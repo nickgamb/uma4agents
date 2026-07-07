@@ -37,6 +37,25 @@ At any point Alice opens her portal and sees which agents are connected, what
 each promised, what it touched, and the one action she personally approved —
 and can revoke any of them.
 
+## Screenshots
+
+### New Agent Requests to Connect to Alice's Brockerage 
+![New Agent](screenshots/New_Agent.png)
+*An agent with **no standing connection** pends on first contact regardless of tier*
+
+### Manage Agent Access & Revocation
+![Agent Access](screenshots/Resource_Approval.png)
+*(Connected Agents → Revoke) deactivates the connection and any live RPTs immediately.*
+
+### Edit RO Policy Terms as Forms or as Code
+![RO Policy](screenshots/RO_Policy.png)
+![RO Policy Code](screenshots/RO_Policy_Monoco.png)
+*Express the resource owner policy terms that agents agree to in a form or as code*
+
+### Activity Ledger
+![Activity Ledger](screenshots/ActivityLedger.png)
+*Track all agent activity live in the ledger*
+
 ## Quick start
 
 Prerequisites: Docker Desktop (or Engine + Compose v2) and
