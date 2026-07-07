@@ -1,0 +1,41 @@
+{
+  "realm": "alice",
+  "enabled": true,
+  "displayName": "Alice's Authorization Server",
+  "registrationAllowed": false,
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "firstName": "Alice",
+      "lastName": "Owner",
+      "email": "alice@uma.lab",
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "alice-demo", "temporary": false }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "alice-portal",
+      "name": "Alice's Portal",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["https://portal.uma.lab/*", "http://localhost:9010/*"],
+      "webOrigins": ["+"]
+    },
+    {
+      "clientId": "uma-as",
+      "name": "UMA-for-agents service",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "secret": "uma-as-demo-secret"
+    }
+  ]
+}

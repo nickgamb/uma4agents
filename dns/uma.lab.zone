@@ -1,0 +1,18 @@
+$ORIGIN uma.lab.
+$TTL 300
+
+@       IN      SOA     ns.uma.lab. admin.uma.lab. (
+                        2026070701      ; Serial
+                        3600            ; Refresh
+                        600             ; Retry
+                        86400           ; Expire
+                        300             ; Minimum TTL
+                        )
+
+; Nameserver
+@       IN      NS      ns.uma.lab.
+ns      IN      A       127.0.0.1
+
+; Wildcard - all demo hostnames resolve to localhost
+@       IN      A       127.0.0.1
+*       IN      A       127.0.0.1

@@ -1,0 +1,22 @@
+# Secrets and local environment
+.env
+*.local
+
+# Generated TLS material and signing keys
+certs/
+
+# Working material: research notes, spikes, progress (kept local, not published)
+research/
+
+# Runtime data
+data/
+**/node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# Upstream checkouts (pinned + fetched by make, not vendored)
+aauth/upstream/
+
+# macOS
+.DS_Store

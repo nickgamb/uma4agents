@@ -1,0 +1,225 @@
+"""demo-driver — headless walker for the three demo acts.
+
+Same grant-loop code path as the agent-shim (lib/uma4a_grant.py), driving
+Alice's vault MCP through the gateway over plain streamable-http JSON-RPC.
+
+  --act tier1   holdings summary: four beats, auto-grant
+  --act tier2   transaction history: visibly stricter dictated terms
+  --act tier3   a trade: ask-me pend -> single-use, operation-scoped grant
+  --act all     the whole day
+
+Bob's side approves terms via his standing config (STANDING). In tier 3,
+--simulate-alice approves via the owner API for headless runs; without it the
+driver waits for Alice to tap approve in her portal.
+"""
+
+import argparse
+import json
+import sys
+
+import httpx
+
+from uma4a_grant import AgentKeys, GrantDenied, parse_challenge, run_grant, signed_headers
+
+GATEWAY_AUTHORITY = "gateway.uma.lab"
+MCP_PATH = "/mcp"
+
+# Bob's standing terms policy: what his shim may accept without asking him.
+STANDING = {"max_expires_in": 7 * 24 * 3600}
+
+
+def say(msg: str) -> None:
+    print(f"   {msg}")
+
+
+def approve_terms(template: dict) -> bool:
+    ok = template["expires_in"] <= STANDING["max_expires_in"]
+    say(f"[bob-standing-config] terms {'accepted' if ok else 'refused'}: "
+        f"purpose={template['purpose']!r} expires_in={template['expires_in']}"
+        f" prohibited={template['prohibited']}")
+    return ok
+
+
+class McpSession:
+    def __init__(self, client: httpx.Client, url: str):
+        self.client = client
+        self.url = url
+        self.session_id: str | None = None
+        self._id = 0
+
+    def _post(self, msg: dict, headers: dict | None = None) -> httpx.Response:
+        h = {"accept": "application/json, text/event-stream",
+             "content-type": "application/json"}
+        if self.session_id:
+            h["mcp-session-id"] = self.session_id
+        if headers:
+            h.update(headers)
+        return self.client.post(self.url, json=msg, headers=h)
+
+    @staticmethod
+    def _payload(r: httpx.Response) -> dict | None:
+        ct = r.headers.get("content-type", "")
+        if "text/event-stream" in ct:
+            for line in r.text.splitlines():
+                if line.startswith("data:"):
+                    return json.loads(line[5:].strip())
+            return None
+        if r.content:
+            return r.json()
+        return None
+
+    def request(self, method: str, params: dict | None = None,
+                headers: dict | None = None, notification: bool = False):
+        msg: dict = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            msg["params"] = params
+        if not notification:
+            self._id += 1
+            msg["id"] = self._id
+        r = self._post(msg, headers)
+        if sid := r.headers.get("mcp-session-id"):
+            self.session_id = sid
+        return r, self._payload(r)
+
+    def initialize(self) -> None:
+        r, payload = self.request(
+            "initialize",
+            {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {"name": "uma4agents-demo-driver", "version": "0.2"},
+            },
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"initialize failed: {r.status_code} {r.text[:200]}")
+        self.request("notifications/initialized", {}, notification=True)
+
+
+def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
+              client: httpx.Client, operation: dict | None = None,
+              simulate_alice: bool = False, owner_token: str | None = None,
+              as_internal: str | None = None) -> dict:
+    """tools/call with the full grant dance on 401."""
+    params = {"name": tool, "arguments": args}
+    r, payload = session.request("tools/call", params)
+    if r.status_code == 200:
+        return payload
+
+    challenge = parse_challenge(r.headers.get("www-authenticate", ""))
+    if r.status_code != 401 or challenge is None:
+        raise RuntimeError(f"unexpected response: {r.status_code} {r.text[:200]}")
+    as_uri, ticket = challenge
+    say(f"challenged: 401 from the gateway, ticket {ticket[:20]}…, AS {as_uri}")
+
+    # First contact pends as a connection request regardless of tier (the
+    # day-1 handshake); ask-me tiers pend per operation. The simulated Alice
+    # approves whatever lands, standing in for her portal tap.
+    if simulate_alice:
+        import threading
+
+        def approve_when_pending():
+            import time
+            for _ in range(40):
+                time.sleep(1.5)
+                pending = client.get(
+                    f"{as_internal}/owner/pending",
+                    headers={"Authorization": f"Bearer {owner_token}"},
+                ).json()
+                if pending:
+                    p = pending[0]
+                    say(f"[simulated-alice] approving {p['kind']} request "
+                        f"{p['family']} from the couch")
+                    client.post(
+                        f"{as_internal}/owner/pending/{p['family']}/decision",
+                        json={"decision": "approved"},
+                        headers={"Authorization": f"Bearer {owner_token}"},
+                    )
+                    return
+
+        threading.Thread(target=approve_when_pending, daemon=True).start()
+
+    rpt = run_grant(client, as_uri, ticket, keys, approve_terms,
+                    operation=operation, on_status=say)
+
+    headers = signed_headers("POST", GATEWAY_AUTHORITY, MCP_PATH, rpt, keys)
+    r, payload = session.request("tools/call", params, headers=headers)
+    if r.status_code != 200:
+        raise RuntimeError(f"authorized call failed: {r.status_code} {r.text[:300]}")
+    return {"payload": payload, "rpt": rpt}
+
+
+def show_result(payload: dict) -> None:
+    try:
+        content = payload["result"]["content"][0]["text"]
+        data = json.loads(content)
+        say("data received: " + json.dumps(data)[:140] + "…")
+    except (KeyError, IndexError, ValueError):
+        say("result: " + json.dumps(payload)[:200])
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--act", default="all", choices=["tier1", "tier2", "tier3", "all"])
+    ap.add_argument("--gateway", default="https://gateway.uma.lab/mcp")
+    ap.add_argument("--as-internal", default="https://alice-as.uma.lab")
+    ap.add_argument("--cacert", default="certs/rootCA.pem")
+    ap.add_argument("--keystore", default="/tmp/demo-driver-agent-key.pem")
+    ap.add_argument("--simulate-alice", action="store_true",
+                    help="approve tier-3 via the owner API (headless runs)")
+    ap.add_argument("--owner-token", default="owner-dev-portal")
+    args = ap.parse_args()
+
+    client = httpx.Client(verify=args.cacert, timeout=15.0)
+    keys = AgentKeys.load_or_create(args.keystore)
+    acts = ["tier1", "tier2", "tier3"] if args.act == "all" else [args.act]
+
+    session = McpSession(client, args.gateway)
+    session.initialize()
+    say("MCP session established through the gateway (discovery is open)")
+
+    try:
+        if "tier1" in acts:
+            print("\n== Act 1 (midday): Bob's agent requests Alice's holdings summary ==")
+            print("   (first contact: an unconnected agent pends until Alice connects it)")
+            out = call_tool(session, keys, "get_positions", {}, client,
+                            simulate_alice=args.simulate_alice,
+                            owner_token=args.owner_token, as_internal=args.as_internal)
+            show_result(out["payload"])
+
+        if "tier2" in acts:
+            print("\n== Act 2 (midday): transaction history — watch the terms tighten ==")
+            out = call_tool(session, keys, "get_transactions",
+                            {"account": "brokerage-main"}, client,
+                            simulate_alice=args.simulate_alice,
+                            owner_token=args.owner_token, as_internal=args.as_internal)
+            show_result(out["payload"])
+
+        if "tier3" in acts:
+            print("\n== Act 3 (afternoon): the market moves — Bob's agent proposes a trade ==")
+            order = {"symbol": "VTI", "side": "sell", "quantity": 40}
+            operation = {"tool": "execute_trade", "params": order}
+            out = call_tool(session, keys, "execute_trade", order, client,
+                            operation=operation, simulate_alice=args.simulate_alice,
+                            owner_token=args.owner_token, as_internal=args.as_internal)
+            show_result(out["payload"])
+
+            print("\n== Act 3 epilogue: the same RPT, tried again ==")
+            headers = signed_headers("POST", GATEWAY_AUTHORITY, MCP_PATH, out["rpt"], keys)
+            r, _ = session.request("tools/call",
+                                   {"name": "execute_trade", "arguments": order},
+                                   headers=headers)
+            say(f"{r.status_code}: single-use grant is consumed — approval permitted "
+                "one walk through the door")
+            if r.status_code == 200:
+                print("FAIL: single-use RPT was accepted twice")
+                return 1
+    except GrantDenied as exc:
+        print(f"grant denied: {exc}")
+        return 1
+
+    print("\nPASS: the requested acts completed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

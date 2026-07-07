@@ -1,0 +1,51 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "title": "UMA for Agents — Grant Flow",
+  "uid": "uma4a-grant",
+  "tags": ["uma4agents"],
+  "timezone": "browser",
+  "time": { "from": "now-30m", "to": "now" },
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Protocol events (ticket = correlation id)",
+      "gridPos": { "h": 14, "w": 16, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "dedupStrategy": "none" },
+      "targets": [
+        { "refId": "A", "expr": "{service=~\"uma-as|uma-pep\"} | json | line_format \"{{.event}}  corr={{.corr}}  {{.details}}\"" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Grants issued",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } } },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "targets": [ { "refId": "A", "expr": "sum(count_over_time({event=\"rpt.issued\"} [$__range]))", "queryType": "instant" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Owner approvals",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 5 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "yellow" } } },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "targets": [ { "refId": "A", "expr": "sum(count_over_time({event=\"owner.decision\"} [$__range]))", "queryType": "instant" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Access allowed",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 9 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "targets": [ { "refId": "A", "expr": "sum(count_over_time({event=\"access.allowed\"} [$__range]))", "queryType": "instant" } ]
+    }
+  ]
+}

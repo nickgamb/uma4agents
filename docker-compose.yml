@@ -1,0 +1,221 @@
+# UMA for Agents — the demo stack.
+#   make init && make up && make smoke-test
+# See docs/ARCHITECTURE.md for the system design.
+#
+# The tokens/passwords below are LOCAL LAB demo defaults, not secrets. Override
+# them via a .env file (see .env.example) and never reuse them anywhere real or
+# expose this stack on a public network.
+
+services:
+  dns:
+    init: true
+    image: docker.io/hickorydns/hickory-dns:0.25.2
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - ./dns/named.toml:/etc/named.toml:ro
+      - ./dns/uma.lab.zone:/var/named/uma.lab.zone:ro
+
+  edge:
+    init: true
+    image: envoyproxy/envoy:v1.34-latest
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "warn"]
+    ports:
+      - "443:443"
+    volumes:
+      - ./edge/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./certs/edge-server.pem:/certs/edge-server.pem:ro
+      - ./certs/edge-server-key.pem:/certs/edge-server-key.pem:ro
+    networks:
+      default:
+        aliases:
+          - alice-as.uma.lab
+          - keycloak.uma.lab
+          - gateway.uma.lab
+          - portal.uma.lab
+          - grafana.uma.lab
+          - ps.uma.lab
+
+  keycloak:
+    init: true
+    image: quay.io/keycloak/keycloak:26.4.5
+    command: start-dev --import-realm --health-enabled=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-uma4agents-admin}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: https://keycloak.uma.lab
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ./keycloak/:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
+  uma-as:
+    init: true
+    build: ./services/uma-as
+    environment:
+      UMA_AS_ISSUER: https://alice-as.uma.lab
+      UMA_AS_PAT: ${UMA_AS_PAT:-pat-dev-gateway}
+      UMA_AS_OWNER_TOKEN: ${UMA_AS_OWNER_TOKEN:-owner-dev-portal}
+    volumes:
+      - uma-as-keys:/keys
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  uma-pep:
+    init: true
+    build:
+      context: .
+      dockerfile: services/uma-pep/Dockerfile
+    environment:
+      UMA_AS_PUBLIC: https://alice-as.uma.lab
+      UMA_AS_INTERNAL: http://uma-as:9000
+      UMA_AS_PAT: ${UMA_AS_PAT:-pat-dev-gateway}
+      UMA_REALM: alice-vault
+    depends_on:
+      uma-as:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9002/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  agentgateway:
+    image: ghcr.io/agentgateway/agentgateway:v1.3.1
+    command: ["-f", "/etc/agentgateway/config.yaml"]
+    volumes:
+      - ./gateway/agw.yaml:/etc/agentgateway/config.yaml:ro
+    depends_on:
+      uma-pep:
+        condition: service_healthy
+
+  alice-vault-mcp:
+    init: true
+    build: ./mcp/alice-vault
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  alice-portal:
+    init: true
+    build: ./services/alice-portal
+    environment:
+      UMA_AS_INTERNAL: http://uma-as:9000
+      UMA_AS_OWNER_TOKEN: ${UMA_AS_OWNER_TOKEN:-owner-dev-portal}
+      PORTAL_AUTH: ${PORTAL_AUTH:-oidc}
+      OIDC_ISSUER: https://keycloak.uma.lab/realms/alice
+      OIDC_CLIENT_ID: alice-portal
+      PORTAL_SESSION_SECRET: ${PORTAL_SESSION_SECRET:-dev-session-secret}
+      VAULT_MCP_URL: http://alice-vault-mcp:9020/mcp
+      SSL_CERT_FILE: /certs/rootCA.pem
+    volumes:
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9010/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  person-server:
+    init: true
+    build:
+      context: ./aauth
+      dockerfile: person-server.Dockerfile
+    environment:
+      AAUTH_DATABASE_URL: sqlite:////data/aauth.db
+      AAUTH_PS_SIGNING_KEY_PATH: /data/.aauth/ps-signing-key.pem
+      AAUTH_AS_SIGNING_KEY_PATH: /data/.aauth/as-signing-key.pem
+      AAUTH_PS_PUBLIC_ORIGIN: https://ps.uma.lab
+      AAUTH_AS_PUBLIC_ORIGIN: https://ps.uma.lab
+      AAUTH_PS_ADMIN_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
+      AAUTH_AS_PERSON_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
+      AAUTH_PS_INSECURE_DEV: "true"
+      AAUTH_AS_INSECURE_DEV: "true"
+    volumes:
+      - ps-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8765/.well-known/aauth-person.json"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  loki:
+    init: true
+    image: grafana/loki:3.4.2
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+
+  promtail:
+    init: true
+    image: grafana/promtail:3.4.2
+    command: ["-config.file=/etc/promtail/promtail.yaml"]
+    volumes:
+      - ./observability/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+  grafana:
+    init: true
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SERVER_ROOT_URL: https://grafana.uma.lab
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./observability/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./observability/grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./observability/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+
+  # Headless walker for the demo acts (same grant code path as the agent-shim).
+  demo-driver:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/driver.py --cacert /driver/rootCA.pem "$$@"
+      - --
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./clients/demo-driver/driver.py:/driver/driver.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+    working_dir: /driver
+    profiles: ["demo"]
+
+  # Headless verification of the agent-shim under a scripted MCP client.
+  shim-test:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q 'mcp>=1.13' httpx 'pyjwt[crypto]' && exec python /repo/clients/agent-shim/test_shim.py
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./:/repo:ro
+    profiles: ["test"]
+
+volumes:
+  uma-as-keys:
+  ps-data:

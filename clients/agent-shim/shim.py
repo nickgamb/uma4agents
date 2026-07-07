@@ -1,0 +1,205 @@
+"""agent-shim — lets an unmodified agent (Claude Code, Claude Desktop, any MCP
+client) act as Bob's requesting agent.
+
+The shim is to UMA-for-agents what mcp-remote is to MCP OAuth: a local stdio
+MCP server that proxies Alice's vault tools through the gateway, holds Bob's
+agent signing key, and runs the four-beat grant dance whenever the gateway
+challenges. Alice's dictated terms are surfaced to Bob **inside his agent**
+via MCP elicitation when the client supports it (Claude Code ≥ 2.1.76);
+otherwise Bob's standing config decides (Claude Code renders elicitation;
+some clients don't yet, hence the fallback).
+
+Connect from Claude Code:
+
+  claude mcp add alice-vault -- \
+      uv run --project /path/to/uma4agents/clients/agent-shim shim
+
+Environment:
+  UMA4A_GATEWAY     https://gateway.uma.lab/mcp
+  UMA4A_CACERT      path to certs/rootCA.pem
+  UMA4A_KEYSTORE    where Bob's agent key persists
+  UMA4A_STANDING_MAX_EXPIRES  fallback auto-accept bound (seconds)
+"""
+
+import json
+import os
+import sys
+
+import httpx
+from mcp.server.fastmcp import Context, FastMCP
+from pydantic import BaseModel
+
+from uma4a_grant import (
+    AgentKeys,
+    GrantDenied,
+    TermsRejected,
+    parse_challenge,
+    run_grant_async,
+    signed_headers,
+)
+
+GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
+CACERT = os.environ.get("UMA4A_CACERT", "certs/rootCA.pem")
+KEYSTORE = os.environ.get("UMA4A_KEYSTORE", os.path.expanduser("~/.uma4agents/agent-key.pem"))
+STANDING_MAX_EXPIRES = int(os.environ.get("UMA4A_STANDING_MAX_EXPIRES", 7 * 24 * 3600))
+AUTHORITY = httpx.URL(GATEWAY).host
+MCP_PATH = httpx.URL(GATEWAY).path
+
+mcp = FastMCP("alice-vault-via-uma")
+keys = AgentKeys.load_or_create(KEYSTORE)
+
+
+def log(msg: str) -> None:
+    print(f"[agent-shim] {msg}", file=sys.stderr, flush=True)
+
+
+class TermsDecision(BaseModel):
+    approve: bool
+
+
+class Upstream:
+    """Minimal MCP streamable-http client with the grant dance built in."""
+
+    def __init__(self) -> None:
+        self.client = httpx.AsyncClient(verify=CACERT, timeout=30.0)
+        self.session_id: str | None = None
+        self._id = 0
+        self._initialized = False
+
+    async def _post(self, msg: dict, headers: dict | None = None) -> httpx.Response:
+        h = {"accept": "application/json, text/event-stream",
+             "content-type": "application/json"}
+        if self.session_id:
+            h["mcp-session-id"] = self.session_id
+        if headers:
+            h.update(headers)
+        r = await self.client.post(GATEWAY, json=msg, headers=h)
+        if sid := r.headers.get("mcp-session-id"):
+            self.session_id = sid
+        return r
+
+    @staticmethod
+    def _payload(r: httpx.Response) -> dict | None:
+        if "text/event-stream" in r.headers.get("content-type", ""):
+            for line in r.text.splitlines():
+                if line.startswith("data:"):
+                    return json.loads(line[5:].strip())
+            return None
+        return r.json() if r.content else None
+
+    async def request(self, method: str, params: dict | None = None,
+                      headers: dict | None = None, notification: bool = False):
+        msg: dict = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            msg["params"] = params
+        if not notification:
+            self._id += 1
+            msg["id"] = self._id
+        r = await self._post(msg, headers)
+        return r, self._payload(r)
+
+    async def ensure_initialized(self) -> None:
+        if self._initialized:
+            return
+        r, _ = await self.request(
+            "initialize",
+            {"protocolVersion": "2025-03-26", "capabilities": {},
+             "clientInfo": {"name": "uma4agents-agent-shim", "version": "0.1"}},
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"gateway initialize failed: {r.status_code}")
+        await self.request("notifications/initialized", {}, notification=True)
+        self._initialized = True
+
+    async def call_tool(self, ctx: Context, tool: str, args: dict,
+                        operation: dict | None = None) -> str:
+        await self.ensure_initialized()
+        params = {"name": tool, "arguments": args}
+        r, payload = await self.request("tools/call", params)
+
+        if r.status_code == 401:
+            challenge = parse_challenge(r.headers.get("www-authenticate", ""))
+            if challenge is None:
+                raise RuntimeError(f"401 without a UMA challenge: {r.text[:200]}")
+            as_uri, ticket = challenge
+            log(f"challenged by {as_uri}; negotiating")
+            await ctx.info(f"Alice's AS requires terms before {tool} — negotiating")
+
+            async def approve(template: dict) -> bool:
+                return await approve_terms(ctx, tool, template)
+
+            rpt = await run_grant_async(
+                self.client, as_uri, ticket, keys, approve,
+                operation=operation, on_status=log,
+            )
+            headers = signed_headers("POST", AUTHORITY, MCP_PATH, rpt, keys)
+            r, payload = await self.request("tools/call", params, headers=headers)
+
+        if r.status_code != 200:
+            raise RuntimeError(f"call failed: {r.status_code} {r.text[:300]}")
+        try:
+            return payload["result"]["content"][0]["text"]
+        except (KeyError, IndexError, TypeError):
+            return json.dumps(payload)
+
+
+async def approve_terms(ctx: Context, tool: str, template: dict) -> bool:
+    """Elicit Bob inside his agent; fall back to his standing config."""
+    message = (
+        f"Alice's authorization server dictates these terms for `{tool}`:\n"
+        f"• purpose: {template['purpose']}\n"
+        f"• access expires in: {template['expires_in']}s\n"
+        f"• prohibited: {', '.join(template['prohibited'])}\n\n"
+        f"Sign this intent contract on your behalf?"
+    )
+    try:
+        result = await ctx.elicit(message=message, schema=TermsDecision)
+        if result.action == "accept" and result.data:
+            log(f"terms {'approved' if result.data.approve else 'refused'} via elicitation")
+            return result.data.approve
+        log("elicitation declined/cancelled — refusing terms")
+        return False
+    except Exception as exc:  # client without elicitation support
+        ok = template["expires_in"] <= STANDING_MAX_EXPIRES
+        log(f"elicitation unavailable ({type(exc).__name__}); standing config "
+            f"{'accepts' if ok else 'refuses'} (max_expires={STANDING_MAX_EXPIRES})")
+        await ctx.info(
+            f"Accepted Alice's terms under Bob's standing config: {template['purpose']}"
+        )
+        return ok
+
+
+upstream = Upstream()
+
+
+@mcp.tool()
+async def get_positions(ctx: Context) -> str:
+    """Alice's current holdings summary (tier 1: auto-grant under her standard terms)."""
+    return await upstream.call_tool(ctx, "get_positions", {})
+
+
+@mcp.tool()
+async def get_transactions(ctx: Context, account: str = "brokerage-main") -> str:
+    """Alice's transaction history (tier 2: stricter dictated terms)."""
+    return await upstream.call_tool(ctx, "get_transactions", {"account": account})
+
+
+@mcp.tool()
+async def execute_trade(ctx: Context, symbol: str, side: str, quantity: int) -> str:
+    """Propose a trade in Alice's account (tier 3: pends until Alice approves;
+    the grant is single-use and bound to exactly this order)."""
+    order = {"symbol": symbol, "side": side, "quantity": quantity}
+    try:
+        return await upstream.call_tool(
+            ctx, "execute_trade", order,
+            operation={"tool": "execute_trade", "params": order},
+        )
+    except GrantDenied as exc:
+        return f"Alice did not authorize this trade: {exc}"
+    except TermsRejected:
+        return "You declined Alice's terms; the trade was not submitted."
+
+
+if __name__ == "__main__":
+    log(f"proxying {GATEWAY} (authority {AUTHORITY}); keystore {KEYSTORE}")
+    mcp.run(transport="stdio")

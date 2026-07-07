@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+# agentgateway — the RS-side PEP fronting Alice's vault MCP.
+# UMA enforcement is delegated to uma-pep over HTTP ext_authz (Spike D).
+binds:
+  - port: 3000
+    listeners:
+      - protocol: HTTP
+        routes:
+          - name: alice-vault-mcp
+            matches:
+              - path:
+                  pathPrefix: /mcp
+            policies:
+              cors:
+                allowOrigins:
+                  - "*"
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - cache-control
+                  - mcp-session-id
+                  - authorization
+                exposeHeaders:
+                  - "Mcp-Session-Id"
+                  - "WWW-Authenticate"
+              extAuthz:
+                host: "uma-pep:9002"
+                # The PEP needs the MCP JSON-RPC body (tool name + args for
+                # scoping and tier-3 operation binding) and the signature
+                # headers (proof-of-possession verification).
+                includeRequestBody:
+                  maxRequestBytes: 16384
+                includeRequestHeaders:
+                  - authorization
+                  - signature
+                  - signature-input
+                  - host
+                  - content-type
+                protocol:
+                  http:
+                    # CEL: forward the original path so the PEP can map
+                    # tool calls to registered resources
+                    path: '"/check" + request.path'
+            backends:
+              - mcp:
+                  targets:
+                    - name: alice-vault
+                      mcp:
+                        host: http://alice-vault-mcp:9020/mcp

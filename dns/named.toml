@@ -1,0 +1,10 @@
+## Hickory DNS configuration
+## Serves the uma.lab zone so demo hostnames resolve to localhost
+
+listen_addrs_ipv4 = ["0.0.0.0"]
+listen_port = 53
+
+[[zones]]
+zone = "uma.lab"
+zone_type = "Primary"
+file = "/var/named/uma.lab.zone"

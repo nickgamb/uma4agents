@@ -1,0 +1,17 @@
+{
+  "as_of": "2026-07-06",
+  "positions": [
+    { "symbol": "VTI", "name": "Vanguard Total Stock Market ETF", "quantity": 812, "cost_basis": 178432.10, "market_value": 231704.44 },
+    { "symbol": "VXUS", "name": "Vanguard Total International Stock ETF", "quantity": 1240, "cost_basis": 68204.00, "market_value": 79360.00 },
+    { "symbol": "BND", "name": "Vanguard Total Bond Market ETF", "quantity": 950, "cost_basis": 71250.00, "market_value": 69825.00 },
+    { "symbol": "AAPL", "name": "Apple Inc.", "quantity": 150, "cost_basis": 21450.00, "market_value": 38250.00 },
+    { "symbol": "CASH", "name": "Money Market Sweep", "quantity": 1, "cost_basis": 24818.55, "market_value": 24818.55 }
+  ],
+  "transactions": [
+    { "account": "brokerage-main", "date": "2026-06-24", "type": "buy", "symbol": "VTI", "quantity": 20, "price": 284.11 },
+    { "account": "brokerage-main", "date": "2026-06-10", "type": "dividend", "symbol": "BND", "amount": 212.40 },
+    { "account": "brokerage-main", "date": "2026-05-28", "type": "sell", "symbol": "AAPL", "quantity": 10, "price": 251.30 },
+    { "account": "brokerage-main", "date": "2026-05-15", "type": "buy", "symbol": "VXUS", "quantity": 60, "price": 63.85 },
+    { "account": "retirement-ira", "date": "2026-05-01", "type": "buy", "symbol": "VTI", "quantity": 35, "price": 279.02 }
+  ]
+}
