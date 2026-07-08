@@ -248,6 +248,28 @@ async def check(request: Request, rest: str = "") -> Response:
     return Response(status_code=200, headers={"x-uma-contract": contract or ""})
 
 
+@app.get("/.well-known/oauth-protected-resource")
+@app.get("/.well-known/oauth-protected-resource/mcp")
+async def protected_resource_metadata() -> dict:
+    """RFC 9728 Protected Resource Metadata — the declare-and-pick-up
+    complement to gateway-side registration. An agent can discover the
+    owner's authorization server (and the protected tool surface) before it
+    is ever challenged. `tool_surfaces` is an extension member carrying the
+    per-tool resource ids the gateway registers at the AS."""
+    scopes = sorted({s for _, (rid, ss) in TOOLS.items() for s in ss})
+    return {
+        "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+        "authorization_servers": [AS_PUBLIC],
+        "scopes_supported": scopes,
+        "bearer_methods_supported": ["header"],
+        "resource_signing_alg_values_supported": ["EdDSA"],
+        "tool_surfaces": [
+            {"tool": tool, "resource_id": rid, "resource_scopes": ss}
+            for tool, (rid, ss) in TOOLS.items()
+        ],
+    }
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}

@@ -6,6 +6,14 @@ binds:
     listeners:
       - protocol: HTTP
         routes:
+          # RFC 9728 Protected Resource Metadata: open discovery of the
+          # owner's AS and the protected tool surface (served by the PEP).
+          - name: protected-resource-metadata
+            matches:
+              - path:
+                  pathPrefix: /.well-known/oauth-protected-resource
+            backends:
+              - host: "uma-pep:9002"
           - name: alice-vault-mcp
             matches:
               - path:

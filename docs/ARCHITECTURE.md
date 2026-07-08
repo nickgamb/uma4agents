@@ -68,7 +68,10 @@ headless demo driver).
    signed call and the gateway lets it through after introspection.
 
 Everything else — resource registration, the PAT, introspection — is setup the
-agent never sees. See [PROTOCOL.md](PROTOCOL.md) for the exact messages.
+agent never sees. Discovery is declarative too: the gateway publishes RFC 9728
+Protected Resource Metadata (`/.well-known/oauth-protected-resource`) naming
+the owner's AS and the protected tool surfaces. See [PROTOCOL.md](PROTOCOL.md)
+for the exact messages.
 
 ## The day-1 handshake (first contact)
 

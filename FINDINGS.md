@@ -24,17 +24,26 @@ available on request.
 | Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *dictating* an intent-contract template, not just naming claim formats |
 | RPT (requesting party token) | **Keep semantics, replace token** | Keep the per-permission introspection array; drop the bearer token for a PoP token |
 | RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work** | The owner-authoritative direction is right; the RS burden belongs in a gateway |
-| Resource registration model | **Transform** | Durable resources → registered *tool/capability surfaces* |
+| Resource registration model | **Transform** | Durable resources → registered *tool/capability surfaces*, declared outward via RFC 9728 Protected Resource Metadata (see below) |
 | Interactive claims gathering (browser redirect) | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Trust-elevation levels, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first POC; revival conditions noted |
 
-And four capabilities the agent era needs that UMA 2.0 does not describe:
+The POC also surfaced four capabilities the agent era demands. They split
+into two groups.
 
-| New capability | Status in POC | Why it's new |
+**Named uses of classic machinery** — no new primitives; UMA 2.0 already
+carries the parts, but the agent-era *use* deserves normative naming:
+
+| Capability | Status in POC | Classic ancestry |
 |---|---|---|
-| Owner-mediated agent registration ("day-1 handshake") | Built | First contact pends; approval establishes a standing relationship |
-| Standing-relationship handle (agent key thumbprint / PCT) | Built | Distinguishes "known advisor's agent" from "stranger who signed the terms" |
-| Per-operation, single-use grants | Built | "Approve this trade" must not become "may trade"; approval permits one action |
+| Owner-mediated agent registration ("day-1 handshake") | Built | The RO-approves-the-relationship shape (as with PAT issuance), applied to the **requesting-agent side** rather than the RS side. Distinct from client registration: DCR-style AS↔client credentials are orthogonal (the agent's PoP key plays that role); what's new-in-use is the *owner* approving a standing RqP-agent relationship. |
+| Standing-relationship handle (agent key thumbprint) | Built | The PCT is the closest ancestor — persisted state for a returning requesting side. Here it is keyed by the agent's key thumbprint and made **owner-visible and owner-revocable** (a registry with a revoke switch), which classic PCT semantics never required. |
+
+**Outside the classic lines** — genuinely new surface:
+
+| Capability | Status in POC | Why it's new |
+|---|---|---|
+| Per-operation, single-use grants | Built | "Approve this trade" must not become "may trade"; the RPT carries an operation hash and is consumed on use. Classic UMA scopes authorize *classes* of action, not one action. |
 | Owner's agent / app as the consent surface | Built (portal) | The 2010 out-of-band-consent wireframes, with an interlocutor that finally exists |
 
 ---
@@ -59,13 +68,19 @@ merely displayed. An attestation from the requesting side (e.g. an AAuth
 mission reference) fits cleanly as *one acceptable claim type* the owner's AS
 may demand — subsuming that model rather than competing with it.
 
-**3. Specify the day-1 handshake.** The first question any reviewer asks —
-"how do Alice and a new agent establish trust?" — is answered by the pending
-state doing double duty as owner-mediated agent registration, with a standing
-handle (key thumbprint; the PCT is the spec-native candidate) distinguishing a
-connected agent from a stranger. This deserves normative text; the POC shows
-it needs no new primitive, only a named use of `request_submitted` plus a
-relationship record.
+**3. Specify the day-1 handshake — precisely.** The first question any
+reviewer asks — "how do Alice and a new agent establish trust?" — is answered
+by the pending state doing double duty as owner-mediated agent registration.
+To place it against classic UMA's two adjacent mechanisms: it is *not* client
+registration (DCR-style AS↔client credentials remain orthogonal; the agent's
+proof-of-possession key plays that role), and it is *not* PAT issuance (which
+introduces the RS). It is the RO-approves-the-relationship shape applied to
+the **requesting-agent side**: the owner admits a specific agent, identified
+by its key, into a standing relationship her policy can then reference — with
+the PCT as the spec-native ancestor for the persisted state. This deserves
+normative text; the POC shows it needs no new primitive, only a named use of
+`request_submitted` plus an owner-visible, owner-revocable relationship
+record.
 
 **4. Retire the bearer RPT; bind to modern proof-of-possession.** Keep the
 rich per-permission introspection semantics; carry them inside a
@@ -73,12 +88,19 @@ sender-constrained token. In the POC the RPT is issued as a PoP token whose
 key binding is verified at enforcement time, and per-operation grants add an
 operation hash so a single-use approval authorizes exactly one call.
 
-**5. Relocate the FedAuthz resource-server burden to a gateway.** The 2015
-adoption friction — resource servers making active calls to the AS — is
-answered by conferring UMA protection at a gateway (here, an MCP gateway):
-naive resources sit behind it unmodified while the gateway registers their
-tool surfaces, catches unauthorized calls, and introspects tokens. This is
-both an adoption argument and a clean home for a protocol binding.
+**5. Relocate the FedAuthz resource-server burden to a gateway, and pair it
+with Protected Resource Metadata.** The 2015 adoption friction — resource
+servers making active calls to the AS — is answered by conferring UMA
+protection at a gateway (here, an MCP gateway): naive resources sit behind it
+unmodified while the gateway registers their tool surfaces, catches
+unauthorized calls, and introspects tokens. The discovery direction is
+covered by RFC 9728: the POC's gateway serves a Protected Resource Metadata
+document announcing the owner's authorization server and — as an extension
+member — the protected *tool surfaces* themselves, so an agent can find the
+AS declaratively before it is ever challenged. Registration pushes inward,
+metadata declares outward; together they answer the old friction from both
+directions. Whether the tool-surface extension belongs in an enhanced PRM
+profile is a good working-group question.
 
 **6. Bindings as thin, separate documents.** Ship the core with a first
 binding to a concrete agent-identity/PoP layer (this POC binds to AAuth) and

@@ -138,6 +138,9 @@ smoke-test:
 	@echo "==> Keycloak alice realm..."
 	@$(CURL) https://keycloak.uma.lab/realms/alice/.well-known/openid-configuration | grep -q issuer \
 		&& echo "  keycloak: OK" || echo "  keycloak: FAIL"
+	@echo "==> Protected Resource Metadata (RFC 9728) at the gateway..."
+	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource | grep -q authorization_servers \
+		&& echo "  resource metadata: OK" || echo "  resource metadata: FAIL"
 	@echo "==> Gateway challenges an unauthorized tool call (expect 401 + UMA ticket)..."
 	@RESP=$$($(CURL) -i https://gateway.uma.lab/mcp -X POST \
 		-H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \

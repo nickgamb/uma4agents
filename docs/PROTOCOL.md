@@ -47,6 +47,15 @@ GET  /owner/events                           SSE stream -> the portal buzz
 
 ## The four beats
 
+### Beat 0 — Discovery (optional)
+
+The gateway serves RFC 9728 Protected Resource Metadata at
+`GET /.well-known/oauth-protected-resource`: the resource identifier, the
+owner's `authorization_servers`, `scopes_supported`, and — as an extension
+member — `tool_surfaces`, the per-tool resource ids the gateway registers at
+the AS. An agent can locate the owner's AS declaratively before its first
+call; the challenge below remains authoritative for the ticket.
+
 ### Beat 1 — Challenge
 
 Agent calls a gateway-fronted MCP tool without (sufficient) authorization.

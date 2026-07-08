@@ -43,7 +43,7 @@ and can revoke any of them.
 ![Dashboard](screenshots/Dashboard.png)
 ![Holdings](screenshots/Holdings.png)
 ![Trade](screenshots/Trade.png)
-*A Brokerage Portal, with MCP, holding Alices portforlio which she would like to give her financial advisor's agent access to*
+*A brokerage portal, with MCP, holding Alice's portfolio — which she would like to give her financial advisor's agent access to*
 
 ### New Agent Requests to Connect to Alice's Brokerage 
 ![New Agent](screenshots/New_Agent.png)
