@@ -589,8 +589,10 @@ async def owner_decision(family: str, request: Request) -> dict:
     if not found:
         raise HTTPException(status_code=404, detail="no pending negotiation for that family")
     event("owner.decision", corr=family, decision=decision)
-    if decision == "approved":
-        ledger_add("approved", family, {"decision": decision})
+    # Record both outcomes: "what did I decide" is an audit question, and a
+    # denial is as much a decision as an approval.
+    ledger_add("approved" if decision == "approved" else "denied", family,
+               {"decision": decision})
     await owner_notify({"type": "decided", "family": family, "decision": decision})
     return {"family": family, "decision": decision}
 

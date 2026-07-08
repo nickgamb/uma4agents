@@ -1,24 +1,25 @@
-# PROTOCOL — the four-beat wire contract (v0.1 draft)
+# PROTOCOL — the grant wire contract
 
 The API of `services/uma-as`, which is both the demo's authorization server and
-the reference implementation of the core grant semantics. Grounded in the UMA
-2.0 Grant and Federated Authorization specifications and the AAuth draft; see
+the reference implementation of the core grant semantics, plus the enforcement
+`services/uma-pep` runs behind the gateway. Grounded in the UMA 2.0 Grant and
+Federated Authorization specifications and the AAuth draft; see
 [ARCHITECTURE.md](ARCHITECTURE.md) for the system view.
 
 Design rule: **stay inside UMA 2.0's wire surface wherever it already fits**
-(`WWW-Authenticate: UMA`, `uma-ticket` grant, `need_info`, `request_submitted`,
-introspection `permissions`), and mark every deviation as an explicit
-extension. The deviations are the findings.
+(`WWW-Authenticate: UMA`, the `uma-ticket` grant, `need_info`,
+`request_submitted`, introspection `permissions`), and mark every deviation as
+an explicit extension. The deviations are the findings.
 
 ## Parties and endpoints
 
 | Party | Host | Role |
 |---|---|---|
-| Bob's Claude + agent-shim | (host machine) | Requesting agent; holds `aa-agent+jwt` + signing key |
-| agentgateway + ext_authz | `gateway.uma.lab` | RS-side PEP; holds the PAT; all FedAuthz obligations |
+| Requesting agent + agent-shim | (host machine) | Holds an Ed25519 signing key; optionally a PS-issued `aa-agent+jwt`. Default is pseudonymous (bare public key in the contract header) |
+| agentgateway + uma-pep | `gateway.uma.lab` | RS-side PEP; holds the PAT; carries the FedAuthz obligations |
 | alice-vault-mcp | (internal) | The resource server's backend; never speaks UMA |
 | uma-as | `alice-as.uma.lab` | Alice's authorization server (beside Keycloak) |
-| alice-portal | `portal.uma.lab` | Alice's consent/policy/audit surface |
+| alice-portal | `portal.uma.lab` | Alice's consent / policy / audit surface |
 
 ### uma-as endpoints
 
@@ -27,22 +28,32 @@ GET  /.well-known/uma4agents-configuration   discovery: issuer, endpoints, jwks_
                                              claim formats accepted
 GET  /jwks                                   uma-as signing keys (RPTs, receipts)
 
-# Protection API (gateway only, PAT-authorized — FedAuthz shape)
-POST /rreg                                   register tool surface as resource
-GET/PUT/DELETE /rreg/{id}                    manage resource registrations
-POST /perm                                   register attempted permissions -> ticket
-POST /introspect                             RPT introspection (permissions array)
+# Protection API (gateway/PEP only, PAT-authorized — FedAuthz shape)
+POST /rreg          register a tool surface as a resource
+GET  /rreg          list registered resources
+POST /perm          register attempted permissions -> ticket
+POST /introspect    RPT introspection (permissions array); consume=true burns single-use
+POST /audit/access  the PEP reports an allowed call (grounds the ledger's "touched")
 
 # Grant API (agent-facing — UMA 2.0 Grant shape)
-POST /token                                  grant_type=uma-ticket negotiation loop
+POST /token         grant_type=uma-ticket negotiation loop
 
-# Owner API (portal only)
-GET  /owner/pending                          tickets in awaiting-owner state
-POST /owner/pending/{ticket_id}/decision     approve | deny (+ constraints)
-GET  /owner/policies                         tier policy read/write
-PUT  /owner/policies/{tier}
-GET  /owner/ledger                           the audit ledger (promised/touched/approved)
-GET  /owner/events                           SSE stream -> the portal buzz
+# Owner API (portal only, owner-token-authorized)
+GET  /owner/pending                        requests in awaiting-owner state
+POST /owner/pending/{family}/decision      approve | deny
+GET  /owner/policies                       tier policy
+PUT  /owner/policies/{tier_id}             edit a tier's terms / ask-me
+GET  /owner/connections                    standing agent relationships
+POST /owner/connections/{jkt}/revoke       revoke a connection + its live RPTs
+GET  /owner/ledger                         the activity ledger
+GET  /owner/events                         SSE stream -> the portal notification
+```
+
+### uma-pep endpoints (behind the gateway)
+
+```
+GET  /.well-known/oauth-protected-resource   RFC 9728 Protected Resource Metadata
+/check{path}                                 ext_authz decision endpoint (all methods)
 ```
 
 ## The four beats
@@ -58,9 +69,11 @@ call; the challenge below remains authoritative for the ticket.
 
 ### Beat 1 — Challenge
 
-Agent calls a gateway-fronted MCP tool without (sufficient) authorization.
-The ext_authz service registers the attempt at uma-as (`POST /perm` with
-`resource_id`, `resource_scopes`) and the gateway answers:
+The agent calls a gateway-fronted MCP tool without (sufficient) authorization.
+MCP session bootstrap and discovery (`initialize`, `tools/list`) pass
+unauthenticated; only `tools/call` is protected. The PEP registers the attempt
+at uma-as (`POST /perm` with `resource_id`, `resource_scopes`) and the gateway
+answers:
 
 ```
 HTTP/1.1 401 Unauthorized
@@ -76,18 +89,18 @@ their own challenge header; this belongs in the AAuth binding document.
 
 ### Beat 2 — Attempt
 
-Shim → `POST /token` (signed request, RFC 9421, `Signature-Key` carrying the
-agent token):
+The agent presents the ticket at the AS token endpoint:
 
 ```
+POST /token
 grant_type = urn:ietf:params:oauth:grant-type:uma-ticket
 ticket     = <ticket>
 ```
 
 uma-as answers `403 need_info` with a **rotated ticket** and the owner's
-dictated terms. `required_claims` is standard UMA; `terms_template` inside the
-required claim is **extension #1** — UMA lets the AS name acceptable claim
-formats, we make it *dictate the content*:
+dictated terms. `required_claims` is standard UMA; the `terms_template` inside
+the required claim is **extension #1** — UMA lets the AS name acceptable claim
+formats; here it *dictates the content*:
 
 ```json
 {
@@ -96,30 +109,32 @@ formats, we make it *dictate the content*:
   "required_claims": [{
     "claim_type": "urn:uma4agents:claim:intent-contract",
     "claim_token_format": ["urn:uma4agents:format:intent-contract-v1+jws"],
-    "friendly_name": "Alice's terms for holdings access",
+    "friendly_name": "Alice's terms: Holdings summary",
     "terms_template": {
-      "template_id": "alice/advisor-tier1/v1",
+      "template_id": "alice/advisor-tier1/v2",
       "dictated_by": "https://alice-as.uma.lab",
       "purpose": "Suitability review for advisory onboarding",
-      "scope": ["positions:read", "allocation:read"],
+      "scope": ["positions:read"],
       "expires_in": 172800,
       "prohibited": ["retention-after-review", "marketing", "model-training"],
-      "ticket_ref": "s256:<hash-of-ticket>",
+      "resource_id": "alice-vault/get_positions",
+      "family": "<negotiation-family-id>",
       "nonce": "<nonce>"
     }
   }]
 }
 ```
 
-The AAuth mission reference (`approver` + `s256`) may appear as an additional
+An AAuth mission reference (`approver` + `s256`) may be offered as an additional
 acceptable `claim_token_format` — attestation demanded by the owner's side.
 
 ### Beat 3 — Commit
 
-The shim surfaces the terms to Bob (MCP elicitation; fallback: standing
-config), then re-presents:
+The shim surfaces the terms to the agent's human (MCP elicitation; fallback:
+standing config), then re-presents the rotated ticket with the signed contract:
 
 ```
+POST /token
 grant_type         = urn:ietf:params:oauth:grant-type:uma-ticket
 ticket             = <rotated>
 claim_token        = <base64url(intent-contract JWS)>
@@ -127,32 +142,44 @@ claim_token_format = urn:uma4agents:format:intent-contract-v1+jws
 ```
 
 The **intent contract** is the terms template echoed and signed by the agent's
-key (the same key the agent token binds — one keypair, provable both ways):
+key. Its JWS protected header carries either `jwk` (the pseudonymous bare key)
+or an `agent_token` (a PS-issued `aa-agent+jwt`, whose `cnf.jwk` is the signing
+key) — so the same key both signs the contract and, later, proves possession of
+the RPT.
 
 ```json
 {
-  "iss": "<agent-id from aa-agent+jwt>",
+  "iss": "aauth:agent:<keyid>",
   "aud": "https://alice-as.uma.lab",
   "iat": 1751900000,
-  "template_id": "alice/advisor-tier1/v1",
-  "purpose": "…", "scope": ["…"], "exp": 1752072800,
-  "prohibited": ["…"],
-  "ticket_ref": "s256:…", "nonce": "…"
+  "template_id": "alice/advisor-tier1/v2",
+  "purpose": "Suitability review for advisory onboarding",
+  "scope": ["positions:read"],
+  "expires_in": 172800,
+  "prohibited": ["retention-after-review", "marketing", "model-training"],
+  "family": "<negotiation-family-id>",
+  "nonce": "<nonce>"
 }
 ```
 
-uma-as verifies the signature against the agent's key, checks the echo matches
-the dictated template (nonce, ticket_ref, no weakened fields), evaluates
-Alice's tier policy, and stores the contract (content-addressed, `s256`) with
-a uma-as-signed receipt for the ledger. Then one of:
+uma-as verifies the signature against the header key, checks the echo matches
+the dictated template (nonce, family, template_id, purpose; prohibited not
+weakened; `expires_in` not extended; an operation present if the tier is
+per-operation), evaluates Alice's tier policy, and stores the contract
+(content-addressed by `s256`). Then one of:
 
-- **Tier 1/2** → Beat 4 immediately.
-- **Tier 3** → `403 request_submitted` + rotated ticket + `interval`
-  (standard UMA 2.0), and uma-as pushes the pending item to the portal
-  (`owner.notified` event). Agent re-presents the ticket after `interval`
-  (each poll rotates it). Alice's decision flips the ticket to grantable or
-  denied. Denial → `request_denied`; timeout → `invalid_grant` (expired).
-- Policy failure → `request_denied`.
+- **Known connection, non-ask-me tier** → Beat 4 immediately.
+- **New agent (no standing connection), any tier** → `403 request_submitted`
+  as a *connection request*: uma-as holds the rotated ticket and pushes the
+  pending item to the portal (`owner.notified`, `kind=connection`).
+- **Ask-me tier (e.g. trade execution)** → `403 request_submitted` as an
+  *operation approval* (`kind=operation`).
+- **Policy failure / weakened echo / bad signature** → `request_denied`.
+
+For a held ticket the agent re-presents after `interval` (each poll rotates
+it). Alice's decision resolves it: approve → grant (and, for a connection
+request, the standing relationship is recorded); deny → `request_denied`;
+expiry → `invalid_grant`.
 
 ### Beat 4 — Grant
 
@@ -160,30 +187,31 @@ a uma-as-signed receipt for the ledger. Then one of:
 {
   "access_token": "<RPT: aa-auth+jwt, cnf-bound>",
   "token_type": "PoP",
-  "pct": "<persisted claims token>",
   "expires_in": 3600
 }
 ```
 
 The RPT is an `aa-auth+jwt` (**extension #2**: UMA's introspection
-`permissions` array carried as a claim inside AAuth's PoP token):
+`permissions` array carried as a claim inside a proof-of-possession token):
 
 ```json
 {
   "iss": "https://alice-as.uma.lab",
-  "sub": "<agent-id>", "aud": "https://gateway.uma.lab",
-  "cnf": { "jwk": { …agent signing key… } },
+  "sub": "<agent id or aauth:pseudonymous-agent>",
+  "aud": "https://gateway.uma.lab",
+  "jti": "rpt_<id>",
   "exp": 1751910000,
+  "cnf": { "jwk": { "…agent signing key…": "" } },
   "permissions": [
-    { "resource_id": "alice-vault/positions", "resource_scopes": ["positions:read"], "exp": 1752072800 }
+    { "resource_id": "alice-vault/get_positions",
+      "resource_scopes": ["positions:read"], "exp": 1752072800 }
   ],
-  "contract": "s256:<intent-contract-hash>",
-  "single_use": false
+  "contract": "s256:<intent-contract-hash>"
 }
 ```
 
-**Tier 3 RPTs** additionally carry the operation binding — authority for *this
-trade*, not trading authority:
+**Ask-me (tier 3) RPTs** additionally carry the operation binding — authority
+for *this trade*, not trading authority:
 
 ```json
   "single_use": true,
@@ -191,57 +219,87 @@ trade*, not trading authority:
                  "params_s256": "<hash of the exact approved order>" }
 ```
 
-The agent retries the original MCP call, signed, with the RPT. The ext_authz
-service introspects (`POST /introspect`, PAT-authorized), verifies the request
-signature against `cnf`, checks tool/scope against `permissions` (and
-`operation.params_s256` for single-use), marks single-use RPTs consumed, and
-the call passes to alice-vault-mcp.
+The agent retries the original MCP call — RFC 9421-signed over
+`@method @authority @path authorization`, with the RPT in the `Authorization:
+PoP …` header. The PEP introspects (`POST /introspect`, PAT-authorized),
+verifies the request signature against the RPT's `cnf` key (this is what makes
+the RPT proof-of-possession rather than bearer), checks the tool against
+`permissions`, and — for single-use RPTs — requires an exact
+`operation.params_s256` match and consumes the token. The call then reaches
+alice-vault-mcp.
+
+## Standing relationships (the day-1 handshake)
+
+A **connection** is the standing relationship an owner has with a specific
+agent, keyed by the agent's RFC 7638 JWK thumbprint (`jkt:…`). It is created
+when Alice approves a `kind=connection` request (first contact), and it holds
+the identity level, a label, first-seen/last-access timestamps, and status.
+
+- While no active connection exists, first contact pends regardless of tier.
+- Once active, non-ask-me tiers auto-grant for that agent; ask-me tiers still
+  pend per operation.
+- `POST /owner/connections/{jkt}/revoke` sets the connection inactive and marks
+  every live RPT bound to that thumbprint consumed, so introspection fails
+  immediately.
+
+This is the standing-relationship handle discussed in
+[FINDINGS.md](../FINDINGS.md); the PCT is its spec-native ancestor, here made
+owner-visible and owner-revocable.
 
 ## Ticket lifecycle
 
 ```
-issued ──presented──> need_info(rotated) ──committed──> granted (consumed)
-                            │                     │
-                            │                     ├──> awaiting-owner(rotated per poll)
-                            │                     │       ├─ approved ─> granted
-                            │                     │       ├─ denied ──> request_denied
-                            │                     │       └─ expired ─> invalid_grant
-                            └──(weakened echo / bad sig)──> request_denied
-Every presentation consumes the ticket and, if negotiation continues, issues a
-fresh one (UMA 2.0 single-use rule). The ticket id family (first ticket's id)
-is the correlation ID for logging and audit.
+issued ─present─▶ need_info(rotated) ─commit─▶ ┌─ known conn, open tier ─▶ granted (consumed)
+                        │                       ├─ new agent (any tier) ──▶ awaiting-owner ┐
+                        │                       └─ ask-me tier ───────────▶ awaiting-owner ┤
+                        │                                                                   │
+                        └─(weakened echo / bad sig / policy fail)─▶ request_denied          │
+                                                                                            │
+        awaiting-owner(rotated per poll):  approved ─▶ granted    denied ─▶ request_denied  │
+                                           expired  ─▶ invalid_grant                        │
+                                                       (connection recorded on approve) ◀───┘
 ```
+
+Every presentation consumes the ticket and, if negotiation continues, issues a
+fresh one (UMA 2.0 single-use rule). The negotiation **family** id (assigned at
+`/perm`) is stable across rotations and is the correlation id for logging,
+audit, and owner decisions.
 
 ## Structured protocol events
 
-One JSON line per event to stdout → Loki. `corr` = the ticket family id;
-the Grafana demo dashboard and `make audit` are views over this stream.
+One JSON line per event to stdout → Loki. `corr` is the negotiation family id;
+the Grafana dashboard, `make audit`, and the portal ledger are views over this
+stream.
 
 ```json
-{ "ts": "…", "corr": "tkt_8f3a…", "event": "need_info.terms_dictated",
-  "actor": "uma-as", "tier": 1, "resource_id": "alice-vault/positions",
-  "scopes": ["positions:read"], "contract_s256": null,
-  "details": { "template_id": "alice/advisor-tier1/v1" } }
+{ "ts": "2026-07-07T18:21:27Z", "event": "need_info.terms_dictated",
+  "corr": "fam_8f3a…", "actor": "uma-as",
+  "details": { "tier": "tier1", "template_id": "alice/advisor-tier1/v2",
+               "resource_id": "alice-vault/get_positions" } }
 ```
 
-Event names (enum, append-only): `permission.registered`, `challenge.issued`,
-`ticket.presented`, `need_info.terms_dictated`, `contract.committed`,
-`policy.evaluated`, `ticket.awaiting_owner`, `owner.notified`,
-`owner.decision`, `rpt.issued`, `rpt.introspected`, `rpt.consumed`,
-`access.allowed`, `access.denied`, `trade.executed`.
+Emitted events: `resource.registered`, `resources.registered_at_startup`,
+`permission.registered`, `challenge.issued`, `ticket.presented`,
+`need_info.terms_dictated`, `contract.committed`, `contract.rejected`,
+`policy.evaluated`, `policy.updated`, `ticket.awaiting_owner`,
+`owner.notified`, `owner.decision`, `connection.approved`,
+`connection.revoked`, `rpt.issued`, `rpt.introspected`, `rpt.consumed`,
+`access.allowed`, `access.denied`.
 
-The dinner ledger is a projection: **promised** = `contract.committed`,
-**touched** = `access.allowed` + `trade.executed`, **personally approved** =
-`owner.decision`.
+The activity ledger is a projection: **promised** = `contract.committed`,
+**touched** = `access.allowed`, **connected** = `connection.approved`,
+**personally approved / denied** = `owner.decision`, **revoked** =
+`connection.revoked`.
 
 ## Extension register (deviations from UMA 2.0, each a finding)
 
 | # | Extension | UMA 2.0 baseline | Why |
 |---|---|---|---|
 | 1 | `terms_template` inside `required_claims`; AS dictates claim *content* | AS names acceptable claim formats | The owner-dictated intent contract (2010 Requesting Party Policy, restored) |
-| 2 | RPT = `aa-auth+jwt` with `permissions` claim; `token_type: PoP` | Bearer RPT, permissions visible only via introspection | "Genome stays, organs replaced" — AAuth binding |
-| 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Tier 3 per-operation grants — approval permits one walk through the door |
-| 4 | Owner push notification on `request_submitted` | RO intervention out of scope | The agent-era consent surface; UMA already holds the pending state |
-| 5 | `contract` (s256) claim on RPT + signed receipts | — | Promise/action/consent in one ledger |
+| 2 | RPT = `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | "Genome stays, organs replaced" — AAuth binding |
+| 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
+| 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |
+| 5 | Standing connection keyed by JWK thumbprint; `contract` (s256) on the RPT | — | Owner-visible, revocable relationships; promise/action/consent in one ledger |
+| 6 | RFC 9728 PRM with a `tool_surfaces` extension member | PRM predates UMA; not profiled for it | Declarative discovery of the AS and the protected tool surface |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.

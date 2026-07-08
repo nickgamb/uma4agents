@@ -106,7 +106,7 @@ demo-tier3:
 demo-all:
 	docker compose --profile demo run --rm demo-driver --act all $(if $(SIM),--simulate-alice)
 
-## audit: print Alice's dinner ledger (promised / touched / personally approved)
+## audit: print Alice's activity ledger (promised / touched / personally approved)
 .PHONY: audit
 audit:
 	@docker compose exec -T uma-as python3 -c "\
@@ -163,4 +163,9 @@ smoke-test:
 # restarting the two services rewinds the story.
 reset:
 	docker compose restart uma-as uma-pep
+	@printf "Waiting for enforcement to come back"; \
+	for i in $$(seq 1 30); do \
+		docker compose exec -T uma-pep python3 -c "import urllib.request;urllib.request.urlopen('http://localhost:9002/health')" >/dev/null 2>&1 && break; \
+		printf "."; sleep 1; \
+	done; echo
 	@echo "Demo state rewound."

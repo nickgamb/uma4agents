@@ -27,8 +27,10 @@ contract itself — every endpoint, claim, and error — is in
 │  (unmodified MCP)  │  execute) — contains zero auth code
 └────────────────────┘
 
-Supporting: person-server (AAuth agent identity), Grafana + Loki + Promtail
-(protocol-event observability), Envoy edge (TLS for *.uma.lab), hickory-dns.
+Supporting: person-server (the AAuth agent-identity component, present for the
+identified-level path; the demo default is pseudonymous keys), Grafana + Loki
++ Promtail (protocol-event observability), Envoy edge (TLS for *.uma.lab),
+hickory-dns.
 ```
 
 The defining split: **Alice reads and trades her own vault directly** through
@@ -46,7 +48,7 @@ The gateway and the grant loop exist for the second case.
 | `alice-vault-mcp` | Alice's brokerage vault as an MCP server (fixture data); unaware it is protected | Python / MCP SDK |
 | `alice-portal` | Meridian Wealth: dashboard, holdings, trade, and Settings → Security → Agent Authorization | Python / FastAPI + vanilla SPA |
 | `keycloak` | Alice's identity provider and OIDC login for the portal | Keycloak |
-| `person-server` | AAuth Person/Agent server — issues agent identity | upstream (pinned) |
+| `person-server` | AAuth Person/Agent server — the agent-identity component for the identified-level path (the demo default signs pseudonymously) | upstream (pinned) |
 | `agent-shim` | Local proxy that lets an unmodified MCP client be the requesting agent | Python / MCP SDK |
 | observability | Grafana + Loki + Promtail; one structured event per protocol step, ticket = correlation id | Grafana stack |
 
