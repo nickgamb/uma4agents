@@ -21,7 +21,7 @@ available on request.
 | Cross-principal grant topology (RO ≠ RqP; AS is the owner's policy home) | **Keep** | The load-bearing idea; nothing else on the table has it |
 | Permission ticket as negotiation handle | **Keep** | Carried clean; its single-use rotation is exactly what makes "pending" safe |
 | `request_submitted` pending state | **Keep** | Already specifies "ask me"; the agent era only adds *where* the owner is asked |
-| Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *dictating* an intent-contract template, not just naming claim formats |
+| Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats |
 | RPT (requesting party token) | **Keep semantics, replace token** | Keep the per-permission introspection array; drop the bearer token for a PoP token |
 | RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work** | The owner-authoritative direction is right; the RS burden belongs in a gateway |
 | Resource registration model | **Transform** | Durable resources → registered *tool/capability surfaces*, declared outward via RFC 9728 Protected Resource Metadata (see below) |
@@ -58,15 +58,24 @@ with verifiable identity," "proof-of-possession on requests"), not a specific
 wire protocol, so no single vendor's roadmap can strand it. This is the UMA 2.0
 maneuver run again: recompose as a grant layer, not a rival stack.
 
-**2. Make the intent contract first-class.** The single most valuable
-transformation is claims-gathering becoming an *owner-dictated* terms
-template that the requesting side echoes and signs. This is the direct
-descendant of the 2010 "Requesting Party Policy" claim (Maler/Bryan) —
-purpose-bound, counterparty-dictated, persistent for audit. It is the
-mechanism that makes a declared intent *enforceable and testable* rather than
-merely displayed. An attestation from the requesting side (e.g. an AAuth
-mission reference) fits cleanly as *one acceptable claim type* the owner's AS
-may demand — subsuming that model rather than competing with it.
+**2. Make the owner's terms first-class — as MyTerms, extended.** The single
+most valuable transformation is claims-gathering becoming an *owner-proffered*
+terms artifact that the requesting side echoes and signs. This is the same
+shape as **IEEE 7012 — "MyTerms," published 2026 — in which the individual
+proffers machine-readable terms and the counterparty agrees**, and the direct
+descendant of UMA's own 2010 "Requesting Party Policy" claim (Maler/Bryan).
+We recommend framing the agentic intent contract as **MyTerms, extended**: the
+base standard covers privacy and data-use terms an individual proffers to a
+website; the agent era extends the same proffer-and-agree pattern to *access*
+terms — purpose, scope, expiry, prohibited actions — that an owner's AS
+dictates to a requesting agent at access time. Two mappings fall out for free:
+each tier's terms template carries an identifier (roster-shaped, in the
+Customer Commons / Creative Commons sense), and the signed, content-addressed
+agreement retained in the ledger is a MyTerms / ISO 27560-style receipt. The
+one thing this adds over base MyTerms is that the terms are *enforced inside a
+grant* rather than merely recorded — which is what makes intent testable
+rather than displayed. An attestation from the requesting side (e.g. an AAuth
+mission reference) fits as one acceptable claim type the owner's AS may demand.
 
 **3. Specify the day-1 handshake — precisely.** The first question any
 reviewer asks — "how do Alice and a new agent establish trust?" — is answered

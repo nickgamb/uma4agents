@@ -272,7 +272,7 @@ async function agentAuthView(body) {
     <div class="subtabs">
       <button data-t="approvals">Approvals <span id="apCount"></span></button>
       <button data-t="connections">Connected agents</button>
-      <button data-t="terms">Terms</button>
+      <button data-t="terms">My Terms</button>
       <button data-t="ledger">Activity ledger</button>
     </div>
     <div id="aaBody"></div>`;

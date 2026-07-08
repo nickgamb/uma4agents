@@ -98,9 +98,12 @@ ticket     = <ticket>
 ```
 
 uma-as answers `403 need_info` with a **rotated ticket** and the owner's
-dictated terms. `required_claims` is standard UMA; the `terms_template` inside
+proffered terms. `required_claims` is standard UMA; the `terms_template` inside
 the required claim is **extension #1** — UMA lets the AS name acceptable claim
-formats; here it *dictates the content*:
+formats; here it *proffers the content* the requesting side must accept. The
+template is a MyTerms-shaped artifact (IEEE 7012, extended from privacy terms
+to agentic access terms): a `template_id` is its roster identifier, and the
+signed echo returned in Beat 3 is the reciprocal agreement.
 
 ```json
 {
@@ -295,7 +298,7 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 
 | # | Extension | UMA 2.0 baseline | Why |
 |---|---|---|---|
-| 1 | `terms_template` inside `required_claims`; AS dictates claim *content* | AS names acceptable claim formats | The owner-dictated intent contract (2010 Requesting Party Policy, restored) |
+| 1 | `terms_template` inside `required_claims`; AS proffers claim *content* | AS names acceptable claim formats | Owner-proffered terms — MyTerms / IEEE 7012 extended to agentic access; descends from the 2010 Requesting Party Policy claim |
 | 2 | RPT = `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | "Genome stays, organs replaced" — AAuth binding |
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
 | 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |
