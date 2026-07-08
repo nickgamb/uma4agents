@@ -169,3 +169,8 @@ reset:
 		printf "."; sleep 1; \
 	done; echo
 	@echo "Demo state rewound."
+
+## shim-test: verify the agent-shim under a scripted MCP client (both approval paths)
+.PHONY: shim-test
+shim-test:
+	docker compose --profile test run --rm shim-test

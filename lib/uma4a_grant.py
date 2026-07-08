@@ -25,7 +25,8 @@ from jwt.algorithms import OKPAlgorithm
 
 from uma4a_http_sig import sign
 
-CONTRACT_FORMAT = "urn:uma4agents:format:intent-contract-v1+jws"
+# MyTerms-shaped agreement: the owner proffers the terms; this side signs them.
+AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
 GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket"
 
 
@@ -83,13 +84,15 @@ def parse_challenge(www_authenticate: str) -> tuple[str, str] | None:
 
 def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
                   operation: dict | None = None) -> str:
-    """Echo the dictated template, signed. Weakening any field is caught by
-    the AS; this client doesn't try."""
+    """Echo the proffered template, signed — the agreement half of the
+    MyTerms exchange. Weakening any field is caught by the AS; this client
+    doesn't try."""
     contract = {
         "iss": f"aauth:agent:{keys.keyid}",
         "aud": as_uri,
         "iat": int(time.time()),
         "template_id": template["template_id"],
+        "terms_uri": template["terms_uri"],
         "purpose": template["purpose"],
         "scope": template["scope"],
         "expires_in": template["expires_in"],
@@ -99,7 +102,7 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     }
     if operation is not None:
         contract["operation"] = operation
-    headers = {"typ": "intent-contract-v1+jws", "kid": keys.keyid}
+    headers = {"typ": "myterms-agreement-v1+jws", "kid": keys.keyid}
     if keys.agent_token:
         headers["agent_token"] = keys.agent_token
     else:
@@ -116,9 +119,12 @@ def run_grant(
     approve_terms: Callable[[dict], bool],
     operation: dict | None = None,
     on_status: Callable[[str], None] = lambda s: None,
+    on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
 ) -> str:
-    """Walks beats 2-4. Returns the RPT. Raises GrantDenied / TermsRejected."""
+    """Walks beats 2-4. Returns the RPT; the counter-signed MyTerms receipt
+    (the agent's half of the dual record) is delivered via on_receipt.
+    Raises GrantDenied / TermsRejected."""
     token_url = f"{as_uri}/token"
 
     on_status("presenting ticket at Alice's AS")
@@ -140,7 +146,7 @@ def run_grant(
                 "grant_type": GRANT_TYPE,
                 "ticket": body["ticket"],
                 "claim_token": claim,
-                "claim_token_format": CONTRACT_FORMAT,
+                "claim_token_format": AGREEMENT_FORMAT,
             },
         )
         body = r.json()
@@ -158,6 +164,8 @@ def run_grant(
 
     if "access_token" in body:
         on_status("grant issued")
+        if body.get("receipt"):
+            on_receipt(body["receipt"])
         return body["access_token"]
     raise GrantDenied(body.get("error_description") or body.get("error", "unknown"))
 
@@ -178,6 +186,7 @@ async def run_grant_async(
     approve_terms,  # async Callable[[dict], bool]
     operation: dict | None = None,
     on_status: Callable[[str], None] = lambda s: None,
+    on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
 ) -> str:
     """Async twin of run_grant — the shim awaits elicitation mid-dance."""
@@ -201,7 +210,7 @@ async def run_grant_async(
                 "grant_type": GRANT_TYPE,
                 "ticket": body["ticket"],
                 "claim_token": claim,
-                "claim_token_format": CONTRACT_FORMAT,
+                "claim_token_format": AGREEMENT_FORMAT,
             },
         )
         body = r.json()
@@ -219,5 +228,7 @@ async def run_grant_async(
 
     if "access_token" in body:
         on_status("grant issued")
+        if body.get("receipt"):
+            on_receipt(body["receipt"])
         return body["access_token"]
     raise GrantDenied(body.get("error_description") or body.get("error", "unknown"))

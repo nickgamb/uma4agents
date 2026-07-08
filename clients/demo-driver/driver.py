@@ -138,8 +138,14 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
 
         threading.Thread(target=approve_when_pending, daemon=True).start()
 
+    def hold_receipt(receipt_jws: str) -> None:
+        import base64 as _b64
+        payload = json.loads(_b64.urlsafe_b64decode(receipt_jws.split(".")[1] + "=="))
+        say(f"receipt held (both sides now have the record): terms {payload['terms_uri']}"
+            f" · agreement {payload['agreement'][:20]}…")
+
     rpt = run_grant(client, as_uri, ticket, keys, approve_terms,
-                    operation=operation, on_status=say)
+                    operation=operation, on_status=say, on_receipt=hold_receipt)
 
     headers = signed_headers("POST", GATEWAY_AUTHORITY, MCP_PATH, rpt, keys)
     r, payload = session.request("tools/call", params, headers=headers)

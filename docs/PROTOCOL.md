@@ -27,6 +27,9 @@ an explicit extension. The deviations are the findings.
 GET  /.well-known/uma4agents-configuration   discovery: issuer, endpoints, jwks_uri,
                                              claim formats accepted
 GET  /jwks                                   uma-as signing keys (RPTs, receipts)
+GET  /terms                                  the owner's terms roster (MyTerms pattern)
+GET  /terms/{template_id}                    a proffered terms document; every version
+                                             stays dereferenceable (persistent record)
 
 # Protection API (gateway/PEP only, PAT-authorized — FedAuthz shape)
 POST /rreg          register a tool surface as a resource
@@ -100,22 +103,25 @@ ticket     = <ticket>
 uma-as answers `403 need_info` with a **rotated ticket** and the owner's
 proffered terms. `required_claims` is standard UMA; the `terms_template` inside
 the required claim is **extension #1** — UMA lets the AS name acceptable claim
-formats; here it *proffers the content* the requesting side must accept. The
-template is a MyTerms-shaped artifact (IEEE 7012, extended from privacy terms
-to agentic access terms): a `template_id` is its roster identifier, and the
-signed echo returned in Beat 3 is the reciprocal agreement.
+formats; here it *proffers the content* the requesting side must accept. This
+is the MyTerms exchange (IEEE 7012, extended from privacy terms to agentic
+access terms): the terms are a **persistent, dereferenceable document** on the
+owner's roster (`terms_uri`, served at `GET /terms/…` for the life of the AS,
+every version retained), and the signed echo returned in Beat 3 is the
+reciprocal agreement.
 
 ```json
 {
   "error": "need_info",
   "ticket": "<rotated>",
   "required_claims": [{
-    "claim_type": "urn:uma4agents:claim:intent-contract",
-    "claim_token_format": ["urn:uma4agents:format:intent-contract-v1+jws"],
+    "claim_type": "urn:uma4agents:claim:myterms-agreement",
+    "claim_token_format": ["urn:uma4agents:format:myterms-agreement-v1+jws"],
     "friendly_name": "Alice's terms: Holdings summary",
     "terms_template": {
       "template_id": "alice/advisor-tier1/v2",
-      "dictated_by": "https://alice-as.uma.lab",
+      "terms_uri": "https://alice-as.uma.lab/terms/alice/advisor-tier1/v2",
+      "proffered_by": "https://alice-as.uma.lab",
       "purpose": "Suitability review for advisory onboarding",
       "scope": ["positions:read"],
       "expires_in": 172800,
@@ -140,14 +146,14 @@ standing config), then re-presents the rotated ticket with the signed contract:
 POST /token
 grant_type         = urn:ietf:params:oauth:grant-type:uma-ticket
 ticket             = <rotated>
-claim_token        = <base64url(intent-contract JWS)>
-claim_token_format = urn:uma4agents:format:intent-contract-v1+jws
+claim_token        = <base64url(myterms-agreement JWS)>
+claim_token_format = urn:uma4agents:format:myterms-agreement-v1+jws
 ```
 
-The **intent contract** is the terms template echoed and signed by the agent's
-key. Its JWS protected header carries either `jwk` (the pseudonymous bare key)
-or an `agent_token` (a PS-issued `aa-agent+jwt`, whose `cnf.jwk` is the signing
-key) — so the same key both signs the contract and, later, proves possession of
+The **agreement** is the terms template echoed and signed by the agent's key.
+Its JWS protected header carries either `jwk` (the pseudonymous bare key) or an
+`agent_token` (a PS-issued `aa-agent+jwt`, whose `cnf.jwk` is the signing key)
+— so the same key both signs the agreement and, later, proves possession of
 the RPT.
 
 ```json
@@ -156,6 +162,7 @@ the RPT.
   "aud": "https://alice-as.uma.lab",
   "iat": 1751900000,
   "template_id": "alice/advisor-tier1/v2",
+  "terms_uri": "https://alice-as.uma.lab/terms/alice/advisor-tier1/v2",
   "purpose": "Suitability review for advisory onboarding",
   "scope": ["positions:read"],
   "expires_in": 172800,
@@ -166,10 +173,11 @@ the RPT.
 ```
 
 uma-as verifies the signature against the header key, checks the echo matches
-the dictated template (nonce, family, template_id, purpose; prohibited not
-weakened; `expires_in` not extended; an operation present if the tier is
-per-operation), evaluates Alice's tier policy, and stores the contract
-(content-addressed by `s256`). Then one of:
+the proffered template (nonce, family, template_id, `terms_uri` naming the
+proffered document, purpose; prohibited not weakened; `expires_in` not
+extended; an operation present if the tier is per-operation), evaluates
+Alice's tier policy, and stores the agreement (content-addressed by `s256`).
+Then one of:
 
 - **Known connection, non-ask-me tier** → Beat 4 immediately.
 - **New agent (no standing connection), any tier** → `403 request_submitted`
@@ -190,9 +198,16 @@ expiry → `invalid_grant`.
 {
   "access_token": "<RPT: aa-auth+jwt, cnf-bound>",
   "token_type": "PoP",
-  "expires_in": 3600
+  "expires_in": 3600,
+  "receipt": "<myterms-receipt+jws>"
 }
 ```
+
+The `receipt` completes the MyTerms exchange: a JWS counter-signed by the
+owner's AS naming the `terms_uri`, the agreement hash, the agent's key
+thumbprint, and the negotiation family — so **both sides hold the record**
+(the owner's ledger keeps hers; the shim persists the agent's to its
+receipts directory).
 
 The RPT is an `aa-auth+jwt` (**extension #2**: UMA's introspection
 `permissions` array carried as a claim inside a proof-of-possession token):
@@ -209,7 +224,7 @@ The RPT is an `aa-auth+jwt` (**extension #2**: UMA's introspection
     { "resource_id": "alice-vault/get_positions",
       "resource_scopes": ["positions:read"], "exp": 1752072800 }
   ],
-  "contract": "s256:<intent-contract-hash>"
+  "contract": "s256:<agreement-hash>"
 }
 ```
 
@@ -282,12 +297,12 @@ stream.
 ```
 
 Emitted events: `resource.registered`, `resources.registered_at_startup`,
-`permission.registered`, `challenge.issued`, `ticket.presented`,
-`need_info.terms_dictated`, `contract.committed`, `contract.rejected`,
-`policy.evaluated`, `policy.updated`, `ticket.awaiting_owner`,
-`owner.notified`, `owner.decision`, `connection.approved`,
-`connection.revoked`, `rpt.issued`, `rpt.introspected`, `rpt.consumed`,
-`access.allowed`, `access.denied`.
+`terms.published`, `permission.registered`, `challenge.issued`,
+`ticket.presented`, `need_info.terms_dictated`, `contract.committed`,
+`contract.rejected`, `policy.evaluated`, `policy.updated`,
+`ticket.awaiting_owner`, `owner.notified`, `owner.decision`,
+`connection.approved`, `connection.revoked`, `rpt.issued`, `receipt.issued`,
+`rpt.introspected`, `rpt.consumed`, `access.allowed`, `access.denied`.
 
 The activity ledger is a projection: **promised** = `contract.committed`,
 **touched** = `access.allowed`, **connected** = `connection.approved`,
@@ -298,7 +313,7 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 
 | # | Extension | UMA 2.0 baseline | Why |
 |---|---|---|---|
-| 1 | `terms_template` inside `required_claims`; AS proffers claim *content* | AS names acceptable claim formats | Owner-proffered terms — MyTerms / IEEE 7012 extended to agentic access; descends from the 2010 Requesting Party Policy claim |
+| 1 | `terms_template` inside `required_claims`; AS proffers claim *content*, dereferenceable at a persistent `terms_uri`, with a counter-signed receipt returned on grant | AS names acceptable claim formats | Owner-proffered terms — MyTerms / IEEE 7012 extended to agentic access; descends from the 2010 Requesting Party Policy claim. Dual-held records: owner's ledger + agent's receipt |
 | 2 | RPT = `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | "Genome stays, organs replaced" — AAuth binding |
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
 | 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |

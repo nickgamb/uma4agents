@@ -64,18 +64,21 @@ terms artifact that the requesting side echoes and signs. This is the same
 shape as **IEEE 7012 — "MyTerms," published 2026 — in which the individual
 proffers machine-readable terms and the counterparty agrees**, and the direct
 descendant of UMA's own 2010 "Requesting Party Policy" claim (Maler/Bryan).
-We recommend framing the agentic intent contract as **MyTerms, extended**: the
-base standard covers privacy and data-use terms an individual proffers to a
-website; the agent era extends the same proffer-and-agree pattern to *access*
-terms — purpose, scope, expiry, prohibited actions — that an owner's AS
-dictates to a requesting agent at access time. Two mappings fall out for free:
-each tier's terms template carries an identifier (roster-shaped, in the
-Customer Commons / Creative Commons sense), and the signed, content-addressed
-agreement retained in the ledger is a MyTerms / ISO 27560-style receipt. The
-one thing this adds over base MyTerms is that the terms are *enforced inside a
-grant* rather than merely recorded — which is what makes intent testable
-rather than displayed. An attestation from the requesting side (e.g. an AAuth
-mission reference) fits as one acceptable claim type the owner's AS may demand.
+The POC speaks this on the wire: every version of the owner's terms is a
+**persistent, dereferenceable document** on her AS's own roster
+(`GET /terms/{template_id}`); the claim the agent commits is a
+`myterms-agreement` JWS that must name the `terms_uri` it accepted; and the
+grant returns a **counter-signed receipt**, so both sides hold the record
+(the owner's ledger and the agent's receipt store) — the dual-record shape
+ISO/IEC TS 27560 describes for consent records. What this profile adds over
+base MyTerms is that the terms are *enforced inside a grant* rather than
+merely recorded — which is what makes intent testable rather than displayed.
+Two things belong to the working group: whether agentic access terms
+(purpose, scope, expiry, prohibited actions) become a MyTerms extension
+proper, and whether standardized agentic terms deserve a shared
+Customer-Commons-style roster so agents can recognize common terms across
+owners. An attestation from the requesting side (e.g. an AAuth mission
+reference) fits as one acceptable claim type the owner's AS may demand.
 
 **3. Specify the day-1 handshake — precisely.** The first question any
 reviewer asks — "how do Alice and a new agent establish trust?" — is answered

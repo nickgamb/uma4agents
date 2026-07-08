@@ -343,10 +343,14 @@ let policyMode = "ui";
 async function renderTerms(target) {
   const tiers = await api("/api/agent/policies");
   if (policyMode === "code") return renderTermsCode(target, tiers);
+  const termsUri = (t) => `https://alice-as.uma.lab/terms/${t.terms.template_id}`;
   target.innerHTML = Object.entries(tiers).map(([id, t]) => `
     <div class="card pad-lg" style="margin-bottom:14px">
       <div class="section-head"><h2>${t.name}</h2>
         <span class="muted mono">${t.resources.join(", ")}</span></div>
+      <div class="muted" style="font-size:12.5px">Published terms:
+        <a class="mono" href="${termsUri(t)}" target="_blank">${t.terms.template_id}</a>
+        — the persistent document agents agree to</div>
       <label class="fld"><div class="lbl">Purpose your terms require the agent to accept</div>
         <input type="text" id="${id}-purpose" value="${t.terms.purpose}"></label>
       <label class="fld"><div class="lbl">Access expires after (seconds)</div>
@@ -418,7 +422,7 @@ async function renderLedger(target) {
     <thead><tr><th>Time</th><th>Event</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
     <tbody>${entries.slice().reverse().map(e => {
       let d = "";
-      if (e.kind === "promised") d = `${e.purpose}<br><span style="font-size:12px">${(e.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span>${e.operation ? `<br><span class="mono" style="font-size:12px">${e.operation.tool}(${JSON.stringify(e.operation.params)})</span>` : ""}<br><span class="thumb">${e.contract}</span>`;
+      if (e.kind === "promised") d = `${e.purpose}<br><span style="font-size:12px">${(e.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span>${e.operation ? `<br><span class="mono" style="font-size:12px">${e.operation.tool}(${JSON.stringify(e.operation.params)})</span>` : ""}${e.terms_uri ? `<br><a class="thumb" href="${e.terms_uri}" target="_blank">${e.terms_uri.split("/terms/")[1] || e.terms_uri}</a>` : ""}<br><span class="thumb">${e.contract}</span>`;
       else if (e.kind === "touched") d = `<span class="mono">${e.tool}</span> ${e.summary || ""}`;
       else if (e.kind === "approved") d = "you personally approved this";
       else if (e.kind === "denied") d = "you denied this request";

@@ -41,6 +41,11 @@ from uma4a_grant import (
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
 CACERT = os.environ.get("UMA4A_CACERT", "certs/rootCA.pem")
 KEYSTORE = os.environ.get("UMA4A_KEYSTORE", os.path.expanduser("~/.uma4agents/agent-key.pem"))
+# The agent's half of the dual-held MyTerms record: counter-signed receipts
+# from the owner's AS, one file per negotiation.
+RECEIPTS_DIR = os.environ.get(
+    "UMA4A_RECEIPTS", os.path.join(os.path.dirname(KEYSTORE) or ".", "receipts")
+)
 STANDING_MAX_EXPIRES = int(os.environ.get("UMA4A_STANDING_MAX_EXPIRES", 7 * 24 * 3600))
 AUTHORITY = httpx.URL(GATEWAY).host
 MCP_PATH = httpx.URL(GATEWAY).path
@@ -51,6 +56,27 @@ keys = AgentKeys.load_or_create(KEYSTORE)
 
 def log(msg: str) -> None:
     print(f"[agent-shim] {msg}", file=sys.stderr, flush=True)
+
+
+def store_receipt(receipt_jws: str) -> None:
+    """Persist the counter-signed receipt from the owner's AS — this agent's
+    half of the dual-held MyTerms record."""
+    import json as _json
+
+    try:
+        payload = _json.loads(
+            __import__("base64").urlsafe_b64decode(
+                receipt_jws.split(".")[1] + "=="
+            )
+        )
+        family = payload.get("family", "unknown")
+    except Exception:
+        family = "unknown"
+    os.makedirs(RECEIPTS_DIR, exist_ok=True)
+    path = os.path.join(RECEIPTS_DIR, f"{family}.receipt.jws")
+    with open(path, "w") as f:
+        f.write(receipt_jws)
+    log(f"receipt held: {path}")
 
 
 class TermsDecision(BaseModel):
@@ -131,6 +157,7 @@ class Upstream:
             rpt = await run_grant_async(
                 self.client, as_uri, ticket, keys, approve,
                 operation=operation, on_status=log,
+                on_receipt=store_receipt,
             )
             headers = signed_headers("POST", AUTHORITY, MCP_PATH, rpt, keys)
             r, payload = await self.request("tools/call", params, headers=headers)

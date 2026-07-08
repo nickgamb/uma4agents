@@ -36,7 +36,13 @@ ISSUER = os.environ.get("UMA_AS_ISSUER", "https://alice-as.uma.lab")
 KEY_PATH = os.environ.get("UMA_AS_SIGNING_KEY", "/keys/uma-as-ed25519.pem")
 PAT = os.environ.get("UMA_AS_PAT", "pat-dev-gateway")
 OWNER_TOKEN = os.environ.get("UMA_AS_OWNER_TOKEN", "owner-dev-portal")
-CONTRACT_FORMAT = "urn:uma4agents:format:intent-contract-v1+jws"
+# The owner-proffered terms + signed agreement follow the MyTerms pattern
+# (IEEE 7012): the individual proffers machine-readable terms from her own
+# roster; the counterparty agrees; both sides keep a record. The URN is ours —
+# a MyTerms-shaped profile for agentic access terms, not a claim of
+# conformance to the IEEE document's schema.
+AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
+AGREEMENT_CLAIM = "urn:uma4agents:claim:myterms-agreement"
 TICKET_TTL = 300
 PENDING_TTL = 600
 POLL_INTERVAL = 3
@@ -164,9 +170,62 @@ async def discovery() -> dict:
         "introspection_endpoint": f"{ISSUER}/introspect",
         "resource_registration_endpoint": f"{ISSUER}/rreg",
         "jwks_uri": f"{ISSUER}/jwks",
+        "terms_endpoint": f"{ISSUER}/terms",
         "grant_types_supported": ["urn:ietf:params:oauth:grant-type:uma-ticket"],
-        "claim_token_formats_supported": [CONTRACT_FORMAT],
+        "claim_token_formats_supported": [AGREEMENT_FORMAT],
     }
+
+
+# --- Terms roster (MyTerms pattern: proffered terms are persistent documents) -
+
+# Every version of every proffered terms document, kept dereferenceable at a
+# stable URI for the life of the AS — the "persistent record of the policies
+# the requesting party promises to adhere to" (2010), in MyTerms shape.
+TERMS_DOCS: dict[str, dict] = {}
+
+
+def terms_uri(template_id: str) -> str:
+    return f"{ISSUER}/terms/{template_id}"
+
+
+def publish_terms(tier_id: str, tier: dict) -> str:
+    """Archive the current version of a tier's terms as a served document.
+    Idempotent per template_id (a version's content never changes)."""
+    template_id = tier["terms"]["template_id"]
+    if template_id not in TERMS_DOCS:
+        TERMS_DOCS[template_id] = {
+            "template_id": template_id,
+            "terms_uri": terms_uri(template_id),
+            "proffered_by": ISSUER,
+            "name": tier["name"],
+            "tier": tier_id,
+            **{k: v for k, v in tier["terms"].items() if k != "template_id"},
+            "published_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        event("terms.published", template_id=template_id, tier=tier_id)
+    return terms_uri(template_id)
+
+
+@app.on_event("startup")
+async def publish_initial_terms() -> None:
+    for tier_id, tier in policy.tiers().items():
+        publish_terms(tier_id, tier)
+
+
+@app.get("/terms")
+async def terms_index() -> dict:
+    return {
+        "proffered_by": ISSUER,
+        "terms": sorted(TERMS_DOCS.values(), key=lambda d: d["template_id"]),
+    }
+
+
+@app.get("/terms/{template_id:path}")
+async def terms_document(template_id: str) -> dict:
+    doc = TERMS_DOCS.get(template_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="unknown terms document")
+    return doc
 
 
 def require_pat(request: Request) -> None:
@@ -289,7 +348,8 @@ def terms_template_for(rec: dict, tier_id: str, tier: dict, family: str) -> dict
     template = dict(tier["terms"])
     template.update(
         {
-            "dictated_by": ISSUER,
+            "proffered_by": ISSUER,
+            "terms_uri": publish_terms(tier_id, tier),
             "nonce": rec["nonce"],
             "family": family,
             "resource_id": rec["resource_id"],
@@ -314,8 +374,8 @@ def need_info_response(rec: dict, tier_id: str, tier: dict) -> JSONResponse:
             "ticket": rotated,
             "required_claims": [
                 {
-                    "claim_type": "urn:uma4agents:claim:intent-contract",
-                    "claim_token_format": [CONTRACT_FORMAT],
+                    "claim_type": AGREEMENT_CLAIM,
+                    "claim_token_format": [AGREEMENT_FORMAT],
                     "friendly_name": f"Alice's terms: {tier['name']}",
                     "terms_template": template,
                 }
@@ -359,6 +419,8 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
         raise ValueError("negotiation family mismatch")
     if contract.get("template_id") != template["template_id"]:
         raise ValueError("template version mismatch")
+    if contract.get("terms_uri") != template["terms_uri"]:
+        raise ValueError("agreement must name the proffered terms document")
     if contract.get("purpose") != template["purpose"]:
         raise ValueError("purpose was altered")
     if not set(template["prohibited"]).issubset(set(contract.get("prohibited", []))):
@@ -402,12 +464,33 @@ def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         }
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
+    jkt = jwk_thumbprint(signer_jwk)
     RPTS[jti] = {"consumed": False, "family": family,
                  "operation": claims.get("operation"),
-                 "jkt": jwk_thumbprint(signer_jwk)}
+                 "jkt": jkt}
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
           tier=rec["tier"])
-    return {"access_token": token, "token_type": "PoP", "expires_in": exp - int(now())}
+
+    # MyTerms pattern: the agreement is recorded on BOTH sides. Alice's side
+    # keeps the contract + ledger; the agent receives this counter-signed
+    # receipt naming the terms document and the agreement hash it accepted.
+    receipt = jwt.encode(
+        {
+            "iss": ISSUER,
+            "sub": jkt,
+            "iat": int(now()),
+            "family": family,
+            "terms_uri": rec["template"]["terms_uri"],
+            "template_id": rec["template"]["template_id"],
+            "agreement": contract_hash,
+        },
+        SIGNING_KEY,
+        algorithm="EdDSA",
+        headers={"typ": "myterms-receipt+jws", "kid": KID},
+    )
+    event("receipt.issued", corr=family, agreement=contract_hash)
+    return {"access_token": token, "token_type": "PoP",
+            "expires_in": exp - int(now()), "receipt": receipt}
 
 
 @app.post("/token")
@@ -441,7 +524,7 @@ async def token(
         return need_info_response(rec, tier_id, tier)
 
     # Beat 3: contract committed.
-    if claim_token_format != CONTRACT_FORMAT:
+    if claim_token_format != AGREEMENT_FORMAT:
         return JSONResponse({"error": "invalid_claim_token_format"}, status_code=400)
     if rec["state"] != "need_info":
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
@@ -468,6 +551,7 @@ async def token(
         "prohibited": contract["prohibited"],
         "expires_in": contract["expires_in"],
         "contract": contract_hash,
+        "terms_uri": contract["terms_uri"],
         "operation": contract.get("operation"),
     })
 
@@ -612,6 +696,9 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
     except KeyError:
         raise HTTPException(status_code=404, detail="unknown tier")
     event("policy.updated", tier=tier_id, template_id=updated["terms"]["template_id"])
+    # Publish the new version immediately so its terms URI dereferences from
+    # the moment it exists; earlier versions remain served (persistent record).
+    publish_terms(tier_id, updated)
     return updated
 
 
