@@ -417,7 +417,7 @@ async function renderLedger(target) {
   const entries = await api("/api/agent/ledger");
   if (!entries.length) { target.innerHTML = `<div class="empty">No agent activity yet. Every promise made, every
     resource touched, and every approval you grant is recorded here.</div>`; return; }
-  const kindChip = { promised: "", touched: "pos", approved: "warn", denied: "neg", connected: "", revoked: "neg" };
+  const kindChip = { promised: "", touched: "pos", approved: "warn", denied: "neg", refused: "neg", connected: "", revoked: "neg" };
   target.innerHTML = `<div class="card pad-lg"><table>
     <thead><tr><th>Time</th><th>Event</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
     <tbody>${entries.slice().reverse().map(e => {
@@ -426,6 +426,7 @@ async function renderLedger(target) {
       else if (e.kind === "touched") d = `<span class="mono">${e.tool}</span> ${e.summary || ""}`;
       else if (e.kind === "approved") d = "you personally approved this";
       else if (e.kind === "denied") d = "you denied this request";
+      else if (e.kind === "refused") d = `the requesting side declined your terms${e.terms_uri ? ` · <a class="thumb" href="${e.terms_uri}" target="_blank">${e.terms_uri.split("/terms/")[1]}</a>` : ""}`;
       else if (e.kind === "connected") d = `agent connected · <span class="thumb">${e.jkt}</span>`;
       else if (e.kind === "revoked") d = `access revoked · ${e.rpts_deactivated} grant(s) killed`;
       return `<tr><td class="thumb">${(e.ts || "").replace("T", " ").replace("Z", "")}</td>

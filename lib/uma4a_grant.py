@@ -133,13 +133,17 @@ def run_grant(
 
     if body.get("error") == "need_info":
         template = body["required_claims"][0]["terms_template"]
-        on_status(f"terms dictated: {template['purpose']} "
+        on_status(f"terms proffered: {template['purpose']} "
                   f"(expires {template['expires_in']}s, "
                   f"prohibited: {', '.join(template['prohibited'])})")
         if not approve_terms(template):
+            # Refusals are records too (the owner's ledger notes the decline).
+            client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                         "ticket": body["ticket"],
+                                         "decline": "true"})
             raise TermsRejected(template["template_id"])
         claim = sign_contract(template, keys, as_uri, operation)
-        on_status("intent contract signed, committing")
+        on_status("agreement signed, committing")
         r = client.post(
             token_url,
             data={
@@ -200,8 +204,12 @@ async def run_grant_async(
 
     if body.get("error") == "need_info":
         template = body["required_claims"][0]["terms_template"]
-        on_status(f"terms dictated: {template['purpose']}")
+        on_status(f"terms proffered: {template['purpose']}")
         if not await approve_terms(template):
+            # Refusals are records too (the owner's ledger notes the decline).
+            await client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                               "ticket": body["ticket"],
+                                               "decline": "true"})
             raise TermsRejected(template["template_id"])
         claim = sign_contract(template, keys, as_uri, operation)
         r = await client.post(

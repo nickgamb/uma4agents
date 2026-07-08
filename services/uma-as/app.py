@@ -220,11 +220,80 @@ async def terms_index() -> dict:
     }
 
 
+def terms_as_html(doc: dict) -> str:
+    """The plain-language representation IEEE 7012 (4.4.1) requires the terms
+    themselves to carry — same URI as the machine-readable form."""
+    prohibited = "".join(f"<li>{p}</li>" for p in doc.get("prohibited", []))
+    scopes = ", ".join(doc.get("scope", []))
+    hours = round(doc.get("expires_in", 0) / 3600, 1)
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<title>{doc['name']} — {doc['template_id']}</title>
+<style>body{{background:#0b0e14;color:#e6e9f0;font-family:system-ui;max-width:640px;
+margin:3rem auto;padding:0 1rem;line-height:1.6}}h1{{font-size:1.3rem}}
+code{{background:#161b26;padding:2px 7px;border-radius:5px}}
+.k{{color:#8a93a8}}li{{margin:.2rem 0}}</style></head><body>
+<h1>{doc['name']}</h1>
+<p class="k">Terms <code>{doc['template_id']}</code>, proffered by
+<code>{doc['proffered_by']}</code>, published {doc['published_at']}.</p>
+<p>The owner of these accounts offers access on the following terms. By
+signing an agreement that names this document, you accept all of them.</p>
+<ul>
+<li><b>Purpose</b> — access is granted only for: {doc['purpose']}.</li>
+<li><b>What you may access</b> — {scopes}.</li>
+<li><b>How long</b> — access expires {doc['expires_in']} seconds
+    (~{hours} hours) after grant.</li>
+<li><b>Prohibited</b> — you agree you will not engage in:<ul>{prohibited}</ul></li>
+<li><b>Anything not expressly permitted here is not permitted.</b></li>
+</ul>
+<p class="k">Machine-readable: this same URI as <code>application/json</code>,
+or <code>?format=jsonld</code> for a JSON-LD/ODRL representation.</p>
+</body></html>"""
+
+
+def terms_as_jsonld(doc: dict) -> dict:
+    """JSON-LD/ODRL representation (IEEE 7012 4.4.2 and Annex A principle (j):
+    structured, IRI-linked terms; ODRL for permissions/prohibitions).
+    Prohibition actions are fragment IRIs on the terms document itself, which
+    dereferences to their definition."""
+    uri = doc["terms_uri"]
+    return {
+        "@context": {
+            "odrl": "http://www.w3.org/ns/odrl/2/",
+            "dcterms": "http://purl.org/dc/terms/",
+        },
+        "@id": uri,
+        "@type": "odrl:Offer",
+        "odrl:uid": uri,
+        "dcterms:title": doc["name"],
+        "dcterms:identifier": doc["template_id"],
+        "dcterms:publisher": doc["proffered_by"],
+        "dcterms:issued": doc["published_at"],
+        "dcterms:description": doc["purpose"],
+        "odrl:permission": [
+            {"odrl:action": f"{uri}#scope/{s}", "odrl:constraint": [
+                {"odrl:leftOperand": "odrl:elapsedTime",
+                 "odrl:operator": "odrl:lteq",
+                 "odrl:rightOperand": {"@value": f"PT{doc['expires_in']}S",
+                                        "@type": "xsd:duration"}}]}
+            for s in doc.get("scope", [])
+        ],
+        "odrl:prohibition": [
+            {"odrl:action": f"{uri}#prohibited/{p}"} for p in doc.get("prohibited", [])
+        ],
+    }
+
+
 @app.get("/terms/{template_id:path}")
-async def terms_document(template_id: str) -> dict:
+async def terms_document(template_id: str, request: Request, format: str = None):
     doc = TERMS_DOCS.get(template_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="unknown terms document")
+    if format == "jsonld":
+        return JSONResponse(terms_as_jsonld(doc), media_type="application/ld+json")
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and "application/json" not in accept.split(",")[0]:
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(terms_as_html(doc))
     return doc
 
 
@@ -471,9 +540,10 @@ def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
           tier=rec["tier"])
 
-    # MyTerms pattern: the agreement is recorded on BOTH sides. Alice's side
-    # keeps the contract + ledger; the agent receives this counter-signed
-    # receipt naming the terms document and the agreement hash it accepted.
+    # MyTerms pattern (IEEE 7012 5.2.2/5.4.4): identical, dually-signed
+    # copies on both sides. The receipt embeds the complete agent-signed
+    # agreement JWS and is counter-signed by the AS, so the artifact the
+    # agent stores and the one Alice's side stores are the same record.
     receipt = jwt.encode(
         {
             "iss": ISSUER,
@@ -483,11 +553,13 @@ def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
             "terms_uri": rec["template"]["terms_uri"],
             "template_id": rec["template"]["template_id"],
             "agreement": contract_hash,
+            "agreement_jws": rec.get("agreement_jws"),
         },
         SIGNING_KEY,
         algorithm="EdDSA",
         headers={"typ": "myterms-receipt+jws", "kid": KID},
     )
+    rec["receipt"] = receipt
     event("receipt.issued", corr=family, agreement=contract_hash)
     return {"access_token": token, "token_type": "PoP",
             "expires_in": exp - int(now()), "receipt": receipt}
@@ -499,6 +571,7 @@ async def token(
     ticket: str = Form(None),
     claim_token: str = Form(None),
     claim_token_format: str = Form(None),
+    decline: str = Form(None),
 ) -> JSONResponse:
     if grant_type != "urn:ietf:params:oauth:grant-type:uma-ticket":
         return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
@@ -509,6 +582,18 @@ async def token(
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
     family = rec["family"]
     event("ticket.presented", corr=family, state=rec["state"])
+
+    # The requesting side declines the proffered terms. Refusals are records
+    # too (IEEE 7012 5.2.4): the owner's ledger notes who walked away from
+    # which terms, and the negotiation ends.
+    if decline == "true" and rec["state"] == "need_info":
+        event("terms.declined", corr=family, tier=rec.get("tier"),
+              template_id=rec.get("template", {}).get("template_id"))
+        ledger_add("refused", family, {
+            "tier": rec.get("tier"),
+            "terms_uri": rec.get("template", {}).get("terms_uri"),
+        })
+        return JSONResponse({"error": "request_denied"}, status_code=403)
 
     # Pending ask-me ticket being re-presented (beat 3, taking longer).
     if rec["state"] == "awaiting-owner":
@@ -540,6 +625,7 @@ async def token(
     contract_hash = s256(raw)
     rec["contract"] = contract
     rec["contract_hash"] = contract_hash
+    rec["agreement_jws"] = raw.decode()
     rec["signer_jwk"] = signer_jwk
     if contract["_identity"].get("sub"):
         rec["agent_sub"] = contract["_identity"]["sub"]

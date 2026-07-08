@@ -29,7 +29,11 @@ GET  /.well-known/uma4agents-configuration   discovery: issuer, endpoints, jwks_
 GET  /jwks                                   uma-as signing keys (RPTs, receipts)
 GET  /terms                                  the owner's terms roster (MyTerms pattern)
 GET  /terms/{template_id}                    a proffered terms document; every version
-                                             stays dereferenceable (persistent record)
+                                             stays dereferenceable (persistent record).
+                                             Three representations at one URI: JSON
+                                             (default), plain-language HTML
+                                             (Accept: text/html — IEEE 7012 4.4.1),
+                                             JSON-LD/ODRL (?format=jsonld — 4.4.2)
 
 # Protection API (gateway/PEP only, PAT-authorized — FedAuthz shape)
 POST /rreg          register a tool surface as a resource
@@ -204,10 +208,16 @@ expiry → `invalid_grant`.
 ```
 
 The `receipt` completes the MyTerms exchange: a JWS counter-signed by the
-owner's AS naming the `terms_uri`, the agreement hash, the agent's key
-thumbprint, and the negotiation family — so **both sides hold the record**
-(the owner's ledger keeps hers; the shim persists the agent's to its
-receipts directory).
+owner's AS that **embeds the complete agent-signed agreement JWS** alongside
+the `terms_uri`, agreement hash, agent key thumbprint, and negotiation
+family. Both sides therefore hold identical, dually-signed copies of the
+record (IEEE 7012 5.2.2/5.4.4): the owner's AS retains it with her ledger;
+the shim persists the agent's copy to its receipts directory.
+
+A requesting side that does not accept the proffered terms may end the
+negotiation with `decline=true` at the token endpoint; the refusal is a
+record too (IEEE 7012 5.2.4) — the owner's ledger gains a `refused` entry
+naming the terms that were declined.
 
 The RPT is an `aa-auth+jwt` (**extension #2**: UMA's introspection
 `permissions` array carried as a claim inside a proof-of-possession token):
@@ -297,12 +307,13 @@ stream.
 ```
 
 Emitted events: `resource.registered`, `resources.registered_at_startup`,
-`terms.published`, `permission.registered`, `challenge.issued`,
-`ticket.presented`, `need_info.terms_dictated`, `contract.committed`,
-`contract.rejected`, `policy.evaluated`, `policy.updated`,
-`ticket.awaiting_owner`, `owner.notified`, `owner.decision`,
-`connection.approved`, `connection.revoked`, `rpt.issued`, `receipt.issued`,
-`rpt.introspected`, `rpt.consumed`, `access.allowed`, `access.denied`.
+`terms.published`, `terms.declined`, `permission.registered`,
+`challenge.issued`, `ticket.presented`, `need_info.terms_dictated`,
+`contract.committed`, `contract.rejected`, `policy.evaluated`,
+`policy.updated`, `ticket.awaiting_owner`, `owner.notified`,
+`owner.decision`, `connection.approved`, `connection.revoked`, `rpt.issued`,
+`receipt.issued`, `rpt.introspected`, `rpt.consumed`, `access.allowed`,
+`access.denied`.
 
 The activity ledger is a projection: **promised** = `contract.committed`,
 **touched** = `access.allowed`, **connected** = `connection.approved`,

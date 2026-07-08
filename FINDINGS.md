@@ -60,25 +60,41 @@ maneuver run again: recompose as a grant layer, not a rival stack.
 
 **2. Make the owner's terms first-class — as MyTerms, extended.** The single
 most valuable transformation is claims-gathering becoming an *owner-proffered*
-terms artifact that the requesting side echoes and signs. This is the same
-shape as **IEEE 7012 — "MyTerms," published 2026 — in which the individual
-proffers machine-readable terms and the counterparty agrees**, and the direct
-descendant of UMA's own 2010 "Requesting Party Policy" claim (Maler/Bryan).
-The POC speaks this on the wire: every version of the owner's terms is a
-**persistent, dereferenceable document** on her AS's own roster
-(`GET /terms/{template_id}`); the claim the agent commits is a
-`myterms-agreement` JWS that must name the `terms_uri` it accepted; and the
-grant returns a **counter-signed receipt**, so both sides hold the record
-(the owner's ledger and the agent's receipt store) — the dual-record shape
-ISO/IEC TS 27560 describes for consent records. What this profile adds over
-base MyTerms is that the terms are *enforced inside a grant* rather than
-merely recorded — which is what makes intent testable rather than displayed.
-Two things belong to the working group: whether agentic access terms
-(purpose, scope, expiry, prohibited actions) become a MyTerms extension
-proper, and whether standardized agentic terms deserve a shared
-Customer-Commons-style roster so agents can recognize common terms across
-owners. An attestation from the requesting side (e.g. an AAuth mission
-reference) fits as one acceptable claim type the owner's AS may demand.
+terms artifact that the requesting side echoes and signs. This is the shape of
+**IEEE Std 7012-2025 ("MyTerms"): the individual proffers machine-readable
+terms as first party; the entity's agent agrees as second party** — and the
+direct descendant of UMA's own 2010 "Requesting Party Policy" claim
+(Maler/Bryan). The POC was checked against the published standard and speaks
+the pattern on the wire:
+
+- *Terms as persistent documents* — every version of the owner's terms is
+  dereferenceable for the life of her AS (`GET /terms/{template_id}`), with a
+  consistent name, version, and purpose (7012 §4.3), in three representations
+  at one URI: plain-language HTML (§4.4.1), JSON, and JSON-LD using ODRL
+  permissions/prohibitions (§4.4.2 and Annex A's own recommendation).
+- *Single choice, no haggling* — the AS proffers one terms set per tier; the
+  agent signs or declines (§5.2.2's "no negotiation beyond the single
+  choice").
+- *Identical dual records* — the grant returns a receipt, counter-signed by
+  the AS, that embeds the complete agent-signed agreement, so both parties
+  hold the same dually-signed artifact (§5.2.2, §5.4.4); refusals are
+  recorded too (§5.2.4), on both the owner-decision and agent-decline sides.
+- *Party identifiers* — the agent is identified pseudonymously by its public
+  key thumbprint (§5.4.5).
+
+Honest divergences from the published standard, each a working-group
+question: 7012 §4.2 places the terms roster with a **neutral nonprofit**
+(Customer-Commons-style), where this POC's roster is the owner's own AS —
+bespoke, authored terms rather than a bounded shared list chosen through a
+§5.2.1.2 chooser; there is no lawyer-readable contract text (§4.4.3); and the
+requesting side has no §5.3.1(b) counter-offer affordance. Whether agentic
+*access* terms (purpose, scope, expiry, prohibited actions) become a MyTerms
+extension with a shared roster is exactly the standardization opportunity.
+What this profile adds over base MyTerms is that the terms are *enforced
+inside a grant* rather than merely recorded — which is what makes intent
+testable rather than displayed. An attestation from the requesting side
+(e.g. an AAuth mission reference) fits as one acceptable claim type the
+owner's AS may demand.
 
 **3. Specify the day-1 handshake — precisely.** The first question any
 reviewer asks — "how do Alice and a new agent establish trust?" — is answered
