@@ -93,6 +93,10 @@ Bob's agent can be an unmodified MCP client. A small local shim handles agent
 identity, request signing, and the grant negotiation — surfacing Alice's terms
 for you to approve. See [clients/agent-shim/README.md](clients/agent-shim/README.md).
 
+## Architecture at a glance
+
+![Architecture](docs/architecture.svg)
+
 ## How it works, briefly
 
 An agent calls a tool through the gateway and is challenged with a permission

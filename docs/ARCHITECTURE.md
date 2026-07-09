@@ -4,6 +4,8 @@ A reference for understanding, operating, or reimplementing the lab. The wire
 contract itself — every endpoint, claim, and error — is in
 [PROTOCOL.md](PROTOCOL.md); this document is the system view.
 
+![Architecture at a glance](architecture.svg)
+
 ## The cast
 
 ```
