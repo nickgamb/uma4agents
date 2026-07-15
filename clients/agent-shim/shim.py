@@ -111,7 +111,14 @@ class Upstream:
                 if line.startswith("data:"):
                     return json.loads(line[5:].strip())
             return None
-        return r.json() if r.content else None
+        if not r.content:
+            return None
+        try:
+            return r.json()
+        except ValueError:
+            raise RuntimeError(
+                f"non-JSON response ({r.status_code}) from the gateway: {r.text[:200]}"
+            ) from None
 
     async def request(self, method: str, params: dict | None = None,
                       headers: dict | None = None, notification: bool = False):

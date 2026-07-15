@@ -172,6 +172,15 @@ async def agent_decision(family: str, request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/api/agent/resources")
+async def agent_resources(request: Request):
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/resources", headers=owner_headers())
+    return JSONResponse(r.json())
+
+
 @app.get("/api/agent/policies")
 async def agent_policies(request: Request):
     if require_login(request):
@@ -222,6 +231,9 @@ async def agent_ledger(request: Request):
 
 @app.get("/api/agent/events")
 async def agent_events(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+
     async def stream():
         async with httpx.AsyncClient(timeout=None) as c:
             async with c.stream("GET", f"{UMA_AS}/owner/events",

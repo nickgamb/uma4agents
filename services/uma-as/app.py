@@ -310,41 +310,112 @@ def require_owner(request: Request) -> None:
 # --- Protection API (gateway-side, FedAuthz shape) ---------------------------
 
 
+def resource_description(body: dict) -> dict:
+    """Validate and normalize a FedAuthz §3 resource description."""
+    scopes = body.get("resource_scopes")
+    if not isinstance(scopes, list) or not scopes or not all(
+        isinstance(s, str) and s for s in scopes
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_request",
+                    "error_description": "resource_scopes (non-empty list) is required"},
+        )
+    return {
+        "resource_scopes": scopes,
+        "name": body.get("name"),
+        "type": body.get("type"),
+        "icon_uri": body.get("icon_uri"),
+        "description": body.get("description"),
+    }
+
+
 @app.post("/rreg")
 async def register_resource(request: Request) -> JSONResponse:
     require_pat(request)
     body = await request.json()
+    desc = resource_description(body)
     rid = body.get("_id") or f"res_{uuid.uuid4().hex[:8]}"
-    RESOURCES[rid] = {
-        "resource_scopes": body["resource_scopes"],
-        "name": body.get("name", rid),
-        "type": body.get("type"),
-    }
-    event("resource.registered", resource_id=rid, scopes=body["resource_scopes"])
-    return JSONResponse({"_id": rid}, status_code=201)
+    created = rid not in RESOURCES
+    RESOURCES[rid] = desc
+    event("resource.registered", resource_id=rid, scopes=desc["resource_scopes"],
+          created=created)
+    return JSONResponse(
+        {"_id": rid, "user_access_policy_uri": f"{ISSUER}/owner/policies"},
+        status_code=201 if created else 200,
+        headers={"Location": f"{ISSUER}/rreg/{rid}"} if created else {},
+    )
 
 
 @app.get("/rreg")
 async def list_resources(request: Request) -> list:
+    """FedAuthz §3.4 List: bare ids, as the spec shapes it."""
     require_pat(request)
-    return [{"_id": k, **v} for k, v in RESOURCES.items()]
+    return list(RESOURCES.keys())
+
+
+@app.get("/rreg/{rid:path}")
+async def read_resource(rid: str, request: Request) -> dict:
+    require_pat(request)
+    if rid not in RESOURCES:
+        raise HTTPException(status_code=404, detail={"error": "not_found"})
+    return {"_id": rid, **{k: v for k, v in RESOURCES[rid].items() if v is not None}}
+
+
+@app.put("/rreg/{rid:path}")
+async def update_resource(rid: str, request: Request) -> dict:
+    require_pat(request)
+    if rid not in RESOURCES:
+        raise HTTPException(status_code=404, detail={"error": "not_found"})
+    RESOURCES[rid] = resource_description(await request.json())
+    event("resource.updated", resource_id=rid,
+          scopes=RESOURCES[rid]["resource_scopes"])
+    return {"_id": rid}
+
+
+@app.delete("/rreg/{rid:path}")
+async def delete_resource(rid: str, request: Request) -> JSONResponse:
+    require_pat(request)
+    if rid not in RESOURCES:
+        raise HTTPException(status_code=404, detail={"error": "not_found"})
+    del RESOURCES[rid]
+    event("resource.deleted", resource_id=rid)
+    return JSONResponse(None, status_code=204)
 
 
 @app.post("/perm")
 async def register_permission(request: Request) -> JSONResponse:
     require_pat(request)
     body = await request.json()
+    rid = body.get("resource_id")
+    # FedAuthz §4.1: the AS only issues tickets against its own registry.
+    registered = RESOURCES.get(rid)
+    if registered is None:
+        event("permission.rejected", resource_id=rid, reason="invalid_resource_id")
+        return JSONResponse(
+            {"error": "invalid_resource_id",
+             "error_description": "resource is not registered at this AS"},
+            status_code=400,
+        )
+    scopes = body.get("resource_scopes") or []
+    if not scopes or not set(scopes).issubset(set(registered["resource_scopes"])):
+        event("permission.rejected", resource_id=rid, reason="invalid_scope",
+              requested=scopes)
+        return JSONResponse(
+            {"error": "invalid_scope",
+             "error_description": "requested scopes exceed the registered resource"},
+            status_code=400,
+        )
     family = f"fam_{secrets.token_urlsafe(8)}"
     ticket = new_ticket(
         {
             "family": family,
             "state": "issued",
-            "resource_id": body["resource_id"],
-            "resource_scopes": body["resource_scopes"],
+            "resource_id": rid,
+            "resource_scopes": scopes,
         }
     )
-    event("permission.registered", corr=family, resource_id=body["resource_id"],
-          scopes=body["resource_scopes"])
+    event("permission.registered", corr=family, resource_id=rid, scopes=scopes)
     return JSONResponse({"ticket": ticket}, status_code=201)
 
 
@@ -765,6 +836,27 @@ async def owner_decision(family: str, request: Request) -> dict:
                {"decision": decision})
     await owner_notify({"type": "decided", "family": family, "decision": decision})
     return {"family": family, "decision": decision}
+
+
+@app.get("/owner/resources")
+async def owner_resources(request: Request) -> list:
+    """The owner's view of what her AS is protecting: every registered
+    resource, joined with the tier whose policy governs it. This is the
+    surface Alice attaches policy to before any agent has ever called."""
+    require_owner(request)
+    out = []
+    for rid, desc in RESOURCES.items():
+        tier_id, tier = policy.tier_for_resource(rid)
+        out.append({
+            "_id": rid,
+            "name": desc.get("name") or rid,
+            "type": desc.get("type"),
+            "resource_scopes": desc["resource_scopes"],
+            "tier": tier_id,
+            "tier_name": tier["name"] if tier else None,
+            "ask_me": tier["ask_me"] if tier else None,
+        })
+    return sorted(out, key=lambda r: r["_id"])
 
 
 @app.get("/owner/policies")

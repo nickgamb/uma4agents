@@ -272,6 +272,7 @@ async function agentAuthView(body) {
     <div class="subtabs">
       <button data-t="approvals">Approvals <span id="apCount"></span></button>
       <button data-t="connections">Connected agents</button>
+      <button data-t="resources">Protected resources</button>
       <button data-t="terms">My Terms</button>
       <button data-t="ledger">Activity ledger</button>
     </div>
@@ -283,6 +284,7 @@ async function agentAuthView(body) {
   const target = $("#aaBody");
   if (agentTab === "approvals") return renderApprovals(target);
   if (agentTab === "connections") return renderConnections(target);
+  if (agentTab === "resources") return renderResources(target);
   if (agentTab === "terms") return renderTerms(target);
   if (agentTab === "ledger") return renderLedger(target);
 }
@@ -338,6 +340,27 @@ window.revoke = async (jkt) => {
   toast("Agent revoked", `${res.rpts_deactivated} active grant(s) deactivated`, "warn");
   renderConnections($("#aaBody"));
 };
+
+async function renderResources(target) {
+  const resources = await api("/api/agent/resources");
+  if (!resources.length) { target.innerHTML = `<div class="empty">No resources are registered with your
+    authorization server yet. When your brokerage's gateway registers the surfaces it protects, they
+    appear here — this is what your policy tiers attach to.</div>`; return; }
+  target.innerHTML = `<div class="card pad-lg">
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Everything your authorization server
+      is protecting, as registered by your brokerage's gateway. Each resource is governed by one of your
+      policy tiers — edit the terms under <b>My Terms</b>.</div>
+    <table>
+    <thead><tr><th>Resource</th><th>Registered id</th><th>Type</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
+    <tbody>${resources.map(r => `<tr>
+      <td><div class="tick"><div class="badge2">🗄️</div><div class="nm">${r.name}</div></div></td>
+      <td class="thumb">${r._id}</td>
+      <td>${r.type || "—"}</td>
+      <td>${(r.resource_scopes || []).map(s => `<span class="chip">${s}</span>`).join(" ")}</td>
+      <td>${r.tier_name ? `${r.tier_name} <span class="muted mono">(${r.tier})</span>` : `<span class="chip neg">no tier — unreachable</span>`}</td>
+      <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
 
 let policyMode = "ui";
 async function renderTerms(target) {

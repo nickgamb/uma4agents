@@ -95,10 +95,12 @@ logs:
 
 ## demo acts: walk the day headlessly (same code path as the agent-shim)
 .PHONY: demo-tier1 demo-tier2 demo-tier3 demo-all
+## first contact pends as a connection request on any tier (the day-1
+## handshake), so every act accepts SIM=1 to simulate Alice's tap
 demo-tier1:
-	docker compose --profile demo run --rm demo-driver --act tier1
+	docker compose --profile demo run --rm demo-driver --act tier1 $(if $(SIM),--simulate-alice)
 demo-tier2:
-	docker compose --profile demo run --rm demo-driver --act tier2
+	docker compose --profile demo run --rm demo-driver --act tier2 $(if $(SIM),--simulate-alice)
 ## demo-tier3: pends until Alice approves in her portal (https://portal.uma.lab);
 ## add SIM=1 to simulate her tap for fully headless runs
 demo-tier3:

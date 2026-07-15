@@ -65,7 +65,13 @@ class McpSession:
                     return json.loads(line[5:].strip())
             return None
         if r.content:
-            return r.json()
+            try:
+                return r.json()
+            except ValueError:
+                raise RuntimeError(
+                    f"non-JSON response ({r.status_code}) — a proxy hop may "
+                    f"still be settling; retry in a few seconds: {r.text[:200]}"
+                ) from None
         return None
 
     def request(self, method: str, params: dict | None = None,

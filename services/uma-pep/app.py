@@ -81,23 +81,27 @@ def deny(status: int, body: dict, headers: dict | None = None) -> Response:
     )
 
 
+async def register_tool_surfaces(client: httpx.AsyncClient) -> None:
+    for tool, (rid, scopes) in TOOLS.items():
+        r = await client.post(
+            f"{AS_INTERNAL}/rreg",
+            json={"_id": rid, "name": f"Alice's vault: {tool}",
+                  "type": "mcp-tool", "resource_scopes": scopes},
+            headers={"Authorization": f"Bearer {PAT}"},
+            timeout=5.0,
+        )
+        r.raise_for_status()
+
+
 @app.on_event("startup")
 async def register_resources() -> None:
     async with httpx.AsyncClient() as client:
-        for tool, (rid, scopes) in TOOLS.items():
-            for attempt in range(30):
-                try:
-                    r = await client.post(
-                        f"{AS_INTERNAL}/rreg",
-                        json={"_id": rid, "name": f"Alice's vault: {tool}",
-                              "type": "mcp-tool", "resource_scopes": scopes},
-                        headers={"Authorization": f"Bearer {PAT}"},
-                        timeout=5.0,
-                    )
-                    r.raise_for_status()
-                    break
-                except httpx.HTTPError:
-                    time.sleep(1)
+        for attempt in range(30):
+            try:
+                await register_tool_surfaces(client)
+                break
+            except httpx.HTTPError:
+                time.sleep(1)
     event("resources.registered_at_startup", tools=list(TOOLS))
 
 
@@ -110,6 +114,19 @@ async def mint_ticket(resource_id: str, scopes: list[str]) -> str | None:
                 headers={"Authorization": f"Bearer {PAT}"},
                 timeout=5.0,
             )
+            if r.status_code == 400 and r.json().get("error") == "invalid_resource_id":
+                # The AS restarted and lost the push-registered state; the RS is
+                # the party that has to notice and repair it. (FedAuthz makes
+                # the RS responsible for keeping registrations current — this
+                # re-push is that obligation, and its awkwardness is a finding.)
+                event("resources.reregistered", reason="as_lost_registry")
+                await register_tool_surfaces(client)
+                r = await client.post(
+                    f"{AS_INTERNAL}/perm",
+                    json={"resource_id": resource_id, "resource_scopes": scopes},
+                    headers={"Authorization": f"Bearer {PAT}"},
+                    timeout=5.0,
+                )
             r.raise_for_status()
             return r.json()["ticket"]
     except httpx.HTTPError as exc:
