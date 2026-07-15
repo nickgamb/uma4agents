@@ -37,11 +37,14 @@ from pydantic import BaseModel
 
 from uma4a_grant import (
     AgentKeys,
+    DiscoveryMismatch,
     GrantDenied,
     TermsRejected,
     parse_challenge,
     run_grant_async,
     signed_headers,
+    validate_resource_metadata,
+    well_known_prm_url,
 )
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
@@ -120,6 +123,26 @@ class Upstream:
         self.session_id: str | None = None
         self._id = 0
         self._initialized = False
+        self._prm: dict | None = None
+
+    async def resource_metadata(self) -> dict | None:
+        """Beat 0 — the resource's RFC 9728 metadata, fetched once. Names
+        the owner's AS and the protected tool surfaces before any call."""
+        if self._prm is None:
+            try:
+                url = well_known_prm_url(GATEWAY)
+                doc = (await self.client.get(url)).json()
+                self._prm = validate_resource_metadata(doc, GATEWAY)
+                log(f"beat 0: resource metadata at {url} — AS "
+                    f"{', '.join(doc.get('authorization_servers', []))}, "
+                    f"{len(doc.get('tool_surfaces', []))} tool surfaces")
+            except DiscoveryMismatch:
+                raise
+            except Exception as exc:
+                # Discovery is declarative; the challenge remains authoritative.
+                log(f"beat 0: resource metadata unavailable ({exc}); "
+                    "continuing challenge-driven")
+        return self._prm
 
     async def _post(self, msg: dict, headers: dict | None = None) -> httpx.Response:
         h = {"accept": "application/json, text/event-stream",
@@ -185,6 +208,14 @@ class Upstream:
                 raise RuntimeError(f"401 without a UMA challenge: {r.text[:200]}")
             as_uri, ticket = challenge
             log(f"challenged by {as_uri}; negotiating")
+            prm = await self.resource_metadata()
+            if prm is not None:
+                try:
+                    validate_resource_metadata(prm, GATEWAY, as_uri)
+                    log("challenge corroborated against the resource's "
+                        "published metadata")
+                except DiscoveryMismatch as exc:
+                    raise RuntimeError(f"refusing to negotiate: {exc}")
             await ctx.info(f"Alice's AS requires terms before {tool} — negotiating")
 
             async def approve(template: dict) -> bool:

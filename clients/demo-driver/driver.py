@@ -21,7 +21,16 @@ import sys
 import httpx
 
 from uma4a_enroll import EnrollmentDenied, enroll
-from uma4a_grant import AgentKeys, GrantDenied, parse_challenge, run_grant, signed_headers
+from uma4a_grant import (
+    AgentKeys,
+    DiscoveryMismatch,
+    GrantDenied,
+    parse_challenge,
+    run_grant,
+    signed_headers,
+    validate_resource_metadata,
+    well_known_prm_url,
+)
 
 GATEWAY_AUTHORITY = "gateway.uma.lab"
 MCP_PATH = "/mcp"
@@ -106,7 +115,9 @@ class McpSession:
 def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
               client: httpx.Client, operation: dict | None = None,
               simulate_alice: bool = False, owner_token=None,
-              as_internal: str | None = None) -> dict:
+              as_internal: str | None = None,
+              resource_metadata: dict | None = None,
+              resource_url: str | None = None) -> dict:
     """tools/call with the full grant dance on 401."""
     params = {"name": tool, "arguments": args}
     r, payload = session.request("tools/call", params)
@@ -118,6 +129,16 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
         raise RuntimeError(f"unexpected response: {r.status_code} {r.text[:200]}")
     as_uri, ticket = challenge
     say(f"challenged: 401 from the gateway, ticket {ticket[:20]}…, AS {as_uri}")
+
+    # Corroborate the (unauthenticated) challenge header against the
+    # resource's TLS-anchored published metadata before negotiating.
+    if resource_metadata is not None:
+        try:
+            validate_resource_metadata(resource_metadata, resource_url, as_uri)
+            say("challenge corroborated: as_uri is among the resource's "
+                "published authorization servers")
+        except DiscoveryMismatch as exc:
+            raise RuntimeError(f"refusing to negotiate: {exc}")
 
     # First contact pends as a connection request regardless of tier (the
     # day-1 handshake); ask-me tiers pend per operation. The simulated Alice
@@ -235,6 +256,19 @@ def main() -> int:
             say("[simulated-alice] logged in at her IdP (direct-access grant)")
         return _alice["token"]
 
+    # Beat 0 — declarative discovery (RFC 9728). Before touching a tool, the
+    # agent reads the resource's published metadata: who the authorization
+    # server is, and which tool surfaces are protected under which scopes.
+    print("\n== Beat 0: the agent discovers the resource's shape (RFC 9728) ==")
+    prm_url = well_known_prm_url(args.gateway)
+    prm = validate_resource_metadata(
+        client.get(prm_url).json(), args.gateway)
+    say(f"resource metadata at {prm_url}")
+    say(f"authorization server(s): {', '.join(prm['authorization_servers'])}")
+    for ts in prm.get("tool_surfaces", []):
+        say(f"tool surface: {ts['tool']} -> {ts['resource_id']} "
+            f"(scopes {', '.join(ts['resource_scopes'])})")
+
     session = McpSession(client, args.gateway)
     session.initialize()
     say("MCP session established through the gateway (discovery is open)")
@@ -245,7 +279,8 @@ def main() -> int:
             print("   (first contact: an unconnected agent pends until Alice connects it)")
             out = call_tool(session, keys, "get_positions", {}, client,
                             simulate_alice=args.simulate_alice,
-                            owner_token=owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal,
+                            resource_metadata=prm, resource_url=args.gateway)
             show_result(out["payload"])
 
         if "tier2" in acts:
@@ -253,7 +288,8 @@ def main() -> int:
             out = call_tool(session, keys, "get_transactions",
                             {"account": "brokerage-main"}, client,
                             simulate_alice=args.simulate_alice,
-                            owner_token=owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal,
+                            resource_metadata=prm, resource_url=args.gateway)
             show_result(out["payload"])
 
         if "tier3" in acts:
@@ -262,7 +298,8 @@ def main() -> int:
             operation = {"tool": "execute_trade", "params": order}
             out = call_tool(session, keys, "execute_trade", order, client,
                             operation=operation, simulate_alice=args.simulate_alice,
-                            owner_token=owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal,
+                            resource_metadata=prm, resource_url=args.gateway)
             show_result(out["payload"])
 
             print("\n== Act 3 epilogue: the same RPT, tried again ==")

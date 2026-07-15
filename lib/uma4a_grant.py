@@ -94,15 +94,63 @@ class AgentKeys:
         return json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))
 
 
-def parse_challenge(www_authenticate: str) -> tuple[str, str] | None:
-    """Extracts (as_uri, ticket) from a WWW-Authenticate: UMA header."""
+@dataclass
+class Challenge:
+    """A parsed WWW-Authenticate: UMA challenge. `resource_metadata` is the
+    RFC 9728 pointer the resource may add so the client can corroborate
+    `as_uri` against the resource's own published metadata."""
+
+    as_uri: str
+    ticket: str
+    resource_metadata: str | None = None
+
+    def __iter__(self):  # (as_uri, ticket) unpacking still works
+        return iter((self.as_uri, self.ticket))
+
+
+def parse_challenge(www_authenticate: str) -> Challenge | None:
+    """Parses a WWW-Authenticate: UMA header."""
     if not www_authenticate or "UMA" not in www_authenticate:
         return None
     m_as = re.search(r'as_uri="([^"]+)"', www_authenticate)
     m_t = re.search(r'ticket="([^"]+)"', www_authenticate)
     if not (m_as and m_t):
         return None
-    return m_as.group(1), m_t.group(1)
+    m_rm = re.search(r'resource_metadata="([^"]+)"', www_authenticate)
+    return Challenge(m_as.group(1), m_t.group(1),
+                     m_rm.group(1) if m_rm else None)
+
+
+def well_known_prm_url(resource_url: str) -> str:
+    """RFC 9728 §3: the metadata URL is formed by inserting the well-known
+    path between host and any resource path component."""
+    u = httpx.URL(resource_url)
+    port = f":{u.port}" if u.port else ""
+    path = u.path.rstrip("/")
+    return (f"{u.scheme}://{u.host}{port}"
+            f"/.well-known/oauth-protected-resource{path}")
+
+
+class DiscoveryMismatch(Exception):
+    """The resource's published metadata contradicts what the client was
+    told — wrong `resource` value, or a challenge naming an AS the resource
+    never published."""
+
+
+def validate_resource_metadata(doc: dict, resource_url: str,
+                               as_uri: str | None = None) -> dict:
+    """RFC 9728 §3.3 client validation: the `resource` value must identify
+    the resource being accessed. When a challenge is in hand, its as_uri
+    must be among the published authorization_servers — the TLS-anchored
+    metadata corroborates the (unauthenticated) challenge header."""
+    if doc.get("resource") != resource_url:
+        raise DiscoveryMismatch(
+            f"metadata is for {doc.get('resource')!r}, not {resource_url!r}")
+    if as_uri is not None and as_uri not in doc.get("authorization_servers", []):
+        raise DiscoveryMismatch(
+            f"challenge names AS {as_uri}, which the resource's metadata "
+            f"does not publish ({doc.get('authorization_servers')})")
+    return doc
 
 
 def sign_contract(template: dict, keys: AgentKeys, as_uri: str,

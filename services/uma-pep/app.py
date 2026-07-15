@@ -218,12 +218,18 @@ async def challenge(tool: str, original_path: str) -> Response:
     if ticket is None:
         return deny(503, {"error": "as_unreachable"})
     event("challenge.issued", corr=None, tool=tool, resource_id=rid, path=original_path)
+    # RFC 9728 §5.1: the challenge names the resource's metadata document, so
+    # the client can corroborate as_uri against what the resource publishes
+    # instead of taking the header's word for it.
+    prm_url = (f"https://{EXPECTED_AUTHORITY}"
+               f"/.well-known/oauth-protected-resource/mcp")
     return deny(
         401,
         {"error": "uma_challenge"},
         {
             "WWW-Authenticate": (
-                f'UMA realm="{REALM}", as_uri="{AS_PUBLIC}", ticket="{ticket}"'
+                f'UMA realm="{REALM}", as_uri="{AS_PUBLIC}", ticket="{ticket}", '
+                f'resource_metadata="{prm_url}"'
             )
         },
     )
