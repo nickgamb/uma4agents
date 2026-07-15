@@ -71,11 +71,15 @@ headless demo driver).
 4. **Grant** — the AS issues a proof-of-possession RPT; the agent retries the
    signed call and the gateway lets it through after introspection.
 
-Everything else — resource registration, the PAT, introspection — is setup the
-agent never sees. Discovery is declarative too: the gateway publishes RFC 9728
+Everything else — registration, the PAT, introspection — is setup the agent
+never sees. Discovery leads the flow: the gateway publishes signed RFC 9728
 Protected Resource Metadata (`/.well-known/oauth-protected-resource`) naming
-the owner's AS and the protected tool surfaces. See [PROTOCOL.md](PROTOCOL.md)
-for the exact messages.
+the owner's AS and the *structural* tool surfaces, and both clients
+corroborate each challenge against it. Which instances belong to whom is not
+public: the owner-bound listing (`/owner-resources`) is served only to
+Alice's AS, which pulls it to build its registry (`REGISTRATION_MODE=pull`,
+the default; classic push RReg remains conformant). See
+[PROTOCOL.md](PROTOCOL.md) for the exact messages.
 
 ## The day-1 handshake (first contact)
 
@@ -86,9 +90,11 @@ presents her terms:
   tier — UMA's `request_submitted` doing double duty as owner-mediated agent
   registration. Alice sees the request in her portal (identity level, the
   agent's key thumbprint, the operation, the prohibitions it signed).
-- **Approval** records a connection keyed by the agent's RFC 7638 JWK
-  thumbprint. Thereafter, non-ask-me tiers auto-grant *for that connection*;
-  ask-me tiers still pend per operation.
+- **Approval** records a connection keyed by the agent's identity handle —
+  the RFC 7638 JWK thumbprint for a pseudonymous agent, the verified
+  issuer-qualified subject for an identified one. Thereafter, non-ask-me
+  tiers auto-grant *for that connection*; ask-me tiers still pend per
+  operation.
 - **Revocation** (Connected Agents → Revoke) deactivates the connection and any
   live RPTs immediately.
 

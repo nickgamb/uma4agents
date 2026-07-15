@@ -24,7 +24,7 @@ available on request.
 | Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats |
 | RPT (requesting party token) | **Keep semantics, replace token** | Keep the per-permission introspection array; drop the bearer token for a PoP token |
 | RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work** | The owner-authoritative direction is right; the RS burden belongs in a gateway |
-| Resource registration model | **Transform** | Durable resources → registered *tool/capability surfaces*, declared outward via RFC 9728 Protected Resource Metadata (see below) |
+| Resource registration model | **Transform** | Durable resources → *tool/capability surfaces*; and registration itself becomes method-agnostic — classic push RReg, or declarative pull from RFC 9728 metadata plus a protected owner-resources listing (rec 5; both run in this POC) |
 | Interactive claims gathering (browser redirect) | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Trust-elevation levels, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first POC; revival conditions noted |
 
@@ -116,30 +116,73 @@ sender-constrained token. In the POC the RPT is issued as a PoP token whose
 key binding is verified at enforcement time, and per-operation grants add an
 operation hash so a single-use approval authorizes exactly one call.
 
-**5. Relocate the FedAuthz resource-server burden to a gateway, and pair it
-with Protected Resource Metadata.** The 2015 adoption friction — resource
-servers making active calls to the AS — is answered by conferring UMA
-protection at a gateway (here, an MCP gateway): naive resources sit behind it
-unmodified while the gateway registers their tool surfaces, catches
-unauthorized calls, and introspects tokens. The discovery direction is
-covered by RFC 9728: the POC's gateway serves a Protected Resource Metadata
-document announcing the owner's authorization server and — as an extension
-member — the protected *tool surfaces* themselves, so an agent can find the
-AS declaratively before it is ever challenged. Registration pushes inward,
-metadata declares outward; together they answer the old friction from both
-directions. Whether the tool-surface extension belongs in an enhanced PRM
-profile is a good working-group question.
+**5. Make resource registration method-agnostic: keep RReg, add a
+declarative profile built on RFC 9728 — with the owner context split out
+behind a protected listing.** This is the same maneuver UMA already made on
+the client side (client registration is method-agnostic; DCR and now CIMD
+both fit). This POC runs both methods against an otherwise identical stack
+— `REGISTRATION_MODE=push|pull` — so the trade is measured, not argued.
+The gateway relocation stands in either mode: naive resources sit behind an
+MCP gateway that carries the FedAuthz obligations; the MCP server cannot
+tell it's protected.
 
-Two costs of the push model, observed in the build, sharpen that question.
-*Fragility*: registration state lives at the AS, so an AS restart strands the
-RS — the RS is the party that must notice (`invalid_resource_id`) and
-re-push, an obligation FedAuthz assigns but deployments will get wrong. *The
-PAT bootstrap*: a real PAT is an issued, expiring, owner-revocable OAuth
-token (this POC issues it via `client_credentials` with `uma_protection`
-scope, and the owner can cut an RS off), but the *consent that authorizes the
-RS in the first place* had to be seeded — FedAuthz's RS-side onboarding is
-the same "how does a standing relationship begin?" question the agent side
-answers with the day-1 handshake, and it deserves the same named treatment.
+*What the pull profile is.* The RS stops calling the AS and only publishes:
+a public RFC 9728 document carrying **structure** (tool surfaces + scopes,
+`authorization_servers`, `jwks_uri`, `signed_metadata` so a relayed copy
+stays attributable) and an `owner_resources_endpoint` extension member; the
+owner-bound **instances** are served at that endpoint only to a querier
+proving possession of the owner's AS signing key (RFC 9421 — the same
+message-signature profile the agent uses for proof-of-possession, pointed
+the other way). The AS pulls both layers and materializes its registry; one
+fetch replaces N registration calls. Eve's phrase for the protected layer
+named the design: **"a kind of protected webfinger for Alice's stuff."**
+Discovery at both layers, each with the right audience.
+
+*What is lost from RReg — measured.* (a) **AS naming authority**: resource
+ids move from AS-assigned to RS-published; they need namespacing under the
+resource identifier or two RSs can collide. (b) **Immediate-consistency
+CRUD**: push registration is transactional; publication is pull-with-cache,
+so staleness is a real state — repaired here by the AS re-pulling when
+`/perm` names an unknown id, the exact mirror of push mode's RS-side
+re-push after an AS restart (both failure paths hit and fixed in this
+build). (c) **The bootstrap forcing function**: RReg forced PAT issuance on
+day one; without it, the owner↔AS↔RS triangle must still be established —
+the RS-side onboarding handshake (this POC seeds Alice's day-0 consent and
+labels it honestly; a real PAT remains: issued via `client_credentials`
+with `uma_protection` scope, expiring, owner-revocable). (d) **Privacy
+inversion, resolved by the split**: RReg was a private RS→AS channel, so it
+could carry owner-bound descriptions; a public well-known document cannot —
+publishing which resources Alice owns would be a leak RReg never had. The
+owner context was never really in the resource description anyway; it was
+in the PAT — and the PAT survives untouched on the permission and
+introspection APIs. (In this POC the registry was *already* inert on the
+grant path before the switch: `/perm` + tier policy carried the load. The
+heavyweight part of RReg did no work a published document couldn't do.)
+
+*What PRM needs — little, and 9728 anticipated it.* Extension members with
+an IANA registry, `signed_metadata`, `jwks_uri`, path-inserted well-known
+URIs, and the §5.1 `resource_metadata` challenge parameter all exist. The
+profile registers two members (structural `tool_surfaces`, the
+owner-resources endpoint) and composes `resource_metadata` with the UMA
+challenge — which also buys a security improvement the baseline lacked:
+clients corroborate the challenge's `as_uri` against the resource's
+published `authorization_servers` instead of taking an unauthenticated
+header on faith. Multi-owner resource servers need guidance (per-instance
+metadata must not become an enumerable list of owners); the protected
+listing is the shape that avoids it.
+
+*Is plain "OpenAPI documentation in PRM form" sufficient for all users?*
+No — sufficient to route, insufficient to authorize. API-shape metadata
+answers "what exists and what scopes govern it." It cannot answer whose AS
+governs which instance or under what terms, because those are per-owner and
+must not be public. The permission ticket remains the intent artifact 9728
+explicitly scopes out; PRM tells you the shape of the door, the ticket
+tells you whose door and the terms of entry.
+
+*Deployment note for any pull profile* (learned as a live deadlock): the
+pull and its verification form a call cycle — the AS queries the RS while
+the RS authenticates the AS against the AS's own published keys. Verifiers
+must tolerate a live back-call or verify against pre-cached keys.
 
 **6. Bindings as thin, separate documents.** Ship the core with a first
 binding to a concrete agent-identity/PoP layer (this POC binds to AAuth) and

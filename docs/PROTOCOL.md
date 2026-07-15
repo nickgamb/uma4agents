@@ -73,20 +73,73 @@ GET  /owner/events                         SSE stream -> the portal notification
 ### uma-pep endpoints (behind the gateway)
 
 ```
-GET  /.well-known/oauth-protected-resource   RFC 9728 Protected Resource Metadata
-/check{path}                                 ext_authz decision endpoint (all methods)
+GET  /.well-known/oauth-protected-resource[/mcp]   RFC 9728 metadata: structural,
+                                                   signed (signed_metadata), with
+                                                   jwks_uri and the two extension
+                                                   members (tool_surfaces,
+                                                   owner_resources_endpoint)
+GET  /jwks                                         the resource's signing keys
+GET  /owner-resources                              owner-bound instances; served only
+                                                   to an RFC 9421-signed query by the
+                                                   owner's AS ("protected webfinger")
+/check{path}                                       ext_authz decision endpoint
 ```
 
 ## The four beats
 
-### Beat 0 — Discovery (optional)
+### Beat 0 — Discovery (two layers, two audiences)
 
-The gateway serves RFC 9728 Protected Resource Metadata at
-`GET /.well-known/oauth-protected-resource`: the resource identifier, the
-owner's `authorization_servers`, `scopes_supported`, and — as an extension
-member — `tool_surfaces`, the per-tool resource ids the gateway registers at
-the AS. An agent can locate the owner's AS declaratively before its first
-call; the challenge below remains authoritative for the ticket.
+Discovery is split by who may ask:
+
+**Public — structure.** The gateway serves RFC 9728 Protected Resource
+Metadata at `GET /.well-known/oauth-protected-resource[/mcp]`: the resource
+identifier, the owner's `authorization_servers`, `scopes_supported`,
+`jwks_uri`, `signed_metadata` (the same claims as a JWT under the resource's
+key, so a relayed copy stays attributable), and two extension members —
+`tool_surfaces` (tool names + scopes, *structural only*) and
+`owner_resources_endpoint` (below). What the public document deliberately
+omits is whose instances sit behind the resource: publishing which resources
+Alice owns at an unauthenticated URI would be a privacy leak the old push
+registration never had.
+
+**Protected — instance.** `GET /owner-resources` (advertised by the public
+document) returns the owner-bound resource instances — ids, names, scopes,
+owner — only to a querier that proves possession of the owner's AS signing
+key: RFC 9421 message signatures over the same profile the agent uses for
+proof-of-possession, verified against the AS's published JWKS. A "protected
+webfinger" for Alice's stuff: discoverable, but only by the party her
+consent already connected.
+
+Agents consume the public layer: both clients fetch it (the driver before
+any call; the shim on first challenge), validate `resource` (RFC 9728
+§3.3), and **corroborate every challenge's `as_uri` against the published
+`authorization_servers`** — a challenge naming an AS the resource never
+published is refused. The AS consumes both layers (see Registration below).
+The challenge remains authoritative for the ticket.
+
+### Registration — how the AS learns what the RS protects
+
+Two conformant methods, selected by `REGISTRATION_MODE` (both fully
+implemented and verified; the AS's registry, `/perm` validation, tickets,
+and the owner's portal view are identical downstream of either):
+
+- **push** — classic FedAuthz: the RS registers each surface at `POST /rreg`
+  (PAT-authorized, full CRUD) and is the party that must notice
+  `invalid_resource_id` after an AS restart and re-push.
+- **pull** (default) — declarative: the RS only publishes. The AS fetches
+  the public RFC 9728 document, verifies `signed_metadata` against the
+  resource's `jwks_uri`, then queries the advertised
+  `owner_resources_endpoint` with an RFC 9421-signed request and
+  materializes its registry from the response. Staleness repairs itself on
+  the AS side: an unknown `resource_id` at `/perm` triggers a re-pull. Push
+  endpoints answer `405 registration_is_declarative` — one registry, one
+  writer.
+
+Deployment note (learned as a deadlock): in pull mode the pull and its
+verification form a call cycle — the AS queries the RS while the RS
+authenticates the AS against the AS's own JWKS. Signed-query verification
+must either tolerate a live back-call (the AS must not block its service
+loop on the pull) or verify against pre-cached keys.
 
 ### Beat 1 — Challenge
 
@@ -100,8 +153,13 @@ answers:
 HTTP/1.1 401 Unauthorized
 WWW-Authenticate: UMA realm="alice-vault",
   as_uri="https://alice-as.uma.lab",
-  ticket="<ticket>"
+  ticket="<ticket>",
+  resource_metadata="https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp"
 ```
+
+`resource_metadata` is RFC 9728 §5.1: the challenge names the document that
+lets the client corroborate `as_uri` instead of taking an unauthenticated
+header's word for it.
 
 The primary challenge is stock UMA 2.0. An `AAuth-Requirement:
 requirement=grant; as_uri=…; ticket=…` form may be emitted alongside it as a
@@ -355,6 +413,7 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
 | 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |
 | 5 | Standing connection keyed by an identity handle (JWK thumbprint when pseudonymous, verified issuer-qualified subject when identified); `contract` (s256) on the RPT | — | Owner-visible, revocable relationships; promise/action/consent in one ledger. Identified agents' session keys rotate, so the key cannot be the relationship key |
-| 6 | RFC 9728 PRM with a `tool_surfaces` extension member | PRM predates UMA; not profiled for it | Declarative discovery of the AS and the protected tool surface |
+| 6 | RFC 9728 PRM with a structural `tool_surfaces` extension member; `resource_metadata` on the UMA challenge; clients corroborate `as_uri` against published `authorization_servers` | PRM predates UMA; UMA's challenge carries `as_uri` on faith | Declarative discovery of the AS and the protected surface; the challenge gains a TLS-anchored second witness. `resource_metadata` itself is stock RFC 9728 §5.1 — composing it with `WWW-Authenticate: UMA` is the extension |
+| 7 | `owner_resources_endpoint` PRM member + the protected owner-resources listing (RFC 9421-signed query by the owner's AS) | FedAuthz: RS pushes owner-bound registrations under the PAT | The privacy split: public metadata stays structural; whose instances sit behind the resource is served only to the owner's AS — "protected webfinger." Enables `REGISTRATION_MODE=pull` (declarative registration), with push remaining conformant |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.

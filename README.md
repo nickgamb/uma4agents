@@ -102,10 +102,14 @@ for you to approve. See [clients/agent-shim/README.md](clients/agent-shim/README
 
 ## How it works, briefly
 
-An agent calls a tool through the gateway and is challenged with a permission
-ticket. It presents the ticket to Alice's authorization server, which dictates
-the terms it requires; the agent signs those terms as an intent contract and
-commits. For a known agent under a permissive tier the grant is immediate; for
+Before anything else, the agent can read the resource's published metadata
+(RFC 9728): who the authorization server is and what tool surfaces exist —
+though never *whose* they are; that lives behind a protected listing only
+Alice's authorization server may query. An agent then calls a tool through
+the gateway and is challenged with a permission ticket (the challenge names
+the metadata, and the agent checks the two against each other). It presents
+the ticket to Alice's authorization server, which dictates the terms it
+requires; the agent signs those terms as an intent contract and commits. For a known agent under a permissive tier the grant is immediate; for
 a new agent or a sensitive action the request pends until Alice approves in her
 portal. The grant is a proof-of-possession token scoped to exactly what was
 agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
