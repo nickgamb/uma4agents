@@ -62,10 +62,15 @@ services:
     build: ./services/uma-as
     environment:
       UMA_AS_ISSUER: https://alice-as.uma.lab
-      UMA_AS_PAT: ${UMA_AS_PAT:-pat-dev-gateway}
-      UMA_AS_OWNER_TOKEN: ${UMA_AS_OWNER_TOKEN:-owner-dev-portal}
-      # Trust bundle for verifying agent-token issuers' TLS (AAuth dwk
-      # discovery happens over https; the lab CA signs *.uma.lab).
+      # The resource-server client the AS issues PATs to (client_credentials,
+      # scope uma_protection). Alice's day-0 consent for it is seeded.
+      UMA_AS_RS_CLIENT_ID: meridian-gateway
+      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      # The owner API takes Alice's OIDC token, validated against her realm.
+      UMA_AS_OWNER_ISSUER: https://keycloak.uma.lab/realms/alice
+      UMA_AS_OWNER: alice
+      # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
+      # realm's JWKS both ride https; the lab CA signs *.uma.lab).
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
     volumes:
       - uma-as-keys:/keys
@@ -84,7 +89,8 @@ services:
     environment:
       UMA_AS_PUBLIC: https://alice-as.uma.lab
       UMA_AS_INTERNAL: http://uma-as:9000
-      UMA_AS_PAT: ${UMA_AS_PAT:-pat-dev-gateway}
+      UMA_AS_RS_CLIENT_ID: meridian-gateway
+      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
       UMA_REALM: alice-vault
     depends_on:
       uma-as:
@@ -118,7 +124,6 @@ services:
     build: ./services/alice-portal
     environment:
       UMA_AS_INTERNAL: http://uma-as:9000
-      UMA_AS_OWNER_TOKEN: ${UMA_AS_OWNER_TOKEN:-owner-dev-portal}
       PORTAL_AUTH: ${PORTAL_AUTH:-oidc}
       OIDC_ISSUER: https://keycloak.uma.lab/realms/alice
       OIDC_CLIENT_ID: alice-portal

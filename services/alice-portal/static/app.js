@@ -342,11 +342,26 @@ window.revoke = async (handle) => {
 };
 
 async function renderResources(target) {
-  const resources = await api("/api/agent/resources");
-  if (!resources.length) { target.innerHTML = `<div class="empty">No resources are registered with your
+  const [resources, servers] = await Promise.all([
+    api("/api/agent/resources"), api("/api/agent/resource-servers")]);
+  const serverCard = `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>Resource servers</h2></div>
+    <div class="muted" style="font-size:12.5px;margin-bottom:10px">Services you have authorized to use
+      your authorization server's protection API (they hold a PAT issued in your name). Revoking one cuts
+      off its registrations, tickets, and token checks immediately.</div>
+    <table><thead><tr><th>Service</th><th>Client id</th><th>Consent</th><th>Last PAT issued</th><th class="r">Status</th><th></th></tr></thead>
+    <tbody>${servers.map(s => `<tr>
+      <td><div class="tick"><div class="badge2">🛡️</div><div class="nm">${s.name}</div></div></td>
+      <td class="thumb">${s.client_id}</td>
+      <td class="muted" style="font-size:12px">${s.consented}</td>
+      <td>${s.last_pat_issued ? s.last_pat_issued.replace("T", " ").replace("Z", "") : "—"}</td>
+      <td class="r"><span class="chip ${s.status === "active" ? "pos" : "neg"}">${s.status}</span></td>
+      <td class="r">${s.status === "active" ? `<button class="btn danger sm" onclick="revokeRs('${s.client_id}')">Revoke</button>` : ""}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+  if (!resources.length) { target.innerHTML = serverCard + `<div class="empty">No resources are registered with your
     authorization server yet. When your brokerage's gateway registers the surfaces it protects, they
     appear here — this is what your policy tiers attach to.</div>`; return; }
-  target.innerHTML = `<div class="card pad-lg">
+  target.innerHTML = serverCard + `<div class="card pad-lg">
     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Everything your authorization server
       is protecting, as registered by your brokerage's gateway. Each resource is governed by one of your
       policy tiers — edit the terms under <b>My Terms</b>.</div>
@@ -361,6 +376,12 @@ async function renderResources(target) {
       <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
+
+window.revokeRs = async (clientId) => {
+  const res = await api(`/api/agent/resource-servers/${clientId}/revoke`, { method: "POST" });
+  toast("Resource server revoked", `${res.client_id} can no longer use your protection API`, "warn");
+  renderResources($("#aaBody"));
+};
 
 let policyMode = "ui";
 async function renderTerms(target) {

@@ -105,7 +105,7 @@ class McpSession:
 
 def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
               client: httpx.Client, operation: dict | None = None,
-              simulate_alice: bool = False, owner_token: str | None = None,
+              simulate_alice: bool = False, owner_token=None,
               as_internal: str | None = None) -> dict:
     """tools/call with the full grant dance on 401."""
     params = {"name": tool, "arguments": args}
@@ -127,11 +127,11 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
 
         def approve_when_pending():
             import time
+            headers = {"Authorization": f"Bearer {owner_token()}"}
             for _ in range(40):
                 time.sleep(1.5)
                 pending = client.get(
-                    f"{as_internal}/owner/pending",
-                    headers={"Authorization": f"Bearer {owner_token}"},
+                    f"{as_internal}/owner/pending", headers=headers,
                 ).json()
                 if pending:
                     p = pending[0]
@@ -140,7 +140,7 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
                     client.post(
                         f"{as_internal}/owner/pending/{p['family']}/decision",
                         json={"decision": "approved"},
-                        headers={"Authorization": f"Bearer {owner_token}"},
+                        headers=headers,
                     )
                     return
 
@@ -179,8 +179,11 @@ def main() -> int:
     ap.add_argument("--cacert", default="certs/rootCA.pem")
     ap.add_argument("--keystore", default="keys/agent-stable-key.pem")
     ap.add_argument("--simulate-alice", action="store_true",
-                    help="approve tier-3 via the owner API (headless runs)")
-    ap.add_argument("--owner-token", default="owner-dev-portal")
+                    help="approve pending requests via the owner API (headless runs)")
+    ap.add_argument("--oidc-issuer",
+                    default="https://keycloak.uma.lab/realms/alice")
+    ap.add_argument("--alice-username", default=os.environ.get("ALICE_USERNAME", "alice"))
+    ap.add_argument("--alice-password", default=os.environ.get("ALICE_PASSWORD", "alice-demo"))
     ap.add_argument("--agent-issuer", default="https://ps.uma.lab",
                     help="Bob's agent server; pass --pseudonymous to skip enrollment")
     ap.add_argument("--pseudonymous", action="store_true",
@@ -213,6 +216,25 @@ def main() -> int:
             return 1
     acts = ["tier1", "tier2", "tier3"] if args.act == "all" else [args.act]
 
+    # The simulated Alice authenticates like the real one: a direct-access
+    # grant at her IdP yields the OIDC token her AS's owner API requires.
+    _alice: dict = {}
+
+    def owner_token() -> str:
+        if not _alice or _alice["expires"] < __import__("time").time() + 15:
+            r = client.post(
+                f"{args.oidc_issuer}/protocol/openid-connect/token",
+                data={"grant_type": "password", "client_id": "alice-portal",
+                      "username": args.alice_username,
+                      "password": args.alice_password},
+            )
+            r.raise_for_status()
+            body = r.json()
+            _alice.update(token=body["access_token"],
+                          expires=__import__("time").time() + body.get("expires_in", 60))
+            say("[simulated-alice] logged in at her IdP (direct-access grant)")
+        return _alice["token"]
+
     session = McpSession(client, args.gateway)
     session.initialize()
     say("MCP session established through the gateway (discovery is open)")
@@ -223,7 +245,7 @@ def main() -> int:
             print("   (first contact: an unconnected agent pends until Alice connects it)")
             out = call_tool(session, keys, "get_positions", {}, client,
                             simulate_alice=args.simulate_alice,
-                            owner_token=args.owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal)
             show_result(out["payload"])
 
         if "tier2" in acts:
@@ -231,7 +253,7 @@ def main() -> int:
             out = call_tool(session, keys, "get_transactions",
                             {"account": "brokerage-main"}, client,
                             simulate_alice=args.simulate_alice,
-                            owner_token=args.owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal)
             show_result(out["payload"])
 
         if "tier3" in acts:
@@ -240,7 +262,7 @@ def main() -> int:
             operation = {"tool": "execute_trade", "params": order}
             out = call_tool(session, keys, "execute_trade", order, client,
                             operation=operation, simulate_alice=args.simulate_alice,
-                            owner_token=args.owner_token, as_internal=args.as_internal)
+                            owner_token=owner_token, as_internal=args.as_internal)
             show_result(out["payload"])
 
             print("\n== Act 3 epilogue: the same RPT, tried again ==")

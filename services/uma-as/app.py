@@ -34,8 +34,27 @@ import policy
 
 ISSUER = os.environ.get("UMA_AS_ISSUER", "https://alice-as.uma.lab")
 KEY_PATH = os.environ.get("UMA_AS_SIGNING_KEY", "/keys/uma-as-ed25519.pem")
-PAT = os.environ.get("UMA_AS_PAT", "pat-dev-gateway")
-OWNER_TOKEN = os.environ.get("UMA_AS_OWNER_TOKEN", "owner-dev-portal")
+# The owner authenticates with her OIDC token (Keycloak); the AS validates
+# it against the realm's published keys. No static owner credential exists.
+OWNER_ISSUER = os.environ.get(
+    "UMA_AS_OWNER_ISSUER", "https://keycloak.uma.lab/realms/alice")
+OWNER_USERNAME = os.environ.get("UMA_AS_OWNER", "alice")
+OWNER_AUDIENCES = set(
+    os.environ.get("UMA_AS_OWNER_CLIENTS", "alice-portal").split(","))
+# Resource servers Alice has authorized to use her Protection API. The PAT
+# is an OAuth token this AS issues to these clients (client_credentials,
+# scope uma_protection); the day-0 consent for her brokerage's gateway is
+# seeded — the RS-side onboarding handshake is a finding, not a feature here.
+RS_CLIENTS: dict[str, dict] = {
+    os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway"): {
+        "secret": os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret"),
+        "name": "Meridian Wealth API gateway",
+        "status": "active",
+        "consented": "seeded at provisioning (Alice linked her brokerage)",
+        "last_pat_issued": None,
+    }
+}
+PAT_TTL = 3600
 # The owner-proffered terms + signed agreement follow the MyTerms pattern
 # (IEEE 7012): the individual proffers machine-readable terms from her own
 # roster; the counterparty agrees; both sides keep a record. The URN is ours —
@@ -300,14 +319,110 @@ async def terms_document(template_id: str, request: Request, format: str = None)
     return doc
 
 
+def _bearer(request: Request) -> str:
+    authz = request.headers.get("authorization", "")
+    if not authz.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="bearer token required")
+    return authz[7:]
+
+
+def issue_pat(client_id: str) -> dict:
+    """Mint a PAT: an OAuth access token for the Protection API, carrying
+    the owner it acts about (FedAuthz's RO context) and the RS it was
+    issued to."""
+    exp = int(now()) + PAT_TTL
+    token = jwt.encode(
+        {
+            "iss": ISSUER,
+            "sub": OWNER_USERNAME,
+            "azp": client_id,
+            "scope": "uma_protection",
+            "jti": f"pat_{uuid.uuid4().hex[:12]}",
+            "exp": exp,
+        },
+        SIGNING_KEY,
+        algorithm="EdDSA",
+        headers={"typ": "pat+jwt", "kid": KID},
+    )
+    RS_CLIENTS[client_id]["last_pat_issued"] = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    event("pat.issued", client_id=client_id, expires_in=PAT_TTL)
+    return {"access_token": token, "token_type": "Bearer",
+            "expires_in": PAT_TTL, "scope": "uma_protection"}
+
+
 def require_pat(request: Request) -> None:
-    if request.headers.get("authorization") != f"Bearer {PAT}":
-        raise HTTPException(status_code=401, detail="protection API requires the PAT")
+    """The Protection API takes the PAT this AS issued — verified, scoped,
+    and revocable via the owner's resource-server registry."""
+    try:
+        claims = jwt.decode(_bearer(request), SIGNING_KEY.public_key(),
+                            algorithms=["EdDSA"], issuer=ISSUER,
+                            options={"verify_aud": False})
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401,
+                            detail=f"protection API requires a valid PAT: {exc}")
+    if "uma_protection" not in claims.get("scope", "").split():
+        raise HTTPException(status_code=403, detail="PAT lacks uma_protection scope")
+    rs = RS_CLIENTS.get(claims.get("azp", ""))
+    if rs is None or rs["status"] != "active":
+        raise HTTPException(status_code=401,
+                            detail="the owner has revoked this resource server")
+
+
+_OWNER_KEYS_CACHE: dict[str, tuple[float, list]] = {}
+
+
+def owner_issuer_keys() -> list:
+    cached = _OWNER_KEYS_CACHE.get(OWNER_ISSUER)
+    if cached and cached[0] > now():
+        return cached[1]
+    import httpx
+
+    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=5.0) as client:
+        meta = client.get(f"{OWNER_ISSUER}/.well-known/openid-configuration")
+        meta.raise_for_status()
+        jwks = client.get(meta.json()["jwks_uri"])
+        jwks.raise_for_status()
+    keys = jwks.json()["keys"]
+    _OWNER_KEYS_CACHE[OWNER_ISSUER] = (now() + JWKS_CACHE_TTL, keys)
+    return keys
 
 
 def require_owner(request: Request) -> None:
-    if request.headers.get("authorization") != f"Bearer {OWNER_TOKEN}":
-        raise HTTPException(status_code=401, detail="owner API requires the owner token")
+    """The owner API takes Alice's own OIDC access token, validated against
+    her realm's published keys. The portal proxies it; the simulated Alice
+    obtains one by actually logging in (direct-access grant)."""
+    from jwt.algorithms import RSAAlgorithm
+
+    token = _bearer(request)
+    try:
+        header = jwt.get_unverified_header(token)
+        claims = None
+        last_error: Exception | None = None
+        for jwk_dict in owner_issuer_keys():
+            if jwk_dict.get("use") == "enc":
+                continue
+            if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
+                continue
+            try:
+                claims = jwt.decode(
+                    token, RSAAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                    algorithms=["RS256"], issuer=OWNER_ISSUER,
+                    options={"verify_aud": False})
+                break
+            except jwt.InvalidTokenError as exc:
+                last_error = exc
+        if claims is None:
+            raise last_error or ValueError("no matching realm key")
+    except Exception as exc:
+        raise HTTPException(status_code=401,
+                            detail=f"owner API requires the owner's OIDC token: {exc}")
+    if claims.get("azp") not in OWNER_AUDIENCES:
+        raise HTTPException(status_code=403,
+                            detail="token was not issued to an owner-surface client")
+    if claims.get("preferred_username") != OWNER_USERNAME:
+        raise HTTPException(status_code=403,
+                            detail="this authorization server serves a different owner")
 
 
 # --- Protection API (gateway-side, FedAuthz shape) ---------------------------
@@ -719,7 +834,25 @@ async def token(
     claim_token: str = Form(None),
     claim_token_format: str = Form(None),
     decline: str = Form(None),
+    client_id: str = Form(None),
+    client_secret: str = Form(None),
+    scope: str = Form(None),
 ) -> JSONResponse:
+    # PAT issuance: a resource server the owner has authorized exchanges its
+    # client credentials for a uma_protection-scoped token (FedAuthz's PAT).
+    if grant_type == "client_credentials":
+        rs = RS_CLIENTS.get(client_id or "")
+        if rs is None or not secrets.compare_digest(client_secret or "", rs["secret"]):
+            return JSONResponse({"error": "invalid_client"}, status_code=401)
+        if rs["status"] != "active":
+            return JSONResponse(
+                {"error": "access_denied",
+                 "error_description": "the owner has revoked this resource server"},
+                status_code=403)
+        if scope != "uma_protection":
+            return JSONResponse({"error": "invalid_scope"}, status_code=400)
+        return JSONResponse(issue_pat(client_id))
+
     if grant_type != "urn:ietf:params:oauth:grant-type:uma-ticket":
         return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
 
@@ -912,6 +1045,29 @@ async def owner_decision(family: str, request: Request) -> dict:
                {"decision": decision})
     await owner_notify({"type": "decided", "family": family, "decision": decision})
     return {"family": family, "decision": decision}
+
+
+@app.get("/owner/resource-servers")
+async def owner_resource_servers(request: Request) -> list:
+    """The resource servers Alice has authorized to use her Protection API —
+    the other standing relationship her AS holds, beside agent connections."""
+    require_owner(request)
+    return [
+        {"client_id": cid, **{k: v for k, v in rs.items() if k != "secret"}}
+        for cid, rs in RS_CLIENTS.items()
+    ]
+
+
+@app.post("/owner/resource-servers/{client_id}/revoke")
+async def owner_revoke_resource_server(client_id: str, request: Request) -> dict:
+    require_owner(request)
+    rs = RS_CLIENTS.get(client_id)
+    if rs is None:
+        raise HTTPException(status_code=404, detail="unknown resource server")
+    rs["status"] = "revoked"
+    event("resource_server.revoked", client_id=client_id)
+    ledger_add("revoked", "-", {"resource_server": client_id})
+    return {"client_id": client_id, "status": "revoked"}
 
 
 @app.get("/owner/resources")

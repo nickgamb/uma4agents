@@ -109,12 +109,19 @@ demo-all:
 	docker compose --profile demo run --rm demo-driver --act all $(if $(SIM),--simulate-alice)
 
 ## audit: print Alice's activity ledger (promised / touched / personally approved)
+# Logs in as Alice for real (direct-access grant at her IdP) — the owner API
+# takes her OIDC token, not a static credential.
 .PHONY: audit
 audit:
 	@docker compose exec -T uma-as python3 -c "\
-	import urllib.request, json; \
+	import urllib.request, urllib.parse, json, ssl; \
+	ctx = ssl.create_default_context(cafile='/certs/rootCA.pem'); \
+	tok = json.load(urllib.request.urlopen(urllib.request.Request( \
+		'https://keycloak.uma.lab/realms/alice/protocol/openid-connect/token', \
+		data=urllib.parse.urlencode({'grant_type': 'password', 'client_id': 'alice-portal', \
+			'username': 'alice', 'password': 'alice-demo'}).encode()), context=ctx))['access_token']; \
 	req = urllib.request.Request('http://localhost:9000/owner/ledger', \
-		headers={'Authorization': 'Bearer ' + __import__('os').environ.get('UMA_AS_OWNER_TOKEN', 'owner-dev-portal')}); \
+		headers={'Authorization': 'Bearer ' + tok}); \
 	entries = json.load(urllib.request.urlopen(req)); \
 	print(json.dumps(entries, indent=2))"
 
@@ -164,7 +171,7 @@ smoke-test:
 # Grant-layer state (tickets, contracts, ledger) is in-memory by design;
 # restarting the two services rewinds the story.
 reset:
-	docker compose restart uma-as uma-pep
+	docker compose restart uma-as uma-pep agentgateway
 	@printf "Waiting for enforcement to come back"; \
 	for i in $$(seq 1 30); do \
 		docker compose exec -T uma-pep python3 -c "import urllib.request;urllib.request.urlopen('http://localhost:9002/health')" >/dev/null 2>&1 && break; \

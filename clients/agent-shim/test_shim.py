@@ -26,8 +26,22 @@ from mcp.types import ElicitRequestParams, ElicitResult
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AS_URI = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
-OWNER_TOKEN = os.environ.get("UMA4A_OWNER_TOKEN", "owner-dev-portal")
+OIDC_ISSUER = os.environ.get("UMA4A_OIDC_ISSUER",
+                             "https://keycloak.uma.lab/realms/alice")
+ALICE_LOGIN = (os.environ.get("ALICE_USERNAME", "alice"),
+               os.environ.get("ALICE_PASSWORD", "alice-demo"))
 CACERT = os.path.join(REPO, "certs/rootCA.pem")
+
+
+def alice_token(client: httpx.Client) -> str:
+    """The simulated Alice logs in for real: direct-access grant at her IdP."""
+    r = client.post(
+        f"{OIDC_ISSUER}/protocol/openid-connect/token",
+        data={"grant_type": "password", "client_id": "alice-portal",
+              "username": ALICE_LOGIN[0], "password": ALICE_LOGIN[1]},
+    )
+    r.raise_for_status()
+    return r.json()["access_token"]
 
 PASS = 0
 FAIL = 0
@@ -65,19 +79,19 @@ def simulate_alice_approval(count: int = 1) -> None:
     """Approve the next `count` pending items (connection requests and
     operation approvals alike) — standing in for Alice's portal taps."""
     client = httpx.Client(verify=CACERT, timeout=10.0)
+    headers = {"Authorization": f"Bearer {alice_token(client)}"}
     approved = 0
     for _ in range(60):
         time.sleep(1.0)
         pending = client.get(
-            f"{AS_URI}/owner/pending",
-            headers={"Authorization": f"Bearer {OWNER_TOKEN}"},
+            f"{AS_URI}/owner/pending", headers=headers,
         ).json()
         for p in pending:
             print(f"   [simulated-alice] approving {p['kind']} {p['family']}", flush=True)
             client.post(
                 f"{AS_URI}/owner/pending/{p['family']}/decision",
                 json={"decision": "approved"},
-                headers={"Authorization": f"Bearer {OWNER_TOKEN}"},
+                headers=headers,
             )
             approved += 1
             if approved >= count:

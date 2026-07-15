@@ -13,6 +13,8 @@ owner token — the portal proxies it.
 """
 
 import os
+import secrets as pysecrets
+import time
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
@@ -25,7 +27,6 @@ from starlette.responses import StreamingResponse
 from mcp_client import VaultClient
 
 UMA_AS = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
-OWNER_TOKEN = os.environ.get("UMA_AS_OWNER_TOKEN", "owner-dev-portal")
 VAULT_MCP = os.environ.get("VAULT_MCP_URL", "http://alice-vault-mcp:9020/mcp")
 AUTH_MODE = os.environ.get("PORTAL_AUTH", "oidc")
 OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "https://keycloak.uma.lab/realms/alice")
@@ -47,9 +48,54 @@ if AUTH_MODE == "oidc":
         token_endpoint_auth_method="none",
     )
 
+# Alice's OIDC tokens, held server-side (Keycloak tokens overflow a cookie);
+# the session cookie carries only an opaque reference. The owner API sees her
+# actual access token — there is no static portal credential.
+TOKENS: dict[str, dict] = {}
 
-def owner_headers() -> dict:
-    return {"Authorization": f"Bearer {OWNER_TOKEN}"}
+
+def _store_tokens(request: Request, token: dict) -> None:
+    sid = request.session.get("sid") or pysecrets.token_urlsafe(16)
+    request.session["sid"] = sid
+    TOKENS[sid] = {
+        "access_token": token["access_token"],
+        "refresh_token": token.get("refresh_token"),
+        "expires_at": token.get("expires_at")
+        or time.time() + token.get("expires_in", 300),
+    }
+
+
+async def owner_token(request: Request) -> str | None:
+    """Alice's current access token, refreshed against Keycloak when stale."""
+    tok = TOKENS.get(request.session.get("sid", ""))
+    if tok is None:
+        return None
+    if tok["expires_at"] > time.time() + 15:
+        return tok["access_token"]
+    if not tok.get("refresh_token"):
+        return None
+    metadata = await oauth.keycloak.load_server_metadata()
+    async with httpx.AsyncClient() as c:
+        r = await c.post(
+            metadata["token_endpoint"],
+            data={"grant_type": "refresh_token",
+                  "refresh_token": tok["refresh_token"],
+                  "client_id": OIDC_CLIENT_ID},
+        )
+    if r.status_code != 200:
+        return None
+    fresh = r.json()
+    tok.update(
+        access_token=fresh["access_token"],
+        refresh_token=fresh.get("refresh_token", tok["refresh_token"]),
+        expires_at=time.time() + fresh.get("expires_in", 300),
+    )
+    return tok["access_token"]
+
+
+async def owner_headers(request: Request) -> dict:
+    token = await owner_token(request)
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 def current_user(request: Request) -> str | None:
@@ -78,11 +124,13 @@ async def auth_callback(request: Request):
     token = await oauth.keycloak.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
     request.session["user"] = userinfo.get("name") or userinfo.get("preferred_username", "Alice")
+    _store_tokens(request, token)
     return RedirectResponse(url="/")
 
 
 @app.get("/auth/logout")
 async def logout(request: Request):
+    TOKENS.pop(request.session.get("sid", ""), None)
     request.session.clear()
     return RedirectResponse(url="/login")
 
@@ -157,7 +205,7 @@ async def agent_pending(request: Request):
     if require_login(request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/pending", headers=owner_headers())
+        r = await c.get(f"{UMA_AS}/owner/pending", headers=await owner_headers(request))
     return JSONResponse(r.json())
 
 
@@ -168,7 +216,7 @@ async def agent_decision(family: str, request: Request):
     body = await request.json()
     async with httpx.AsyncClient() as c:
         r = await c.post(f"{UMA_AS}/owner/pending/{family}/decision",
-                         json=body, headers=owner_headers())
+                         json=body, headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
@@ -177,8 +225,28 @@ async def agent_resources(request: Request):
     if require_login(request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/resources", headers=owner_headers())
+        r = await c.get(f"{UMA_AS}/owner/resources", headers=await owner_headers(request))
     return JSONResponse(r.json())
+
+
+@app.get("/api/agent/resource-servers")
+async def agent_resource_servers(request: Request):
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/resource-servers",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json())
+
+
+@app.post("/api/agent/resource-servers/{client_id}/revoke")
+async def agent_revoke_resource_server(client_id: str, request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/resource-servers/{client_id}/revoke",
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.get("/api/agent/policies")
@@ -186,7 +254,7 @@ async def agent_policies(request: Request):
     if require_login(request):
         return JSONResponse({}, status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/policies", headers=owner_headers())
+        r = await c.get(f"{UMA_AS}/owner/policies", headers=await owner_headers(request))
     return JSONResponse(r.json())
 
 
@@ -197,7 +265,7 @@ async def agent_update_policy(tier_id: str, request: Request):
     body = await request.json()
     async with httpx.AsyncClient() as c:
         r = await c.put(f"{UMA_AS}/owner/policies/{tier_id}",
-                        json=body, headers=owner_headers())
+                        json=body, headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
@@ -206,7 +274,7 @@ async def agent_connections(request: Request):
     if require_login(request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/connections", headers=owner_headers())
+        r = await c.get(f"{UMA_AS}/owner/connections", headers=await owner_headers(request))
     return JSONResponse(r.json())
 
 
@@ -216,7 +284,7 @@ async def agent_revoke(jkt: str, request: Request):
         return JSONResponse({"error": "auth"}, status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.post(f"{UMA_AS}/owner/connections/{jkt}/revoke",
-                         headers=owner_headers())
+                         headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
@@ -225,7 +293,7 @@ async def agent_ledger(request: Request):
     if require_login(request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/ledger", headers=owner_headers())
+        r = await c.get(f"{UMA_AS}/owner/ledger", headers=await owner_headers(request))
     return JSONResponse(r.json())
 
 
@@ -237,7 +305,7 @@ async def agent_events(request: Request):
     async def stream():
         async with httpx.AsyncClient(timeout=None) as c:
             async with c.stream("GET", f"{UMA_AS}/owner/events",
-                                headers=owner_headers()) as r:
+                                headers=await owner_headers(request)) as r:
                 async for chunk in r.aiter_raw():
                     yield chunk
 

@@ -31,7 +31,11 @@ from uma4a_http_sig import VerifyError, verify
 
 AS_PUBLIC = os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab")
 AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
-PAT = os.environ.get("UMA_AS_PAT", "pat-dev-gateway")
+# The gateway's standing as a resource server: client credentials it
+# exchanges at the AS for a PAT (scope uma_protection) — the FedAuthz
+# obligation, done as OAuth rather than a shared string.
+RS_CLIENT_ID = os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
+RS_CLIENT_SECRET = os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret")
 REALM = os.environ.get("UMA_REALM", "alice-vault")
 # The authority Alice's vault is served under. Signature verification
 # reconstructs the signed components from configuration rather than trusting
@@ -81,13 +85,41 @@ def deny(status: int, body: dict, headers: dict | None = None) -> Response:
     )
 
 
+_PAT: dict = {"token": None, "expires": 0.0}
+
+
+async def get_pat(client: httpx.AsyncClient, force: bool = False) -> str:
+    """The current PAT, refreshed via client_credentials before it expires."""
+    if force or _PAT["token"] is None or _PAT["expires"] < time.time() + 60:
+        r = await client.post(
+            f"{AS_INTERNAL}/token",
+            data={"grant_type": "client_credentials",
+                  "client_id": RS_CLIENT_ID,
+                  "client_secret": RS_CLIENT_SECRET,
+                  "scope": "uma_protection"},
+            timeout=5.0,
+        )
+        r.raise_for_status()
+        body = r.json()
+        _PAT["token"] = body["access_token"]
+        _PAT["expires"] = time.time() + body.get("expires_in", 300)
+        event("pat.obtained", client_id=RS_CLIENT_ID,
+              expires_in=body.get("expires_in"))
+    return _PAT["token"]
+
+
+async def pat_headers(client: httpx.AsyncClient) -> dict:
+    return {"Authorization": f"Bearer {await get_pat(client)}"}
+
+
 async def register_tool_surfaces(client: httpx.AsyncClient) -> None:
+    headers = await pat_headers(client)
     for tool, (rid, scopes) in TOOLS.items():
         r = await client.post(
             f"{AS_INTERNAL}/rreg",
             json={"_id": rid, "name": f"Alice's vault: {tool}",
                   "type": "mcp-tool", "resource_scopes": scopes},
-            headers={"Authorization": f"Bearer {PAT}"},
+            headers=headers,
             timeout=5.0,
         )
         r.raise_for_status()
@@ -111,9 +143,17 @@ async def mint_ticket(resource_id: str, scopes: list[str]) -> str | None:
             r = await client.post(
                 f"{AS_INTERNAL}/perm",
                 json={"resource_id": resource_id, "resource_scopes": scopes},
-                headers={"Authorization": f"Bearer {PAT}"},
+                headers=await pat_headers(client),
                 timeout=5.0,
             )
+            if r.status_code == 401:
+                # PAT expired mid-flight or the AS restarted with new keys.
+                r = await client.post(
+                    f"{AS_INTERNAL}/perm",
+                    json={"resource_id": resource_id, "resource_scopes": scopes},
+                    headers={"Authorization": f"Bearer {await get_pat(client, force=True)}"},
+                    timeout=5.0,
+                )
             if r.status_code == 400 and r.json().get("error") == "invalid_resource_id":
                 # The AS restarted and lost the push-registered state; the RS is
                 # the party that has to notice and repair it. (FedAuthz makes
@@ -124,7 +164,7 @@ async def mint_ticket(resource_id: str, scopes: list[str]) -> str | None:
                 r = await client.post(
                     f"{AS_INTERNAL}/perm",
                     json={"resource_id": resource_id, "resource_scopes": scopes},
-                    headers={"Authorization": f"Bearer {PAT}"},
+                    headers=await pat_headers(client),
                     timeout=5.0,
                 )
             r.raise_for_status()
@@ -139,7 +179,7 @@ async def introspect(token: str, consume: bool) -> dict:
         r = await client.post(
             f"{AS_INTERNAL}/introspect",
             data={"token": token, "consume": "true" if consume else "false"},
-            headers={"Authorization": f"Bearer {PAT}"},
+            headers=await pat_headers(client),
             timeout=5.0,
         )
         r.raise_for_status()
@@ -152,7 +192,7 @@ async def report_access(family: str, tool: str, summary: str) -> None:
             await client.post(
                 f"{AS_INTERNAL}/audit/access",
                 json={"family": family, "tool": tool, "summary": summary},
-                headers={"Authorization": f"Bearer {PAT}"},
+                headers=await pat_headers(client),
                 timeout=5.0,
             )
     except httpx.HTTPError:
