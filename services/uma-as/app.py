@@ -52,9 +52,18 @@ RS_CLIENTS: dict[str, dict] = {
         "status": "active",
         "consented": "seeded at provisioning (Alice linked her brokerage)",
         "last_pat_issued": None,
+        # Where the RS publishes itself — the root of declarative
+        # registration (RFC 9728 metadata is derived from this identifier).
+        "resource_uri": os.environ.get(
+            "UMA_AS_RS_RESOURCE_URI", "https://gateway.uma.lab/mcp"),
     }
 }
 PAT_TTL = 3600
+# push: the RS registers its resources here (classic FedAuthz /rreg).
+# pull: this AS *reads* the RS's published metadata — public structure from
+# the RFC 9728 document, owner-bound instances from the protected
+# owner-resources endpoint — and materializes its registry from it.
+REGISTRATION_MODE = os.environ.get("REGISTRATION_MODE", "push")
 # The owner-proffered terms + signed agreement follow the MyTerms pattern
 # (IEEE 7012): the individual proffers machine-readable terms from her own
 # roster; the counterparty agrees; both sides keep a record. The URN is ours —
@@ -425,6 +434,116 @@ def require_owner(request: Request) -> None:
                             detail="this authorization server serves a different owner")
 
 
+# --- Declarative registration (pull mode) -------------------------------------
+
+
+def well_known_prm_url(resource_uri: str) -> str:
+    from urllib.parse import urlparse
+
+    u = urlparse(resource_uri)
+    return (f"{u.scheme}://{u.netloc}"
+            f"/.well-known/oauth-protected-resource{u.path.rstrip('/')}")
+
+
+def pull_registrations(client_id: str) -> int:
+    """Read the RS's published metadata and materialize the registry.
+
+    1. Fetch the public RFC 9728 document (TLS-anchored) and verify its
+       signed_metadata against the resource's jwks_uri — the pulled copy is
+       attributable, not just transport-secure.
+    2. Query the protected owner-resources endpoint it advertises, signing
+       the request with this AS's key (RFC 9421) — "protected webfinger":
+       the RS serves the owner-bound instances only to her AS.
+    """
+    import httpx
+
+    from uma4a_http_sig import sign as http_sign
+
+    rs = RS_CLIENTS[client_id]
+    resource_uri = rs["resource_uri"]
+    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=10.0) as client:
+        prm = client.get(well_known_prm_url(resource_uri))
+        prm.raise_for_status()
+        doc = prm.json()
+        if doc.get("resource") != resource_uri:
+            raise ValueError(f"metadata is for {doc.get('resource')!r}")
+        if ISSUER not in doc.get("authorization_servers", []):
+            raise ValueError("the RS's metadata does not name this AS")
+
+        jwks = client.get(doc["jwks_uri"])
+        jwks.raise_for_status()
+        signed = doc.get("signed_metadata")
+        if not signed:
+            raise ValueError("published metadata is not signed")
+        verified = None
+        for jwk_dict in jwks.json()["keys"]:
+            try:
+                verified = jwt.decode(signed, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                      algorithms=["EdDSA"],
+                                      options={"verify_aud": False})
+                break
+            except jwt.InvalidTokenError:
+                continue
+        if verified is None or verified.get("iss") != resource_uri:
+            raise ValueError("signed_metadata did not verify against the "
+                             "resource's published keys")
+
+        endpoint = verified.get("owner_resources_endpoint")
+        if not endpoint:
+            raise ValueError("no owner_resources_endpoint in signed metadata")
+        from urllib.parse import urlparse
+
+        u = urlparse(endpoint)
+        headers = http_sign(method="GET", authority=u.netloc, path=u.path,
+                            authorization="", key=SIGNING_KEY, keyid=KID)
+        listing = client.get(endpoint, headers=headers)
+        listing.raise_for_status()
+        body = listing.json()
+
+    count = 0
+    for res in body.get("resources", []):
+        RESOURCES[res["_id"]] = {
+            "resource_scopes": res["resource_scopes"],
+            "name": res.get("name"),
+            "type": res.get("type"),
+            "icon_uri": None,
+            "description": None,
+            "registered_via": "pull",
+            "owner": body.get("owner"),
+        }
+        count += 1
+    event("resources.pulled", client_id=client_id, owner=body.get("owner"),
+          count=count, endpoint=endpoint)
+    return count
+
+
+@app.on_event("startup")
+async def pull_at_startup() -> None:
+    if REGISTRATION_MODE != "pull":
+        return
+    import asyncio
+
+    async def attempt_loop():
+        for _ in range(60):
+            for client_id in RS_CLIENTS:
+                try:
+                    # Off the event loop: the RS authenticates this AS's
+                    # signed query by fetching *our* JWKS, so the pull and
+                    # the verification form a call cycle — a blocking pull
+                    # deadlocks a single-threaded AS. (Finding: pull-model
+                    # verification must tolerate a live back-call, or keys
+                    # must be cached ahead of need.)
+                    await asyncio.to_thread(pull_registrations, client_id)
+                    return
+                except Exception as exc:
+                    event("resources.pull_retry", client_id=client_id,
+                          error=str(exc)[:200])
+            await asyncio.sleep(2)
+        event("resources.pull_failed", note="lazy pull on first /perm remains")
+
+    asyncio.create_task(attempt_loop())
+
+
 # --- Protection API (gateway-side, FedAuthz shape) ---------------------------
 
 
@@ -448,9 +567,21 @@ def resource_description(body: dict) -> dict:
     }
 
 
+def reject_push() -> None:
+    """In pull mode the registry is materialized from what the RS publishes;
+    accepting pushes too would leave two writers and no single truth."""
+    if REGISTRATION_MODE == "pull":
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "registration_is_declarative",
+                    "error_description": "this AS pulls the RS's published "
+                    "metadata; update the published documents instead"})
+
+
 @app.post("/rreg")
 async def register_resource(request: Request) -> JSONResponse:
     require_pat(request)
+    reject_push()
     body = await request.json()
     desc = resource_description(body)
     rid = body.get("_id") or f"res_{uuid.uuid4().hex[:8]}"
@@ -483,6 +614,7 @@ async def read_resource(rid: str, request: Request) -> dict:
 @app.put("/rreg/{rid:path}")
 async def update_resource(rid: str, request: Request) -> dict:
     require_pat(request)
+    reject_push()
     if rid not in RESOURCES:
         raise HTTPException(status_code=404, detail={"error": "not_found"})
     RESOURCES[rid] = resource_description(await request.json())
@@ -494,6 +626,7 @@ async def update_resource(rid: str, request: Request) -> dict:
 @app.delete("/rreg/{rid:path}")
 async def delete_resource(rid: str, request: Request) -> JSONResponse:
     require_pat(request)
+    reject_push()
     if rid not in RESOURCES:
         raise HTTPException(status_code=404, detail={"error": "not_found"})
     del RESOURCES[rid]
@@ -508,6 +641,20 @@ async def register_permission(request: Request) -> JSONResponse:
     rid = body.get("resource_id")
     # FedAuthz §4.1: the AS only issues tickets against its own registry.
     registered = RESOURCES.get(rid)
+    if registered is None and REGISTRATION_MODE == "pull":
+        # The mirror of push mode's RS-side repair: an unknown id means our
+        # pulled copy may be stale, so re-read what the RS publishes.
+        # (to_thread: see pull_at_startup — the pull triggers a JWKS
+        # back-call from the RS and must not block this event loop.)
+        import asyncio
+
+        for client_id in RS_CLIENTS:
+            try:
+                await asyncio.to_thread(pull_registrations, client_id)
+            except Exception as exc:
+                event("resources.pull_retry", client_id=client_id,
+                      error=str(exc)[:200])
+        registered = RESOURCES.get(rid)
     if registered is None:
         event("permission.rejected", resource_id=rid, reason="invalid_resource_id")
         return JSONResponse(
@@ -1087,6 +1234,7 @@ async def owner_resources(request: Request) -> list:
             "tier": tier_id,
             "tier_name": tier["name"] if tier else None,
             "ask_me": tier["ask_me"] if tier else None,
+            "registered_via": desc.get("registered_via", "push"),
         })
     return sorted(out, key=lambda r: r["_id"])
 

@@ -24,6 +24,9 @@ import sys
 import time
 
 import httpx
+import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI, Request, Response
 from jwt.algorithms import OKPAlgorithm
 
@@ -37,6 +40,16 @@ AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
 RS_CLIENT_ID = os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
 RS_CLIENT_SECRET = os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret")
 REALM = os.environ.get("UMA_REALM", "alice-vault")
+# How the AS learns what this RS protects. "push": the classic FedAuthz
+# direction — this PEP registers each surface at /rreg on startup and
+# repairs on invalid_resource_id. "pull": the RS only *publishes* — public
+# structure in the RFC 9728 document, owner-bound instances behind the
+# protected owner-resources endpoint — and the AS comes and reads.
+REGISTRATION_MODE = os.environ.get("REGISTRATION_MODE", "push")
+# The owner whose instances this (single-owner) gateway fronts.
+OWNER = os.environ.get("UMA_OWNER", "alice")
+PEP_KEY_PATH = os.environ.get("UMA_PEP_SIGNING_KEY", "/keys/uma-pep-ed25519.pem")
+PEP_KID = "uma-pep-1"
 # The authority Alice's vault is served under. Signature verification
 # reconstructs the signed components from configuration rather than trusting
 # forwarded headers (the ext_authz hop rewrites Host).
@@ -56,6 +69,24 @@ log = logging.getLogger("uma-pep")
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
 app = FastAPI(title="uma-pep")
+
+
+def load_or_create_key(path: str) -> Ed25519PrivateKey:
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            return serialization.load_pem_private_key(f.read(), password=None)
+    key = Ed25519PrivateKey.generate()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ))
+    return key
+
+
+PEP_KEY = load_or_create_key(PEP_KEY_PATH)
 
 
 def event(name: str, corr: str | None = None, **details) -> None:
@@ -127,6 +158,10 @@ async def register_tool_surfaces(client: httpx.AsyncClient) -> None:
 
 @app.on_event("startup")
 async def register_resources() -> None:
+    if REGISTRATION_MODE != "push":
+        event("registration.declarative", mode=REGISTRATION_MODE,
+              note="publishing only; the AS pulls what it needs")
+        return
     async with httpx.AsyncClient() as client:
         for attempt in range(30):
             try:
@@ -154,11 +189,14 @@ async def mint_ticket(resource_id: str, scopes: list[str]) -> str | None:
                     headers={"Authorization": f"Bearer {await get_pat(client, force=True)}"},
                     timeout=5.0,
                 )
-            if r.status_code == 400 and r.json().get("error") == "invalid_resource_id":
+            if (REGISTRATION_MODE == "push" and r.status_code == 400
+                    and r.json().get("error") == "invalid_resource_id"):
                 # The AS restarted and lost the push-registered state; the RS is
                 # the party that has to notice and repair it. (FedAuthz makes
                 # the RS responsible for keeping registrations current — this
                 # re-push is that obligation, and its awkwardness is a finding.)
+                # In pull mode the repair burden sits with the AS instead: it
+                # re-reads the published metadata when it meets an unknown id.
                 event("resources.reregistered", reason="as_lost_registry")
                 await register_tool_surfaces(client)
                 r = await client.post(
@@ -311,26 +349,109 @@ async def check(request: Request, rest: str = "") -> Response:
     return Response(status_code=200, headers={"x-uma-contract": contract or ""})
 
 
-@app.get("/.well-known/oauth-protected-resource")
-@app.get("/.well-known/oauth-protected-resource/mcp")
-async def protected_resource_metadata() -> dict:
-    """RFC 9728 Protected Resource Metadata — the declare-and-pick-up
-    complement to gateway-side registration. An agent can discover the
-    owner's authorization server (and the protected tool surface) before it
-    is ever challenged. `tool_surfaces` is an extension member carrying the
-    per-tool resource ids the gateway registers at the AS."""
+def prm_document() -> dict:
+    """RFC 9728 Protected Resource Metadata — *structural* only. It says
+    what shape the resource has (tools, scopes) and where authority lives
+    (authorization_servers, the owner-resources query endpoint); it does
+    not say whose instances sit behind it. Publishing which resources Alice
+    owns at an unauthenticated well-known URI would be a privacy leak the
+    old push registration never had — owner-bound ids live behind
+    /owner-resources ("protected webfinger" for Alice's stuff)."""
     scopes = sorted({s for _, (rid, ss) in TOOLS.items() for s in ss})
     return {
         "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
         "authorization_servers": [AS_PUBLIC],
+        "jwks_uri": f"https://{EXPECTED_AUTHORITY}/jwks",
         "scopes_supported": scopes,
         "bearer_methods_supported": ["header"],
         "resource_signing_alg_values_supported": ["EdDSA"],
         "tool_surfaces": [
-            {"tool": tool, "resource_id": rid, "resource_scopes": ss}
+            {"tool": tool, "resource_scopes": ss}
             for tool, (rid, ss) in TOOLS.items()
         ],
+        "owner_resources_endpoint": f"https://{EXPECTED_AUTHORITY}/owner-resources",
     }
+
+
+@app.get("/.well-known/oauth-protected-resource")
+@app.get("/.well-known/oauth-protected-resource/mcp")
+async def protected_resource_metadata() -> dict:
+    doc = prm_document()
+    # RFC 9728 signed_metadata: the same claims as a JWT under the
+    # resource's key (jwks_uri above), so a relayed or cached copy of this
+    # document stays attributable to the resource that published it.
+    doc["signed_metadata"] = jwt.encode(
+        {**doc, "iss": doc["resource"], "iat": int(time.time())},
+        PEP_KEY, algorithm="EdDSA",
+        headers={"typ": "oauth-protected-resource+jwt", "kid": PEP_KID},
+    )
+    return doc
+
+
+@app.get("/jwks")
+async def pep_jwks() -> dict:
+    jwk = json.loads(OKPAlgorithm.to_jwk(PEP_KEY.public_key()))
+    jwk.update({"kid": PEP_KID, "use": "sig"})
+    return {"keys": [jwk]}
+
+
+_AS_KEYS_CACHE: dict = {"expires": 0.0, "keys": []}
+
+
+async def as_verification_keys() -> list:
+    if _AS_KEYS_CACHE["expires"] < time.time():
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{AS_INTERNAL}/jwks", timeout=5.0)
+            r.raise_for_status()
+        _AS_KEYS_CACHE.update(expires=time.time() + 300, keys=r.json()["keys"])
+    return _AS_KEYS_CACHE["keys"]
+
+
+@app.get("/owner-resources")
+async def owner_resources(request: Request) -> Response:
+    """The protected half of discovery — a "protected webfinger" for the
+    owner's stuff. Serves the owner-bound resource instances only to a
+    querier that proves possession of the owner's AS signing key (RFC 9421
+    over @method/@authority/@path — the same message-signature mechanics
+    the agent uses for proof-of-possession, pointed the other way). The
+    trust was established at onboarding: this gateway holds a PAT from
+    exactly that AS."""
+    verified = False
+    last_error = "no signature"
+    for jwk_dict in await as_verification_keys():
+        try:
+            pub = OKPAlgorithm.from_jwk(json.dumps(jwk_dict))
+            verify(
+                method=request.method,
+                authority=EXPECTED_AUTHORITY,
+                path="/owner-resources",
+                authorization="",
+                signature_input=request.headers.get("signature-input", ""),
+                signature=request.headers.get("signature", ""),
+                public_key=pub,
+            )
+            verified = True
+            break
+        except VerifyError as exc:
+            last_error = str(exc)
+    if not verified:
+        event("owner_resources.denied", reason=last_error)
+        return deny(401, {"error": "invalid_signature",
+                          "error_description": "this listing is served only to "
+                          f"the owner's authorization server: {last_error}"})
+    event("owner_resources.served", owner=OWNER, count=len(TOOLS))
+    return Response(
+        content=json.dumps({
+            "owner": OWNER,
+            "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+            "resources": [
+                {"_id": rid, "tool": tool, "resource_scopes": ss,
+                 "name": f"Alice's vault: {tool}", "type": "mcp-tool"}
+                for tool, (rid, ss) in TOOLS.items()
+            ],
+        }),
+        media_type="application/json",
+    )
 
 
 @app.get("/health")

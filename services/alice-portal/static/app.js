@@ -366,11 +366,11 @@ async function renderResources(target) {
       is protecting, as registered by your brokerage's gateway. Each resource is governed by one of your
       policy tiers — edit the terms under <b>My Terms</b>.</div>
     <table>
-    <thead><tr><th>Resource</th><th>Registered id</th><th>Type</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
+    <thead><tr><th>Resource</th><th>Registered id</th><th>Source</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
     <tbody>${resources.map(r => `<tr>
       <td><div class="tick"><div class="badge2">🗄️</div><div class="nm">${r.name}</div></div></td>
       <td class="thumb">${r._id}</td>
-      <td>${r.type || "—"}</td>
+      <td>${r.registered_via === "pull" ? `<span class="chip">published · pulled</span>` : `<span class="chip">pushed</span>`}</td>
       <td>${(r.resource_scopes || []).map(s => `<span class="chip">${s}</span>`).join(" ")}</td>
       <td>${r.tier_name ? `${r.tier_name} <span class="muted mono">(${r.tier})</span>` : `<span class="chip neg">no tier — unreachable</span>`}</td>
       <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>

@@ -7,11 +7,29 @@ binds:
       - protocol: HTTP
         routes:
           # RFC 9728 Protected Resource Metadata: open discovery of the
-          # owner's AS and the protected tool surface (served by the PEP).
+          # owner's AS and the *structural* tool surface (served by the PEP).
           - name: protected-resource-metadata
             matches:
               - path:
                   pathPrefix: /.well-known/oauth-protected-resource
+            backends:
+              - host: "uma-pep:9002"
+          # The resource's signing keys (RFC 9728 jwks_uri) — verifies
+          # signed_metadata.
+          - name: resource-jwks
+            matches:
+              - path:
+                  pathPrefix: /jwks
+            backends:
+              - host: "uma-pep:9002"
+          # The protected owner-resources listing ("protected webfinger"):
+          # owner-bound resource instances, served only to a caller who
+          # proves possession of the owner's AS signing key. The PEP does
+          # that verification itself.
+          - name: owner-resources
+            matches:
+              - path:
+                  pathPrefix: /owner-resources
             backends:
               - host: "uma-pep:9002"
           - name: alice-vault-mcp

@@ -263,11 +263,13 @@ def main() -> int:
     prm_url = well_known_prm_url(args.gateway)
     prm = validate_resource_metadata(
         client.get(prm_url).json(), args.gateway)
-    say(f"resource metadata at {prm_url}")
+    say(f"resource metadata at {prm_url} (signed: "
+        f"{'yes' if prm.get('signed_metadata') else 'no'})")
     say(f"authorization server(s): {', '.join(prm['authorization_servers'])}")
     for ts in prm.get("tool_surfaces", []):
-        say(f"tool surface: {ts['tool']} -> {ts['resource_id']} "
-            f"(scopes {', '.join(ts['resource_scopes'])})")
+        say(f"tool surface: {ts['tool']} (scopes {', '.join(ts['resource_scopes'])})")
+    say("note: which resources belong to whom is not in the public document —"
+        " owner instances live behind the protected owner-resources endpoint")
 
     session = McpSession(client, args.gateway)
     session.initialize()

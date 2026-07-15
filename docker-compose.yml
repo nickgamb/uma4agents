@@ -59,8 +59,16 @@ services:
 
   uma-as:
     init: true
-    build: ./services/uma-as
+    build:
+      context: .
+      dockerfile: services/uma-as/Dockerfile
     environment:
+      # pull: registration is declarative — the AS reads the RS's published
+      # metadata (public structure + protected owner instances) instead of
+      # receiving pushes. push: classic FedAuthz /rreg. Keep in step with
+      # uma-pep's REGISTRATION_MODE.
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-pull}
+      UMA_AS_RS_RESOURCE_URI: https://gateway.uma.lab/mcp
       UMA_AS_ISSUER: https://alice-as.uma.lab
       # The resource-server client the AS issues PATs to (client_credentials,
       # scope uma_protection). Alice's day-0 consent for it is seeded.
@@ -92,6 +100,9 @@ services:
       UMA_AS_RS_CLIENT_ID: meridian-gateway
       UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
       UMA_REALM: alice-vault
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-pull}
+    volumes:
+      - uma-pep-keys:/keys
     depends_on:
       uma-as:
         condition: service_healthy
@@ -232,5 +243,6 @@ services:
 
 volumes:
   uma-as-keys:
+  uma-pep-keys:
   ps-data:
   driver-keys:
