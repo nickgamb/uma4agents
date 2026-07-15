@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-RUN pip install --no-cache-dir fastapi uvicorn 'pyjwt[crypto]' python-multipart sse-starlette
+RUN pip install --no-cache-dir fastapi uvicorn 'pyjwt[crypto]' python-multipart sse-starlette httpx
 WORKDIR /app
 COPY app.py policy.py ./
 EXPOSE 9000

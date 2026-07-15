@@ -19,6 +19,12 @@ Environment:
   UMA4A_CACERT      path to certs/rootCA.pem
   UMA4A_KEYSTORE    where Bob's agent key persists
   UMA4A_STANDING_MAX_EXPIRES  fallback auto-accept bound (seconds)
+  UMA4A_AGENT_ISSUER  Bob's agent server (e.g. https://ps.uma.lab); when set,
+                      the shim enrolls and runs identified (aa-agent+jwt) —
+                      first enrollment pends until Bob approves in the person
+                      server UI. Unset: pseudonymous (bare key).
+  UMA4A_PERSON_TOKEN  optional person-API bearer to auto-approve enrollment
+                      (headless runs only — normally Bob taps in the PS UI)
 """
 
 import json
@@ -47,15 +53,38 @@ RECEIPTS_DIR = os.environ.get(
     "UMA4A_RECEIPTS", os.path.join(os.path.dirname(KEYSTORE) or ".", "receipts")
 )
 STANDING_MAX_EXPIRES = int(os.environ.get("UMA4A_STANDING_MAX_EXPIRES", 7 * 24 * 3600))
+AGENT_ISSUER = os.environ.get("UMA4A_AGENT_ISSUER")
+PERSON_TOKEN = os.environ.get("UMA4A_PERSON_TOKEN")
 AUTHORITY = httpx.URL(GATEWAY).host
 MCP_PATH = httpx.URL(GATEWAY).path
 
 mcp = FastMCP("alice-vault-via-uma")
-keys = AgentKeys.load_or_create(KEYSTORE)
 
 
 def log(msg: str) -> None:
     print(f"[agent-shim] {msg}", file=sys.stderr, flush=True)
+
+
+def bootstrap_identity() -> AgentKeys:
+    """Pseudonymous by default; identified when an agent issuer is set.
+    Identified: the persisted key becomes the stable key, a fresh session
+    key signs everything, and the issuer's aa-agent+jwt binds them."""
+    if not AGENT_ISSUER:
+        return AgentKeys.load_or_create(KEYSTORE)
+    from uma4a_enroll import enroll
+
+    k = AgentKeys.load_or_create_identified(KEYSTORE)
+    with httpx.Client(verify=CACERT, timeout=30.0) as client:
+        k.agent_token = enroll(
+            client, AGENT_ISSUER, k.stable, k.key,
+            agent_name="Bob's agent via uma4agents shim",
+            person_token=PERSON_TOKEN, on_status=log,
+        )
+    log(f"enrolled with {AGENT_ISSUER}; running identified")
+    return k
+
+
+keys = bootstrap_identity()
 
 
 def store_receipt(receipt_jws: str) -> None:

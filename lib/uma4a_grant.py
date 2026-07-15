@@ -40,32 +40,55 @@ class TermsRejected(Exception):
 
 @dataclass
 class AgentKeys:
-    """The requesting agent's signing identity (pseudonymous AAuth level:
-    the bare public key rides the contract's JWS header; identified level
-    adds a PS-issued agent token)."""
+    """The requesting agent's signing identity.
+
+    Pseudonymous (AAuth level 0): `key` is the persisted long-term key and
+    its bare public JWK rides the contract's JWS header — the key *is* the
+    identity, so it must be stable across runs for the owner's standing
+    connection to recognize the agent.
+
+    Identified: `stable` is the persisted long-term key enrolled at the
+    agent server; `key` is a fresh per-session ephemeral key that the issued
+    aa-agent+jwt (`agent_token`) binds via cnf.jwk. Contracts and PoP
+    requests are signed with the ephemeral key; identity continuity lives in
+    the token's issuer+subject, not the key.
+    """
 
     key: Ed25519PrivateKey = field(default_factory=Ed25519PrivateKey.generate)
     keyid: str = "agent-req-1"
-    agent_token: str | None = None  # aa-agent+jwt when PS-bootstrapped
+    agent_token: str | None = None  # aa-agent+jwt when enrolled
+    stable: Ed25519PrivateKey | None = None  # long-term key (identified mode)
 
-    @classmethod
-    def load_or_create(cls, path: str) -> "AgentKeys":
+    @staticmethod
+    def _load_or_create_key(path: str) -> Ed25519PrivateKey:
         import os
 
         if os.path.exists(path):
             with open(path, "rb") as f:
-                return cls(key=serialization.load_pem_private_key(f.read(), password=None))
-        keys = cls()
+                return serialization.load_pem_private_key(f.read(), password=None)
+        key = Ed25519PrivateKey.generate()
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "wb") as f:
             f.write(
-                keys.key.private_bytes(
+                key.private_bytes(
                     serialization.Encoding.PEM,
                     serialization.PrivateFormat.PKCS8,
                     serialization.NoEncryption(),
                 )
             )
-        return keys
+        return key
+
+    @classmethod
+    def load_or_create(cls, path: str) -> "AgentKeys":
+        """Pseudonymous identity: one persisted signing key."""
+        return cls(key=cls._load_or_create_key(path))
+
+    @classmethod
+    def load_or_create_identified(cls, path: str) -> "AgentKeys":
+        """Identified identity: persisted stable key + fresh session key.
+        Enroll with uma4a_enroll.enroll() to obtain the agent_token."""
+        return cls(key=Ed25519PrivateKey.generate(),
+                   stable=cls._load_or_create_key(path))
 
     def public_jwk(self) -> dict:
         return json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))

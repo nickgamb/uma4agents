@@ -102,13 +102,16 @@ app = FastAPI(title="uma-as")
 # ---------------------------------------------------------------------------
 RESOURCES: dict[str, dict] = {}
 TICKETS: dict[str, dict] = {}
-RPTS: dict[str, dict] = {}          # jti -> {consumed, operation, family, jkt}
+RPTS: dict[str, dict] = {}          # jti -> {consumed, operation, family, handle}
 LEDGER: list[dict] = []             # promised / touched / approved entries
 OWNER_QUEUE: list[asyncio.Queue] = []  # SSE subscribers (portal)
 # Standing relationships: the day-1 handshake's output. Keyed by the agent's
-# RFC 7638 JWK thumbprint. An unknown agent's first contract commit pends as a
-# connection request — UMA's request_submitted doing double duty as
-# owner-mediated agent registration. Revocation deactivates live RPTs too.
+# connection handle — the RFC 7638 JWK thumbprint for a pseudonymous agent
+# (the key is the identity), issuer-qualified subject for an identified one
+# (its session keys rotate; see connection_handle). An unknown agent's first
+# contract commit pends as a connection request — UMA's request_submitted
+# doing double duty as owner-mediated agent registration. Revocation
+# deactivates live RPTs too.
 CONNECTIONS: dict[str, dict] = {}
 
 
@@ -438,7 +441,7 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
     rec = RPTS.get(jti)
     if rec is None:
         return {"active": False}
-    conn = CONNECTIONS.get(rec.get("jkt", ""))
+    conn = CONNECTIONS.get(rec.get("handle", ""))
     if conn is not None and conn["status"] != "active":
         event("rpt.introspected", corr=rec["family"], result="connection-revoked")
         return {"active": False}
@@ -525,12 +528,87 @@ def need_info_response(rec: dict, tier_id: str, tier: dict) -> JSONResponse:
     )
 
 
+AGENT_ISSUER_CA = os.environ.get("UMA4A_CA_BUNDLE")  # trust bundle for issuer TLS
+_ISSUER_JWKS_CACHE: dict[str, tuple[float, list]] = {}
+JWKS_CACHE_TTL = 300
+
+
+def agent_issuer_keys(iss: str) -> list:
+    """Resolve an agent-token issuer's signing keys via AAuth discovery
+    (GET {iss}/.well-known/aauth-agent.json -> jwks_uri). TLS on the issuer
+    origin is the trust root — AAuth's own precondition — so non-https
+    issuers are rejected outright."""
+    if not iss.startswith("https://"):
+        raise ValueError("agent token issuer must be an https origin")
+    cached = _ISSUER_JWKS_CACHE.get(iss)
+    if cached and cached[0] > now():
+        return cached[1]
+    import httpx
+
+    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=5.0) as client:
+        meta = client.get(f"{iss}/.well-known/aauth-agent.json")
+        meta.raise_for_status()
+        jwks = client.get(meta.json()["jwks_uri"])
+        jwks.raise_for_status()
+    keys = jwks.json()["keys"]
+    _ISSUER_JWKS_CACHE[iss] = (now() + JWKS_CACHE_TTL, keys)
+    return keys
+
+
+def verify_agent_token(agent_token: str) -> dict:
+    """Validate an aa-agent+jwt against its issuer's published keys.
+    Returns the verified claims; raises on any break in the chain."""
+    header = jwt.get_unverified_header(agent_token)
+    if header.get("typ") != "aa-agent+jwt":
+        raise ValueError(f"agent token typ must be aa-agent+jwt, got {header.get('typ')!r}")
+    unverified = jwt.decode(agent_token, options={"verify_signature": False})
+    iss = unverified.get("iss")
+    if not iss:
+        raise ValueError("agent token has no issuer")
+    try:
+        candidates = agent_issuer_keys(iss)
+    except Exception as exc:
+        raise ValueError(f"agent token issuer discovery failed for {iss}: {exc}")
+    kid = header.get("kid")
+    last_error: Exception | None = None
+    for jwk_dict in candidates:
+        if kid and jwk_dict.get("kid") and jwk_dict["kid"] != kid:
+            continue
+        try:
+            key = OKPAlgorithm.from_jwk(json.dumps(jwk_dict))
+            claims = jwt.decode(agent_token, key, algorithms=["EdDSA"],
+                                options={"verify_aud": False})
+            if "cnf" not in claims or "jwk" not in claims["cnf"]:
+                raise ValueError("agent token carries no cnf.jwk key binding")
+            return claims
+        except jwt.InvalidTokenError as exc:
+            last_error = exc
+    raise ValueError(f"agent token signature did not verify against {iss}'s "
+                     f"published keys: {last_error}")
+
+
+def connection_handle(identity: dict, signer_jwk: dict) -> str:
+    """The stable name for a standing relationship. A pseudonymous agent *is*
+    its key, so the RFC 7638 thumbprint is the handle. An identified agent's
+    continuity lives in its issuer+subject — its session keys rotate, and a
+    thumbprint-keyed connection would forget the agent every session."""
+    if identity.get("level") == "identified":
+        from urllib.parse import urlparse
+
+        sub, host = identity["sub"], urlparse(identity["iss"]).netloc
+        # Qualify by issuer so two issuers' subjects can never collide —
+        # unless the issuer already writes its host into the subject.
+        return sub if sub.endswith(f"@{host}") else f"{sub}@{host}"
+    return jwk_thumbprint(signer_jwk)
+
+
 def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
     """Verify the intent contract JWS and its echo of the dictated template.
 
     Returns (contract_claims, signer_jwk). The signer key comes from the JWS
     protected header: `jwk` (pseudonymous bare key, an AAuth identity level)
-    or the `cnf.jwk` of an embedded `agent_token` (PS-issued aa-agent+jwt).
+    or the `cnf.jwk` of an embedded `agent_token` (an aa-agent+jwt whose
+    signature is verified against its issuer's published keys).
     """
     raw = base64.urlsafe_b64decode(claim_token_b64 + "=" * (-len(claim_token_b64) % 4))
     token = raw.decode()
@@ -540,11 +618,9 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
         signer_jwk = header["jwk"]
         identity = {"level": "pseudonymous"}
     elif "agent_token" in header:
-        agent_claims = jwt.decode(header["agent_token"], options={"verify_signature": False})
-        # Full agent-token chain validation (issuer JWKS fetch per AAuth dwk
-        # discovery) is wired in the shim's bootstrap; here we bind to its cnf.
+        agent_claims = verify_agent_token(header["agent_token"])
         signer_jwk = agent_claims["cnf"]["jwk"]
-        identity = {"level": "identified", "iss": agent_claims.get("iss"),
+        identity = {"level": "identified", "iss": agent_claims["iss"],
                     "sub": agent_claims.get("sub")}
     else:
         raise ValueError("contract JWS must carry jwk or agent_token in its header")
@@ -604,10 +680,10 @@ def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         }
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
-    jkt = jwk_thumbprint(signer_jwk)
+    handle = connection_handle(rec["contract"]["_identity"], signer_jwk)
     RPTS[jti] = {"consumed": False, "family": family,
                  "operation": claims.get("operation"),
-                 "jkt": jkt}
+                 "handle": handle}
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
           tier=rec["tier"])
 
@@ -618,7 +694,7 @@ def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     receipt = jwt.encode(
         {
             "iss": ISSUER,
-            "sub": jkt,
+            "sub": handle,
             "iat": int(now()),
             "family": family,
             "terms_uri": rec["template"]["terms_uri"],
@@ -716,8 +792,8 @@ async def token(
     # request_submitted machinery, asking a different question ("do you want a
     # relationship with this agent?"). Alice's approval creates the connection
     # AND releases this negotiation in one tap.
-    jkt = jwk_thumbprint(signer_jwk)
-    conn = CONNECTIONS.get(jkt)
+    handle = connection_handle(contract["_identity"], signer_jwk)
+    conn = CONNECTIONS.get(handle)
     needs_connection = conn is None or conn["status"] != "active"
     needs_operation_approval = tier["ask_me"]
 
@@ -726,7 +802,7 @@ async def token(
         rec["state"] = "awaiting-owner"
         rec["decision"] = None
         rec["pending_kind"] = kind
-        rec["jkt"] = jkt
+        rec["handle"] = handle
         rotated = new_ticket(rec)
         event("ticket.awaiting_owner", corr=family, tier=rec["tier"], kind=kind)
         await owner_notify(
@@ -740,7 +816,7 @@ async def token(
                 "operation": contract.get("operation"),
                 "prohibited": contract["prohibited"],
                 "identity": contract["_identity"],
-                "jkt": jkt,
+                "handle": handle,
             }
         )
         event("owner.notified", corr=family, kind=kind)
@@ -751,7 +827,7 @@ async def token(
 
     conn["last_access"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     event("policy.evaluated", corr=family, result="auto-grant", tier=rec["tier"],
-          connection=jkt)
+          connection=handle)
     return JSONResponse(issue_rpt(rec, contract_hash, signer_jwk, None))
 
 
@@ -759,20 +835,20 @@ async def pending_poll(rec: dict) -> JSONResponse:
     family = rec["family"]
     if rec.get("decision") == "approved":
         if rec.get("pending_kind") == "connection":
-            jkt = rec["jkt"]
-            CONNECTIONS[jkt] = {
-                "jkt": jkt,
-                "identity": rec["contract"]["_identity"],
-                "label": rec["contract"]["_identity"].get("sub")
-                or f"Agent {jkt[4:12]}",
+            handle = rec["handle"]
+            identity = rec["contract"]["_identity"]
+            CONNECTIONS[handle] = {
+                "handle": handle,
+                "identity": identity,
+                "label": identity.get("sub") or f"Agent {handle[4:12]}",
                 "status": "active",
                 "first_seen": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "last_access": None,
                 "tiers": ["tier1", "tier2", "tier3"],
             }
-            event("connection.approved", corr=family, jkt=jkt)
-            ledger_add("connected", family, {"jkt": jkt,
-                                             "identity": rec["contract"]["_identity"]})
+            event("connection.approved", corr=family, handle=handle)
+            ledger_add("connected", family, {"handle": handle,
+                                             "identity": identity})
         event("policy.evaluated", corr=family, result="owner-approved", tier=rec["tier"])
         # Tier policy still applies after connection: an ask-me tier needs its
         # per-operation approval, which Alice's single tap covered only if this
@@ -809,7 +885,7 @@ async def owner_pending(request: Request) -> list:
                     "operation": rec["contract"].get("operation"),
                     "prohibited": rec["contract"]["prohibited"],
                     "identity": rec["contract"]["_identity"],
-                    "jkt": rec.get("jkt"),
+                    "handle": rec.get("handle"),
                 }
             )
     return out
@@ -886,22 +962,22 @@ async def owner_connections(request: Request) -> list:
     return sorted(CONNECTIONS.values(), key=lambda c: c["first_seen"], reverse=True)
 
 
-@app.post("/owner/connections/{jkt}/revoke")
-async def owner_revoke_connection(jkt: str, request: Request) -> dict:
+@app.post("/owner/connections/{handle}/revoke")
+async def owner_revoke_connection(handle: str, request: Request) -> dict:
     require_owner(request)
-    conn = CONNECTIONS.get(jkt)
+    conn = CONNECTIONS.get(handle)
     if conn is None:
         raise HTTPException(status_code=404, detail="unknown connection")
     conn["status"] = "revoked"
     killed = 0
     for rec in RPTS.values():
-        if rec.get("jkt") == jkt and not rec["consumed"]:
+        if rec.get("handle") == handle and not rec["consumed"]:
             rec["consumed"] = True
             killed += 1
-    event("connection.revoked", jkt=jkt, rpts_deactivated=killed)
-    ledger_add("revoked", "-", {"jkt": jkt, "rpts_deactivated": killed})
+    event("connection.revoked", handle=handle, rpts_deactivated=killed)
+    ledger_add("revoked", "-", {"handle": handle, "rpts_deactivated": killed})
     await owner_notify({"type": "decided", "family": "-", "decision": "revoked"})
-    return {"jkt": jkt, "status": "revoked", "rpts_deactivated": killed}
+    return {"handle": handle, "status": "revoked", "rpts_deactivated": killed}
 
 
 @app.get("/owner/ledger")

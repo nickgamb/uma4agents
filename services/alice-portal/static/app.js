@@ -304,7 +304,7 @@ async function renderApprovals(target) {
       ${p.operation ? `<div class="kv"><span class="k">Operation</span>
         <span class="mono">${p.operation.tool}(${JSON.stringify(p.operation.params)})</span></div>` : ""}
       <div class="kv"><span class="k">Identity</span><span>${p.identity?.level || "unknown"}${p.identity?.sub ? " · " + p.identity.sub : ""}</span></div>
-      ${p.jkt ? `<div class="kv"><span class="k">Agent key</span><span class="thumb">${p.jkt}</span></div>` : ""}
+      ${p.handle ? `<div class="kv"><span class="k">Agent</span><span class="thumb">${p.handle}</span></div>` : ""}
       <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span></div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn pos sm" onclick="decide('${p.family}','approved')">${isConn ? "Connect this agent" : "Approve this operation"}</button>
@@ -324,19 +324,19 @@ async function renderConnections(target) {
   if (!conns.length) { target.innerHTML = `<div class="empty">No agents are connected yet. The first time an
     agent presents your terms, you'll be asked whether to establish a relationship — approved agents appear here.</div>`; return; }
   target.innerHTML = `<div class="card pad-lg"><table>
-    <thead><tr><th>Agent</th><th>Identity</th><th>Key thumbprint</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
+    <thead><tr><th>Agent</th><th>Identity</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${conns.map(c => `<tr>
       <td><div class="tick"><div class="badge2">🤖</div><div class="nm">${c.label}</div></div></td>
       <td>${c.identity?.level || "—"}</td>
-      <td class="thumb">${c.jkt.slice(0, 22)}…</td>
+      <td class="thumb">${c.handle.length > 24 ? c.handle.slice(0, 22) + "…" : c.handle}</td>
       <td>${(c.first_seen || "").replace("T", " ").replace("Z", "")}</td>
       <td>${c.last_access ? c.last_access.replace("T", " ").replace("Z", "") : "—"}</td>
       <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${c.status}</span></td>
-      <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${c.jkt}')">Revoke</button>` : ""}</td>
+      <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${c.handle}')">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
-window.revoke = async (jkt) => {
-  const res = await api(`/api/agent/connections/${jkt}/revoke`, { method: "POST" });
+window.revoke = async (handle) => {
+  const res = await api(`/api/agent/connections/${encodeURIComponent(handle)}/revoke`, { method: "POST" });
   toast("Agent revoked", `${res.rpts_deactivated} active grant(s) deactivated`, "warn");
   renderConnections($("#aaBody"));
 };
@@ -450,7 +450,7 @@ async function renderLedger(target) {
       else if (e.kind === "approved") d = "you personally approved this";
       else if (e.kind === "denied") d = "you denied this request";
       else if (e.kind === "refused") d = `the requesting side declined your terms${e.terms_uri ? ` · <a class="thumb" href="${e.terms_uri}" target="_blank">${e.terms_uri.split("/terms/")[1]}</a>` : ""}`;
-      else if (e.kind === "connected") d = `agent connected · <span class="thumb">${e.jkt}</span>`;
+      else if (e.kind === "connected") d = `agent connected · <span class="thumb">${e.handle}</span>`;
       else if (e.kind === "revoked") d = `access revoked · ${e.rpts_deactivated} grant(s) killed`;
       return `<tr><td class="thumb">${(e.ts || "").replace("T", " ").replace("Z", "")}</td>
         <td><span class="chip ${kindChip[e.kind] || ""}">${e.kind}</span></td>

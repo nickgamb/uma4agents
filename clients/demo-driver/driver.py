@@ -15,10 +15,12 @@ driver waits for Alice to tap approve in her portal.
 
 import argparse
 import json
+import os
 import sys
 
 import httpx
 
+from uma4a_enroll import EnrollmentDenied, enroll
 from uma4a_grant import AgentKeys, GrantDenied, parse_challenge, run_grant, signed_headers
 
 GATEWAY_AUTHORITY = "gateway.uma.lab"
@@ -175,14 +177,40 @@ def main() -> int:
     ap.add_argument("--gateway", default="https://gateway.uma.lab/mcp")
     ap.add_argument("--as-internal", default="https://alice-as.uma.lab")
     ap.add_argument("--cacert", default="certs/rootCA.pem")
-    ap.add_argument("--keystore", default="/tmp/demo-driver-agent-key.pem")
+    ap.add_argument("--keystore", default="keys/agent-stable-key.pem")
     ap.add_argument("--simulate-alice", action="store_true",
                     help="approve tier-3 via the owner API (headless runs)")
     ap.add_argument("--owner-token", default="owner-dev-portal")
+    ap.add_argument("--agent-issuer", default="https://ps.uma.lab",
+                    help="Bob's agent server; pass --pseudonymous to skip enrollment")
+    ap.add_argument("--pseudonymous", action="store_true",
+                    help="run with a bare key instead of an enrolled agent token")
+    ap.add_argument("--person-token",
+                    default=os.environ.get("PS_ADMIN_TOKEN", "uma4agents-ps-admin"),
+                    help="person API bearer standing in for Bob's approval tap")
     args = ap.parse_args()
 
     client = httpx.Client(verify=args.cacert, timeout=15.0)
-    keys = AgentKeys.load_or_create(args.keystore)
+    if args.pseudonymous:
+        keys = AgentKeys.load_or_create(args.keystore)
+        say("running pseudonymously: the bare agent key is the identity")
+    else:
+        # The identified AAuth level: enroll with Bob's agent server. The
+        # stable key persists across runs; the session key the aa-agent+jwt
+        # binds is fresh each run — identity continuity lives in the token.
+        print("\n== Prologue: Bob's agent enrolls with his agent server ==")
+        keys = AgentKeys.load_or_create_identified(args.keystore)
+        try:
+            keys.agent_token = enroll(
+                client, args.agent_issuer, keys.stable, keys.key,
+                agent_name="Bob's advisory agent (Sterling & Vance)",
+                person_token=args.person_token, on_status=say,
+            )
+            say(f"aa-agent+jwt in hand from {args.agent_issuer}; "
+                "contracts will carry it")
+        except EnrollmentDenied as exc:
+            print(f"enrollment failed: {exc}")
+            return 1
     acts = ["tier1", "tier2", "tier3"] if args.act == "all" else [args.act]
 
     session = McpSession(client, args.gateway)

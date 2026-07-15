@@ -64,8 +64,12 @@ services:
       UMA_AS_ISSUER: https://alice-as.uma.lab
       UMA_AS_PAT: ${UMA_AS_PAT:-pat-dev-gateway}
       UMA_AS_OWNER_TOKEN: ${UMA_AS_OWNER_TOKEN:-owner-dev-portal}
+      # Trust bundle for verifying agent-token issuers' TLS (AAuth dwk
+      # discovery happens over https; the lab CA signs *.uma.lab).
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
     volumes:
       - uma-as-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
       interval: 3s
@@ -143,6 +147,7 @@ services:
       AAUTH_AS_SIGNING_KEY_PATH: /data/.aauth/as-signing-key.pem
       AAUTH_PS_PUBLIC_ORIGIN: https://ps.uma.lab
       AAUTH_AS_PUBLIC_ORIGIN: https://ps.uma.lab
+      AAUTH_AS_SERVER_DOMAIN: ps.uma.lab
       AAUTH_PS_ADMIN_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
       AAUTH_AS_PERSON_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
       AAUTH_PS_INSECURE_DEV: "true"
@@ -191,15 +196,19 @@ services:
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/driver.py --cacert /driver/rootCA.pem "$$@"
+      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' && exec python /driver/driver.py --cacert /driver/rootCA.pem "$$@"
       - --
     environment:
       PYTHONPATH: /driver/lib
       PYTHONUNBUFFERED: "1"
+      PS_ADMIN_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
     volumes:
       - ./clients/demo-driver/driver.py:/driver/driver.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      # Bob's agent's long-term (stable) key survives runs, so the agent
+      # server recognizes the agent and Alice's connection stays standing.
+      - driver-keys:/driver/keys
     working_dir: /driver
     profiles: ["demo"]
 
@@ -219,3 +228,4 @@ services:
 volumes:
   uma-as-keys:
   ps-data:
+  driver-keys:
