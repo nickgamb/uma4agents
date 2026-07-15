@@ -37,7 +37,7 @@ carries the parts, but the agent-era *use* deserves normative naming:
 | Capability | Status in POC | Classic ancestry |
 |---|---|---|
 | Owner-mediated agent registration ("day-1 handshake") | Built | The RO-approves-the-relationship shape (as with PAT issuance), applied to the **requesting-agent side** rather than the RS side. Distinct from client registration: DCR-style AS↔client credentials are orthogonal (the agent's PoP key plays that role); what's new-in-use is the *owner* approving a standing RqP-agent relationship. |
-| Standing-relationship handle (agent key thumbprint) | Built | The PCT is the closest ancestor — persisted state for a returning requesting side. Here it is keyed by the agent's key thumbprint and made **owner-visible and owner-revocable** (a registry with a revoke switch), which classic PCT semantics never required. |
+| Standing-relationship handle (identity-shaped) | Built | The PCT is the closest ancestor — persisted state for a returning requesting side. Here it is made **owner-visible and owner-revocable** (a registry with a revoke switch), which classic PCT semantics never required. The handle's shape follows the identity level: a pseudonymous agent *is* its key, so the RFC 7638 thumbprint carries; an identified agent's session keys rotate (AAuth binds a fresh key per session), so the handle must be the verified issuer-qualified subject — **the key cannot be the relationship key once real agent identity arrives**. This bit us in the build: thumbprint-keyed connections forgot an enrolled agent on every run. |
 
 **Outside the classic lines** — genuinely new surface:
 
@@ -129,6 +129,17 @@ AS declaratively before it is ever challenged. Registration pushes inward,
 metadata declares outward; together they answer the old friction from both
 directions. Whether the tool-surface extension belongs in an enhanced PRM
 profile is a good working-group question.
+
+Two costs of the push model, observed in the build, sharpen that question.
+*Fragility*: registration state lives at the AS, so an AS restart strands the
+RS — the RS is the party that must notice (`invalid_resource_id`) and
+re-push, an obligation FedAuthz assigns but deployments will get wrong. *The
+PAT bootstrap*: a real PAT is an issued, expiring, owner-revocable OAuth
+token (this POC issues it via `client_credentials` with `uma_protection`
+scope, and the owner can cut an RS off), but the *consent that authorizes the
+RS in the first place* had to be seeded — FedAuthz's RS-side onboarding is
+the same "how does a standing relationship begin?" question the agent side
+answers with the day-1 handshake, and it deserves the same named treatment.
 
 **6. Bindings as thin, separate documents.** Ship the core with a first
 binding to a concrete agent-identity/PoP layer (this POC binds to AAuth) and

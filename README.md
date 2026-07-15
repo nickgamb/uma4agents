@@ -25,6 +25,9 @@ See **[FINDINGS.md](FINDINGS.md)** for the recommendations to spec authors,
 Alice is a brokerage client at *Meridian Wealth*. Bob is her new financial
 advisor, and his firm runs an agent. Over one day:
 
+0. **Enrollment** — Bob's agent registers with his AAuth person/agent server
+   and receives a verifiable agent token; Alice's authorization server checks
+   it against the issuer's published keys before believing a word of it.
 1. **Holdings summary** — Bob's agent asks; because Alice has connected it and
    her terms permit it, the grant is automatic, purpose-bound, and expiring.
 2. **Transaction history** — granted too, under visibly stricter terms her
@@ -130,15 +133,17 @@ this stack as-is on a public network.
 |---|---|---|
 | Alice's login | `alice` / `alice-demo` | `keycloak/alice-realm.json` |
 | Keycloak admin | `admin` / `uma4agents-admin` | `KC_ADMIN_PASSWORD` |
-| Portal ↔ AS owner token | `owner-dev-portal` | `UMA_AS_OWNER_TOKEN` |
-| Gateway ↔ AS protection token (PAT) | `pat-dev-gateway` | `UMA_AS_PAT` |
+| Gateway's OAuth client secret (exchanged for its PAT) | `gateway-dev-secret` | `UMA_AS_RS_CLIENT_SECRET` |
 | Portal session secret | `dev-session-secret` | `PORTAL_SESSION_SECRET` |
 | Person-server admin token | `uma4agents-ps-admin` | `PS_ADMIN_TOKEN` |
 | uma-as OIDC client secret | `uma-as-demo-secret` | `keycloak/alice-realm.json` |
 
 Every value in the table's right column except the two in the realm file can be
 overridden via a `.env` file (see `.env.example`); the realm values live in
-`keycloak/alice-realm.json`.
+`keycloak/alice-realm.json`. The tokens that actually flow — Alice's owner
+token, the gateway's PAT, the agent's `aa-agent+jwt` — are all issued at
+runtime (OIDC login, `client_credentials`, and AAuth enrollment
+respectively); none of them are configured strings.
 
 ## Troubleshooting
 

@@ -101,6 +101,10 @@ async def owner_headers(request: Request) -> dict:
 def current_user(request: Request) -> str | None:
     if AUTH_MODE != "oidc":
         return "alice"
+    # A signed cookie can outlive the server-side token store (portal
+    # restart): a session without live tokens is not a login.
+    if request.session.get("sid") not in TOKENS:
+        return None
     return request.session.get("user")
 
 
@@ -206,7 +210,7 @@ async def agent_pending(request: Request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/pending", headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.post("/api/agent/pending/{family}/decision")
@@ -226,7 +230,7 @@ async def agent_resources(request: Request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/resources", headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.get("/api/agent/resource-servers")
@@ -236,7 +240,7 @@ async def agent_resource_servers(request: Request):
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/resource-servers",
                         headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.post("/api/agent/resource-servers/{client_id}/revoke")
@@ -255,7 +259,7 @@ async def agent_policies(request: Request):
         return JSONResponse({}, status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/policies", headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.put("/api/agent/policies/{tier_id}")
@@ -275,7 +279,7 @@ async def agent_connections(request: Request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/connections", headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.post("/api/agent/connections/{jkt}/revoke")
@@ -294,7 +298,7 @@ async def agent_ledger(request: Request):
         return JSONResponse([], status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.get(f"{UMA_AS}/owner/ledger", headers=await owner_headers(request))
-    return JSONResponse(r.json())
+    return JSONResponse(r.json(), status_code=r.status_code)
 
 
 @app.get("/api/agent/events")

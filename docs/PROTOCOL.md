@@ -26,7 +26,7 @@ an explicit extension. The deviations are the findings.
 ```
 GET  /.well-known/uma4agents-configuration   discovery: issuer, endpoints, jwks_uri,
                                              claim formats accepted
-GET  /jwks                                   uma-as signing keys (RPTs, receipts)
+GET  /jwks                                   uma-as signing keys (RPTs, receipts, PATs)
 GET  /terms                                  the owner's terms roster (MyTerms pattern)
 GET  /terms/{template_id}                    a proffered terms document; every version
                                              stays dereferenceable (persistent record).
@@ -35,23 +35,37 @@ GET  /terms/{template_id}                    a proffered terms document; every v
                                              (Accept: text/html — IEEE 7012 4.4.1),
                                              JSON-LD/ODRL (?format=jsonld — 4.4.2)
 
-# Protection API (gateway/PEP only, PAT-authorized — FedAuthz shape)
-POST /rreg          register a tool surface as a resource
-GET  /rreg          list registered resources
-POST /perm          register attempted permissions -> ticket
-POST /introspect    RPT introspection (permissions array); consume=true burns single-use
-POST /audit/access  the PEP reports an allowed call (grounds the ledger's "touched")
+# Protection API (resource servers only, PAT-authorized — FedAuthz shape).
+# The PAT is an OAuth access token this AS issues (see /token below): signed,
+# expiring, scope uma_protection, carrying the owner (sub) and the RS (azp).
+# Full FedAuthz resource-registration CRUD; /perm rejects unregistered
+# resources (invalid_resource_id) and excess scopes (invalid_scope).
+POST   /rreg            register a tool surface as a resource
+GET    /rreg            list registered resource ids
+GET    /rreg/{_id}      read one resource description
+PUT    /rreg/{_id}      update a resource description
+DELETE /rreg/{_id}      deregister
+POST   /perm            register attempted permissions -> ticket
+POST   /introspect      RPT introspection (permissions array); consume=true burns single-use
+POST   /audit/access    the PEP reports an allowed call (grounds the ledger's "touched")
 
-# Grant API (agent-facing — UMA 2.0 Grant shape)
-POST /token         grant_type=uma-ticket negotiation loop
+# Token endpoint (agent-facing UMA 2.0 Grant shape, plus RS-facing PAT issuance)
+POST /token         grant_type=uma-ticket            the four-beat negotiation loop
+POST /token         grant_type=client_credentials    PAT for an owner-authorized RS
+                    (scope=uma_protection; the owner can revoke the RS, which
+                    kills issuance and verification at once)
 
-# Owner API (portal only, owner-token-authorized)
+# Owner API (portal only; takes the owner's own OIDC access token, validated
+# against her realm's published keys — no static owner credential exists)
 GET  /owner/pending                        requests in awaiting-owner state
 POST /owner/pending/{family}/decision      approve | deny
 GET  /owner/policies                       tier policy
 PUT  /owner/policies/{tier_id}             edit a tier's terms / ask-me
+GET  /owner/resources                      registered resources joined with tiers
+GET  /owner/resource-servers               RSs holding her protection access
+POST /owner/resource-servers/{id}/revoke   cut an RS off from the Protection API
 GET  /owner/connections                    standing agent relationships
-POST /owner/connections/{jkt}/revoke       revoke a connection + its live RPTs
+POST /owner/connections/{handle}/revoke    revoke a connection + its live RPTs
 GET  /owner/ledger                         the activity ledger
 GET  /owner/events                         SSE stream -> the portal notification
 ```
@@ -156,9 +170,10 @@ claim_token_format = urn:uma4agents:format:myterms-agreement-v1+jws
 
 The **agreement** is the terms template echoed and signed by the agent's key.
 Its JWS protected header carries either `jwk` (the pseudonymous bare key) or an
-`agent_token` (a PS-issued `aa-agent+jwt`, whose `cnf.jwk` is the signing key)
-— so the same key both signs the agreement and, later, proves possession of
-the RPT.
+`agent_token` (an `aa-agent+jwt` from the agent's server, which the AS
+verifies against the issuer's published keys via AAuth dwk discovery; its
+`cnf.jwk` is the signing key) — so the same key both signs the agreement and,
+later, proves possession of the RPT.
 
 ```json
 {
@@ -259,15 +274,26 @@ alice-vault-mcp.
 ## Standing relationships (the day-1 handshake)
 
 A **connection** is the standing relationship an owner has with a specific
-agent, keyed by the agent's RFC 7638 JWK thumbprint (`jkt:…`). It is created
-when Alice approves a `kind=connection` request (first contact), and it holds
-the identity level, a label, first-seen/last-access timestamps, and status.
+agent, keyed by a **handle** whose shape follows the agent's identity level:
+
+- *Pseudonymous* — the RFC 7638 JWK thumbprint (`jkt:…`). The key *is* the
+  identity, so it must persist for the relationship to persist.
+- *Identified* — the issuer-qualified subject of the verified `aa-agent+jwt`
+  (e.g. `aauth:…@ps.uma.lab`). AAuth session keys rotate per run, so a
+  thumbprint-keyed connection would forget an identified agent every session;
+  continuity lives in the token's issuer+subject. (The AS validates the
+  agent token against its issuer's published keys — AAuth dwk discovery over
+  https — before believing any of it.)
+
+A connection is created when Alice approves a `kind=connection` request
+(first contact), and it holds the identity level, a label,
+first-seen/last-access timestamps, and status.
 
 - While no active connection exists, first contact pends regardless of tier.
 - Once active, non-ask-me tiers auto-grant for that agent; ask-me tiers still
   pend per operation.
-- `POST /owner/connections/{jkt}/revoke` sets the connection inactive and marks
-  every live RPT bound to that thumbprint consumed, so introspection fails
+- `POST /owner/connections/{handle}/revoke` sets the connection inactive and
+  marks every live RPT bound to that handle consumed, so introspection fails
   immediately.
 
 This is the standing-relationship handle discussed in
@@ -328,7 +354,7 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 | 2 | RPT = `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | "Genome stays, organs replaced" — AAuth binding |
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
 | 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |
-| 5 | Standing connection keyed by JWK thumbprint; `contract` (s256) on the RPT | — | Owner-visible, revocable relationships; promise/action/consent in one ledger |
+| 5 | Standing connection keyed by an identity handle (JWK thumbprint when pseudonymous, verified issuer-qualified subject when identified); `contract` (s256) on the RPT | — | Owner-visible, revocable relationships; promise/action/consent in one ledger. Identified agents' session keys rotate, so the key cannot be the relationship key |
 | 6 | RFC 9728 PRM with a `tool_surfaces` extension member | PRM predates UMA; not profiled for it | Declarative discovery of the AS and the protected tool surface |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.
