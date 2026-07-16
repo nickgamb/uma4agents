@@ -61,6 +61,9 @@ and can revoke any of them.
 *(Connected Agents → Revoke) deactivates the connection and any live RPTs immediately.*
 
 ### Discovery, Split Into Public and Protected (RFC 9728)
+![Registration before and after PRM](docs/prm-at-a-glance.svg)
+*Registration flips from pushed to pulled; the challenge gains a second witness; the ticket keeps its job*
+
 ![Protected Resource Metadata](screenshots/prm-metadata.png)
 *The resource's public metadata is **structural**: tool surfaces and scopes, the owner's authorization server, `jwks_uri`, `signed_metadata` — and a pointer to the protected owner-resources endpoint. Whose resources these are is deliberately not here.*
 

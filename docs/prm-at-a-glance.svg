@@ -1,0 +1,136 @@
+<svg viewBox="0 0 1200 780" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b8cff"/><stop offset="1" stop-color="#8f6bff"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.75" cy="0" r="0.8">
+      <stop offset="0" stop-color="#5b8cff" stop-opacity="0.10"/><stop offset="1" stop-color="#5b8cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.05" cy="1" r="0.7">
+      <stop offset="0" stop-color="#8f6bff" stop-opacity="0.08"/><stop offset="1" stop-color="#8f6bff" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="mAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b8cff"/>
+    </marker>
+    <marker id="mGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2ed079"/>
+    </marker>
+    <marker id="mWarn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f2b955"/>
+    </marker>
+    <marker id="mDim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#616c85"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="780" fill="#080a0f"/>
+  <rect width="1200" height="780" fill="url(#glow1)"/>
+  <rect width="1200" height="780" fill="url(#glow2)"/>
+
+  <!-- header -->
+  <rect x="40" y="26" width="34" height="34" rx="9" fill="url(#mark)"/>
+  <text x="57" y="49" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="800">M</text>
+  <text x="88" y="42" fill="#eef1f7" font-size="17" font-weight="650">Registration, before and after RFC 9728</text>
+  <text x="88" y="60" fill="#9aa4ba" font-size="12">What changes when RReg's push becomes declarative pull — and what deliberately doesn't</text>
+  <text x="1160" y="42" text-anchor="end" fill="#616c85" font-size="11" font-family="ui-monospace, 'SF Mono', Menlo, monospace">UMA FedAuthz · RFC 9728 PRM · RFC 9421</text>
+
+  <!-- center divider -->
+  <line x1="600" y1="96" x2="600" y2="614" stroke="#232c3d" stroke-dasharray="3 5"/>
+
+  <!-- ======================= LEFT: PUSH ======================= -->
+  <text x="40" y="104" fill="#616c85" font-size="10" letter-spacing="2" font-weight="600">PUSH — CLASSIC FEDAUTHZ</text>
+  <text x="560" y="104" text-anchor="end" fill="#616c85" font-size="10" font-family="ui-monospace, Menlo, monospace">tag: rreg-baseline</text>
+
+  <!-- agent card L -->
+  <rect x="40" y="118" width="520" height="64" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="58" y="140" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">REQUESTING SIDE</text>
+  <text x="58" y="160" fill="#eef1f7" font-size="13" font-weight="650">Bob's agent + shim</text>
+  <text x="230" y="160" fill="#9aa4ba" font-size="10.5">learns everything from the challenge — no discovery</text>
+
+  <!-- challenge arrows L -->
+  <line x1="120" y1="182" x2="120" y2="238" stroke="#5b8cff" stroke-width="1.6" marker-end="url(#mAccent)"/>
+  <text x="136" y="202" fill="#5b8cff" font-size="10.5" font-weight="600">① tools/call → 401 · ticket + as_uri</text>
+  <text x="136" y="217" fill="#f2b955" font-size="10.5">as_uri taken on faith — an unauthenticated header</text>
+  <text x="136" y="231" fill="#616c85" font-size="9.5" font-family="ui-monospace, Menlo, monospace">WWW-Authenticate: UMA</text>
+
+  <!-- RS card L -->
+  <rect x="40" y="244" width="520" height="118" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="58" y="266" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">RESOURCE SIDE · PEP</text>
+  <text x="58" y="286" fill="#eef1f7" font-size="13" font-weight="650">agentgateway + uma-pep</text>
+  <text x="290" y="286" fill="#616c85" font-size="10" font-family="ui-monospace, Menlo, monospace">holds Alice's PAT</text>
+  <rect x="56" y="298" width="488" height="50" rx="8" fill="#151b26" stroke="#232c3d"/>
+  <text x="70" y="316" fill="#9aa4ba" font-size="10.5">registers every tool surface at the AS, one call each, before anything works</text>
+  <text x="70" y="333" fill="#9aa4ba" font-size="10.5">owner-bound resource ids travel inside the private RS → AS channel</text>
+
+  <!-- push arrows L -->
+  <line x1="150" y1="362" x2="150" y2="452" stroke="#5b8cff" stroke-width="2.4" marker-end="url(#mAccent)"/>
+  <text x="166" y="382" fill="#5b8cff" font-size="11.5" font-weight="650">registration is PUSHED</text>
+  <text x="166" y="397" fill="#7f9bd8" font-size="10.5">N × POST /rreg — imperative, PAT-authorized</text>
+  <line x1="470" y1="452" x2="470" y2="362" stroke="#f2b955" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#mWarn)"/>
+  <text x="454" y="416" text-anchor="end" fill="#f2b955" font-size="10">AS restart strands the registry: invalid_resource_id →</text>
+  <text x="454" y="430" text-anchor="end" fill="#f2b955" font-size="10">the RS must notice and re-push</text>
+
+  <!-- AS card L -->
+  <rect x="40" y="458" width="520" height="96" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="58" y="480" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">ALICE'S SIDE · AUTHORIZATION SERVER</text>
+  <text x="58" y="500" fill="#eef1f7" font-size="13" font-weight="650">uma-as — resource registry</text>
+  <rect x="56" y="512" width="488" height="32" rx="8" fill="#151b26" stroke="#232c3d"/>
+  <text x="70" y="532" fill="#9aa4ba" font-size="10.5">ids assigned by the AS at registration · registry is written state, owned remotely</text>
+
+  <!-- ======================= RIGHT: PULL ======================= -->
+  <text x="640" y="104" fill="#616c85" font-size="10" letter-spacing="2" font-weight="600">PULL — DECLARATIVE VIA RFC 9728</text>
+  <text x="1160" y="104" text-anchor="end" fill="#616c85" font-size="10" font-family="ui-monospace, Menlo, monospace">branch: prm-discovery</text>
+
+  <!-- agent card R -->
+  <rect x="640" y="118" width="520" height="64" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="658" y="140" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">REQUESTING SIDE</text>
+  <text x="658" y="160" fill="#eef1f7" font-size="13" font-weight="650">Bob's agent + shim</text>
+  <text x="830" y="160" fill="#2ed079" font-size="10.5">reads the public shape before its first call (Beat 0)</text>
+
+  <!-- challenge arrows R -->
+  <line x1="720" y1="182" x2="720" y2="238" stroke="#5b8cff" stroke-width="1.6" marker-end="url(#mAccent)"/>
+  <text x="736" y="198" fill="#5b8cff" font-size="10.5" font-weight="600">① tools/call → 401 · ticket + as_uri + resource_metadata</text>
+  <text x="736" y="213" fill="#2ed079" font-size="10.5">✓ as_uri corroborated against the published metadata</text>
+  <text x="736" y="227" fill="#616c85" font-size="9.5" font-family="ui-monospace, Menlo, monospace">a challenge naming an unpublished AS is refused</text>
+
+  <!-- RS card R -->
+  <rect x="640" y="244" width="520" height="118" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="658" y="266" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">RESOURCE SIDE · PEP</text>
+  <text x="658" y="286" fill="#eef1f7" font-size="13" font-weight="650">agentgateway + uma-pep</text>
+  <text x="890" y="286" fill="#616c85" font-size="10" font-family="ui-monospace, Menlo, monospace">publishes only — no /rreg calls</text>
+  <rect x="656" y="298" width="238" height="50" rx="8" fill="#151b26" stroke="#2ed079" stroke-opacity="0.45"/>
+  <text x="668" y="314" fill="#2ed079" font-size="10.5" font-weight="620">PUBLIC — structure, signed</text>
+  <text x="668" y="328" fill="#9aa4ba" font-size="9.5">tools · scopes · AS location · jwks_uri</text>
+  <text x="668" y="341" fill="#616c85" font-size="8.5" font-family="ui-monospace, Menlo, monospace">/.well-known/oauth-protected-resource/mcp</text>
+  <rect x="906" y="298" width="238" height="50" rx="8" fill="#151b26" stroke="#f2b955" stroke-opacity="0.5"/>
+  <text x="918" y="314" fill="#f2b955" font-size="10.5" font-weight="620">🔒 PROTECTED — whose instances</text>
+  <text x="918" y="328" fill="#9aa4ba" font-size="9.5">Alice's resource ids — "protected webfinger"</text>
+  <text x="918" y="341" fill="#616c85" font-size="8.5" font-family="ui-monospace, Menlo, monospace">/owner-resources — only her AS may ask</text>
+
+  <!-- pull arrows R -->
+  <line x1="775" y1="452" x2="775" y2="362" stroke="#2ed079" stroke-width="2.4" marker-end="url(#mGreen)"/>
+  <text x="666" y="390" fill="#2ed079" font-size="11.5" font-weight="650">registration is PULLED</text>
+  <text x="666" y="406" fill="#67c795" font-size="10.5">one fetch · signed_metadata verified</text>
+  <line x1="1025" y1="452" x2="1025" y2="362" stroke="#f2b955" stroke-width="2" marker-end="url(#mWarn)"/>
+  <text x="1041" y="390" fill="#f2b955" font-size="10.5" font-weight="620">signed query —</text>
+  <text x="1041" y="404" fill="#f2b955" font-size="10.5" font-weight="620">proves her AS's key</text>
+  <text x="1041" y="418" fill="#616c85" font-size="9.5" font-family="ui-monospace, Menlo, monospace">RFC 9421</text>
+  <text x="900" y="440" text-anchor="middle" fill="#9aa4ba" font-size="10">unknown id at /perm → AS re-pulls · self-healing</text>
+
+  <!-- AS card R -->
+  <rect x="640" y="458" width="520" height="96" rx="12" fill="#0f131c" stroke="#232c3d"/>
+  <text x="658" y="480" fill="#616c85" font-size="10" letter-spacing="1.6" font-weight="600">ALICE'S SIDE · AUTHORIZATION SERVER</text>
+  <text x="658" y="500" fill="#eef1f7" font-size="13" font-weight="650">uma-as — registry materialized by pull</text>
+  <rect x="656" y="512" width="488" height="32" rx="8" fill="#151b26" stroke="#232c3d"/>
+  <text x="670" y="532" fill="#9aa4ba" font-size="10.5">ids adopted from what the RS publishes, namespaced under the resource identifier</text>
+
+  <!-- ======================= UNCHANGED strip ======================= -->
+  <rect x="40" y="618" width="1120" height="76" rx="12" fill="#0d1119" stroke="#232c3d"/>
+  <text x="58" y="642" fill="#616c85" font-size="10" letter-spacing="2" font-weight="600">WHAT DELIBERATELY DOESN'T CHANGE</text>
+  <text x="58" y="664" fill="#9aa4ba" font-size="11">The PAT still authorizes /perm and introspection · the permission ticket is still the intent artifact · terms, agreements, PoP grants — beats ② ③ ④ — untouched</text>
+  <text x="58" y="682" fill="#eef1f7" font-size="11" font-weight="600">Metadata tells you the shape of the door. The ticket still tells you whose door, and the terms of entry.</text>
+
+  <!-- footer -->
+  <text x="600" y="726" text-anchor="middle" fill="#616c85" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace">REGISTRATION_MODE=push | pull — both conformant, identical downstream    ·    the measured diff: git diff rreg-baseline..prm-discovery</text>
+</svg>
