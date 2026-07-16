@@ -349,12 +349,14 @@ async function renderResources(target) {
     <div class="muted" style="font-size:12.5px;margin-bottom:10px">Services you have authorized to use
       your authorization server's protection API (they hold a PAT issued in your name). Revoking one cuts
       off its registrations, tickets, and token checks immediately.</div>
-    <table><thead><tr><th>Service</th><th>Client id</th><th>Consent</th><th>Last PAT issued</th><th class="r">Status</th><th></th></tr></thead>
+    <table><thead><tr><th>Service</th><th>Consent</th><th>Last PAT issued</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${servers.map(s => `<tr>
-      <td><div class="tick"><div class="badge2">🛡️</div><div class="nm">${s.name}</div></div></td>
-      <td class="thumb">${s.client_id}</td>
-      <td class="muted" style="font-size:12px">${s.consented}</td>
-      <td>${s.last_pat_issued ? s.last_pat_issued.replace("T", " ").replace("Z", "") : "—"}</td>
+      <td><div class="tick"><div class="badge2">🛡️</div>
+        <div><div class="nm">${s.name}</div><div class="cell-sub mono">${s.client_id}</div></div></div></td>
+      <td class="prose">${s.consented}</td>
+      <td class="nowrap">${s.last_pat_issued
+        ? `${s.last_pat_issued.slice(0, 10)}<div class="cell-sub mono">${s.last_pat_issued.slice(11, 19)} UTC</div>`
+        : "—"}</td>
       <td class="r"><span class="chip ${s.status === "active" ? "pos" : "neg"}">${s.status}</span></td>
       <td class="r">${s.status === "active" ? `<button class="btn danger sm" onclick="revokeRs('${s.client_id}')">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
@@ -362,17 +364,20 @@ async function renderResources(target) {
     authorization server yet. When your brokerage's gateway registers the surfaces it protects, they
     appear here — this is what your policy tiers attach to.</div>`; return; }
   target.innerHTML = serverCard + `<div class="card pad-lg">
+    <div class="section-head"><h2>Protected resources</h2></div>
     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Everything your authorization server
       is protecting, as registered by your brokerage's gateway. Each resource is governed by one of your
       policy tiers — edit the terms under <b>My Terms</b>.</div>
     <table>
-    <thead><tr><th>Resource</th><th>Registered id</th><th>Source</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
+    <thead><tr><th>Resource</th><th>Source</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
     <tbody>${resources.map(r => `<tr>
-      <td><div class="tick"><div class="badge2">🗄️</div><div class="nm">${r.name}</div></div></td>
-      <td class="thumb">${r._id}</td>
+      <td><div class="tick"><div class="badge2">🗄️</div>
+        <div><div class="nm">${r.name}</div><div class="cell-sub mono">${r._id}</div></div></div></td>
       <td>${r.registered_via === "pull" ? `<span class="chip">published · pulled</span>` : `<span class="chip">pushed</span>`}</td>
       <td>${(r.resource_scopes || []).map(s => `<span class="chip">${s}</span>`).join(" ")}</td>
-      <td>${r.tier_name ? `${r.tier_name} <span class="muted mono">(${r.tier})</span>` : `<span class="chip neg">no tier — unreachable</span>`}</td>
+      <td class="nowrap">${r.tier_name
+        ? `${r.tier_name}<div class="cell-sub mono">${r.tier}</div>`
+        : `<span class="chip neg">no tier — unreachable</span>`}</td>
       <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
