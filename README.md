@@ -56,6 +56,16 @@ and can revoke any of them.
 ![Agent Access](screenshots/Resource_Approval.png)
 *(Connected Agents → Revoke) deactivates the connection and any live RPTs immediately.*
 
+### Discovery, Split Into Public and Protected (RFC 9728)
+![Protected Resource Metadata](screenshots/prm-metadata.png)
+*The resource's public metadata is **structural**: tool surfaces and scopes, the owner's authorization server, `jwks_uri`, `signed_metadata` — and a pointer to the protected owner-resources endpoint. Whose resources these are is deliberately not here.*
+
+![Owner resources are protected](screenshots/prm-as-only.png)
+*The owner-resources listing refuses anyone who can't prove they're the owner's authorization server — "a kind of protected webfinger for Alice's stuff"*
+
+![Resource servers and pulled registry](screenshots/prm-myact.png)
+*Alice's view of both standing relationships: the gateway holding a PAT issued in her name (revocable), and every protected resource her AS **pulled** from the gateway's published metadata (`Source: published · pulled`)*
+
 ### Edit RO Policy Terms as Forms or as Code
 ![RO Policy](screenshots/RO_Policy.png)
 ![RO Policy Code](screenshots/RO_Policy_Monoco.png)
