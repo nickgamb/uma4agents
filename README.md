@@ -52,6 +52,10 @@ and can revoke any of them.
 ![New Agent](screenshots/New_Agent.png)
 *An agent with **no standing connection** pends on first contact regardless of tier*
 
+### A Sensitive Operation Pends for Alice — One Approval, One Trade
+![Trade approval](screenshots/Trade_Approval_Identified.png)
+*An ask-me tier holds the request until Alice taps. The agent is **identified** — its `aauth:…@ps.uma.lab` identity was verified against its issuer's published keys, not claimed — and her approval releases a single-use grant bound to exactly this order.*
+
 ### Manage Agent Access & Revocation
 ![Agent Access](screenshots/Resource_Approval.png)
 *(Connected Agents → Revoke) deactivates the connection and any live RPTs immediately.*
@@ -72,8 +76,8 @@ and can revoke any of them.
 *Express the resource owner policy terms that agents agree to in a form or as code*
 
 ### Activity Ledger
-![Activity Ledger](screenshots/ActivityLedger.png)
-*Track all agent activity live in the ledger*
+![Activity Ledger](screenshots/Activity_Ledger_Identified.png)
+*The full trail of one afternoon: what the agent **promised** (the signed terms, hash and all), what Alice **personally approved** (and denied), and what was actually **touched** — every row correlated by its negotiation id*
 
 ## Quick start
 
