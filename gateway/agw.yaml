@@ -14,6 +14,14 @@ binds:
                   pathPrefix: /.well-known/oauth-protected-resource
             backends:
               - host: "uma-pep:9002"
+          # The AAuth-binding encoding of the same public layer: R3
+          # vocabulary + access_mode, sharing the same protected endpoint.
+          - name: aauth-resource-metadata
+            matches:
+              - path:
+                  pathPrefix: /.well-known/aauth-resource.json
+            backends:
+              - host: "uma-pep:9002"
           # The resource's signing keys (RFC 9728 jwks_uri) — verifies
           # signed_metadata.
           - name: resource-jwks

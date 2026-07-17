@@ -388,6 +388,50 @@ async def protected_resource_metadata() -> dict:
     return doc
 
 
+def r3_vocabulary() -> dict:
+    """An AAuth Rich Resource Requests (R3) vocabulary describing this
+    resource's operations in a format the agent already speaks (MCP), so a
+    caller that knows only the hostname can learn the API. Content-addressed:
+    the digest is over the canonical operation list, which gives the
+    *universal type layer* (operations + their scopes) a stable identifier —
+    the same facts, referenceable independent of any one owner."""
+    operations = [
+        {"tool": tool, "resource_scopes": ss}
+        for tool, (rid, ss) in TOOLS.items()
+    ]
+    digest = s256(json.dumps(operations, sort_keys=True).encode())
+    return {"format": "mcp", "operations": operations, "digest": digest}
+
+
+def aauth_resource_document() -> dict:
+    """The AAuth-binding encoding of the *same public structural layer* the
+    PRM document carries — AAuth's `/.well-known/aauth-resource.json`. Same
+    tool surfaces, expressed as an R3 vocabulary; `access_mode` names the
+    four-party (federated) topology this gateway already runs (PS federates
+    with the owner's AS). Crucially it points at the *same*
+    owner_resources_endpoint: the protected instance layer ("protected
+    webfinger") is binding-independent — only the public encoding changes."""
+    return {
+        "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+        "access_mode": "four-party",
+        "access_servers": [AS_PUBLIC],
+        "jwks_uri": f"https://{EXPECTED_AUTHORITY}/jwks",
+        "r3_vocabularies": [r3_vocabulary()],
+        "owner_resources_endpoint": f"https://{EXPECTED_AUTHORITY}/owner-resources",
+    }
+
+
+@app.get("/.well-known/aauth-resource.json")
+async def aauth_resource_metadata() -> dict:
+    doc = aauth_resource_document()
+    doc["signed_metadata"] = jwt.encode(
+        {**doc, "iss": doc["resource"], "iat": int(time.time())},
+        PEP_KEY, algorithm="EdDSA",
+        headers={"typ": "aauth-resource+jwt", "kid": PEP_KID},
+    )
+    return doc
+
+
 @app.get("/jwks")
 async def pep_jwks() -> dict:
     jwk = json.loads(OKPAlgorithm.to_jwk(PEP_KEY.public_key()))

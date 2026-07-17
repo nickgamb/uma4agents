@@ -196,12 +196,43 @@ each recruiting a different implementer community.
 Observations from binding the grant layer onto AAuth as it exists today,
 offered as engineering notes on a foundation:
 
+- **This POC is already an AAuth four-party (federated) deployment — the
+  contribution is a richer AS, not a rival to one.** AAuth's four roles map
+  onto what runs here almost one-to-one: the person server is AAuth's **PS**
+  (represents Bob, the requesting person), the gateway/PEP is the
+  **Resource**, and `uma-as` is precisely AAuth's **AS** (the access server
+  that "evaluates resource policy on behalf of the resource"). The permission
+  ticket is AAuth's resource token (`aud` = the AS); the RPT is AAuth's auth
+  token. What AAuth leaves deliberately open — *how* the AS evaluates policy
+  and reaches the owner — is exactly the surface this experiment fills: the
+  dictated-terms demand loop, the ask-me hold, the MyTerms agreement. So the
+  sharper framing (correcting our own hero line, which over-broadly implied no
+  agent protocol is near the "may" question): **AAuth puts an authority in the
+  right place and specifies the cross-domain token plumbing; UMA-for-agents is
+  the negotiation grammar that authority runs.** Neither spec "answers may" on
+  its own — both slot it to the AS — and that slot is the new agent-era
+  surface.
 - **AAuth's resource token is permission-ticket-shaped, with the negotiation
   state on the opposite side.** UMA mints the ticket at the *owner's* AS
   (owner-authoritative from message one); AAuth mints the resource token at
   the *resource*. For an owner holding a pending "ask-me" request, the UMA
   direction is the one that carries. Worth a joint look at where pending state
   should live.
+- **Discovery is binding-shaped; the split is not.** The public/structural
+  layer has a natural encoding per binding: `tool_surfaces` in the RFC 9728
+  document for the OAuth+DPoP binding, and AAuth's own
+  `/.well-known/aauth-resource.json` with an R3 vocabulary
+  (`r3_vocabularies`, content-addressed) for the AAuth binding — this POC now
+  serves both, from one tool registry. R3's content-addressing is the better
+  fit for the *type layer* and sharpens the point the pull work surfaced with
+  Eve: operations-and-scopes are universal facts, so a content digest gives
+  them a stable identifier independent of any owner. What does **not** change
+  with the binding is the layer above it: the protected owner-resources
+  listing ("protected webfinger") and the permission ticket are shared across
+  both discovery formats — both documents here point at the *same*
+  `owner_resources_endpoint`. R3 describes what the *resource's* operations
+  are (resource-authored); MyTerms describes what the *owner* permits
+  (owner-authored). They compose — R3 does not absorb the ticket or the terms.
 - **Proof-of-possession composes for free.** An AAuth auth token is already
   key-bound; carrying UMA's permission array as a claim delivers "rich
   introspection over a PoP token" with no new token type.

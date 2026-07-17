@@ -73,11 +73,14 @@ GET  /owner/events                         SSE stream -> the portal notification
 ### uma-pep endpoints (behind the gateway)
 
 ```
-GET  /.well-known/oauth-protected-resource[/mcp]   RFC 9728 metadata: structural,
-                                                   signed (signed_metadata), with
-                                                   jwks_uri and the two extension
-                                                   members (tool_surfaces,
-                                                   owner_resources_endpoint)
+GET  /.well-known/oauth-protected-resource[/mcp]   RFC 9728 metadata (OAuth+DPoP
+                                                   binding): structural, signed,
+                                                   jwks_uri + tool_surfaces +
+                                                   owner_resources_endpoint
+GET  /.well-known/aauth-resource.json              AAuth-binding encoding of the same
+                                                   public layer: access_mode +
+                                                   r3_vocabularies (content-addressed),
+                                                   same owner_resources_endpoint
 GET  /jwks                                         the resource's signing keys
 GET  /owner-resources                              owner-bound instances; served only
                                                    to an RFC 9421-signed query by the
@@ -102,13 +105,26 @@ omits is whose instances sit behind the resource: publishing which resources
 Alice owns at an unauthenticated URI would be a privacy leak the old push
 registration never had.
 
-**Protected — instance.** `GET /owner-resources` (advertised by the public
-document) returns the owner-bound resource instances — ids, names, scopes,
-owner — only to a querier that proves possession of the owner's AS signing
-key: RFC 9421 message signatures over the same profile the agent uses for
-proof-of-possession, verified against the AS's published JWKS. A "protected
-webfinger" for Alice's stuff: discoverable, but only by the party her
-consent already connected.
+The public layer has **two binding encodings of the same structural facts**,
+served side by side from one tool registry:
+
+- **OAuth+DPoP binding** — the RFC 9728 document above (`tool_surfaces`).
+- **AAuth binding** — `GET /.well-known/aauth-resource.json`: an
+  `access_mode` (`four-party`, the federated topology this stack runs) and an
+  R3 vocabulary (`r3_vocabularies`, content-addressed via a `digest` over the
+  operation list), per AAuth's resource-metadata convention. R3 is the better
+  home for the type layer — the content digest gives universal operations +
+  scopes a stable id independent of any owner.
+
+**Protected — instance.** `GET /owner-resources` (advertised by *both* public
+documents, which point at the same endpoint) returns the owner-bound resource
+instances — ids, names, scopes, owner — only to a querier that proves
+possession of the owner's AS signing key: RFC 9421 message signatures over the
+same profile the agent uses for proof-of-possession, verified against the AS's
+published JWKS. A "protected webfinger" for Alice's stuff: discoverable, but
+only by the party her consent already connected. This instance layer, and the
+permission ticket, are **binding-independent** — only the public encoding
+changes.
 
 Agents consume the public layer: both clients fetch it (the driver before
 any call; the shim on first challenge), validate `resource` (RFC 9728
@@ -413,7 +429,7 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Ask-me per-operation grants — approval permits one action |
 | 4 | Owner push notification on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | The agent-era consent surface; the day-1 handshake |
 | 5 | Standing connection keyed by an identity handle (JWK thumbprint when pseudonymous, verified issuer-qualified subject when identified); `contract` (s256) on the RPT | — | Owner-visible, revocable relationships; promise/action/consent in one ledger. Identified agents' session keys rotate, so the key cannot be the relationship key |
-| 6 | RFC 9728 PRM with a structural `tool_surfaces` extension member; `resource_metadata` on the UMA challenge; clients corroborate `as_uri` against published `authorization_servers` | PRM predates UMA; UMA's challenge carries `as_uri` on faith | Declarative discovery of the AS and the protected surface; the challenge gains a TLS-anchored second witness. `resource_metadata` itself is stock RFC 9728 §5.1 — composing it with `WWW-Authenticate: UMA` is the extension |
+| 6 | Public structural discovery in two binding encodings from one registry — RFC 9728 `tool_surfaces` (OAuth+DPoP) and AAuth `aauth-resource.json` `r3_vocabularies`, content-addressed (AAuth); `resource_metadata` on the UMA challenge; clients corroborate `as_uri` against published `authorization_servers` | PRM and AAuth resource metadata both predate this; UMA's challenge carries `as_uri` on faith | Declarative discovery of the AS and the surface, per binding; the challenge gains a TLS-anchored second witness. The encodings are stock (9728 §5.1, AAuth R3) — composing them with the UMA challenge, and sharing one protected instance layer beneath both, is the extension |
 | 7 | `owner_resources_endpoint` PRM member + the protected owner-resources listing (RFC 9421-signed query by the owner's AS) | FedAuthz: RS pushes owner-bound registrations under the PAT | The privacy split: public metadata stays structural; whose instances sit behind the resource is served only to the owner's AS — "protected webfinger." Enables `REGISTRATION_MODE=pull` (declarative registration), with push remaining conformant |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.

@@ -10,11 +10,12 @@ The whole stack runs locally with one command. It binds to
 [AAuth](https://github.com/dickhardt/AAuth) for agent identity and
 proof-of-possession.
 
-> **The question.** Every agent protocol today answers *"is this my agent doing
-> my task?"* None answers *"may your agent touch my stuff?"* An agent economy is
-> agents touching other people's stuff — and the owner isn't in the loop when
-> the agent shows up. UMA answered that a decade ago; this shows what it looks
-> like with agent-shaped mechanics.
+> **The question.** Agent-identity protocols answer *"is this my agent doing my
+> task?"* The harder question — *"may your agent touch my stuff?"* — needs an
+> authority on the owner's side and a negotiation to fill it. AAuth's four-party
+> mode puts that authority in the right place; what stays unspecified is how an
+> *offline* owner actually answers. UMA worked that out a decade ago. This binds
+> the two, and shows what it looks like with agent-shaped mechanics.
 
 See **[FINDINGS.md](FINDINGS.md)** for the recommendations to spec authors,
 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the system design, and
