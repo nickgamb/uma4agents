@@ -223,7 +223,7 @@ services:
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q 'mcp>=1.13' httpx 'pyjwt[crypto]' && exec python /repo/clients/agent-shim/test_shim.py
+      - pip install -q 'mcp>=1.13,<2' httpx 'pyjwt[crypto]' && exec python /repo/clients/agent-shim/test_shim.py
     environment:
       PYTHONUNBUFFERED: "1"
     volumes:

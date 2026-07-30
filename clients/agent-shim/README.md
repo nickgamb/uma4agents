@@ -15,7 +15,7 @@ From the repo root (so cert/lib paths resolve):
 ```bash
 claude mcp add alice-vault -- \
   env PYTHONPATH=lib UMA4A_CACERT=certs/rootCA.pem \
-  uv run --with 'mcp>=1.13' --with httpx --with 'pyjwt[crypto]' \
+  uv run --with 'mcp>=1.13,<2' --with httpx --with 'pyjwt[crypto]' \
   python clients/agent-shim/shim.py
 ```
 
