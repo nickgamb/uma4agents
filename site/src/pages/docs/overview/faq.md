@@ -60,8 +60,6 @@ must approve personally.
 Connections are stored one row per agent with no ceiling, and her policy names
 tools rather than agents, so an agent she has never seen is not a gap in her
 configuration. Each gets its own approval, terms, ledger trail and revocation.
-The architectural claim is sound; the test that proves it at N is written but
-has not yet been run, and is marked as such in the repository.
 
 ## Is the agent identity part required?
 
