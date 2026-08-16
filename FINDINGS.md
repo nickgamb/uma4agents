@@ -389,7 +389,25 @@ revocable, with none a fallback for another. The reference stack runs
 `oidc,local-key`, and a decision lands in the same ledger either way. See
 [docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md).
 
-**11. Identity levels are two, and description is not one of them.** Running the
+**11. A message-signature profile has to say which requests cover their body.**
+The four components this profile signs — `@method`, `@authority`, `@path`,
+`authorization` — say who is asking and what they are asking of. They say
+nothing about the bytes, and that distinction is invisible until an endpoint
+carries its meaning in a body rather than a URL.
+
+Ours does. `POST /owner/pending/{family}/decision` is the owner saying yes or
+no, and with those four components alone an intermediary can leave her
+signature untouched and change the word. The family is in the path and cannot
+be retargeted; the answer can be inverted, which is worse, because it is silent
+and it is hers. We shipped that and caught it reviewing our own branch.
+
+The fix is RFC 9530 `Content-Digest` as a covered component, and the rule worth
+writing into a spec is the one that makes it enforceable: **a verifier must be
+able to require the digest, not merely accept it.** Optional coverage is not
+coverage — a signer that omits it produces a signature that verifies. Endpoints
+whose body is the decision should mandate it.
+
+**12. Identity levels are two, and description is not one of them.** Running the
 same negotiation against four requesting-side arrangements — a bare key, an
 AAuth-identified agent with rotating session keys, a CIMD-described agent, and
 one published in a Web Bot Auth directory — produces **two** connection handles,

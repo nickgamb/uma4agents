@@ -105,15 +105,26 @@ That is [its own guide](/docs/guides/indivisible/).
 
 ## 4. Sign the request over what matters
 
-The agent signs over method, authority, path and the authorization header. The
-body is covered by a content digest included in the signature base.
+The agent signs over method, authority, path and the authorization header.
 
-Two rules from experience:
+Notice what that list does **not** include: the body. Those four say who is
+asking and what they are asking of; they say nothing about the bytes. For a
+single-use grant the body is pinned anyway — `operation.params_s256` is a hash
+of the exact approved parameters, and step 4 refuses anything else. For a
+grant that is not single-use, it is not pinned by the signature at all.
+
+So decide deliberately whether your bodies carry meaning that has to be
+integrity-protected, and cover an [RFC 9530](https://www.rfc-editor.org/rfc/rfc9530.html)
+`Content-Digest` where they do. The owner's decision endpoint is the clearest
+case: its entire meaning is one word in its body, and a signature that stops at
+the URL lets an intermediary invert the answer without breaking anything.
+
+Two more rules from experience:
 
 - Take the authority from **configuration**, not from the `Host` header. A
   caller-controlled authority is not an authority, and behind a proxy `Host` is
   frequently something else entirely.
-- Verify the digest against the body the enforcement point actually read. If the
+- Verify any digest against the body the enforcement point actually read. If the
   gateway truncated the body, the digest fails — which is correct, but you want
   the log line to say "truncated body" rather than "signature invalid".
 

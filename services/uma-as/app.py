@@ -505,17 +505,26 @@ def owner_device_key():
     return key
 
 
-def require_owner_signature(request: Request) -> None:
+async def require_owner_signature(request: Request) -> None:
     """The owner signs her own request, with her own key.
 
-    RFC 9421 over the same covered components an agent signs — method,
-    authority, path, authorization — verified with `lib/uma4a_http_sig.py`,
-    the same module the enforcement point uses. There is no bearer token to
-    steal, nothing to introspect, and no third party to be available: the
-    authority holds one public key and checks a signature against it.
+    RFC 9421 over method, authority, path and authorization, verified with
+    `lib/uma4a_http_sig.py` — the same module the enforcement point uses.
+    There is no bearer token to steal, nothing to introspect, and no third
+    party that has to be available: the authority holds one public key.
+
+    **A request with a body must also cover an RFC 9530 Content-Digest.** The
+    four base components say who is asking and what they are asking of; they
+    say nothing about the bytes. That is adequate for a GET and unsafe for
+    `POST /owner/pending/{family}/decision`, whose whole meaning is a word in
+    its body: without the digest an intermediary can leave her signature
+    untouched and turn an approval into a refusal. The family is in the path
+    and so cannot be retargeted — but the answer could be inverted, which is
+    worse, because it is silent and it is hers.
 
     `authorization` is part of the signature base whether or not it carries a
-    value, so an unauthenticated owner request signs over the empty string.
+    value, so an owner request that has no bearer token signs the empty
+    string.
     """
     from uma4a_http_sig import VerifyError
     from uma4a_http_sig import verify as verify_sig
@@ -530,6 +539,9 @@ def require_owner_signature(request: Request) -> None:
     path = request.url.path
     if request.url.query:
         path = f"{path}?{request.url.query}"
+    # Read once and cache on the request: FastAPI's body() is memoised, so the
+    # route handler still gets it after this.
+    body = await request.body()
     try:
         verify_sig(
             method=request.method,
@@ -539,13 +551,15 @@ def require_owner_signature(request: Request) -> None:
             signature_input=sig_input,
             signature=sig,
             public_key=owner_device_key(),
+            body=body or None,
+            require_digest=bool(body),
         )
     except VerifyError as exc:
         raise HTTPException(
             status_code=401, detail=f"owner signature did not verify: {exc}") from exc
 
 
-def require_owner(request: Request) -> None:
+async def require_owner(request: Request) -> None:
     """Whoever is calling the owner API has to be the owner.
 
     Any configured credential that verifies is enough — she is one person
@@ -566,7 +580,9 @@ def require_owner(request: Request) -> None:
     last: HTTPException | None = None
     for mode in OWNER_AUTH:
         try:
-            VERIFY_OWNER[mode](request)
+            result = VERIFY_OWNER[mode](request)
+            if hasattr(result, "__await__"):
+                await result
             return
         except HTTPException as exc:
             last = exc
@@ -1359,7 +1375,7 @@ async def pending_poll(rec: dict) -> JSONResponse:
 
 @app.get("/owner/pending")
 async def owner_pending(request: Request) -> list:
-    require_owner(request)
+    await require_owner(request)
     return [
         {
             "family": rec["family"],
@@ -1377,7 +1393,7 @@ async def owner_pending(request: Request) -> list:
 
 @app.post("/owner/pending/{family}/decision")
 async def owner_decision(family: str, request: Request) -> dict:
-    require_owner(request)
+    await require_owner(request)
     body = await request.json()
     decision = body.get("decision")
     if decision not in ("approved", "denied"):
@@ -1399,7 +1415,7 @@ async def owner_decision(family: str, request: Request) -> dict:
 async def owner_resource_servers(request: Request) -> list:
     """The resource servers Alice has authorized to use her Protection API —
     the other standing relationship her AS holds, beside agent connections."""
-    require_owner(request)
+    await require_owner(request)
     return [
         {"client_id": cid, **{k: v for k, v in rs.items() if k != "secret"}}
         for cid, rs in (await STORE.resource_servers()).items()
@@ -1408,7 +1424,7 @@ async def owner_resource_servers(request: Request) -> list:
 
 @app.post("/owner/resource-servers/{client_id}/revoke")
 async def owner_revoke_resource_server(client_id: str, request: Request) -> dict:
-    require_owner(request)
+    await require_owner(request)
     if not await STORE.revoke_resource_server(client_id):
         raise HTTPException(status_code=404, detail="unknown resource server")
     event("resource_server.revoked", client_id=client_id)
@@ -1421,7 +1437,7 @@ async def owner_resources(request: Request) -> list:
     """The owner's view of what her AS is protecting: every registered
     resource, joined with the tier whose policy governs it. This is the
     surface Alice attaches policy to before any agent has ever called."""
-    require_owner(request)
+    await require_owner(request)
     tiers = await STORE.tiers()
     out = []
     for rid, desc in RESOURCES.items():
@@ -1441,13 +1457,13 @@ async def owner_resources(request: Request) -> list:
 
 @app.get("/owner/policies")
 async def owner_policies(request: Request) -> dict:
-    require_owner(request)
+    await require_owner(request)
     return await STORE.tiers()
 
 
 @app.put("/owner/policies/{tier_id}")
 async def owner_update_policy(tier_id: str, request: Request) -> dict:
-    require_owner(request)
+    await require_owner(request)
     patch = await request.json()
     try:
         updated = await STORE.update_tier(tier_id, patch)
@@ -1462,13 +1478,13 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
 
 @app.get("/owner/connections")
 async def owner_connections(request: Request) -> list:
-    require_owner(request)
+    await require_owner(request)
     return await STORE.connections()
 
 
 @app.post("/owner/connections/{handle}/revoke")
 async def owner_revoke_connection(handle: str, request: Request) -> dict:
-    require_owner(request)
+    await require_owner(request)
     # Deactivating the connection and burning the tokens issued under it is
     # one step, not two: a revocation that flipped the connection and then
     # failed would leave the agent holding exactly the authority Alice had
@@ -1484,7 +1500,7 @@ async def owner_revoke_connection(handle: str, request: Request) -> dict:
 
 @app.get("/owner/ledger")
 async def owner_ledger(request: Request) -> list:
-    require_owner(request)
+    await require_owner(request)
     return await STORE.ledger()
 
 
@@ -1498,7 +1514,7 @@ async def owner_events(request: Request):
     fan-out has to be a property of the state, not of the process that
     happens to be serving her.
     """
-    require_owner(request)
+    await require_owner(request)
     from sse_starlette.sse import EventSourceResponse
 
     async def stream():

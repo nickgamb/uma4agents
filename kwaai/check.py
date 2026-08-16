@@ -107,6 +107,41 @@ def main() -> int:
         print("   her device key, held by a personal AI: also accepted")
         print("   neither is a fallback for the other")
 
+        # Regression: her signature has to reach the bytes, not just the URL.
+        # It did not, at first. The four base components of RFC 9421 say who is
+        # asking and what of — an intermediary could leave the signature
+        # untouched and turn "approved" into "denied", which is silent and is
+        # her decision. A body now carries an RFC 9530 Content-Digest and the
+        # owner API refuses a signature that does not cover it.
+        from uma4a_http_sig import sign as _sign
+
+        tampered = _sign(method="POST", authority="alice-as.uma.lab",
+                         path="/owner/pending/fam_regression/decision",
+                         authorization="", key=ai._key, keyid="owner",
+                         body=json.dumps({"decision": "approved"}).encode())
+        flipped = client.post(
+            f"{AS_PUBLIC}/owner/pending/fam_regression/decision",
+            headers={**tampered, "Content-Type": "application/json"},
+            content=json.dumps({"decision": "denied"}).encode(), timeout=10.0)
+        if flipped.status_code != 401:
+            print(f"FAIL: a flipped decision body was accepted ({flipped.status_code}) "
+                  "— the signature does not cover the body")
+            return 1
+        print("   a decision body changed after signing: 401")
+
+        unsigned_body = _sign(method="POST", authority="alice-as.uma.lab",
+                              path="/owner/pending/fam_regression/decision",
+                              authorization="", key=ai._key, keyid="owner")
+        nodigest = client.post(
+            f"{AS_PUBLIC}/owner/pending/fam_regression/decision",
+            headers={**unsigned_body, "Content-Type": "application/json"},
+            content=json.dumps({"decision": "denied"}).encode(), timeout=10.0)
+        if nodigest.status_code != 401:
+            print(f"FAIL: a body with no digest covered was accepted "
+                  f"({nodigest.status_code})")
+            return 1
+        print("   a body the signature never covered: 401")
+
         print("\n== The personal AI takes over answering ==")
         stop = False
         threading.Thread(target=lambda: ability.run(1.0, lambda: stop, client),

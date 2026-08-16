@@ -69,9 +69,13 @@ def owner_call(client: httpx.Client, method: str, path: str, body: dict | None =
     components are fixed by the profile rather than by what happens to be
     present.
     """
+    raw = json.dumps(body).encode() if body is not None else None
     headers = http_sign(method=method, authority=OWNER_AUTHORITY, path=path,
-                        authorization="", key=owner_key(), keyid="owner")
-    return client.request(method, f"{AS}{path}", headers=headers, json=body, timeout=10.0)
+                        authorization="", key=owner_key(), keyid="owner", body=raw)
+    if raw is not None:
+        headers["Content-Type"] = "application/json"
+    return client.request(method, f"{AS}{path}", headers=headers, content=raw,
+                          timeout=10.0)
 
 
 def approve_in_background(client: httpx.Client) -> None:

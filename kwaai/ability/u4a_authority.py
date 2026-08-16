@@ -114,12 +114,19 @@ class OwnerAuthority:
 
     def _call(self, client: httpx.Client, method: str, path: str,
               body: dict | None = None) -> httpx.Response:
+        # Sign the bytes that are sent, not an equivalent serialisation of
+        # them. A decision endpoint's meaning is in its body, so the body is
+        # covered by a Content-Digest — without it an intermediary can leave
+        # the signature intact and change the answer.
+        raw = json.dumps(body).encode() if body is not None else None
         headers = http_sign(
             method=method, authority=self.name, path=path, authorization="",
-            key=_HostKey(self.host), keyid="owner",
+            key=_HostKey(self.host), keyid="owner", body=raw,
         )
+        if raw is not None:
+            headers["Content-Type"] = "application/json"
         return client.request(method, f"{self.url}{path}", headers=headers,
-                              json=body, timeout=15.0)
+                              content=raw, timeout=15.0)
 
     def pending(self, client: httpx.Client) -> list[Request]:
         r = self._call(client, "GET", "/owner/pending")

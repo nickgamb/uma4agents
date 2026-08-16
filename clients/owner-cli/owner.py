@@ -92,6 +92,9 @@ def load_key() -> Ed25519PrivateKey:
 
 def call(method: str, path: str, body: dict | None = None) -> httpx.Response:
     key = load_key()
+    # The exact bytes are signed and sent. Serialising twice — once to hash,
+    # once for httpx — would risk hashing something the server never sees.
+    raw = json.dumps(body).encode() if body is not None else None
     headers = http_sign(
         method=method,
         authority=AUTHORITY,
@@ -99,10 +102,13 @@ def call(method: str, path: str, body: dict | None = None) -> httpx.Response:
         authorization="",
         key=key,
         keyid="owner",
+        body=raw,
     )
     headers["Accept"] = "application/json"
+    if raw is not None:
+        headers["Content-Type"] = "application/json"
     with httpx.Client(timeout=30.0) as client:
-        return client.request(method, f"{AS}{path}", headers=headers, json=body)
+        return client.request(method, f"{AS}{path}", headers=headers, content=raw)
 
 
 def show(resp: httpx.Response) -> int:

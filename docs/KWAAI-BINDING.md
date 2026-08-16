@@ -54,6 +54,11 @@ UMA_AS_OWNER_AUTH=oidc,local-key    # both — what the reference stack runs
 same message-signature profile the agent uses for proof-of-possession, pointed
 at the owner, verified by the same module.
 
+A request with a body must also cover an RFC 9530 `Content-Digest`, and the
+owner API refuses one that does not. Those four components say who is asking
+and what of; they say nothing about the bytes, and this endpoint's whole
+meaning is a word in its body. See recommendation 11 in FINDINGS.
+
 **Both is the interesting configuration**, and it is a finding in its own
 right: a person reaches her own things more than one way. A browser on her
 laptop, an app on her phone, a personal AI holding a key. Each credential is
