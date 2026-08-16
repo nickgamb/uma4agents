@@ -399,7 +399,10 @@ Ours does. `POST /owner/pending/{family}/decision` is the owner saying yes or
 no, and with those four components alone an intermediary can leave her
 signature untouched and change the word. The family is in the path and cannot
 be retargeted; the answer can be inverted, which is worse, because it is silent
-and it is hers. We shipped that and caught it reviewing our own branch.
+and it is hers. This implementation had exactly that gap, and the case is
+recorded because the shape of the mistake generalises: a signature profile
+defined once, for one endpoint, and then reused for another whose meaning
+moved from the URL into the body.
 
 The fix is RFC 9530 `Content-Digest` as a covered component, and there are two
 rules worth writing into a spec rather than one.

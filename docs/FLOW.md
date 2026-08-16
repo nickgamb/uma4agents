@@ -41,10 +41,9 @@ as_uri: identical in all four
 her policy: unchanged
 ```
 
-## The result that was not what we expected
+## Two levels, not four
 
-Going in, the expectation was four regimes, four handles. That is wrong, and
-the run says so:
+Four regimes do not produce four handles. The run says so:
 
 ```
 pseudonymous   aauth:pseudonymous-agent
@@ -59,8 +58,7 @@ description*: they let a party who has never met this agent say something true
 about who operates it, and they change nothing about how it is filed or
 judged.
 
-That is a sharper statement of the same principle than the one we set out to
-demonstrate. Description is not identity, and neither is authorization.
+Description is not identity, and neither is authorization.
 
 ## The negative that makes it falsifiable
 

@@ -38,7 +38,7 @@ identical. `make flow-check` in the lab runs it.
 
 ## Two levels, not four
 
-The expectation going in was four regimes, four handles. That is wrong:
+Four regimes do not produce four handles:
 
 ```
 pseudonymous   aauth:pseudonymous-agent

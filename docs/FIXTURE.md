@@ -1,8 +1,7 @@
 # The minimal deployment
 
-*This started as a misreading of a note from the U4A club and turned into
-something else. It is kept on its own merits, described below, and it is not
-an answer to what was actually asked — see [FLOW.md](FLOW.md) for that.*
+*A test harness, not a deployment. If you are looking for the argument that
+agent identity stays on the requesting side, that is [FLOW.md](FLOW.md).*
 
 The reference architecture is a brokerage's: an identity provider, a
 replicated authorization server on Postgres, a gateway carrying the
