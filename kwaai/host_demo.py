@@ -16,9 +16,9 @@ What it does that a real host would do properly:
                         face. The wait is unbounded either way.
     log                 prints. A real host has somewhere to put a record.
 
-Run it against the floating stack:
+Run it against the fixture:
 
-    make float-up
+    make fixture
     make kwaai-host                    # asks you about each request
     make kwaai-host AUTO=tier1         # answers tier1 without asking
 

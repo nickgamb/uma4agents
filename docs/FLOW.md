@@ -106,7 +106,7 @@ should say so rather than reaching for this one.
 
 ## See also
 
-- [FLOATING.md](FLOATING.md) — the minimal fixture, and how little the protocol
+- [FIXTURE.md](FIXTURE.md) — the minimal fixture, and how little the protocol
   needs underneath it
 - [KWAAI-BINDING.md](KWAAI-BINDING.md) — a personal AI as the owner's side
 - `clients/demo-driver/flow_check.py` — the check itself

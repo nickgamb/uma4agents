@@ -105,7 +105,7 @@ in the same ledger, correlated to the same negotiation. Nothing forks.
 Interactively, against the minimal fixture:
 
 ```bash
-make float-up
+make fixture
 make kwaai-host              # puts each request to you
 make kwaai-host AUTO=tier1   # standing approval for one tier
 ```

@@ -392,3 +392,56 @@ async def run_grant_async(
             on_receipt(body["receipt"])
         return body["access_token"]
     raise GrantDenied(body.get("error_description") or body.get("error", "unknown"))
+
+
+# --- The MCP envelope --------------------------------------------------------
+#
+# Every driver in this repo was carrying its own copy of the 2026-07-28 framing:
+# the protocol version, the two routing headers, the Accept that admits an SSE
+# body, and the unwrapping of `data:` frames. Six copies of the one thing the
+# spec revision most recently changed, and the one thing a future revision will
+# change again.
+
+MCP_PROTOCOL_VERSION = "2026-07-28"
+
+
+def mcp_meta(client_name: str, version: str = "0.1") -> dict:
+    return {
+        "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {"name": client_name, "version": version},
+    }
+
+
+def mcp_call(client, url: str, method: str, params: dict, meta: dict,
+             headers: dict | None = None, timeout: float = 30.0):
+    """One JSON-RPC call over MCP streamable-http. Returns the parsed response.
+
+    `Mcp-Method` and `Mcp-Name` are sent because SEP-2243 requires them on
+    2026-07-28, and because an enforcement point is entitled to route on them —
+    it must also reconcile them against the body, which is why they are set
+    from the same values rather than passed in separately.
+    """
+    p = dict(params)
+    p["_meta"] = meta
+    h = {
+        "content-type": "application/json",
+        "accept": "application/json, text/event-stream",
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+        "Mcp-Method": method,
+    }
+    if method == "tools/call":
+        h["Mcp-Name"] = params.get("name", "")
+    h.update(headers or {})
+    r = client.post(url, json={"jsonrpc": "2.0", "method": method, "id": 1,
+                               "params": p}, headers=h, timeout=timeout)
+    return r
+
+
+def mcp_json(response) -> dict:
+    """The JSON body, whether it arrived plain or as a single SSE frame."""
+    body = response.text
+    for line in body.splitlines():
+        if line.startswith("data:"):
+            body = line[5:].strip()
+    return json.loads(body)

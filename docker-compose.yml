@@ -286,7 +286,7 @@ services:
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /kwaai/check_full.py
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /kwaai/check.py
     environment:
       PYTHONPATH: /driver/lib
       PYTHONUNBUFFERED: "1"

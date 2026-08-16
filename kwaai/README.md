@@ -30,7 +30,7 @@ make kwaai-check
 Interactively, against the fixture:
 
 ```bash
-make float-up
+make fixture
 make kwaai-host              # each request is put to you
 make kwaai-host AUTO=tier1   # standing approval for one tier
 ```

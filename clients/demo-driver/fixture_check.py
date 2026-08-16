@@ -18,7 +18,7 @@ What is left is the part that matters, and it still refuses the calls Alice
 has not agreed to. That is the point being demonstrated: the protection does
 not depend on the infrastructure underneath it.
 
-Run with `make float`.
+Run with `make fixture`.
 """
 
 import json
@@ -30,7 +30,9 @@ import time
 import httpx
 
 sys.path.insert(0, "/driver/lib")
-from uma4a_grant import AgentKeys, GrantDenied, run_grant, signed_headers  # noqa: E402
+from uma4a_grant import (  # noqa: E402
+    AgentKeys, GrantDenied, mcp_call, mcp_json, mcp_meta, run_grant, signed_headers,
+)
 from uma4a_http_sig import sign as http_sign  # noqa: E402
 
 VAULT = os.environ.get("VAULT_URL", "http://alice-vault-mcp:9020/mcp")
@@ -41,11 +43,7 @@ OWNER_KEY = os.environ.get("UMA4A_OWNER_KEY", "/keys/owner-ed25519.pem")
 PATH = "/mcp"
 UMA_CHALLENGE = -32001
 
-META = {
-    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-    "io.modelcontextprotocol/clientCapabilities": {},
-    "io.modelcontextprotocol/clientInfo": {"name": "u4a-float-check", "version": "0.1"},
-}
+META = mcp_meta("u4a-fixture-check")
 
 
 def say(msg: str) -> None:
@@ -53,22 +51,7 @@ def say(msg: str) -> None:
 
 
 def rpc(client: httpx.Client, method: str, params: dict, headers: dict | None = None) -> dict:
-    p = dict(params)
-    p["_meta"] = META
-    h = {"content-type": "application/json",
-         "accept": "application/json, text/event-stream",
-         "MCP-Protocol-Version": "2026-07-28",
-         "Mcp-Method": method}
-    if method == "tools/call":
-        h["Mcp-Name"] = params.get("name", "")
-    h.update(headers or {})
-    r = client.post(VAULT, json={"jsonrpc": "2.0", "method": method, "id": 1,
-                                 "params": p}, headers=h, timeout=30.0)
-    body = r.text
-    for line in body.splitlines():
-        if line.startswith("data:"):
-            body = line[5:].strip()
-    return json.loads(body)
+    return mcp_json(mcp_call(client, VAULT, method, params, META, headers))
 
 
 def owner_key():
@@ -146,7 +129,7 @@ def main() -> int:
         say(f"ticket {ch['ticket'][:18]}…, authority {ch['as_uri']}")
 
         print("\n== Beats 2-4: terms, signature, grant ==")
-        keys = AgentKeys.load_or_create("/driver/keys/float-check.pem")
+        keys = AgentKeys.load_or_create("/driver/keys/fixture-check.pem")
         approve_in_background(client)
 
         def approve_terms(template: dict) -> bool:

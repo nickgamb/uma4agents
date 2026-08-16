@@ -36,7 +36,9 @@ import httpx
 
 sys.path.insert(0, "/driver/lib")
 from uma4a_enroll import EnrollmentDenied, enroll  # noqa: E402
-from uma4a_grant import AgentKeys, GrantDenied, parse_challenge, run_grant  # noqa: E402
+from uma4a_grant import (  # noqa: E402
+    AgentKeys, GrantDenied, mcp_call, mcp_meta, parse_challenge, run_grant,
+)
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
 AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
@@ -47,11 +49,7 @@ PS_ADMIN = os.environ.get("PS_ADMIN_TOKEN", "uma4agents-ps-admin")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 KEYS = "/driver/keys"
 
-META = {
-    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-    "io.modelcontextprotocol/clientCapabilities": {},
-    "io.modelcontextprotocol/clientInfo": {"name": "u4a-flow-check", "version": "0.1"},
-}
+META = mcp_meta("u4a-flow-check")
 
 
 def say(msg: str) -> None:
@@ -91,13 +89,8 @@ def approve_everything(client: httpx.Client, deadline: float) -> None:
 
 
 def challenge_for(client: httpx.Client, tool: str):
-    body = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-            "params": {"name": tool, "arguments": {}, "_meta": META}}
-    r = client.post(GATEWAY, json=body, timeout=30.0, headers={
-        "content-type": "application/json",
-        "accept": "application/json, text/event-stream",
-        "MCP-Protocol-Version": "2026-07-28",
-        "Mcp-Method": "tools/call", "Mcp-Name": tool})
+    r = mcp_call(client, GATEWAY, "tools/call",
+                 {"name": tool, "arguments": {}}, META)
     ch = parse_challenge(r.headers.get("www-authenticate", ""))
     if ch is None:
         raise SystemExit(f"no UMA challenge from the gateway: {r.status_code} "

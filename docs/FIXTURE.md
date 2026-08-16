@@ -13,11 +13,11 @@ much of this is the protocol?*
 
 This is the answer, run rather than argued.
 
-![The reference architecture and the floating one, side by side, with the four
-beats unchanged across both](float-vs-reference.svg)
+![The reference architecture and the minimal fixture, side by side, with the
+four beats unchanged across both](reference-vs-fixture.svg)
 
 ```
-make float
+make fixture
 ```
 
 Two containers. No `make init`, no certificate, no DNS zone, no sudo, no host
@@ -36,9 +36,9 @@ beats, the same terms, the same proof-of-possession token, the same refusals.
 
 The middle two are the ones to argue about. The rest are the point.
 
-## The one piece that did not float
+## The one piece that could not be removed
 
-Everything else in this profile was already portable. The owner's
+Everything else in this profile was already portable enough to strip. The owner's
 authentication was not: `uma-as` validated her OIDC token against a Keycloak
 realm, so an authority meant to be *personal* still required her to stand up an
 identity provider before she could answer a single request.
@@ -73,10 +73,10 @@ relax because the caller happens to be the owner.
 ## Try it
 
 ```bash
-make float                      # the whole grant, checked, ~8s after images
-make float-owner ARGS=pending   # what is waiting on her
-make float-owner ARGS="approve fam_..."
-make float-down
+make fixture                    # brings it up and checks the whole grant
+make owner ARGS=pending   # what is waiting on her
+make owner ARGS="approve fam_..."
+make fixture-down
 ```
 
 `clients/owner-cli/owner.py` is her side of it: about 200 lines, no dependency
@@ -98,12 +98,12 @@ That last one has a binding of its own: [KWAAI-BINDING.md](KWAAI-BINDING.md).
 ## One that cost an hour
 
 Both compose files define a service called `uma-as`. Under one project name —
-which is the default, taken from the directory — `make float-up` did not start
+which is the default, taken from the directory — `make fixture` did not start
 a second authorization server beside the reference stack's. It **replaced** it,
 with a configuration that accepts only her device key, and every OIDC owner
 request in the running reference deployment began failing.
 
-`compose.float.yml` now declares `name: uma4agents-float`. Worth knowing if you
+`compose.fixture.yml` now declares `name: uma4agents-fixture`. Worth knowing if you
 keep a second stack alongside the first: compose isolates by project, and two
 files in one directory share a project unless told otherwise.
 

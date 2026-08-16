@@ -1,4 +1,4 @@
-# The floating deployment: U4A with nothing standing behind it.
+# The fixture: U4A with nothing standing behind it.
 #
 # The main stack is the reference architecture — an identity provider, a
 # replicated authorization server on Postgres, a gateway carrying the
@@ -14,7 +14,7 @@
 #   owner-keygen       makes her keypair on first run, so there is no setup
 #
 # Three containers, plain http, no host state, no `make init`. Everything the
-# grant needs and nothing else. Run it with `make float`.
+# grant needs and nothing else. Run it with `make fixture`.
 #
 # What this is not: a recommendation. A deployment holding other people's
 # assets should have all the things this file removes. The claim is narrower —
@@ -22,11 +22,11 @@
 # and that an owner's authority can therefore live somewhere small.
 
 # Its own project, so it cannot collide with the reference stack. Both files
-# define a service called `uma-as`, and under one project name `make float-up`
+# define a service called `uma-as`, and under one project name `make fixture`
 # quietly *replaced* the running reference deployment's authorization server
 # with this one — which then failed every OIDC owner request, because this
 # configuration does not accept them.
-name: uma4agents-float
+name: uma4agents-fixture
 
 services:
   # Her key, made once into a volume both sides can read. A real deployment
@@ -56,7 +56,7 @@ services:
         print("made the owner's key; enrolled the public half with her authority")
         PY
     volumes:
-      - float-keys:/keys
+      - fixture-keys:/keys
 
   uma-as:
     init: true
@@ -69,7 +69,7 @@ services:
       UMA_AS_ISSUER: http://uma-as:9000
       UMA_AS_RS_RESOURCE_URI: http://alice-vault.local:9020/mcp
       UMA_AS_RS_CLIENT_ID: local-resource
-      UMA_AS_RS_CLIENT_SECRET: float-dev-secret
+      UMA_AS_RS_CLIENT_SECRET: fixture-dev-secret
       UMA_AS_STORE: memory
       # The whole point of this file.
       UMA_AS_OWNER_AUTH: local-key
@@ -77,7 +77,7 @@ services:
       UMA_AS_OWNER_AUTHORITY: alice-as.local
       UMA_AS_OWNER: alice
     volumes:
-      - float-keys:/keys
+      - fixture-keys:/keys
     depends_on:
       owner-keygen:
         condition: service_completed_successfully
@@ -102,7 +102,7 @@ services:
       UMA_AS_PUBLIC: http://uma-as:9000
       UMA_AS_INTERNAL: http://uma-as:9000
       UMA_AS_RS_CLIENT_ID: local-resource
-      UMA_AS_RS_CLIENT_SECRET: float-dev-secret
+      UMA_AS_RS_CLIENT_SECRET: fixture-dev-secret
       UMA_REALM: alice-vault
       # Published over plain http, because there is no certificate authority
       # in this deployment and the pull has to be able to fetch what it reads.
@@ -110,7 +110,7 @@ services:
       UMA_EXPECTED_AUTHORITY: alice-vault.local:9020
       UMA_PEP_SIGNING_KEY: /keys/vault-ed25519.pem
     volumes:
-      - float-vault-keys:/keys
+      - fixture-vault-keys:/keys
     depends_on:
       uma-as:
         condition: service_healthy
@@ -120,12 +120,12 @@ services:
       timeout: 5s
       retries: 15
 
-  float-check:
+  fixture-check:
     image: python:3.12-slim
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /driver/float_check.py
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /driver/fixture_check.py
     environment:
       PYTHONPATH: /driver/lib
       PYTHONUNBUFFERED: "1"
@@ -135,10 +135,10 @@ services:
       UMA_AS_OWNER_AUTHORITY: alice-as.local
       UMA4A_OWNER_KEY: /keys/owner-ed25519.pem
     volumes:
-      - ./clients/demo-driver/float_check.py:/driver/float_check.py:ro
+      - ./clients/demo-driver/fixture_check.py:/driver/fixture_check.py:ro
       - ./lib:/driver/lib:ro
-      - float-keys:/keys:ro
-      - float-driver-keys:/driver/keys
+      - fixture-keys:/keys:ro
+      - fixture-driver-keys:/driver/keys
     working_dir: /driver
     depends_on:
       alice-vault-mcp:
@@ -146,6 +146,6 @@ services:
     profiles: ["check"]
 
 volumes:
-  float-keys:
-  float-vault-keys:
-  float-driver-keys:
+  fixture-keys:
+  fixture-vault-keys:
+  fixture-driver-keys:
