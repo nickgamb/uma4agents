@@ -51,6 +51,41 @@ OWNER_METADATA_URL = os.environ.get(
 OWNER_USERNAME = os.environ.get("UMA_AS_OWNER", "alice")
 OWNER_AUDIENCES = set(
     os.environ.get("UMA_AS_OWNER_CLIENTS", "alice-portal").split(","))
+
+# How the owner proves she is the owner, to her own authorization server.
+#
+#   oidc       she signs in to an identity provider and the AS validates the
+#              token against its published keys. Right for a deployment that
+#              already has one, and the default.
+#   local-key  she holds an Ed25519 key and signs her owner-API requests with
+#              it (RFC 9421 — the same profile agents use for proof-of-
+#              possession, pointed at the owner). No identity provider, no
+#              static credential, nothing to stand up.
+#
+# Both, comma-separated, is the interesting configuration and the one the
+# reference stack runs: `oidc,local-key`. A person has more than one way to
+# reach her own things — a browser on her laptop, an app on her phone, a
+# personal AI holding a key — and the profile should not force her to pick
+# one. Each credential is independently sufficient and independently
+# revocable; the second is not a fallback for the first.
+#
+# The key mode exists because OIDC is the one piece of this profile that
+# cannot go anywhere small. An authority meant to be personal should not
+# require her to operate an identity provider before she can answer a single
+# request. The verifying code is the same either way; only the credential is
+# different.
+OWNER_AUTH = tuple(
+    m.strip().lower()
+    for m in os.environ.get("UMA_AS_OWNER_AUTH", "oidc").split(",")
+    if m.strip()
+)
+# Her public key, in local-key mode: a path to an Ed25519 public key PEM.
+OWNER_KEY_PATH = os.environ.get("UMA_AS_OWNER_KEY", "/keys/owner-ed25519.pub")
+# The authority this AS reconstructs an owner signature base against. Taken
+# from configuration, never from the request — an authority the caller can set
+# is not an authority. Defaults to the host part of this AS's own issuer.
+OWNER_EXPECTED_AUTHORITY = os.environ.get(
+    "UMA_AS_OWNER_AUTHORITY", ISSUER.split("://", 1)[-1].split("/", 1)[0])
 PAT_TTL = 3600
 # Registration is declarative: this AS *reads* the RS's published metadata —
 # public structure from the RFC 9728 document, owner-bound instances from the
@@ -443,8 +478,103 @@ def owner_issuer_keys() -> list:
     return keys
 
 
+_OWNER_KEY_CACHE: dict[str, object] = {}
+
+
+def owner_device_key():
+    """Her registered device key, in local-key mode.
+
+    Read once and cached. A real deployment enrols this key — she proves
+    possession of it on a device she already trusts — rather than finding it
+    on disk; the lab writes it at first run so the stack has nothing to set up.
+    """
+    from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
+    cached = _OWNER_KEY_CACHE.get(OWNER_KEY_PATH)
+    if cached is not None:
+        return cached
+    try:
+        with open(OWNER_KEY_PATH, "rb") as fh:
+            key = load_pem_public_key(fh.read())
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(f"UMA_AS_OWNER_AUTH=local-key but no owner key at "
+                    f"{OWNER_KEY_PATH}: {exc}")) from exc
+    _OWNER_KEY_CACHE[OWNER_KEY_PATH] = key
+    return key
+
+
+def require_owner_signature(request: Request) -> None:
+    """The owner signs her own request, with her own key.
+
+    RFC 9421 over the same covered components an agent signs — method,
+    authority, path, authorization — verified with `lib/uma4a_http_sig.py`,
+    the same module the enforcement point uses. There is no bearer token to
+    steal, nothing to introspect, and no third party to be available: the
+    authority holds one public key and checks a signature against it.
+
+    `authorization` is part of the signature base whether or not it carries a
+    value, so an unauthenticated owner request signs over the empty string.
+    """
+    from uma4a_http_sig import VerifyError
+    from uma4a_http_sig import verify as verify_sig
+
+    sig_input = request.headers.get("signature-input")
+    sig = request.headers.get("signature")
+    if not sig_input or not sig:
+        raise HTTPException(
+            status_code=401,
+            detail="owner API requires an RFC 9421 signature from the owner's key")
+
+    path = request.url.path
+    if request.url.query:
+        path = f"{path}?{request.url.query}"
+    try:
+        verify_sig(
+            method=request.method,
+            authority=OWNER_EXPECTED_AUTHORITY,
+            path=path,
+            authorization=request.headers.get("authorization", ""),
+            signature_input=sig_input,
+            signature=sig,
+            public_key=owner_device_key(),
+        )
+    except VerifyError as exc:
+        raise HTTPException(
+            status_code=401, detail=f"owner signature did not verify: {exc}") from exc
+
+
 def require_owner(request: Request) -> None:
-    """The owner API takes Alice's own OIDC access token, validated against
+    """Whoever is calling the owner API has to be the owner.
+
+    Any configured credential that verifies is enough — she is one person
+    however she reached this. Every owner endpoint calls this, so none of them
+    needs to know which credentials the deployment accepts.
+
+    A 401 is returned only when *no* configured mode verifies, and it carries
+    the last reason rather than a list, so a caller presenting one credential
+    is told why that one failed instead of why the others did.
+    """
+    unknown = [m for m in OWNER_AUTH if m not in VERIFY_OWNER]
+    if unknown or not OWNER_AUTH:
+        raise HTTPException(
+            status_code=500,
+            detail=(f"UMA_AS_OWNER_AUTH must be a comma-separated list of "
+                    f"{'|'.join(sorted(VERIFY_OWNER))}; got {unknown or 'nothing'}"))
+
+    last: HTTPException | None = None
+    for mode in OWNER_AUTH:
+        try:
+            VERIFY_OWNER[mode](request)
+            return
+        except HTTPException as exc:
+            last = exc
+    raise last or HTTPException(status_code=401, detail="owner authentication failed")
+
+
+def require_owner_oidc(request: Request) -> None:
+    """One of the credentials: Alice's own OIDC access token, validated against
     her realm's published keys. The portal proxies it; the simulated Alice
     obtains one by actually logging in (direct-access grant)."""
     from jwt.algorithms import RSAAlgorithm
@@ -478,6 +608,15 @@ def require_owner(request: Request) -> None:
     if claims.get("preferred_username") != OWNER_USERNAME:
         raise HTTPException(status_code=403,
                             detail="this authorization server serves a different owner")
+
+
+
+# Filled after both verifiers exist. A deployment names the credentials it
+# accepts; this maps each name to the code that checks it.
+VERIFY_OWNER = {
+    "oidc": require_owner_oidc,
+    "local-key": require_owner_signature,
+}
 
 
 # --- Declarative registration (pull mode) -------------------------------------

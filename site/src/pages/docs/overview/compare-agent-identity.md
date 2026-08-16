@@ -113,6 +113,18 @@ owner is, and an agent economy will need both — an enterprise IdP governing th
 agents an organisation runs, and something owner-side governing what those
 agents may reach that belongs to somebody else.
 
+## Two levels, and everything else is description
+
+Worth stating precisely, because it is checkable and because getting it wrong
+is quiet. Running the same negotiation against all four of the above produces
+**two** connection handles, not four: either the key is the identity, or a
+verified issuer stands behind it. A CIMD document and a Web Bot Auth directory
+change nothing about how an agent is filed or judged — the terms proffered and
+the grant issued are identical with or without them.
+
+That is the design working. See [identity stays where it
+is](/docs/overview/flow/).
+
 ## What is left over
 
 Once you know which agent is calling, who operates it, and that it holds the key

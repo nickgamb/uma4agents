@@ -1,0 +1,141 @@
+<svg viewBox="0 0 1200 820" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- float-vs-reference — the same protocol, two deployments.
+       Colour: site/src/style/theme.js · brand direction 1b -->
+  <defs>
+    <marker id="mA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="mG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bcdb2c"/>
+    </marker>
+    <marker id="mD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#757b83"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="820" fill="#0a0b0d"/>
+
+  <!-- header -->
+  <g transform="translate(40 26) scale(0.53125)">
+    <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="15" fill="#0a0b0d" stroke="#8cc2d4" stroke-width="2.8"/>
+    <g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 17 L11 33 A5.75 5.75 0 0 0 22.5 33 L22.5 17" stroke="#ffffff"/>
+      <path d="M34.5 17 L26.25 31 L37.75 31 M34.5 17 L34.5 39" stroke="#bcdb2c"/>
+      <path d="M41.5 39 L47.25 17 L53 39 M43.5 31.5 L51 31.5" stroke="#ffffff"/>
+    </g>
+    <path d="M20 46.5 L44 46.5" fill="none" stroke="#8cc2d4" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+  <text x="88" y="42" fill="#ffffff" font-size="17" font-weight="650">Two deployments, one protocol</text>
+  <text x="88" y="60" fill="#a9aeb6" font-size="12">The reference architecture, and the minimal fixture used to test the protocol on its own</text>
+  <text x="1160" y="42" text-anchor="end" fill="#757b83" font-size="11" font-family="ui-monospace, 'SF Mono', Menlo, monospace">branch: float/personal-authority</text>
+
+  <line x1="600" y1="92" x2="600" y2="720" stroke="#24262c" stroke-width="1.5" stroke-dasharray="7 6"/>
+
+  <!-- ============================ LEFT: reference ============================ -->
+  <text x="40" y="118" fill="#757b83" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="2">THE REFERENCE ARCHITECTURE</text>
+  <text x="40" y="138" fill="#a9aeb6" font-size="12.5">What a brokerage runs. `make up`, or three nodes on Kubernetes.</text>
+
+  <!-- owner side -->
+  <rect x="40" y="158" width="240" height="196" rx="10" fill="#121317" stroke="#8cc2d4" stroke-width="1.6"/>
+  <text x="56" y="180" fill="#8cc2d4" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="1.4">ALICE — THE OWNER</text>
+  <rect x="56" y="192" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="68" y="213" fill="#ffffff" font-size="12">Keycloak — her identity provider</text>
+  <rect x="56" y="232" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="68" y="253" fill="#ffffff" font-size="12">uma-as ×3 — her authority</text>
+  <rect x="56" y="272" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="68" y="293" fill="#ffffff" font-size="12">Postgres ×3 — replicated</text>
+  <rect x="56" y="312" width="208" height="30" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="68" y="331" fill="#ffffff" font-size="12">her portal</text>
+
+  <!-- rs side -->
+  <rect x="316" y="158" width="240" height="150" rx="10" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+  <text x="332" y="180" fill="#757b83" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="1.4">MERIDIAN — RESOURCE SERVER</text>
+  <rect x="332" y="192" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="344" y="213" fill="#ffffff" font-size="12">agentgateway — ext_authz</text>
+  <rect x="332" y="232" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="344" y="253" fill="#ffffff" font-size="12">uma-pep — enforces, publishes</text>
+  <rect x="332" y="272" width="208" height="30" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="344" y="291" fill="#ffffff" font-size="12">the vault (no auth code)</text>
+
+  <!-- the platform both sides sit on -->
+  <rect x="40" y="366" width="516" height="34" rx="8" fill="#121317" stroke="#24262c" stroke-dasharray="4 4"/>
+  <text x="56" y="388" fill="#a9aeb6" font-size="12">Underneath both: an mkcert CA · a DNS zone · an edge proxy</text>
+
+  <text x="40" y="428" fill="#757b83" font-size="11.5">Setup: <tspan fill="#e8836b">make init</tspan> (certs, one sudo for DNS), then <tspan fill="#e8836b">make up</tspan></text>
+  <text x="40" y="448" fill="#757b83" font-size="11.5">Containers: <tspan fill="#e8836b">13</tspan>   ·   host state: a CA and a resolver file</text>
+
+  <!-- ============================ RIGHT: floating ============================ -->
+  <text x="640" y="118" fill="#bcdb2c" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="2">THE MINIMAL FIXTURE</text>
+  <text x="640" y="138" fill="#a9aeb6" font-size="12.5">Everything that is not the protocol, removed. A test fixture, not a recommendation.</text>
+
+  <rect x="640" y="158" width="240" height="112" rx="10" fill="#121317" stroke="#8cc2d4" stroke-width="1.6"/>
+  <text x="656" y="180" fill="#8cc2d4" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="1.4">ALICE — THE OWNER</text>
+  <rect x="656" y="192" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="668" y="213" fill="#ffffff" font-size="12">uma-as — memory store</text>
+  <rect x="656" y="232" width="208" height="30" rx="6" fill="#1a1c21" stroke="#bcdb2c"/>
+  <text x="668" y="252" fill="#bcdb2c" font-size="12">a key she holds</text>
+
+  <rect x="916" y="158" width="240" height="112" rx="10" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+  <text x="932" y="180" fill="#757b83" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="1.4">THE RESOURCE</text>
+  <rect x="932" y="192" width="208" height="34" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="944" y="213" fill="#ffffff" font-size="12">the vault — enforces itself</text>
+  <rect x="932" y="232" width="208" height="30" rx="6" fill="#1a1c21" stroke="#24262c"/>
+  <text x="944" y="252" fill="#a9aeb6" font-size="12">publishes its own metadata</text>
+
+  <!-- what is gone -->
+  <g font-size="12" fill="#757b83">
+    <text x="640" y="302">Gone: <tspan fill="#e8836b">identity provider</tspan> · <tspan fill="#e8836b">database</tspan> · <tspan fill="#e8836b">gateway</tspan></text>
+    <text x="640" y="322">      <tspan fill="#e8836b">certificate authority</tspan> · <tspan fill="#e8836b">DNS zone</tspan> · <tspan fill="#e8836b">edge proxy</tspan></text>
+  </g>
+
+  <rect x="640" y="342" width="516" height="40" rx="8" fill="#1a1c21" stroke="#bcdb2c" stroke-dasharray="4 4"/>
+  <text x="656" y="367" fill="#bcdb2c" font-size="12">Her device key also works on the left: a personal AI answers on either stack</text>
+
+  <text x="640" y="428" fill="#757b83" font-size="11.5">Setup: <tspan fill="#bcdb2c">make float</tspan>. No init, no sudo, no certificate, plain http.</text>
+  <text x="640" y="448" fill="#757b83" font-size="11.5">Containers: <tspan fill="#bcdb2c">2</tspan>   ·   host state: <tspan fill="#bcdb2c">none</tspan>   ·   cold start: <tspan fill="#bcdb2c">8s</tspan>   ·   <tspan fill="#bcdb2c">92 MB</tspan></text>
+
+  <!-- ============================ THE FLOW, SHARED ============================ -->
+  <line x1="40" y1="478" x2="1160" y2="478" stroke="#24262c"/>
+  <text x="40" y="508" fill="#ffffff" font-size="14" font-weight="650">And the grant is the same on both sides of the line</text>
+  <text x="40" y="528" fill="#a9aeb6" font-size="12">Not a reduced protocol, not a demo mode — the identical four beats, the identical refusals.</text>
+
+  <g font-size="12">
+    <!-- beat rows, drawn once across the full width -->
+    <g transform="translate(40 556)">
+      <rect x="0" y="0" width="1120" height="44" rx="8" fill="#121317" stroke="#24262c"/>
+      <text x="18" y="27" fill="#bcdb2c" font-size="14" font-weight="700" font-family="ui-monospace, 'SF Mono', Menlo, monospace">1</text>
+      <text x="44" y="27" fill="#ffffff" font-weight="600">Challenge</text>
+      <text x="150" y="27" fill="#a9aeb6">the resource refuses and hands back a ticket and the address of her authority</text>
+      <line x1="905" y1="22" x2="960" y2="22" stroke="#8cc2d4" stroke-width="1.4" marker-end="url(#mA)"/>
+      <text x="975" y="27" fill="#757b83" font-size="11">unchanged</text>
+    </g>
+    <g transform="translate(40 600)">
+      <rect x="0" y="0" width="1120" height="44" rx="8" fill="#121317" stroke="#24262c"/>
+      <text x="18" y="27" fill="#bcdb2c" font-size="14" font-weight="700" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2</text>
+      <text x="44" y="27" fill="#ffffff" font-weight="600">Attempt</text>
+      <text x="150" y="27" fill="#a9aeb6">the agent presents the ticket; her authority proffers her terms</text>
+      <line x1="905" y1="22" x2="960" y2="22" stroke="#8cc2d4" stroke-width="1.4" marker-end="url(#mA)"/>
+      <text x="975" y="27" fill="#757b83" font-size="11">unchanged</text>
+    </g>
+    <g transform="translate(40 652)">
+      <rect x="0" y="0" width="1120" height="44" rx="8" fill="#121317" stroke="#24262c"/>
+      <text x="18" y="27" fill="#bcdb2c" font-size="14" font-weight="700" font-family="ui-monospace, 'SF Mono', Menlo, monospace">3</text>
+      <text x="44" y="27" fill="#ffffff" font-weight="600">Commit</text>
+      <text x="150" y="27" fill="#a9aeb6">the agent signs the terms — and first contact waits for her</text>
+      <line x1="905" y1="22" x2="960" y2="22" stroke="#f2b955" stroke-width="1.4" marker-end="url(#mD)"/>
+      <text x="975" y="27" fill="#f2b955" font-size="11">she is asked differently</text>
+    </g>
+    <g transform="translate(40 704)">
+      <rect x="0" y="0" width="1120" height="44" rx="8" fill="#121317" stroke="#24262c"/>
+      <text x="18" y="27" fill="#bcdb2c" font-size="14" font-weight="700" font-family="ui-monospace, 'SF Mono', Menlo, monospace">4</text>
+      <text x="44" y="27" fill="#ffffff" font-weight="600">Grant</text>
+      <text x="150" y="27" fill="#a9aeb6">a proof-of-possession token, bound to one operation where her tier says so</text>
+      <line x1="905" y1="22" x2="960" y2="22" stroke="#8cc2d4" stroke-width="1.4" marker-end="url(#mA)"/>
+      <text x="975" y="27" fill="#757b83" font-size="11">unchanged</text>
+    </g>
+  </g>
+
+  <text x="40" y="778" fill="#f2b955" font-size="12">Beat 3 is the only difference, and it is the credential rather than the beat:</text>
+  <text x="40" y="797" fill="#a9aeb6" font-size="12">she signs in to an identity provider on the left, and signs her own request with her own key on the right.</text>
+  <text x="1160" y="797" text-anchor="end" fill="#757b83" font-size="11" font-family="ui-monospace, 'SF Mono', Menlo, monospace">UMA_AS_OWNER_AUTH=oidc | local-key</text>
+</svg>

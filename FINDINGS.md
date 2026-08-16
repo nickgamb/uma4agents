@@ -372,6 +372,40 @@ implementer will meet it, none of them will be warned by the current text, and
 the symptom is a replayed transaction rather than an error. It costs one
 sentence.
 
+**10. Say how the owner authenticates to her own authorization server.** UMA
+2.0 and FedAuthz are silent on it, which was reasonable in 2018 when an AS was
+tacitly a web application the owner logged in to. It stops being reasonable the
+moment the authority can be *personal* — on her laptop, or inside a personal AI
+— because the profile then requires her to stand up an identity provider before
+she can answer a single request. Two credential modes cost one code path, and
+the second reuses the verifier already present: an RFC 9421 signature over her
+request, checked against a key she enrolled, which is the same message-signature
+profile the agent uses for proof-of-possession pointed the other way.
+
+The configuration worth specifying is **both at once**. A person reaches her own
+things more than one way — a browser, a phone, a personal AI holding a key —
+and each credential should be independently sufficient and independently
+revocable, with none a fallback for another. The reference stack runs
+`oidc,local-key`, and a decision lands in the same ledger either way. See
+[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md).
+
+**11. Identity levels are two, and description is not one of them.** Running the
+same negotiation against four requesting-side arrangements — a bare key, an
+AAuth-identified agent with rotating session keys, a CIMD-described agent, and
+one published in a Web Bot Auth directory — produces **two** connection handles,
+not four. Either the key is the identity, or a verified issuer stands behind it.
+CIMD and Web Bot Auth are additive *description*: they let a party who has never
+met this agent say something true about who operates it, and change nothing
+about how it is filed or judged. Terms, grant and policy are byte-identical
+across all four.
+
+A core spec should say this plainly, because the failure mode is attractive and
+quiet: an implementation that lets a directory lookup or a metadata document tip
+a decision has changed the trust model without changing the wire. The test that
+catches it is the negative one — the owner's policy contains no identity
+vocabulary at all. See [docs/FLOW.md](docs/FLOW.md) and `make flow-check`.
+
+
 ---
 
 ## Binding notes (AAuth)

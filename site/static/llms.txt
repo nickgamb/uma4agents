@@ -27,6 +27,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · The three parties](https://u4a.ai/docs/overview/parties.md): Owner, requesting party, requesting agent — and what it costs to treat the last two as one.
 - [Overview · Terms as first-class](https://u4a.ai/docs/overview/terms.md): The owner does not just decide — she states what she requires, and the agent signs it.
 - [Overview · Identity is not authorization](https://u4a.ai/docs/overview/identity.md): Knowing which agent is calling tells you nothing about whether it may proceed. Both are needed, and they answer different questions.
+- [Overview · Identity stays where it is](https://u4a.ai/docs/overview/flow.md): The owner never has to know how the asking agent is identified — checked against four identity regimes that produce one unchanged decision.
 - [Overview · Discovery, public and protected](https://u4a.ai/docs/overview/discovery.md): What a resource is can be public. Whose instances sit behind it cannot.
 - [Overview · Proof-of-possession](https://u4a.ai/docs/overview/proof-of-possession.md): A grant that names a key, and a request signed with it — so holding the token is not enough.
 - [Overview · Single-use means indivisible](https://u4a.ai/docs/overview/single-use.md): Once has to mean once across every replica, which makes it a property of how you write to the store rather than of the protocol.
@@ -45,6 +46,7 @@ UMA 2.0. Listed in reading order.
 - [Guides · Mint an operation-bound grant](https://u4a.ai/docs/guides/grant.md): Issuing a credential that authorizes one operation rather than a capability, and the enforcement order that makes it hold.
 - [Guides · Make single-use indivisible](https://u4a.ai/docs/guides/indivisible.md): Why the burn has to be one statement, how to write it in a relational store, and how to test something that only fails under concurrency.
 - [Guides · Wire the owner's approval path](https://u4a.ai/docs/guides/approval.md): Holding a negotiation while a human decides, showing her something she can act on, and authorizing her without inventing a credential for her.
+- [Guides · Put the authority on her device](https://u4a.ai/docs/guides/personal-authority.md): Running the owner's side inside a personal AI — the credential it needs, the four methods it has to provide, and what stays the authorization server's job.
 - [Guides · Deploy it at scale](https://u4a.ai/docs/guides/at-scale.md): Separating the parties so the seam is enforced rather than described, replicating an authority correctly, and the checks that prove it held.
 - [Reference · Wire contract](https://u4a.ai/docs/reference/wire-contract.md): Every message that travels between the parties, in order, with the fields that carry meaning.
 - [Reference · Endpoints](https://u4a.ai/docs/reference/endpoints.md): Every surface each party exposes, who may call it, and what it answers.

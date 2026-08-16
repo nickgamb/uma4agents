@@ -3,9 +3,10 @@
 FROM python:3.12-slim
 # httpx / pyjwt are only needed by the embedded enforcement path; they are
 # installed unconditionally so one image serves both modes.
-RUN pip install --no-cache-dir "mcp>=2,<3" httpx 'pyjwt[crypto]'
+RUN pip install --no-cache-dir "mcp>=2,<3" httpx 'pyjwt[crypto]' cryptography
 WORKDIR /app
-COPY lib/uma4a_http_sig.py lib/uma4a_pep.py ./
-COPY mcp/alice-vault/server.py mcp/alice-vault/uma_extension.py mcp/alice-vault/fixtures.json ./
+COPY lib/uma4a_http_sig.py lib/uma4a_pep.py lib/uma4a_publish.py ./
+COPY mcp/alice-vault/server.py mcp/alice-vault/uma_extension.py ./
+COPY mcp/alice-vault/uma_publish.py mcp/alice-vault/fixtures.json ./
 EXPOSE 9020
 CMD ["python", "server.py"]

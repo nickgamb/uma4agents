@@ -20,6 +20,9 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 |---|---|---|
 | `UMA_AS_ISSUER` | `https://alice-as.uma.lab` | The issuer this authority claims in tokens it mints |
 | `UMA_AS_SIGNING_KEY` | `/keys/uma-as-ed25519.pem` | Signing key for RPTs, receipts and PATs |
+| `UMA_AS_OWNER_AUTH` | `oidc` | Comma-separated: `oidc`, `local-key`, or both. Each accepted credential is independently sufficient |
+| `UMA_AS_OWNER_KEY` | `/keys/owner-ed25519.pub` | Her enrolled device key, for `local-key`. Public half only |
+| `UMA_AS_OWNER_AUTHORITY` | host part of the issuer | The authority her signature base is rebuilt against. Configuration, never the request |
 | `UMA_AS_OWNER_ISSUER` | `https://keycloak.uma.lab/realms/alice` | The issuer the owner's tokens must claim |
 | `UMA_AS_OWNER_METADATA_URL` | `{OWNER_ISSUER}/.well-known/openid-configuration` | Where to fetch her identity provider's metadata |
 | `UMA_AS_OWNER` | `alice` | The owner's username |
@@ -49,6 +52,7 @@ rather than holding a call open across it.
 | `UMA_PEP_SIGNING_KEY` | `/keys/uma-pep-ed25519.pem` | Key for `signed_metadata` and signed queries |
 | `UMA_EXPECTED_AUTHORITY` | `gateway.uma.lab` | The authority used to rebuild the RFC 9421 signature base |
 | `UMA_ALLOWED_ORIGINS` | derived from the authority | Origins accepted on MCP requests |
+| `UMA_PEP_SCHEME` | `https` | The scheme of the URLs it publishes. `http` for a deployment with no certificate authority |
 
 `UMA_EXPECTED_AUTHORITY` is the setting to get right. The signature base needs
 an authority, and taking it from the `Host` header gives the caller control of

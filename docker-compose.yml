@@ -70,8 +70,13 @@ services:
       # scope uma_protection). Alice's day-0 consent for it is seeded.
       UMA_AS_RS_CLIENT_ID: meridian-gateway
       UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
-      # The owner API takes Alice's OIDC token, validated against her realm.
+      # Two independent credentials for one person: her browser session, and a
+      # key her device holds. The portal uses the first; a personal AI holding
+      # her key uses the second. Neither is a fallback for the other.
+      UMA_AS_OWNER_AUTH: oidc,local-key
       UMA_AS_OWNER_ISSUER: https://keycloak.uma.lab/realms/alice
+      UMA_AS_OWNER_KEY: /owner/owner-ed25519.pub
+      UMA_AS_OWNER_AUTHORITY: alice-as.uma.lab
       UMA_AS_OWNER: alice
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).
@@ -79,6 +84,8 @@ services:
     volumes:
       - uma-as-keys:/keys
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+      # Only the public half. Her private key never leaves her side.
+      - ./certs/owner-ed25519.pub:/owner/owner-ed25519.pub:ro
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
       interval: 3s
@@ -250,6 +257,47 @@ services:
       - driver-keys:/driver/keys
     working_dir: /driver
     profiles: ["demo"]
+
+  # Four agents, four identity regimes, one unchanged owner. Verifies that
+  # nothing about who the agent is reaches Alice's authorization decision.
+  flow-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' && exec python /driver/flow_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      PS_ADMIN_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
+    volumes:
+      - ./clients/demo-driver/flow_check.py:/driver/flow_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    working_dir: /driver
+    profiles: ["test"]
+
+  # The personal-AI binding against the full stack: her authority, her portal,
+  # the gateway and the vault all as they really are — and a personal AI
+  # holding her key instead of a browser session.
+  kwaai-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /kwaai/check_full.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./kwaai:/kwaai:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - ./certs/owner-ed25519.pem:/owner/owner-ed25519.pem:ro
+      - driver-keys:/driver/keys
+    working_dir: /driver
+    profiles: ["test"]
 
   # Verifies the four-beat grant against a resource that protects itself:
   # ENFORCEMENT_MODE=embedded, no gateway and no ext_authz in the path.

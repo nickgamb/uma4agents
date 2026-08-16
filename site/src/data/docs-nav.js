@@ -51,6 +51,7 @@ const nav = {
       group: "What holds it together",
       pages: [
         { title: "Identity is not authorization", to: "/docs/overview/identity/" },
+        { title: "Identity stays where it is", to: "/docs/overview/flow/" },
         { title: "Discovery, public and protected", to: "/docs/overview/discovery/" },
         { title: "Proof-of-possession", to: "/docs/overview/proof-of-possession/" },
         { title: "Single-use means indivisible", to: "/docs/overview/single-use/" },
@@ -97,6 +98,7 @@ const nav = {
       pages: [
         { title: "Make single-use indivisible", to: "/docs/guides/indivisible/" },
         { title: "Wire the owner's approval path", to: "/docs/guides/approval/" },
+        { title: "Put the authority on her device", to: "/docs/guides/personal-authority/" },
         { title: "Deploy it at scale", to: "/docs/guides/at-scale/" },
       ],
     },

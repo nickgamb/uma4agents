@@ -46,6 +46,16 @@ if ENFORCEMENT_MODE == "embedded":
 
 mcp = MCPServer("alice-vault", extensions=extensions)
 
+if ENFORCEMENT_MODE == "embedded":
+    # A resource that protects itself also has to publish for itself.
+    #
+    # RFC 9728 puts the metadata at the resource's own origin, so when there
+    # is no gateway in front of this process there is nowhere else for it to
+    # come from. In gateway mode the ext_authz service serves these and this
+    # block does not run — one implementation either way, from lib/.
+    import uma_publish
+    uma_publish.attach(mcp, TOOLS)
+
 
 @mcp.tool()
 def get_positions() -> dict:

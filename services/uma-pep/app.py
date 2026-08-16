@@ -54,6 +54,14 @@ PEP_KID = "uma-pep-1"
 # reconstructs the signed components from configuration rather than trusting
 # forwarded headers (the ext_authz hop rewrites Host).
 EXPECTED_AUTHORITY = os.environ.get("UMA_EXPECTED_AUTHORITY", "gateway.uma.lab")
+# The base every published URL is built from. The scheme is configuration
+# rather than a constant for the same reason the authority is: a resource
+# server reachable over plain http — a personal deployment on a laptop, with
+# no certificate authority in the picture — publishes http URLs, and an
+# authorization server pulling from it has to be able to fetch what it reads.
+# The deployed shape leaves this alone and stays https.
+PUBLIC_SCHEME = os.environ.get("UMA_PEP_SCHEME", "https")
+PUBLIC_BASE = f"{PUBLIC_SCHEME}://{EXPECTED_AUTHORITY}"
 # Origins allowed to drive the gateway from a browser context. Agents are not
 # browsers and send no Origin; the check only bites when one is present.
 ALLOWED_ORIGINS = {
@@ -145,7 +153,7 @@ ENFORCER = Enforcer(
     expected_authority=EXPECTED_AUTHORITY,
     allowed_origins=ALLOWED_ORIGINS,
     resource_metadata_url=(
-        f"https://{EXPECTED_AUTHORITY}/.well-known/oauth-protected-resource/mcp"),
+        f"{PUBLIC_BASE}/.well-known/oauth-protected-resource/mcp"),
     event=event,
 )
 
@@ -238,9 +246,9 @@ def prm_document() -> dict:
     /owner-resources ("protected webfinger" for Alice's stuff)."""
     scopes = sorted({s for _, (rid, ss) in TOOLS.items() for s in ss})
     return {
-        "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+        "resource": f"{PUBLIC_BASE}/mcp",
         "authorization_servers": [AS_PUBLIC],
-        "jwks_uri": f"https://{EXPECTED_AUTHORITY}/jwks",
+        "jwks_uri": f"{PUBLIC_BASE}/jwks",
         "scopes_supported": scopes,
         "bearer_methods_supported": ["header"],
         "resource_signing_alg_values_supported": ["EdDSA"],
@@ -248,7 +256,7 @@ def prm_document() -> dict:
             {"tool": tool, "resource_scopes": ss}
             for tool, (rid, ss) in TOOLS.items()
         ],
-        "owner_resources_endpoint": f"https://{EXPECTED_AUTHORITY}/owner-resources",
+        "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources",
     }
 
 
@@ -291,12 +299,12 @@ def aauth_resource_document() -> dict:
     owner_resources_endpoint: the protected instance layer ("protected
     webfinger") is binding-independent — only the public encoding changes."""
     return {
-        "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+        "resource": f"{PUBLIC_BASE}/mcp",
         "access_mode": "four-party",
         "access_servers": [AS_PUBLIC],
-        "jwks_uri": f"https://{EXPECTED_AUTHORITY}/jwks",
+        "jwks_uri": f"{PUBLIC_BASE}/jwks",
         "r3_vocabularies": [r3_vocabulary()],
-        "owner_resources_endpoint": f"https://{EXPECTED_AUTHORITY}/owner-resources",
+        "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources",
     }
 
 
@@ -366,7 +374,7 @@ async def owner_resources(request: Request) -> Response:
     return Response(
         content=json.dumps({
             "owner": OWNER,
-            "resource": f"https://{EXPECTED_AUTHORITY}/mcp",
+            "resource": f"{PUBLIC_BASE}/mcp",
             "resources": [
                 {"_id": rid, "tool": tool, "resource_scopes": ss,
                  "name": f"Alice's vault: {tool}", "type": "mcp-tool"}

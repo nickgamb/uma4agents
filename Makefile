@@ -46,11 +46,26 @@ init:
 	openssl genrsa -out ./certs/uma-as-signing-key.pem 2048
 	openssl rsa -in ./certs/uma-as-signing-key.pem -pubout -out ./certs/uma-as-signing-pub.pem
 
+	$(MAKE) owner-key
+
 	$(MAKE) dns-setup
 
 	@echo ""
 	@echo "==> Init complete. Run: make up"
 	@echo "==> Optional (browser trust for https://*.uma.lab): make trust-ca"
+
+## owner-key: Alice's own device key. She makes it; only the public half ever
+## reaches her authorization server, which is the point — it is a credential
+## she holds rather than one she is issued. Her portal keeps using OIDC; this
+## is the second, independent way she reaches her own authority.
+.PHONY: owner-key
+owner-key:
+	@if [ ! -f ./certs/owner-ed25519.pem ]; then \
+		openssl genpkey -algorithm ed25519 -out ./certs/owner-ed25519.pem 2>/dev/null; \
+		openssl pkey -in ./certs/owner-ed25519.pem -pubout -out ./certs/owner-ed25519.pub; \
+		chmod 600 ./certs/owner-ed25519.pem; \
+		echo "==> made Alice's device key (certs/owner-ed25519.pem)"; \
+	else echo "==> Alice's device key already exists"; fi
 
 ## trust-ca: add the local CA to the system trust store (browser use; may prompt)
 .PHONY: trust-ca
@@ -92,6 +107,66 @@ down:
 
 logs:
 	docker compose logs -f
+
+## float: the same grant with nothing standing behind it — no identity
+## provider, no database, no gateway, no certificate, no host state. Needs no
+## `make init`: three containers, plain http, and the owner's key is made on
+## first run. See docs/FLOATING.md.
+.PHONY: float float-up float-down float-owner
+float: float-up
+	docker compose -f compose.float.yml --profile check run --rm float-check
+
+float-up:
+	docker compose -f compose.float.yml up -d --build owner-keygen uma-as alice-vault-mcp
+
+float-down:
+	docker compose -f compose.float.yml down --timeout 2 --volumes --remove-orphans
+
+## kwaai-host: run the personal-AI binding against the floating stack. It
+## holds her key and puts each request to you. AUTO=tier1,tier2 gives a tier
+## standing approval. See kwaai/README.md.
+.PHONY: kwaai-host kwaai-demo
+kwaai-host:
+	@docker compose -f compose.float.yml run --rm --no-deps -it \
+		-v $(PWD)/kwaai:/kwaai:ro \
+		-e UMA4A_OWNER_AS=http://uma-as:9000 \
+		-e UMA4A_OWNER_AUTHORITY=alice-as.local \
+		-e UMA4A_OWNER_KEY=/keys/owner-ed25519.pem \
+		-e UMA4A_AUTO_TIERS=$(AUTO) \
+		--entrypoint /bin/bash float-check \
+		-c "pip install -q httpx cryptography && python /kwaai/host_demo.py"
+
+## kwaai-demo: the same binding, answered headlessly, so it can be checked.
+kwaai-demo: float-up
+	docker compose -f compose.float.yml --profile check run --rm \
+		-v $(PWD)/kwaai:/kwaai:ro \
+		-e UMA4A_AUTO_TIERS=tier1,tier2,tier3 \
+		--entrypoint /bin/bash float-check \
+		-c "pip install -q httpx cryptography 'pyjwt[crypto]' && python /kwaai/check.py"
+
+## float-owner: Alice's side of her own authority, from the host.
+##   make float-owner ARGS=pending
+##   make float-owner ARGS="approve fam_..."
+float-owner:
+	@docker compose -f compose.float.yml run --rm --no-deps \
+		-v $(PWD)/clients/owner-cli:/cli:ro \
+		-e UMA4A_OWNER_AS=http://uma-as:9000 \
+		-e UMA4A_OWNER_AUTHORITY=alice-as.local \
+		-e UMA4A_OWNER_KEY=/keys/owner-ed25519.pem \
+		-e PYTHONPATH=/driver/lib \
+		--entrypoint /bin/bash float-check \
+		-c "pip install -q httpx cryptography && python /cli/owner.py $(ARGS)"
+
+## flow-check: four agents, four identity regimes, one unchanged owner.
+## Proves agent identity never reaches Alice's authorization decision.
+.PHONY: flow-check kwaai-check
+flow-check:
+	docker compose --profile test run --rm flow-check
+
+## kwaai-check: the personal-AI binding against the full stack — her key
+## alongside her portal session, both accepted, one ledger.
+kwaai-check:
+	docker compose --profile test run --rm kwaai-check
 
 ## demo acts: walk the day headlessly (same code path as the agent-shim)
 .PHONY: demo-tier1 demo-tier2 demo-tier3 demo-all

@@ -38,6 +38,13 @@ a fifteen-minute demo guide,
 2026-07-28 (plus the extension it proposes,
 [ext-auth-third-party-authorization.md](docs/ext-auth-third-party-authorization.md)).
 
+**[docs/FLOW.md](docs/FLOW.md)** is the one to read if you only read one: the
+owner never has to know how the asking agent is identified, checked against
+four different identity regimes with `make flow-check`.
+**[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md)** puts her side inside a
+personal AI, and **[docs/FLOATING.md](docs/FLOATING.md)** is the minimal
+fixture the protocol is tested on with nothing underneath it.
+
 ## Try it, without installing anything
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/nickgamb/uma4agents?devcontainer_path=.devcontainer%2Fdevcontainer.json)

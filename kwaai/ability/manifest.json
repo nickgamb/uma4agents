@@ -1,0 +1,71 @@
+{
+  "$comment": [
+    "PROPOSED. pAI-OS does not publish an ability manifest schema we could",
+    "find, so the field names here are ours and are meant to be replaced by",
+    "theirs. What matters for review is not the spelling but the four things",
+    "an ability of this kind needs from its host — see `requires` below, and",
+    "kwaai/README.md for what each one means and why."
+  ],
+
+  "id": "ai.u4a.owner-authority",
+  "name": "Owner authority",
+  "version": "0.1.0",
+  "summary": "Decide what other people's agents may do with your accounts, on your device.",
+  "description": [
+    "Holds your authorization policy and answers on your behalf when somebody",
+    "else's AI agent asks for access to something of yours. The agent",
+    "negotiates against your terms, signs them, and gets a grant bound to one",
+    "operation — or waits while this ability asks you.",
+    "",
+    "This is not an agent and it does not act for you. It is the thing that",
+    "says no."
+  ],
+
+  "requires": {
+    "key": {
+      "why": "Every request this ability makes to the authority is signed with a key that is yours. It is the whole credential — there is no account and no token.",
+      "needs": "an Ed25519 signing key the host holds and will sign bytes with, and which does not leave the device",
+      "operations": ["sign", "public_key"]
+    },
+    "presence": {
+      "why": "Requests arrive when you are not looking at them. Somebody has to be asked.",
+      "needs": "a way to put a question in front of the person and get back approve or deny, with an unbounded wait",
+      "operations": ["ask"]
+    },
+    "network": {
+      "why": "The authority is reachable over http on the device, or wherever the person put it.",
+      "needs": "outbound http to a configured base URL",
+      "operations": ["fetch"]
+    },
+    "storage": {
+      "why": "Her policy and her ledger outlive a restart.",
+      "needs": "a durable place for the authority's own state",
+      "operations": ["read", "write"]
+    }
+  },
+
+  "provides": [
+    {
+      "capability": "authorization.owner",
+      "summary": "Answers whether another party's agent may touch this person's resources."
+    }
+  ],
+
+  "config": {
+    "authority_url": {
+      "type": "string",
+      "default": "http://localhost:9000",
+      "summary": "Her authorization server. Runs alongside this ability."
+    },
+    "authority_name": {
+      "type": "string",
+      "default": "alice-as.local",
+      "summary": "The authority the request signature is reconstructed against. Configuration on both sides, never read off the request."
+    },
+    "auto_approve_tiers": {
+      "type": "array",
+      "default": [],
+      "summary": "Tiers to answer without asking. Empty by default: an ability that answers for her by default is not doing the job."
+    }
+  }
+}

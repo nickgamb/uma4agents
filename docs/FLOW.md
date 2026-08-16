@@ -1,0 +1,112 @@
+# Flow: identity stays where it is
+
+The load-bearing idea in this profile is not the ticket or the token. It is
+that **Alice never has to know how Bob's agent is identified.**
+
+She writes her terms and sets her tiers. Whether the agent asking is a bare
+key with no issuer anywhere, an AAuth-identified agent whose session keys
+rotate every run, one described by a CIMD document, or one whose keys are
+published in a Web Bot Auth directory — none of that reaches her. Governance
+of the agent stays with Bob, who runs it. Governance of the resource stays
+with Alice, who owns it. Neither side has to adopt the other's identity
+system for the grant to work.
+
+That is a claim, so it is checked:
+
+```
+make flow-check
+```
+
+## What it does
+
+Four negotiations against the same authorization server, with the requesting
+side arranged four different ways, and a comparison of what Alice's side did.
+
+| Regime | What the agent brings | What it is |
+|---|---|---|
+| pseudonymous | a bare Ed25519 key | the key *is* the identity |
+| identified | an AAuth `aa-agent+jwt`, fresh session key each run | a verified issuer stands behind it |
+| described | a CIMD document at a URL | who operates it — display only |
+| published | a Web Bot Auth directory | where its keys can be looked up |
+
+Measured output:
+
+```
+her policy: 3 tiers
+nothing in it names an agent, an issuer or an identity scheme
+
+terms:  identical in all four
+grant:  identical in all four
+as_uri: identical in all four
+her policy: unchanged
+```
+
+## The result that was not what we expected
+
+Going in, the expectation was four regimes, four handles. That is wrong, and
+the run says so:
+
+```
+pseudonymous   aauth:pseudonymous-agent
+identified     aauth:6db1c44a-…@ps.uma.lab
+described      aauth:pseudonymous-agent
+published      aauth:pseudonymous-agent
+```
+
+There are **two identity levels**, not four. Either the key is the identity,
+or a verified issuer stands behind it. CIMD and Web Bot Auth are *additive
+description*: they let a party who has never met this agent say something true
+about who operates it, and they change nothing about how it is filed or
+judged.
+
+That is a sharper statement of the same principle than the one we set out to
+demonstrate. Description is not identity, and neither is authorization.
+
+## The negative that makes it falsifiable
+
+An assertion that everything is identical proves nothing on its own — a system
+that ignored all four inputs would also pass. So the check also asserts that
+**her policy document contains no identity vocabulary at all**: no issuer, no
+`aauth`, no `cimd`, no thumbprint, no `jkt`, no `agent_token`.
+
+If any identity signal ever became an authorization input, one of the two
+halves would break: either her policy would have to name it, or the four runs
+would stop agreeing.
+
+## Why this is the design and not an accident
+
+Three decisions, each already in the profile, add up to it:
+
+**The verifying key is always the grant's `cnf`.** Not the CIMD document, not
+the Web Bot Auth directory, not the issuer. Those are consulted for display and
+discovery; the thing that decides whether a request is authentic is the key the
+grant names.
+
+**The connection handle follows the identity level, and nothing else.** A
+pseudonymous agent is filed under its RFC 7638 thumbprint, because the key is
+the identity and must persist for the relationship to persist. An identified
+agent is filed under its issuer-qualified subject, because AAuth binds a fresh
+session key per run and a thumbprint-keyed connection would forget it every
+time. Both are handles; neither is a permission.
+
+**Her terms are about the access, not the asker.** Purpose, scope, expiry,
+prohibitions. Nothing in a terms template has anywhere to put an issuer.
+
+## What this costs
+
+Alice cannot write a policy like "only agents from this issuer." She can decide
+per agent, per tier and per operation, and she can revoke a connection — but
+she cannot express a rule over an identity system she is deliberately blind to.
+
+Whether that is a limitation or the point is the interesting question. Today it
+is the point: it is what lets an agent from an organisation she has never heard
+of ask her for something without either side onboarding to the other. A
+deployment that wants issuer rules is describing a different trust model, and
+should say so rather than reaching for this one.
+
+## See also
+
+- [FLOATING.md](FLOATING.md) — the minimal fixture, and how little the protocol
+  needs underneath it
+- [KWAAI-BINDING.md](KWAAI-BINDING.md) — a personal AI as the owner's side
+- `clients/demo-driver/flow_check.py` — the check itself

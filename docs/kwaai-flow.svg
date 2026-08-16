@@ -1,0 +1,123 @@
+<svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- kwaai-flow — a personal AI as the owner's authority.
+       For sharing outside the project; assumes no U4A knowledge.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bcdb2c"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="700" fill="#0a0b0d"/>
+
+  <g transform="translate(40 26) scale(0.53125)">
+    <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="15" fill="#0a0b0d" stroke="#8cc2d4" stroke-width="2.8"/>
+    <g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 17 L11 33 A5.75 5.75 0 0 0 22.5 33 L22.5 17" stroke="#ffffff"/>
+      <path d="M34.5 17 L26.25 31 L37.75 31 M34.5 17 L34.5 39" stroke="#bcdb2c"/>
+      <path d="M41.5 39 L47.25 17 L53 39 M43.5 31.5 L51 31.5" stroke="#ffffff"/>
+    </g>
+    <path d="M20 46.5 L44 46.5" fill="none" stroke="#8cc2d4" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+  <text x="88" y="40" fill="#ffffff" font-size="17" font-weight="650">A personal AI, deciding for its person</text>
+  <text x="88" y="59" fill="#a9aeb6" font-size="12.5">Somebody else’s AI agent wants something of Alice’s. Her personal AI is what answers.</text>
+
+  <!-- ============================== THE CAST ============================== -->
+  <g>
+    <rect x="40" y="96" width="250" height="86" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.6"/>
+    <text x="60" y="124" fill="#ffffff" font-size="14" font-weight="650">Bob’s AI agent</text>
+    <text x="60" y="145" fill="#a9aeb6" font-size="12">Works for Bob, not for Alice.</text>
+    <text x="60" y="163" fill="#757b83" font-size="11.5">Alice has never met it.</text>
+
+    <rect x="330" y="96" width="250" height="86" rx="10" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+    <text x="350" y="124" fill="#ffffff" font-size="14" font-weight="650">Where her data lives</text>
+    <text x="350" y="145" fill="#a9aeb6" font-size="12">Her brokerage, her clinic,</text>
+    <text x="350" y="163" fill="#a9aeb6" font-size="12">her inbox — someone else’s server.</text>
+
+    <rect x="620" y="96" width="250" height="86" rx="10" fill="#1a1c21" stroke="#bcdb2c" stroke-width="2"/>
+    <text x="640" y="124" fill="#bcdb2c" font-size="14" font-weight="650">Her personal AI</text>
+    <text x="640" y="145" fill="#a9aeb6" font-size="12">On her device. Holds her key.</text>
+    <text x="640" y="163" fill="#a9aeb6" font-size="12">Knows what she is willing to allow.</text>
+
+    <rect x="910" y="96" width="250" height="86" rx="10" fill="#121317" stroke="#8cc2d4" stroke-width="1.6"/>
+    <text x="930" y="124" fill="#ffffff" font-size="14" font-weight="650">Alice</text>
+    <text x="930" y="145" fill="#a9aeb6" font-size="12">Asleep, usually.</text>
+    <text x="930" y="163" fill="#757b83" font-size="11.5">Asked only when it matters.</text>
+  </g>
+
+  <!-- ============================== THE FLOW ============================== -->
+  <g stroke="#1a1c21" stroke-width="1">
+    <line x1="165" y1="190" x2="165" y2="596"/>
+    <line x1="455" y1="190" x2="455" y2="596"/>
+    <line x1="745" y1="190" x2="745" y2="596"/>
+    <line x1="1035" y1="190" x2="1035" y2="596"/>
+  </g>
+  <text x="40" y="224" fill="#757b83" font-size="12" font-family="ui-monospace, 'SF Mono', Menlo, monospace" letter-spacing="2">WHAT HAPPENS</text>
+
+  <!-- 1 -->
+  <g transform="translate(40 244)">
+    <circle cx="14" cy="16" r="13" fill="#1a1c21" stroke="#5e8fa3"/>
+    <text x="14" y="21" text-anchor="middle" fill="#8cc2d4" font-size="13" font-weight="700" font-family="ui-monospace, monospace">1</text>
+    <text x="42" y="21" fill="#ffffff" font-size="13.5" font-weight="600">The agent asks the server directly.</text>
+    <text x="330" y="21" fill="#a9aeb6" font-size="12.5">No introduction, no account, no prior relationship.</text>
+    <line x1="165" y1="46" x2="445" y2="46" stroke="#5e8fa3" stroke-width="1.4" marker-end="url(#a)"/>
+  </g>
+
+  <!-- 2 -->
+  <g transform="translate(40 302)">
+    <circle cx="14" cy="16" r="13" fill="#1a1c21" stroke="#e8836b"/>
+    <text x="14" y="21" text-anchor="middle" fill="#e8836b" font-size="13" font-weight="700" font-family="ui-monospace, monospace">2</text>
+    <text x="42" y="21" fill="#ffffff" font-size="13.5" font-weight="600">The server refuses — and says who can say yes.</text>
+    <text x="430" y="21" fill="#a9aeb6" font-size="12.5">It cannot decide. The data is Alice’s.</text>
+    <line x1="445" y1="46" x2="165" y2="46" stroke="#e8836b" stroke-width="1.4" marker-end="url(#r)"/>
+    <text x="305" y="64" text-anchor="middle" fill="#e8836b" font-size="11.5">“no — ask her, here”</text>
+  </g>
+
+  <!-- 3 -->
+  <g transform="translate(40 378)">
+    <circle cx="14" cy="16" r="13" fill="#1a1c21" stroke="#f2b955"/>
+    <text x="14" y="21" text-anchor="middle" fill="#f2b955" font-size="13" font-weight="700" font-family="ui-monospace, monospace">3</text>
+    <text x="42" y="21" fill="#ffffff" font-size="13.5" font-weight="600">Her personal AI states her terms. The agent signs them.</text>
+    <text x="500" y="21" fill="#a9aeb6" font-size="12.5">Purpose, scope, how long, what is forbidden.</text>
+    <line x1="745" y1="46" x2="165" y2="46" stroke="#f2b955" stroke-width="1.4" marker-end="url(#r)"/>
+    <text x="455" y="64" text-anchor="middle" fill="#f2b955" font-size="11.5">her terms, as a document — signed and kept by both sides</text>
+  </g>
+
+  <!-- 4 -->
+  <g transform="translate(40 454)">
+    <circle cx="14" cy="16" r="13" fill="#1a1c21" stroke="#bcdb2c"/>
+    <text x="14" y="21" text-anchor="middle" fill="#bcdb2c" font-size="13" font-weight="700" font-family="ui-monospace, monospace">4</text>
+    <text x="42" y="21" fill="#ffffff" font-size="13.5" font-weight="600">If it needs her, it asks her. Otherwise it answers itself.</text>
+    <text x="520" y="21" fill="#a9aeb6" font-size="12.5">First contact always asks. Routine reads do not.</text>
+    <line x1="745" y1="46" x2="1035" y2="46" stroke="#bcdb2c" stroke-width="1.4" marker-end="url(#g)"/>
+    <text x="890" y="64" text-anchor="middle" fill="#bcdb2c" font-size="11.5">“an advisor’s agent wants your holdings”</text>
+  </g>
+
+  <!-- 5 -->
+  <g transform="translate(40 530)">
+    <circle cx="14" cy="16" r="13" fill="#1a1c21" stroke="#bcdb2c"/>
+    <text x="14" y="21" text-anchor="middle" fill="#bcdb2c" font-size="13" font-weight="700" font-family="ui-monospace, monospace">5</text>
+    <text x="42" y="21" fill="#ffffff" font-size="13.5" font-weight="600">A permission is issued — for that one thing, and nothing more.</text>
+    <text x="560" y="21" fill="#a9aeb6" font-size="12.5">Locked to the agent’s key. Not transferable.</text>
+    <line x1="745" y1="46" x2="165" y2="46" stroke="#bcdb2c" stroke-width="1.4" marker-end="url(#g)"/>
+    <text x="455" y="64" text-anchor="middle" fill="#bcdb2c" font-size="11.5">“sell 40 VTI” — not “may trade”</text>
+  </g>
+
+  <!-- ============================== THE POINT ============================== -->
+  <line x1="40" y1="606" x2="1160" y2="606" stroke="#24262c"/>
+  <g>
+    <text x="40" y="634" fill="#ffffff" font-size="13.5" font-weight="650">What the personal AI has to do</text>
+    <text x="40" y="654" fill="#a9aeb6" font-size="12">Hold her key. Ask her. That is the whole integration — none of the protocol above is its job.</text>
+    <text x="40" y="676" fill="#757b83" font-size="11.5">It never sees her passwords, never acts as her agent, and never talks to Bob. It only ever says yes or no.</text>
+
+    <rect x="820" y="616" width="340" height="66" rx="8" fill="#121317" stroke="#bcdb2c" stroke-dasharray="4 4"/>
+    <text x="840" y="641" fill="#bcdb2c" font-size="12.5" font-weight="600">She isn’t online. Her policy is.</text>
+    <text x="840" y="663" fill="#757b83" font-size="11.5">Working code: github.com/nickgamb/uma4agents</text>
+  </g>
+</svg>

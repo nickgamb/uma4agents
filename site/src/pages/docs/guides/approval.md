@@ -89,8 +89,16 @@ lose a request she has not answered.
 
 ## 4. Authorize her without inventing a credential
 
-The owner API takes **the owner's own access token** from the identity provider
-she already uses, validated against her realm's published keys.
+The owner API takes **a credential that is hers** — and there is more than one
+kind. An access token from the identity provider she already uses, validated
+against her realm's published keys, is the obvious one. A key her device holds,
+signing each request under RFC 9421, is the other; it is what lets her
+authority run somewhere that has no identity provider at all. See
+[put the authority on her device](/docs/guides/personal-authority/).
+
+Accept both where both make sense. A person reaches her own things from a
+browser, a phone and possibly a personal AI, and each credential should be
+independently sufficient and independently revocable.
 
 No static owner credential exists anywhere in the system. This matters more than
 it sounds: a shared secret for the owner API is a permanent skeleton key for

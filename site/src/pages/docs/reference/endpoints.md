@@ -57,8 +57,10 @@ conformant and is preserved on the `legacy/rreg-baseline` branch.
 
 ### Owner API
 
-Portal only. Takes the owner's own OIDC access token, validated against her
-realm's published keys. No static owner credential exists.
+Takes a credential that is hers. Two are defined and a deployment may accept
+both: an OIDC access token validated against her realm's published keys, or an
+RFC 9421 signature from a key she enrolled. No static owner credential exists
+either way. See [put the authority on her device](/docs/guides/personal-authority/).
 
 | Endpoint | Answers |
 |---|---|

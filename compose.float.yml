@@ -1,0 +1,151 @@
+# The floating deployment: U4A with nothing standing behind it.
+#
+# The main stack is the reference architecture — an identity provider, a
+# replicated authorization server on Postgres, a gateway carrying the
+# enforcement obligations, a certificate authority, a DNS zone. That is what a
+# brokerage would run, and it is also a lot of infrastructure to look at when
+# the question is "how much of this is the protocol?"
+#
+# This file answers that question by removing everything that is not:
+#
+#   uma-as             memory store, and the owner authenticates with a key
+#                      she holds rather than through an identity provider
+#   alice-vault-mcp    enforces in-process; no gateway is in the path
+#   owner-keygen       makes her keypair on first run, so there is no setup
+#
+# Three containers, plain http, no host state, no `make init`. Everything the
+# grant needs and nothing else. Run it with `make float`.
+#
+# What this is not: a recommendation. A deployment holding other people's
+# assets should have all the things this file removes. The claim is narrower —
+# that the protection is a property of the protocol rather than of the stack,
+# and that an owner's authority can therefore live somewhere small.
+
+# Its own project, so it cannot collide with the reference stack. Both files
+# define a service called `uma-as`, and under one project name `make float-up`
+# quietly *replaced* the running reference deployment's authorization server
+# with this one — which then failed every OIDC owner request, because this
+# configuration does not accept them.
+name: uma4agents-float
+
+services:
+  # Her key, made once into a volume both sides can read. A real deployment
+  # enrols a key her device already holds; nothing downstream can tell the
+  # difference, which is why generating one here is honest rather than a
+  # shortcut.
+  owner-keygen:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        pip install -q cryptography
+        python - <<'PY'
+        import os
+        from cryptography.hazmat.primitives import serialization as s
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        priv, pub = "/keys/owner-ed25519.pem", "/keys/owner-ed25519.pub"
+        if os.path.exists(priv) and os.path.exists(pub):
+            print("owner key already present"); raise SystemExit(0)
+        k = Ed25519PrivateKey.generate()
+        open(priv, "wb").write(k.private_bytes(
+            encoding=s.Encoding.PEM, format=s.PrivateFormat.PKCS8,
+            encryption_algorithm=s.NoEncryption()))
+        open(pub, "wb").write(k.public_key().public_bytes(
+            encoding=s.Encoding.PEM, format=s.PublicFormat.SubjectPublicKeyInfo))
+        print("made the owner's key; enrolled the public half with her authority")
+        PY
+    volumes:
+      - float-keys:/keys
+
+  uma-as:
+    init: true
+    build:
+      context: .
+      dockerfile: services/uma-as/Dockerfile
+    environment:
+      # Container-network names, published as-is. The authority an agent is
+      # told to negotiate with is the authority it can reach.
+      UMA_AS_ISSUER: http://uma-as:9000
+      UMA_AS_RS_RESOURCE_URI: http://alice-vault.local:9020/mcp
+      UMA_AS_RS_CLIENT_ID: local-resource
+      UMA_AS_RS_CLIENT_SECRET: float-dev-secret
+      UMA_AS_STORE: memory
+      # The whole point of this file.
+      UMA_AS_OWNER_AUTH: local-key
+      UMA_AS_OWNER_KEY: /keys/owner-ed25519.pub
+      UMA_AS_OWNER_AUTHORITY: alice-as.local
+      UMA_AS_OWNER: alice
+    volumes:
+      - float-keys:/keys
+    depends_on:
+      owner-keygen:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  alice-vault-mcp:
+    init: true
+    build:
+      context: .
+      dockerfile: mcp/alice-vault/Dockerfile
+    # An alias, so the resource's published URLs name something the
+    # authorization server can actually dial when it pulls them.
+    networks:
+      default:
+        aliases: [alice-vault.local]
+    environment:
+      ENFORCEMENT_MODE: embedded
+      UMA_AS_PUBLIC: http://uma-as:9000
+      UMA_AS_INTERNAL: http://uma-as:9000
+      UMA_AS_RS_CLIENT_ID: local-resource
+      UMA_AS_RS_CLIENT_SECRET: float-dev-secret
+      UMA_REALM: alice-vault
+      # Published over plain http, because there is no certificate authority
+      # in this deployment and the pull has to be able to fetch what it reads.
+      UMA_PEP_SCHEME: http
+      UMA_EXPECTED_AUTHORITY: alice-vault.local:9020
+      UMA_PEP_SIGNING_KEY: /keys/vault-ed25519.pem
+    volumes:
+      - float-vault-keys:/keys
+    depends_on:
+      uma-as:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  float-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /driver/float_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      VAULT_URL: http://alice-vault.local:9020/mcp
+      AS_URL: http://uma-as:9000
+      UMA_EXPECTED_AUTHORITY: alice-vault.local:9020
+      UMA_AS_OWNER_AUTHORITY: alice-as.local
+      UMA4A_OWNER_KEY: /keys/owner-ed25519.pem
+    volumes:
+      - ./clients/demo-driver/float_check.py:/driver/float_check.py:ro
+      - ./lib:/driver/lib:ro
+      - float-keys:/keys:ro
+      - float-driver-keys:/driver/keys
+    working_dir: /driver
+    depends_on:
+      alice-vault-mcp:
+        condition: service_healthy
+    profiles: ["check"]
+
+volumes:
+  float-keys:
+  float-vault-keys:
+  float-driver-keys:
