@@ -23,12 +23,19 @@ The **authorization server** holds Alice's policy and answers on her behalf. It
 dictates terms, decides tiers, issues grants, records connections, and keeps the
 ledger. It is the only component that speaks for her.
 
-Her **identity provider** is what she logs in to, and the source of the token
-the authorization server checks when she approves something. There is no static
-owner credential anywhere in the system.
+Her **surface** is where she writes terms, sees what has been asked, and
+revokes. In the lab that is a portal she signs in to, with her **identity
+provider** as the source of the token her authorization server checks when she
+approves something. It can equally be a personal AI holding her key, which
+authenticates with a signature instead of a login — the authority accepts
+either, or both, and neither is a fallback for the other.
 
-Her **portal** is where she writes terms, sees what has been asked, and revokes.
-It holds no authority of its own — every call it makes carries her token.
+Either way the surface holds no authority of its own. It does not decide and it
+does not keep a record; it reaches the one thing that does, and a decision made
+through either surface lands in the same ledger.
+
+See [Put the authority on her device](/docs/guides/personal-authority/) for what
+a surface actually has to provide.
 
 ## The resource server's side
 

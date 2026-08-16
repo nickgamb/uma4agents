@@ -127,6 +127,29 @@ Read the pod logs directly and you will be misled. The authorization server runs
 three replicas, so `kubectl logs deploy/uma-as` shows one of them and a single
 negotiation's events are spread across all three.
 
+## Give her a personal AI instead
+
+Everything above had Alice answering from a browser. She does not have to. The
+lab also runs **Kwaai's pAI-OS**, with a U4A ability installed, holding her key.
+
+```bash
+make k8s-paios          # or `make paios` on the compose path
+make k8s-paios-check
+make k8s-paios-down     # hand the decisions back to her portal
+```
+
+It answers the tiers she gave standing consent to, and Bob's agent gets its
+grant without her being disturbed. What it will **not** do is answer a trade:
+pAI-OS gives an ability no channel to reach its person, so anything on an ask-me
+tier is refused and logged. That refusal is the interesting result, and it is
+the subject of [Put the authority on her
+device](/docs/guides/personal-authority/).
+
+This is a second surface, not a replacement — both demos are worth running.
+While her personal AI is up, the requests it can answer never reach her portal,
+which is exactly what you would want and worth noticing. It starts stopped for
+that reason.
+
 ## Break it
 
 ```bash
