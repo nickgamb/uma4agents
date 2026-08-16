@@ -95,6 +95,7 @@ server, the same ticket and the same terms — MCP SDK 2.x exposes
 | `keycloak` | Alice's identity provider and OIDC login for the portal | Keycloak |
 | `person-server` | AAuth Person/Agent server — the agent-identity component for the identified-level path (the demo default signs pseudonymously) | upstream (pinned) |
 | `agent-shim` | Local proxy that lets an unmodified MCP client be the requesting agent | Python / MCP SDK |
+| `paios` | Kwaai's pAI-OS with the U4A ability installed: Alice's personal AI, holding her key and answering her authorization server. Off by default — an alternative surface to her portal, not a layer under it. See [DEMOS.md](DEMOS.md) | upstream (pinned) + `kwaai/abilities/` |
 | observability | Grafana + Loki + Promtail; one structured event per protocol step, ticket = correlation id | Grafana stack |
 
 Shared code in `lib/`: `uma4a_http_sig.py` (RFC 9421 signing/verification, used

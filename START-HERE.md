@@ -174,7 +174,35 @@ with its own terms, trail and revoke button.
 Full detail, including what changes between MCP clients, is in
 [clients/agent-shim/README.md](clients/agent-shim/README.md).
 
-## 8. Try to break it
+## 8. Give Alice her own AI
+
+Everything so far had Alice answering from a browser. She does not have to.
+The side that decides is an authority and a way to reach her, and both can sit
+on a machine of hers — so the lab also runs **Kwaai's pAI-OS**, with a U4A
+ability installed, holding her key.
+
+```bash
+make k8s-paios          # her personal AI starts answering
+make k8s-paios-check
+```
+
+It answers the tiers she has given standing consent to, and Bob's agent gets
+its grant without her being disturbed. What it will **not** do is answer a
+trade: pAI-OS gives an ability no way to reach its person, so anything on an
+ask-me tier is refused and logged. That refusal is the interesting result, and
+the open question we are taking to Kwaai.
+
+```bash
+make k8s-paios-down     # hand the decisions back to her portal
+```
+
+This does not replace the portal demo — it is a second surface onto the same
+decisions, and a decision made by either lands in the same ledger. While her
+personal AI is up, requests it can answer never reach her portal, which is
+exactly what you would want and worth noticing during a demo.
+[docs/DEMOS.md](docs/DEMOS.md) has both, side by side.
+
+## 9. Try to break it
 
 ```bash
 make k8s-chaos
@@ -186,6 +214,8 @@ answer *that same request*. Not a fresh one.
 
 ## Where to read more
 
+- **[docs/DEMOS.md](docs/DEMOS.md)** — the two demos, her portal and her
+  personal AI, and when to reach for which
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where

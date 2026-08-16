@@ -1,0 +1,44 @@
+{
+    "id": "u4a-owner-authority",
+    "name": "Owner authority (UMA for Agents)",
+    "versions": {
+        "package": "0.1.0",
+        "product": "0.1"
+    },
+    "description": "Decide what other people's AI agents may do with your accounts. Holds your key, states your terms to an agent that asks, and puts the decision to you when it matters.",
+    "author": {
+        "name": "UMA for Agents",
+        "url": "https://u4a.ai"
+    },
+    "maintainer": {
+        "name": "Nick Gamb",
+        "url": "https://github.com/nickgamb/uma4agents"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/nickgamb/uma4agents.git"
+    },
+    "language": "python",
+    "license": "Apache-2.0",
+    "scripts": {
+        "start": "python3 main.py"
+    },
+    "dependencies": [
+        {
+            "id": "httpx",
+            "type": "python",
+            "name": "httpx",
+            "versions": {
+                "required": ">=0.27"
+            }
+        },
+        {
+            "id": "cryptography",
+            "type": "python",
+            "name": "cryptography",
+            "versions": {
+                "required": ">=42.0"
+            }
+        }
+    ]
+}

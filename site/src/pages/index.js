@@ -225,6 +225,25 @@ const IndexPage = () => {
                 <path d="M7 -24 V0" className="fig"/>
               </g>
 
+              {/* Alice's own personal AI. Deliberately the same machine as Bob's
+                   in shape and different in colour: it is the same kind of thing,
+                   on the other side of the boundary. It never talks to Bob's
+                   agent — it only ever answers her authorization server. */}
+              <g id="alice-ai">
+                <path d="M0 -99 V-90" className="fig"/>
+                <circle cx="0" cy="-102" r="4" className="own-ai-dot"/>
+                <rect x="-20" y="-90" width="40" height="31" rx="10" className="own-ai-head"/>
+                <circle className="own-ai-eye" cx="-7.5" cy="-74" r="3.6"/>
+                <circle className="own-ai-eye" cx="7.5" cy="-74" r="3.6"/>
+                <rect x="-15" y="-55" width="30" height="31" rx="9" className="own-ai-body"/>
+                <path d="M-15 -45 L-28 -35" className="fig"/>
+                <path d="M15 -45 L28 -35" className="fig"/>
+                <path d="M-7 -24 V0" className="fig"/>
+                <path d="M7 -24 V0" className="fig"/>
+                <path id="alice-ai-key" d="M0 -112 m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 M6 -112 H18 M14 -112 V-106"
+                      className="own-ai-key" opacity="0"/>
+              </g>
+
               {/* The setup's question: someone is going to ask for her holdings, and
                    the server holding them is not the party who can answer. */}
               <g id="question" opacity="0">

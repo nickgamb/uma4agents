@@ -21,6 +21,7 @@ build() {
 }
 
 build uma-as           services/uma-as/Dockerfile        .
+build paios            kwaai/Dockerfile                  .
 build uma-pep          services/uma-pep/Dockerfile       .
 build alice-vault-mcp  mcp/alice-vault/Dockerfile        .
 build alice-portal     services/alice-portal/Dockerfile  ./services/alice-portal

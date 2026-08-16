@@ -99,6 +99,30 @@ In the lab this is one `make owner-key`, which writes a keypair and hands over
 only the public part. A real deployment enrols a key the device already holds
 and never had to generate.
 
+## What it is like when the host cannot ask
+
+The fourth method is the one that decides whether this is a personal AI or a
+standing policy, and it is the one a host is least likely to have.
+
+The lab runs this against a real personal-AI runtime — Kwaai's pAI-OS, with
+the ability installed under `abilities/<id>/<semver>/` where its own loader
+finds it (`make paios`, or `make k8s-paios` in the cluster). It starts an
+ability as a process configured by environment variables, which is enough for
+three of the four methods and not for `ask`: there is no notification, no
+prompt, no inbox.
+
+So the ability **denies** anything that needs her, and records why:
+
+```json
+{"event": "cannot-ask", "family": "trade:execute",
+ "outcome": "denied — no channel to her"}
+```
+
+Denying is the right default — a request pends precisely because she has not
+said yes — but it narrows what the surface can do to the tiers she stood
+behind ahead of time. If you are building one of these, build the channel
+first. Everything else in this guide is mechanical by comparison.
+
 ## Verify it
 
 - An unsigned owner request is refused
@@ -118,6 +142,10 @@ make them agree.
 to reach the authority and swallowing the error. A surface behind a private CA
 needs the trust bundle passed in — and it should log the failure rather than
 silently retrying, which is a bug worth avoiding by design.
+
+**It refuses everything that needs her.** Then it has no way to ask, and it is
+behaving correctly. Either give it a channel to her, or configure the tiers
+she is willing to stand behind in advance — and be clear which one you have.
 
 **Two ledgers.** The surface is recording decisions locally instead of making
 them at the authority. The record belongs to the authority; the surface is a

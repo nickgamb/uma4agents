@@ -53,6 +53,7 @@ const C = {
   agent:   "@agent",
   sunken:  "@sunken",
   edge:    "@edge",
+  own:     "@own",     // her own AI: her colour, not the requesting side's
 };
 
 /* Filled by readTheme(), which runs before the first frame and again whenever
@@ -66,6 +67,7 @@ const VARS = {
   agent: "--agent",
   sunken: "--sunken",
   edge: "--edge",
+  own: "--primary",
 };
 
 function readTheme() {
@@ -96,6 +98,9 @@ const HOME = 240;
 const OFFSTAGE_L = -140;
 const PHONE_MARK = 372;        // beside the nightstand, reaching for it
 const BOB_MARK = 470;
+/* Her own AI stands between her home and her authorization server — her side
+   of the stage, and clear of the nightstand she left the phone on. */
+const OWN_MARK = 452;
 const AGENT_MARK = BOB_MARK + 92;
 /* Structures are wide; an actor stands beside one, not inside it. These are
    the marks the agent walks to, offset left of each building's centre. */
@@ -114,6 +119,9 @@ const BASE = {
   '#alice-arm-l':      { rotate: 0 },
   '#bob':              { x: OFFSTAGE_L, y: GROUND, opacity: 0 },
   '#agent':            { x: OFFSTAGE_L - 90, y: GROUND, opacity: 0 },
+  '#alice-ai':         { x: OWN_MARK, y: GROUND, opacity: 0 },
+  '#alice-ai-key':     { opacity: 0 },
+  '#alice-ai .own-ai-eye': { fill: C.own, opacity: 1 },
   '#agent .eye':       { fill: C.rest, opacity: 1 },
   '#ticket':           { x: VAULT_MARK, y: GROUND - 128, opacity: 0 },
   '#scroll':           { x: AS_MARK, y: GROUND - 250, opacity: 0, scaleY: 1 },
@@ -357,6 +365,73 @@ export const SCENES = [
   },
   {
     at: 73000,
+    beat: 'But what if Alice has one too?',
+    text: 'Nothing in those four beats required Alice to be a person at a laptop. The side that decides needs an authority and a way to reach her — and both can sit on something she owns.',
+    end: { '#alice': { x: HOME, opacity: 1 }, '#alice-ai': { opacity: 1 },
+           '#agent': { opacity: 0 }, '#bob': { opacity: 0 } },
+    play() {
+      animate(['#agent', '#bob'], { opacity: [0.16, 0], duration: 500 });
+      animate('#alice', { x: [OFFSTAGE_L, HOME], duration: 1400, ease: 'outSine' });
+      animate('#alice-ai', {
+        opacity: [0, 1], x: [OWN_MARK - 52, OWN_MARK], duration: 900, delay: 1200, ease: 'outBack',
+      });
+      animate('#alice-ai .own-ai-eye', { opacity: [0.2, 1], duration: 600, delay: 1900 });
+    },
+  },
+  {
+    at: 79000,
+    beat: 'Hers, not an agent',
+    text: 'Her personal AI is not another agent asking for things. It holds her key and it knows her terms — it is the side that answers, moved onto a machine of hers.',
+    end: { '#alice-ai-key': { opacity: 1 } },
+    play() {
+      animate('#alice-ai-key', { opacity: [0, 1], y: [-8, 0], duration: 700, ease: 'outBack' });
+      animate('#as-shield', { stroke: [C.rest, C.own, C.rest], duration: 1600, delay: 800 });
+    },
+  },
+  {
+    at: 85000,
+    beat: 'So she is not woken',
+    text: 'For the tiers she has already stood behind, her AI answers and the door opens. She is not at her desk, and she does not need to be — the decision was hers, made earlier.',
+    end: { '#alice': { x: OFFSTAGE_L }, '#agent': { x: AGENT_MARK, opacity: 0 },
+           '#vault-spokes': { rotate: 740 } },
+    play() {
+      animate('#alice', { x: [HOME, OFFSTAGE_L], duration: 1500, ease: 'inSine' });
+      animate('#agent', {
+        opacity: [0, 1], x: [OFFSTAGE_L - 90, AGENT_MARK], duration: 1400, ease: 'outSine',
+      });
+      // Everything that happens on her side is two eyes blinking.
+      animate('#alice-ai .own-ai-eye', { opacity: [1, 0.25, 1], duration: 520, loop: 2, delay: 1500 });
+      animate('#key', {
+        opacity: [0, 1], x: [OWN_MARK, VAULT_CENTRE - 60], y: [GROUND - 150, GROUND - 150],
+        rotate: [0, 380], duration: 1500, delay: 2500, ease: 'outQuad',
+      });
+      animate('#vault-spokes', { rotate: [380, 740], duration: 1000, delay: 3600 });
+      animate('#vault-yes', { opacity: [0, 1], scale: [0.6, 1], duration: 500, delay: 3800, ease: 'outBack' });
+      animate('#key', { opacity: [1, 0], duration: 400, delay: 4200 });
+      animate('#vault-yes', { opacity: [1, 0], duration: 400, delay: 5000 });
+      animate('#agent', { opacity: [1, 0], duration: 400, delay: 5000 });
+    },
+  },
+  {
+    at: 91000,
+    beat: 'And it still wakes her',
+    text: 'For a trade she has not stood behind, it refuses and asks her. An agent that cannot reach its person must not answer for it — that is the hard part.',
+    end: { '#alice-ai': { opacity: 0 }, '#alice-ai-key': { opacity: 0 },
+           '#alice': { x: OFFSTAGE_L }, '#phone-screen': { fill: C.sunken } },
+    play() {
+      animate('#alice-ai .own-ai-eye', { fill: [C.own, C.pending], duration: 500, delay: 400 });
+      animate('#phone-screen', { fill: [C.sunken, C.pending], duration: 500, delay: 900 });
+      animate('#buzz', { opacity: [0, 1, 0, 1, 0], duration: 1600, delay: 1000 });
+      animate('#alice', { x: [OFFSTAGE_L, PHONE_MARK], duration: 1600, delay: 1400, ease: 'outSine' });
+      animate('#alice-arm-l', { rotate: [0, -32, 0], duration: 700, delay: 3000 });
+      animate('#phone-screen', { fill: [C.pending, C.granted], duration: 400, delay: 3600 });
+      animate('#alice-ai .own-ai-eye', { fill: [C.pending, C.own], duration: 400, delay: 3700 });
+      animate('#alice', { x: [PHONE_MARK, OFFSTAGE_L], duration: 1600, delay: 4200, ease: 'inSine' });
+      animate(['#alice-ai', '#alice-ai-key'], { opacity: [1, 0], duration: 700, delay: 4600 });
+    },
+  },
+  {
+    at: 97000,
     beat: 'The architecture',
     text: 'That is the protocol. This is the machine it runs on — and the four beats are the same four beats.',
     end: {
@@ -374,7 +449,7 @@ export const SCENES = [
     },
   },
   {
-    at: 79000,
+    at: 103000,
     beat: 'The parties',
     text: 'Each party is its own boundary. Bob’s firm, the brokerage that holds the assets, and Alice — who owns them and is not either of the others.',
     end: {
@@ -394,7 +469,7 @@ export const SCENES = [
     },
   },
   {
-    at: 85400,
+    at: 109400,
     beat: 'The mesh',
     text: 'Every connection between them is mutually authenticated, and every box has a cryptographic name rather than an address.',
     end: { '#arch-mesh': { opacity: 1 } },
@@ -406,7 +481,7 @@ export const SCENES = [
     },
   },
   {
-    at: 90600,
+    at: 114600,
     beat: 'Beat 1 · challenge',
     text: 'The agent arrives at the front door like anyone else, and the enforcement point in front of the vault refuses it — with a ticket.',
     end: { '#beat-1': { opacity: 1 } },
@@ -419,7 +494,7 @@ export const SCENES = [
     },
   },
   {
-    at: 95800,
+    at: 119800,
     beat: 'Beats 2 and 3',
     text: 'The ticket takes it past the resource server entirely, to Alice’s own authorization server — three of them, agreeing through one database.',
     end: { '#beat-2': { opacity: 1 }, '#arch-scale': { opacity: 1 } },
@@ -433,7 +508,7 @@ export const SCENES = [
     },
   },
   {
-    at: 101600,
+    at: 125600,
     beat: 'Beat 4 · grant',
     text: 'What comes back is scoped to what was agreed, and the enforcement point spends it once. A second attempt with the same grant is refused.',
     end: { '#beat-4': { opacity: 1 } },
@@ -450,7 +525,7 @@ export const SCENES = [
     },
   },
   {
-    at: 107200,
+    at: 131200,
     beat: 'The boundary',
     text: 'And there is no shortcut. Bob’s side cannot reach Alice’s at all — not because nobody wrote the address down, but because the mesh refuses it.',
     end: { '#arch-denied': { opacity: 1 } },
@@ -463,7 +538,7 @@ export const SCENES = [
     },
   },
   {
-    at: 113000,
+    at: 137000,
     text: '',
     // Strike the machine behind the curtain, exactly as act one does, so the
     // loop opens on the first frame rather than cutting to it.
@@ -492,7 +567,7 @@ export const SCENES = [
   },
 ];
 
-const TOTAL = 119000;
+const TOTAL = 143000;
 
 /* ---- the machine --------------------------------------------------------- */
 

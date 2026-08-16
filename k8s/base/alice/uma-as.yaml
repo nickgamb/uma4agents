@@ -73,6 +73,15 @@ spec:
               value: https://keycloak.uma.lab/realms/alice
             - name: UMA_AS_OWNER
               value: alice
+            # Two independent credentials for one person: her browser session
+            # at her identity provider, and a key her device holds. Her portal
+            # uses the first; her personal AI uses the second.
+            - name: UMA_AS_OWNER_AUTH
+              value: oidc,local-key
+            - name: UMA_AS_OWNER_KEY
+              value: /owner/owner-ed25519.pub
+            - name: UMA_AS_OWNER_AUTHORITY
+              value: alice-as.uma.lab
             - name: UMA_AS_RS_RESOURCE_URI
               value: https://gateway.uma.lab/mcp
             - name: UMA_AS_RS_CLIENT_ID
@@ -93,6 +102,8 @@ spec:
               value: /certs/rootCA.pem
           volumeMounts:
             - { name: ca, mountPath: /certs, readOnly: true }
+            # Only the public half reaches the authority.
+            - { name: owner-key, mountPath: /owner, readOnly: true }
             # The signing key, from a Secret rather than generated per pod.
             # Three replicas each minting their own Ed25519 key would publish
             # three different JWKS behind one Service, and roughly two thirds
@@ -149,6 +160,11 @@ spec:
       volumes:
         - name: ca
           configMap: { name: uma-lab-ca-bundle }
+        - name: owner-key
+          secret:
+            secretName: owner-device-key
+            items:
+              - { key: owner-ed25519.pub, path: owner-ed25519.pub }
         - name: signing-key
           secret: { secretName: uma-as-signing-key }
 ---

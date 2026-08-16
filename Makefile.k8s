@@ -200,6 +200,24 @@ r=urllib.request.urlopen(urllib.request.Request(\
 headers={'Authorization':'Bearer '+tok}));\
 print(json.dumps(json.load(r),indent=2))"
 
+## k8s-paios: scale up her personal AI, so it answers instead of her portal.
+## Off by default for the same reason as compose: while it runs, the tiers it
+## has standing consent for are already answered and her portal has nothing
+## waiting. Run `make k8s-paios-down` before the portal walkthrough.
+.PHONY: k8s-paios k8s-paios-down k8s-paios-check
+k8s-paios:
+	@kubectl -n alice scale deployment/paios --replicas=1 >/dev/null
+	@kubectl -n alice rollout status deployment/paios --timeout=180s
+	@echo "==> Her personal AI is answering. 'make k8s-paios-down' hands it back to her portal."
+
+k8s-paios-down:
+	@kubectl -n alice scale deployment/paios --replicas=0 >/dev/null
+	@echo "==> Stopped. Pending requests wait for her portal again."
+
+## k8s-paios-check: the same check the compose path runs, in the cluster.
+k8s-paios-check: k8s-paios
+	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py
+
 ## k8s-reset: rewind the story without rebuilding the cluster
 .PHONY: k8s-reset
 k8s-reset:

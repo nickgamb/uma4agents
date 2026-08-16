@@ -65,6 +65,13 @@ circle.head { fill: var(--card); }
 .tie { fill: var(--accent); stroke: none; }
 
 .bot-head, .bot-body { fill: var(--card-2); stroke: var(--agent); stroke-width: 2.6; }
+
+/* Alice's own personal AI. Her colour, not the requesting side's — the shape
+   says "the same kind of machine", the colour says "whose". */
+.own-ai-head, .own-ai-body { fill: var(--card-2); stroke: var(--primary); stroke-width: 2.6; }
+.own-ai-dot { fill: var(--primary); }
+.own-ai-eye { fill: var(--primary); }
+.own-ai-key { fill: none; stroke: var(--primary); stroke-width: 2.4; stroke-linecap: round; }
 .bot-dot { fill: var(--agent); }
 .eye { fill: var(--accent); }
 

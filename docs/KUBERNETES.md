@@ -158,7 +158,28 @@ make k8s-chaos                  # ~5 min; expect 5 passed
 authorization server that took it is **deleted**, the database primary is
 **killed**, a standby takes over — and she still answers *that same request*.
 
-### 6. Look around
+### 6. Give Alice her own AI
+
+```bash
+make k8s-paios                  # Kwaai's pAI-OS, holding her key
+make k8s-paios-check            # expect PASS
+make k8s-paios-down             # hand the decisions back to her portal
+```
+
+A second surface onto her decisions, not a replacement for her portal — both
+demos are worth showing, and [DEMOS.md](DEMOS.md) puts them side by side. It
+runs in her namespace, behind the same waypoint, so the policy that protects
+the owner API applies to it too.
+
+**Notice** what it refuses. It answers the tiers she gave standing consent to
+and never disturbs her; on an ask-me tier it **denies**, because pAI-OS gives
+an ability no channel to reach its person. That is the open question in the
+binding — see [KWAAI-BINDING.md](KWAAI-BINDING.md).
+
+It starts at `replicas: 0` deliberately: while it is up, the requests it can
+answer never reach her portal, and the portal demo is the default.
+
+### 7. Look around
 
 ```bash
 make k8s-status                 # what is running, per party
@@ -247,7 +268,7 @@ probe. The asymmetry is the point.
 
 ---
 
-## Four traps, each of which fails by pointing somewhere else
+## Five traps, each of which fails by pointing somewhere else
 
 These cost real time. Each is commented where it bit.
 
@@ -267,6 +288,12 @@ traffic never passes a service-scoped waypoint. The waypoints here are
 **Behind a waypoint, the second hop carries the waypoint's identity**, not the
 caller's. Without a rule naming it, everything is refused *after* the policy
 meant to permit it already said yes — a 503 with nothing denied in any log.
+
+**A Service named `paios` breaks pAI-OS**, and every other workload that reads
+an environment variable named after itself. Kubernetes injects legacy service
+links — `PAIOS_PORT=tcp://10.96.x.x:8443` — into every pod in the namespace,
+and pAI-OS parses `PAIOS_PORT` as an integer. It crash-loops on a value it
+never set. `enableServiceLinks: false` is the fix and costs nothing.
 
 And one more, found by `make k8s-chaos` rather than by reading: **a
 `principals` rule silently excludes anything outside the mesh.** CloudNativePG's

@@ -72,6 +72,12 @@ data:
 
     NAME = sys.argv[1]          # secret name
     FILENAME = sys.argv[2]      # key within the secret, and the mounted filename
+    # A third argument asks for the public half alongside the private one.
+    # The owner's device key needs both and they go to different places: the
+    # private half is mounted into her personal AI, the public half into her
+    # authorization server, which is the whole point of it being a key she
+    # holds rather than a credential she is issued.
+    PUBNAME = sys.argv[3] if len(sys.argv) > 3 else None
     NS = os.environ.get("POD_NAMESPACE", "alice")
 
     SA = "/var/run/secrets/kubernetes.io/serviceaccount"
@@ -99,14 +105,22 @@ data:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    pem = Ed25519PrivateKey.generate().private_bytes(
+    key = Ed25519PrivateKey.generate()
+    pem = key.private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption())
 
+    data = {FILENAME: base64.b64encode(pem).decode()}
+    if PUBNAME:
+        pub = key.public_key().public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo)
+        data[PUBNAME] = base64.b64encode(pub).decode()
+
     call("POST", f"/api/v1/namespaces/{NS}/secrets", {
         "apiVersion": "v1", "kind": "Secret", "metadata": {"name": NAME},
-        "data": {FILENAME: base64.b64encode(pem).decode()},
+        "data": data,
     })
     print(f"{NAME} created")
 ---
@@ -128,6 +142,45 @@ spec:
           image: localhost:5001/u4a/uma-as:dev
           imagePullPolicy: Always
           command: ["python3", "/script/keygen.py", "uma-as-signing-key", "uma-as-ed25519.pem"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          volumeMounts:
+            - { name: script, mountPath: /script, readOnly: true }
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 192Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: script
+          configMap: { name: keygen-script }
+---
+# Alice's device key. The private half is mounted into her personal AI; the
+# public half into her authorization server, which verifies her signature
+# against it. She is the only party that ever holds the private one.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: owner-keygen
+  namespace: alice
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: { app: keygen }
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: keygen
+      containers:
+        - name: keygen
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["python3", "/script/keygen.py", "owner-device-key",
+                    "owner-ed25519.pem", "owner-ed25519.pub"]
           env:
             - name: POD_NAMESPACE
               valueFrom: { fieldRef: { fieldPath: metadata.namespace } }

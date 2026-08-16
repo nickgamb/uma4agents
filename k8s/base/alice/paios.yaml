@@ -1,0 +1,101 @@
+# Kwaai's pAI-OS, with the U4A ability installed.
+#
+# In Alice's namespace, because it is hers. It holds her key and answers her
+# authorization server; it is a second surface onto her decisions, beside her
+# portal, and the two are alternatives rather than layers.
+#
+# Deliberately `replicas: 0`. The lab comes up with her portal as the surface,
+# because that is the demo most people want first — and while this is running
+# it answers the tiers she has given it standing consent for, which leaves her
+# portal with nothing waiting. `make k8s-paios` scales it up; `make
+# k8s-paios-down` scales it back.
+#
+# Her key is the same Secret uma-as verifies against, mounted here as the
+# private half. That split is the point: only the public half goes to the
+# authority.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: paios
+  namespace: alice
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paios
+  namespace: alice
+  labels: { app: paios }
+spec:
+  # Off until asked for. See the note above.
+  replicas: 0
+  selector:
+    matchLabels: { app: paios }
+  template:
+    metadata:
+      labels:
+        app: paios
+        # Her personal AI talks to her authorization server through the mesh
+        # like everything else, so the policy that protects the owner API
+        # applies to it too.
+        istio.io/use-waypoint: waypoint
+    spec:
+      serviceAccountName: paios
+      # Kubernetes injects a PAIOS_PORT=tcp://10.96.x.x:8443 into every pod in
+      # this namespace, because there is a Service called `paios`. pAI-OS reads
+      # PAIOS_PORT as an integer and dies on it. The legacy service-link
+      # variables buy us nothing here, so they are off.
+      enableServiceLinks: false
+      containers:
+        - name: paios
+          image: localhost:5001/u4a/paios:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: https, containerPort: 8443 }
+          env:
+            - name: PAIOS_HOST
+              value: 0.0.0.0
+            - name: U4A_AUTHORITY_URL
+              value: https://alice-as.uma.lab
+            - name: U4A_AUTHORITY_NAME
+              value: alice-as.uma.lab
+            - name: U4A_OWNER_KEY
+              value: /owner/owner-ed25519.pem
+            # The tiers she has given it standing consent for. Everything else
+            # it refuses, because pAI-OS gives an ability no way to reach her.
+            - name: U4A_AUTO_TIERS
+              value: tier1
+            # Same variables, same paths as the compose stack — nothing in the
+            # ability knows which shape it is running in.
+            - name: U4A_CA_BUNDLE
+              value: /certs/rootCA.pem
+            - name: SSL_CERT_FILE
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: owner-key, mountPath: /owner, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: data, mountPath: /opt/paios/data }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 768Mi }
+      volumes:
+        - name: owner-key
+          secret:
+            secretName: owner-device-key
+            items:
+              - { key: owner-ed25519.pem, path: owner-ed25519.pem }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paios
+  namespace: alice
+  labels: { app: paios }
+spec:
+  selector: { app: paios }
+  ports:
+    - { name: https, port: 8443, targetPort: 8443 }

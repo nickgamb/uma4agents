@@ -4,6 +4,8 @@ SHELL=/bin/bash -o pipefail
 
 # Pinned upstream ref for the AAuth person server (built, not vendored)
 PERSON_SERVER_REF = 4e05247
+# Pinned upstream ref for Kwaai's pAI-OS (built, not vendored)
+PAIOS_REF = b65d858
 
 ## fetch-upstream: clone the pinned AAuth person server into aauth/upstream/
 fetch-upstream:
@@ -12,7 +14,11 @@ fetch-upstream:
 		git clone https://github.com/christian-posta/aauth-person-server aauth/upstream/aauth-person-server; \
 	fi
 	@cd aauth/upstream/aauth-person-server && git fetch -q && git checkout -q $(PERSON_SERVER_REF)
-	@echo "Upstream pinned: person-server@$(PERSON_SERVER_REF)"
+	@if [ ! -d aauth/upstream/paios/.git ]; then \
+		git clone https://github.com/pAI-OS/paios aauth/upstream/paios; \
+	fi
+	@cd aauth/upstream/paios && git fetch -q && git checkout -q $(PAIOS_REF)
+	@echo "Upstream pinned: person-server@$(PERSON_SERVER_REF) paios@$(PAIOS_REF)"
 
 ## init: generate local CA, TLS certs, and signing keys; configure local DNS
 init:
@@ -128,6 +134,45 @@ flow-check:
 ## session, both accepted, one ledger. See docs/KWAAI-BINDING.md.
 kwaai-check:
 	docker compose --profile test run --rm kwaai-check
+
+## paios: Kwaai's pAI-OS running in the lab with the U4A ability installed,
+## holding Alice's key and deciding for her. See docs/KWAAI-BINDING.md.
+##
+## It is off by default and `make up` does not start it, because it is a
+## *second surface onto her decisions*. While it runs it answers the tiers she
+## has given it standing consent for, which means the portal demo has nothing
+## left to show — she was already answered. Run one or the other:
+##
+##   make paios        the personal AI answers          (then: make paios-down)
+##   make demo-tier3   she answers in her portal
+.PHONY: paios paios-down paios-check paios-logs
+paios:
+	docker compose --profile kwaai up -d --build paios
+	@echo ""
+	@echo "==> Her personal AI is now answering for her."
+	@echo "==> Standing consent: $${PAIOS_AUTO_TIERS:-tier1}. Everything else it refuses,"
+	@echo "    because pAI-OS gives an ability no way to reach her."
+	@echo "==> Run 'make paios-down' before the portal demo, or she will find"
+	@echo "    nothing waiting: her personal AI will have answered already."
+
+## paios-down: stop the personal AI, so her portal is the surface again.
+paios-down:
+	docker compose --profile kwaai stop paios >/dev/null 2>&1 || true
+	docker compose --profile kwaai rm -f paios >/dev/null 2>&1 || true
+	@echo "==> Her personal AI is stopped. Pending requests wait for her portal again."
+
+## paios-check: verify it — the OS finds the ability, the ability answers a
+## standing-consent tier, and refuses an ask-me tier it cannot reach her about.
+paios-check: paios
+	@printf "Waiting for pAI-OS and the ability"; \
+	for i in $$(seq 1 40); do \
+		docker compose exec -T paios test -f /opt/paios/data/ability.log >/dev/null 2>&1 && break; \
+		printf "."; sleep 2; \
+	done; echo
+	docker compose exec -T paios python /opt/u4a/paios_check.py
+
+paios-logs:
+	docker compose logs -f paios
 
 ## kwaai-host: the same binding, interactive, against the fixture. Each request
 ## is put to you. AUTO=tier1,tier2 gives a tier standing approval.

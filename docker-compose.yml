@@ -278,6 +278,39 @@ services:
     working_dir: /driver
     profiles: ["test"]
 
+  # Kwaai's pAI-OS, with the U4A ability installed under abilities/.
+  #
+  # A personal AI running beside the rest of the lab, holding Alice's key and
+  # answering her authorization server when somebody else's agent asks for
+  # something of hers. Built from a pinned upstream ref by `make
+  # fetch-upstream`, with one directory added — which is how pAI-OS takes an
+  # extension.
+  paios:
+    init: true
+    build:
+      context: .
+      dockerfile: kwaai/Dockerfile
+    environment:
+      PAIOS_HOST: 0.0.0.0
+      U4A_AUTHORITY_URL: https://alice-as.uma.lab
+      U4A_AUTHORITY_NAME: alice-as.uma.lab
+      U4A_OWNER_KEY: /owner/owner-ed25519.pem
+      U4A_CA_BUNDLE: /certs/rootCA.pem
+      # Her standing consent, set by her. Without it the ability denies
+      # everything, because pAI-OS gives it no way to ask her.
+      U4A_AUTO_TIERS: ${PAIOS_AUTO_TIERS:-tier1}
+      SSL_CERT_FILE: /certs/rootCA.pem
+    volumes:
+      # Her private key. Only this container and she have it; her
+      # authorization server holds the public half.
+      - ./certs/owner-ed25519.pem:/owner/owner-ed25519.pem:ro
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+      - paios-data:/opt/paios/data
+    depends_on:
+      uma-as:
+        condition: service_healthy
+    profiles: ["kwaai"]
+
   # The personal-AI binding against the full stack: her authority, her portal,
   # the gateway and the vault all as they really are — and a personal AI
   # holding her key instead of a browser session.
@@ -332,6 +365,7 @@ services:
     profiles: ["test"]
 
 volumes:
+  paios-data:
   uma-as-keys:
   uma-pep-keys:
   ps-data:

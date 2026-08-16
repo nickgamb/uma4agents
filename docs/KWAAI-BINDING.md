@@ -67,19 +67,28 @@ for the other. UMA 2.0 and FedAuthz are silent on owner authentication
 entirely, which is defensible for 2018 and is not once the authority can be
 personal.
 
-## What is assumed, and what is not
+## Packaged as a real ability
 
-pAI-OS does not publish an ability manifest schema we could find, so
-`kwaai/ability/manifest.json` declares **our** requirements in **our** field
-names and is meant to be replaced by theirs. What is worth reviewing is not the
-spelling but the four things the ability needs from a host — a key it will sign
-with, a way to reach the person, outbound http, and somewhere durable to keep
-state.
+pAI-OS takes an extension as a directory under `abilities/<id>/<semver>/` with
+a `metadata.json` in it — "akin to plugins in WordPress", as their own README
+puts it. Ours is `kwaai/abilities/u4a-owner-authority/0.1.0/`, and pAI-OS finds
+it with its own `AbilitiesManager`, not with our reading of its layout.
 
-Nothing here has been run against pAI-OS. `kwaai/host_demo.py` is a stand-in
-that implements those four methods against a file and a terminal, so the
-binding is demonstrable today and the conversation can be about mapping rather
-than about a blank page.
+One thing to flag for Kwaai, because it cost us an afternoon. pAI-OS **does**
+publish a manifest schema — `abilities/schema-metadata.json`, with a
+`validate-metadata.py` beside it — but the schema has drifted from the runtime.
+It types `dependencies` as an object keyed by platform; the runtime and every
+shipped ability use an array. Their own validator rejects their own abilities:
+
+```
+$ python validate-metadata.py chroma/0.1.0
+ValidationError: [{'id': 'chromadb', 'type': 'python', …}] is not of type 'object'
+On instance['dependencies']:
+```
+
+So our `metadata.json` follows the runtime and the shipped abilities rather
+than the schema, and satisfies the schema in every other respect. Which of the
+two is authoritative is a question for them, and worth an issue either way.
 
 ## Running it
 
@@ -115,17 +124,67 @@ make kwaai-host              # puts each request to you
 make kwaai-host AUTO=tier1   # standing approval for one tier
 ```
 
+## Inside pAI-OS
+
+The above runs the ability as a process of ours. The lab also runs it as an
+ability of theirs: `kwaai/Dockerfile` builds Kwaai's pAI-OS from the pinned
+upstream ref `make fetch-upstream` clones, installs our directory under its
+`abilities/`, and starts both.
+
+```bash
+make up            # her portal demo, as always
+make paios         # add her personal AI
+make paios-check
+make paios-down    # back to the portal demo
+```
+
+It is a second surface onto her decisions, not a replacement for her portal.
+The two are alternatives — see [DEMOS.md](DEMOS.md).
+
+```
+== pAI-OS finds the ability ==
+   u4a-owner-authority — Owner authority (UMA for Agents)
+   start: python3 main.py   dependencies: httpx, cryptography
+   found by its own AbilitiesManager, under abilities/<id>/<semver>/
+
+== A tier she has given standing consent to ==
+   granted — the personal AI answered, she was not disturbed
+
+== An ask-me tier, which needs her ==
+   refused — and that is correct
+```
+
+Two upstream accommodations were needed, both small and both noted in the
+Dockerfile: the pinned ref imports `pkg_resources`, so setuptools is held below
+81, and `PAIOS_HOST` defaults to localhost, which binds to nothing another
+container can reach.
+
+**The refusal is the finding.** pAI-OS starts an ability as a process
+configured by environment variables. It gives it no channel to its person — no
+notification, no prompt, no inbox. So `ask()` cannot be implemented, and the
+ability denies and logs why:
+
+```json
+{"event": "cannot-ask", "family": "trade:execute",
+ "outcome": "denied — no channel to her"}
+```
+
+That is the safe answer: a request pends precisely because she has not said
+yes. But it means the only thing that works unattended is `U4A_AUTO_TIERS`,
+which is standing consent she configured rather than a judgement the process
+made. A personal AI that cannot reach its person can hold a standing policy;
+it cannot hold her attention.
+
 ## Open questions for Kwaai
 
-1. **The ability contract.** What does pAI-OS actually give an ability for
-   signing, for reaching the person, and for storage? The four above are a
-   guess at the shape.
-2. **Where the authority runs.** Beside the ability as a local service, or
-   inside the runtime? Either works; the second is more interesting and
-   probably harder.
-3. **Whose key.** Can an ability sign with a key the host holds and will not
-   release — an enclave, a passkey? The ability only ever calls `sign()`, so
-   the answer being yes costs nothing.
+1. **A channel to the person.** This is the one that matters. An ability has
+   no way to ask. `ask()` is the whole difference between standing consent and
+   a personal AI, and it needs a host affordance that does not exist yet.
+2. **Whose key.** Can an ability sign with a key the host holds and will not
+   release — an enclave, a passkey, the webauthn already in their backend? The
+   ability only ever calls `sign()`, so the answer being yes costs nothing and
+   is strictly better than a key in a file, which is what it does today.
+3. **Which manifest is authoritative**, the schema or the runtime. See above.
 4. **What she sees.** The request carries the exact operation and the terms the
    agent signed. How a personal AI puts that to a person, in a sentence, is a
    product question we have deliberately not answered.
