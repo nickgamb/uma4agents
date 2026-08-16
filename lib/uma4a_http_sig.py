@@ -135,7 +135,8 @@ class VerifyError(Exception):
 def verify(method: str, authority: str, path: str, authorization: str,
            signature_input: str, signature: str, public_key: Ed25519PublicKey,
            max_age_s: int = 60, signature_agent: str | None = None,
-           body: bytes | None = None, require_digest: bool = False) -> str:
+           body: bytes | None = None, require_digest: bool = False,
+           digest_header: str | None = None) -> str:
     """Verifies the signature headers against the reconstructed request.
 
     Accepts any covered-component list that *includes* REQUIRED_COMPONENTS, so
@@ -170,14 +171,32 @@ def verify(method: str, authority: str, path: str, authorization: str,
     if missing:
         raise VerifyError(f"signature does not cover {', '.join(missing)}")
 
-    # The body, if the caller cares about it. `require_digest` is how an
-    # endpoint whose body carries meaning refuses a signature that does not
-    # reach it — covering it optionally would let a caller simply omit it.
-    digest = content_digest(body) if body else None
+    # The body, if the caller cares about it.
+    #
+    # Two separate obligations, and conflating them is the classic way to get
+    # this wrong. RFC 9421 builds the base from the *header field value*, so
+    # that is what goes into the base — recomputing it from the body instead
+    # would verify our own clients and reject a conforming third-party signer
+    # whose encoding differs. And RFC 9530 says nothing about whether the
+    # header is true, so the header is separately checked against the bytes
+    # that actually arrived. A verifier that does only the first trusts an
+    # attacker's arithmetic; one that does only the second is not verifying
+    # what was signed.
+    #
+    # `require_digest` is how an endpoint whose body carries meaning refuses a
+    # signature that does not reach it. Covering it optionally is not coverage:
+    # a signer that omits it still produces a signature that verifies.
+    digest = None
     if require_digest and '"content-digest"' not in covered:
         raise VerifyError("signature does not cover content-digest")
-    if '"content-digest"' in covered and digest is None:
-        raise VerifyError("signature covers content-digest but no body was read")
+    if '"content-digest"' in covered:
+        if not digest_header:
+            raise VerifyError("signature covers content-digest but none was sent")
+        if body is None:
+            raise VerifyError("signature covers content-digest but no body was read")
+        if digest_header.strip() != content_digest(body):
+            raise VerifyError("content-digest does not match the body")
+        digest = digest_header.strip()
 
     values = _values(method, authority, path, authorization, signature_agent,
                      digest)

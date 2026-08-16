@@ -401,11 +401,23 @@ signature untouched and change the word. The family is in the path and cannot
 be retargeted; the answer can be inverted, which is worse, because it is silent
 and it is hers. We shipped that and caught it reviewing our own branch.
 
-The fix is RFC 9530 `Content-Digest` as a covered component, and the rule worth
-writing into a spec is the one that makes it enforceable: **a verifier must be
-able to require the digest, not merely accept it.** Optional coverage is not
-coverage — a signer that omits it produces a signature that verifies. Endpoints
-whose body is the decision should mandate it.
+The fix is RFC 9530 `Content-Digest` as a covered component, and there are two
+rules worth writing into a spec rather than one.
+
+**A verifier must be able to require the digest, not merely accept it.**
+Optional coverage is not coverage — a signer that omits it still produces a
+signature that verifies. Endpoints whose body is the decision should mandate it.
+
+**Verifying the signature and verifying the digest are two obligations.** RFC
+9421 builds the base from the `Content-Digest` *header field value*; RFC 9530
+says nothing about whether that header is true. Our first fix recomputed the
+digest from the received body and never read the header. That is safe — a
+tampered body cannot match — and it is not conformant, so it would have
+rejected any third-party signer whose encoding differed from ours. Reading the
+header for the base and *separately* asserting it against the bytes that
+arrived satisfies both. A verifier that does only the first trusts the
+attacker's arithmetic; one that does only the second is not verifying what was
+signed.
 
 **12. Identity levels are two, and description is not one of them.** Running the
 same negotiation against four requesting-side arrangements — a bare key, an

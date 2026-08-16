@@ -551,8 +551,9 @@ async def require_owner_signature(request: Request) -> None:
             signature_input=sig_input,
             signature=sig,
             public_key=owner_device_key(),
-            body=body or None,
+            body=body if body else None,
             require_digest=bool(body),
+            digest_header=request.headers.get("content-digest"),
         )
     except VerifyError as exc:
         raise HTTPException(
