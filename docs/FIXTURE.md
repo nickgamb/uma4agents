@@ -21,7 +21,8 @@ make fixture
 ```
 
 Two containers. No `make init`, no certificate, no DNS zone, no sudo, no host
-state at all. Cold start eight seconds, 92 MB resident. And the same four
+state at all. Cold start under ten seconds once the images are built, and about
+90 MB resident. And the same four
 beats, the same terms, the same proof-of-possession token, the same refusals.
 
 ## What was removed, and what it cost
