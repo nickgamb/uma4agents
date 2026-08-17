@@ -172,6 +172,15 @@ granting requires asking her:
 - **Tier 3 — trade execution**: `ask_me` — pends for per-operation approval and
   yields a single-use, operation-bound grant.
 
+Each tier may also carry **rules** — policy that faces the requesting agent
+without naming one. They read what the authorization server could establish
+about the agent (`assurance.*`, in `services/uma-as/assurance.py`) and what
+Alice has herself seen of it (`standing.*`), and only the second kind may ever
+make a requirement *looser*. Her attention also has a depth limit
+(`UMA_AS_PEND_BUDGET`), so a flood of unknown agents is refused rather than
+queued, and never crowds out an agent she already knows. See
+[ASSURANCE.md](ASSURANCE.md).
+
 ## Ports and hostnames
 
 TLS everywhere via the Envoy edge and a local CA (`make init`). Browser access

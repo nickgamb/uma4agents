@@ -15,6 +15,7 @@ State is in-memory by design: `make reset` rewinds the story.
 import asyncio
 import base64
 import hashlib
+import calendar
 import json
 import logging
 import os
@@ -30,6 +31,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
+import assurance
 import policy
 import store
 
@@ -1027,6 +1029,32 @@ def connection_handle(identity: dict, signer_jwk: dict) -> str:
     return jwk_thumbprint(signer_jwk)
 
 
+def standing_facts(conn: dict | None, tier_id: str) -> dict:
+    """What Alice's own authority has seen of this agent.
+
+    Kept apart from assurance because only these may relax a requirement —
+    they are the one kind of evidence here that the requesting side had no
+    hand in producing. `age_seconds` is None when she has never met it, which
+    the conditions read as "younger than everything, older than nothing".
+    """
+    if conn is None or conn.get("status") != "active":
+        return {"active": False, "age_seconds": None, "first_at_tier": True,
+                "revocations": int((conn or {}).get("revocations", 0))}
+    age = None
+    if first_seen := conn.get("first_seen"):
+        try:
+            age = max(0, int(now() - calendar.timegm(
+                time.strptime(first_seen, "%Y-%m-%dT%H:%M:%SZ"))))
+        except ValueError:
+            age = None
+    return {
+        "active": True,
+        "age_seconds": age,
+        "first_at_tier": tier_id not in (conn.get("tiers_granted") or []),
+        "revocations": int(conn.get("revocations", 0)),
+    }
+
+
 _CIMD_CACHE: dict[str, dict] = {}
 
 
@@ -1296,7 +1324,47 @@ async def token(
     handle = connection_handle(contract["_identity"], signer_jwk)
     conn = await STORE.connection(handle)
     needs_connection = conn is None or conn["status"] != "active"
-    needs_operation_approval = tier["ask_me"]
+
+    # What her authority can establish about this agent, and what she has
+    # herself seen of it. Kept apart on purpose — see `assurance.py`.
+    axes = assurance.assess(contract["_identity"])
+    facts = {
+        "assurance": axes,
+        "standing": standing_facts(conn, rec["tier"]),
+        "request": {"expires_in": contract.get("expires_in", 0),
+                    "max_expires_in": tier["terms"]["expires_in"]},
+    }
+    requirement, reasons = policy.evaluate(tier, facts)
+    event("assurance.assessed", corr=family, **axes)
+
+    if requirement == policy.REFUSE:
+        event("policy.evaluated", corr=family, result="refused", tier=rec["tier"],
+              because=reasons)
+        await ledger_add("refused", family, {"tier": rec["tier"],
+                                             "because": reasons})
+        await close_negotiation(rec)
+        return JSONResponse({"error": "request_denied",
+                             "error_description": "; ".join(reasons)},
+                            status_code=403)
+
+    needs_operation_approval = requirement == policy.ASK
+
+    # Her attention has a depth limit, and only strangers spend it. An agent
+    # she already has standing with is never counted and never turned away for
+    # budget, so a flood of unknown agents cannot crowd out the ones she knows.
+    if needs_connection:
+        waiting = sum(1 for p in await STORE.pending_negotiations()
+                      if p.get("pending_kind") == "connection"
+                      and p["family"] != family)
+        if waiting >= policy.PEND_BUDGET:
+            event("policy.evaluated", corr=family, result="attention-budget",
+                  waiting=waiting, budget=policy.PEND_BUDGET)
+            await close_negotiation(rec)
+            return JSONResponse(
+                {"error": "request_denied",
+                 "error_description": "the owner is not accepting new agent "
+                                      "requests at the moment; try later"},
+                status_code=429)
 
     if needs_connection or needs_operation_approval:
         kind = "connection" if needs_connection else "operation"
@@ -1318,6 +1386,12 @@ async def token(
                 "prohibited": contract["prohibited"],
                 "identity": contract["_identity"],
                 "handle": handle,
+                # What her authority could and could not establish, in
+                # sentences rather than integers. A dialog that shows a level
+                # without saying what was checked teaches nothing.
+                "assurance": axes,
+                "assurance_notes": assurance.describe(axes, contract["_identity"]),
+                "because": reasons,
             }
         )
         event("owner.notified", corr=family, kind=kind)
@@ -1327,8 +1401,9 @@ async def token(
         )
 
     await STORE.touch_connection(handle, utcstamp())
+    await STORE.note_tier_grant(handle, rec["tier"])
     event("policy.evaluated", corr=family, result="auto-grant", tier=rec["tier"],
-          connection=handle)
+          connection=handle, because=reasons or None)
     granted = await issue_rpt(rec, contract_hash, signer_jwk, None)
     await close_negotiation(rec)
     return JSONResponse(granted)
@@ -1340,6 +1415,11 @@ async def pending_poll(rec: dict) -> JSONResponse:
         if rec.get("pending_kind") == "connection":
             handle = rec["handle"]
             identity = rec["contract"]["_identity"]
+            # A previously revoked agent that she admits again starts a new
+            # relationship, but not a clean record: `standing.never_revoked`
+            # would be worthless if a revocation could be cleared by asking a
+            # second time.
+            prior = await STORE.connection(handle) or {}
             await STORE.put_connection({
                 "handle": handle,
                 "identity": identity,
@@ -1347,7 +1427,12 @@ async def pending_poll(rec: dict) -> JSONResponse:
                 "status": "active",
                 "first_seen": utcstamp(),
                 "last_access": None,
-                "tiers": ["tier1", "tier2", "tier3"],
+                # Which tiers this connection has actually been granted at.
+                # Being admitted is not the same as being admitted everywhere:
+                # `standing.first_at_tier` reads this, so the first request at
+                # each new tier comes back to her.
+                "tiers_granted": [],
+                "revocations": int(prior.get("revocations", 0)),
             })
             event("connection.approved", corr=family, handle=handle)
             await ledger_add("connected", family, {"handle": handle,
@@ -1356,6 +1441,8 @@ async def pending_poll(rec: dict) -> JSONResponse:
         # Tier policy still applies after connection: an ask-me tier needs its
         # per-operation approval, which Alice's single tap covered only if this
         # negotiation carried the operation (it did — the contract binds it).
+        if handle := rec.get("handle"):
+            await STORE.note_tier_grant(handle, rec["tier"])
         granted = await issue_rpt(rec, rec["contract_hash"], rec["signer_jwk"],
                                   rec["contract"].get("operation"))
         await close_negotiation(rec)

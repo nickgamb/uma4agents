@@ -32,6 +32,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · Proof-of-possession](https://u4a.ai/docs/overview/proof-of-possession.md): A grant that names a key, and a request signed with it — so holding the token is not enough.
 - [Overview · Single-use means indivisible](https://u4a.ai/docs/overview/single-use.md): Once has to mean once across every replica, which makes it a property of how you write to the store rather than of the protocol.
 - [Overview · Revocation and the ledger](https://u4a.ai/docs/overview/revocation.md): What was promised, what was approved, what was touched — and what happens the moment the owner changes her mind.
+- [Overview · Agent assurance](https://u4a.ai/docs/overview/assurance.md): Policy that faces the requesting agent without naming one — three axes of evidence, the asymmetry that makes them safe to use, and a limit on how much of the owner's attention a stranger can spend.
 - [Overview · Compared to UMA 2.0](https://u4a.ai/docs/overview/compare-uma.md): What this profile keeps, what it changes, and why each change was necessary rather than preferred.
 - [Overview · Compared to OAuth 2.0 and GNAP](https://u4a.ai/docs/overview/compare-oauth-gnap.md): Both can carry a negotiation. Neither, on its own, puts the deciding party anywhere but the service.
 - [Overview · Compared to policy engines](https://u4a.ai/docs/overview/compare-policy-engines.md): OPA, Cedar and AuthZEN decide well. They do not decide whose policy is being expressed, and the two compose.

@@ -281,6 +281,16 @@ class PostgresStore:
             "SET conn = jsonb_set(conn, '{last_access}', to_jsonb($2::text)) "
             "WHERE handle = $1", handle, when)
 
+    async def note_tier_grant(self, handle: str, tier_id: str) -> None:
+        # Append-if-absent in one statement, so two replicas granting at the
+        # same tier concurrently cannot lose each other's write.
+        await self._pool.execute(
+            "UPDATE connections SET conn = jsonb_set("
+            "  conn, '{tiers_granted}',"
+            "  COALESCE(conn->'tiers_granted', '[]'::jsonb) || to_jsonb($2::text))"
+            "WHERE handle = $1 AND NOT COALESCE(conn->'tiers_granted', '[]'::jsonb)"
+            "                        @> to_jsonb($2::text)", handle, tier_id)
+
     async def revoke_connection(self, handle: str) -> int | None:
         async with self._pool.acquire() as conn:
             # One transaction: a revocation that flipped the connection and
@@ -289,7 +299,10 @@ class PostgresStore:
             async with conn.transaction():
                 row = await conn.fetchrow(
                     "UPDATE connections "
-                    "SET conn = jsonb_set(conn, '{status}', '\"revoked\"') "
+                    "SET conn = jsonb_set("
+                    "  jsonb_set(conn, '{status}', '\"revoked\"'),"
+                    "  '{revocations}',"
+                    "  to_jsonb(COALESCE((conn->>'revocations')::int, 0) + 1)) "
                     "WHERE handle = $1 RETURNING handle", handle)
                 if row is None:
                     return None

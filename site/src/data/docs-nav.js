@@ -56,6 +56,7 @@ const nav = {
         { title: "Proof-of-possession", to: "/docs/overview/proof-of-possession/" },
         { title: "Single-use means indivisible", to: "/docs/overview/single-use/" },
         { title: "Revocation and the ledger", to: "/docs/overview/revocation/" },
+        { title: "Agent assurance", to: "/docs/overview/assurance/" },
       ],
     },
     {

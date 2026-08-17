@@ -63,6 +63,16 @@ make reset          # compose
 make k8s-reset      # kubernetes
 ```
 
+## Worth running either way
+
+```bash
+make assurance-check    # what her policy can say about an agent, and the cap
+make policy-test        #   on how much of her attention a stranger can spend
+```
+
+Neither is a demo — they are checks — but the first one reads like one, and it
+is the shortest route to what [ASSURANCE.md](ASSURANCE.md) argues.
+
 ## The third thing, which is not a demo
 
 `make fixture` is a two-container stack with no identity provider, no database

@@ -140,11 +140,17 @@ class MemoryStore:
         if (conn := self._connections.get(handle)) is not None:
             conn["last_access"] = when
 
+    async def note_tier_grant(self, handle: str, tier_id: str) -> None:
+        if (conn := self._connections.get(handle)) is not None:
+            if tier_id not in conn.setdefault("tiers_granted", []):
+                conn["tiers_granted"].append(tier_id)
+
     async def revoke_connection(self, handle: str) -> int | None:
         conn = self._connections.get(handle)
         if conn is None:
             return None
         conn["status"] = "revoked"
+        conn["revocations"] = int(conn.get("revocations", 0)) + 1
         killed = 0
         for rec in self._rpts.values():
             if rec.get("handle") == handle and not rec["consumed"]:

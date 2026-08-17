@@ -1,0 +1,232 @@
+"""Agent assurance, and the limit on how much of Alice's attention a stranger
+can spend.
+
+Two things are demonstrated here, both against the running stack.
+
+**Assurance is policy she can write, without naming an agent.** Her authority
+derives what it can establish about a requesting agent — is the request bound
+to a key it will recognise, can it check where the credential came from, is
+anyone named and reachable behind it — and keeps those apart from *standing*,
+which is what she has herself seen of that agent. Her rules read those facts.
+Nothing in them names an agent, so they hold for the next stranger too.
+
+The asymmetry is the safety property, and it is what this checks hardest:
+
+    assurance may only tighten a requirement; only standing may relax one.
+
+So a lie can only cost the liar friction. That is what makes it safe for her
+policy to read a self-asserted operator name at all.
+
+**Her attention has a depth limit.** Nothing above stops someone minting ten
+thousand keys and putting ten thousand first-contact requests in front of her.
+Keys are free. So there is a cap on how many requests from agents she has no
+standing with may be waiting at once — and an agent she already knows is never
+counted against it, which is the property that matters: a flood turns strangers
+away without touching the relationships she has.
+
+Run against the full stack with `make assurance-check`.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import time
+import uuid
+
+import httpx
+
+sys.path.insert(0, "/driver/lib")
+from uma4a_grant import (  # noqa: E402
+    AgentKeys, GrantDenied, mcp_call, mcp_meta, parse_challenge, run_grant,
+)
+
+GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
+AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
+KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
+OPERATOR = os.environ.get("UMA4A_AGENT_OPERATOR", "https://agent.uma.lab")
+CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
+KEYS = "/driver/keys"
+BUDGET = int(os.environ.get("UMA_AS_PEND_BUDGET", "5"))
+RUN = uuid.uuid4().hex[:8]
+META = mcp_meta("u4a-assurance-check")
+
+PASS, FAIL = [], []
+
+
+def say(msg: str) -> None:
+    print(f"   {msg}", flush=True)
+
+
+def check(name: str, ok: bool, detail: str = "") -> None:
+    (PASS if ok else FAIL).append(name)
+    print(f"   {'ok  ' if ok else 'FAIL'} {name}" + (f" — {detail}" if detail else ""),
+          flush=True)
+
+
+def owner_token(client: httpx.Client) -> str:
+    r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
+                    data={"grant_type": "password", "client_id": "alice-portal",
+                          "username": "alice",
+                          "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
+                    timeout=15.0)
+    r.raise_for_status()
+    return r.json()["access_token"]
+
+
+def owner_hdrs(client: httpx.Client) -> dict:
+    return {"Authorization": f"Bearer {owner_token(client)}"}
+
+
+def pending(client: httpx.Client) -> list:
+    return client.get(f"{AS_PUBLIC}/owner/pending", headers=owner_hdrs(client),
+                      timeout=15.0).json()
+
+
+def decide_all(client: httpx.Client, decision: str) -> int:
+    hdrs, n = owner_hdrs(client), 0
+    for p in pending(client):
+        client.post(f"{AS_PUBLIC}/owner/pending/{p['family']}/decision",
+                    json={"decision": decision}, headers=hdrs, timeout=15.0)
+        n += 1
+    return n
+
+
+def negotiate(client: httpx.Client, keys: AgentKeys, tool: str,
+              arguments: dict | None = None, quiet: bool = True,
+              max_wait_s: int = 25):
+    """One negotiation. Returns (granted, asked, reason) — whether the grant
+    was issued, whether it had to go past Alice to get there, and what the
+    authorization server said if it did not."""
+    args = arguments or {}
+    r = mcp_call(client, GATEWAY, "tools/call",
+                 {"name": tool, "arguments": args}, META)
+    ch = parse_challenge(r.headers.get("www-authenticate", ""))
+    if ch is None:
+        raise SystemExit(f"no challenge for {tool}: {r.status_code}")
+    asked = {"v": False}
+
+    def status(msg: str) -> None:
+        if "has been asked" in msg:
+            asked["v"] = True
+        if not quiet:
+            say(f"[agent] {msg}")
+
+    try:
+        run_grant(client, ch.as_uri, ch.ticket, keys, lambda t: True,
+                  operation=({"tool": tool, "params": args} if args else None),
+                  on_status=status, max_wait_s=max_wait_s)
+        return True, asked["v"], None
+    except GrantDenied as exc:
+        return False, asked["v"], str(exc)
+
+
+def approve_in_background(client: httpx.Client, seconds: float):
+    """Alice, answering promptly. Deliberately blind to who is asking.
+
+    Returns the stop switch: the attention-budget section below has to be able
+    to turn her off, because a cap on the *queue* is only observable while
+    nobody is draining it.
+    """
+    import threading
+
+    stop = threading.Event()
+
+    def loop() -> None:
+        deadline = time.time() + seconds
+        while time.time() < deadline and not stop.is_set():
+            try:
+                decide_all(client, "approved")
+            except Exception:                                      # noqa: BLE001
+                pass
+            time.sleep(0.8)
+
+    threading.Thread(target=loop, daemon=True).start()
+    return stop
+
+
+def main() -> int:
+    ca = CA if os.path.exists(CA) else True
+    with httpx.Client(verify=ca, timeout=30.0) as client:
+        decide_all(client, "denied")          # start from an empty queue
+
+        # An agent with a named operator, and one with nobody behind it.
+        # Same code, same key type, same terms — the only difference is
+        # whether a CIMD document says who runs it.
+        accountable = AgentKeys.load_or_create(f"{KEYS}/assurance-named-{RUN}.pem")
+        accountable.client_id = f"{OPERATOR}/agent.json"
+        anonymous = AgentKeys.load_or_create(f"{KEYS}/assurance-nameless-{RUN}.pem")
+
+        print("\n== First contact: both are strangers, so both ask ==")
+        approving = approve_in_background(client, 90)
+        a_ok, a_asked, _ = negotiate(client, accountable, "get_positions")
+        n_ok, n_asked, _ = negotiate(client, anonymous, "get_positions")
+        check("the accountable agent was admitted, after asking", a_ok and a_asked)
+        check("the nameless agent was admitted too — assurance is not a gate",
+              n_ok and n_asked)
+
+        print("\n== Second request, same tier: assurance decides who is quiet ==")
+        a_ok, a_asked, _ = negotiate(client, accountable, "get_positions")
+        check("an agent with a named operator does not disturb her again",
+              a_ok and not a_asked)
+        n_ok, n_asked, _ = negotiate(client, anonymous, "get_positions")
+        check("an agent with nobody behind it asks every time",
+              n_ok and n_asked)
+        say("her rule reads `assurance.accountability_below:1` and names no agent")
+
+        print("\n== Standing is per tier, not per agent ==")
+        a_ok, a_asked, _ = negotiate(client, accountable, "get_transactions")
+        check("being admitted is not being admitted everywhere", a_ok and a_asked)
+        a_ok, a_asked, _ = negotiate(client, accountable, "get_transactions")
+        check("and the second request at that tier is quiet",
+              a_ok and not a_asked)
+
+        print("\n== A lie can only cost the liar friction ==")
+        liar = AgentKeys.load_or_create(f"{KEYS}/assurance-liar-{RUN}.pem")
+        liar.client_id = "https://not-a-real-operator.invalid/agent.json"
+        l_ok, l_asked, _ = negotiate(client, liar, "get_positions")
+        check("metadata that does not resolve buys nothing", l_ok and l_asked)
+        l_ok, l_asked, _ = negotiate(client, liar, "get_positions")
+        check("and is still worth nothing on the second try", l_ok and l_asked)
+
+        print("\n== Her attention has a depth limit ==")
+        # She stops answering. A cap on the queue is only observable while
+        # nobody is draining it — which is also the situation it exists for.
+        approving.set()
+        time.sleep(1.5)
+        decide_all(client, "denied")
+
+        refused = None
+        for i in range(BUDGET + 2):
+            stranger = AgentKeys.load_or_create(f"{KEYS}/assurance-flood-{RUN}-{i}.pem")
+            # A short wait: each of these is meant to *stay* in her queue, not
+            # to be answered. Giving up on the poll leaves the pend standing,
+            # which is exactly what an attacker's request would do.
+            ok, _, why = negotiate(client, stranger, "get_positions", max_wait_s=2)
+            if not ok and "not accepting new agent requests" in (why or "") \
+                    and refused is None:
+                refused = i
+        waiting = len(pending(client))
+        check(f"a flood of strangers is capped at {BUDGET} waiting for her",
+              waiting <= BUDGET, f"{waiting} waiting")
+        check("and the ones past the cap are refused with a reason, not queued",
+              refused is not None, f"first refusal at stranger {refused}")
+
+        # Her queue is still full of strangers, and nobody is answering it.
+        print("\n== And the flood does not reach the agent she knows ==")
+        a_ok, a_asked, _ = negotiate(client, accountable, "get_positions",
+                                     max_wait_s=4)
+        check("an established agent is unaffected by the queue being full",
+              a_ok and not a_asked)
+        decide_all(client, "denied")
+
+    print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
+    if FAIL:
+        return 1
+    print("\nPASS: assurance tightened and never widened, standing was per tier,")
+    print("      and a flood of strangers could not crowd out the agent she knows.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

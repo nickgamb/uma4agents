@@ -117,7 +117,7 @@ logs:
 ## fixture: the grant with nothing standing behind it — no identity provider,
 ## no database, no gateway, no certificate, no host state. A test harness for
 ## the protocol on its own, not a deployment. See docs/FIXTURE.md.
-.PHONY: fixture fixture-down owner flow-check kwaai-check kwaai-host
+.PHONY: fixture fixture-down owner flow-check assurance-check kwaai-check kwaai-host
 fixture:
 	docker compose -f compose.fixture.yml up -d --build owner-keygen uma-as alice-vault-mcp
 	docker compose -f compose.fixture.yml --profile check run --rm fixture-check
@@ -129,6 +129,11 @@ fixture-down:
 ## The check behind docs/FLOW.md — agent identity never reaches her decision.
 flow-check:
 	docker compose --profile test run --rm flow-check
+
+## assurance-check: agent assurance, and the cap on how much of Alice's
+## attention a stranger can spend. See docs/ASSURANCE.md.
+assurance-check:
+	docker compose --profile test run --rm assurance-check
 
 ## kwaai-check: the personal-AI binding — her device key alongside her portal
 ## session, both accepted, one ledger. See docs/KWAAI-BINDING.md.
@@ -309,6 +314,12 @@ shim-test:
 sig-test:
 	@docker run --rm -v "$(PWD)/lib:/u4a/lib:ro" python:3.12-slim \
 		sh -c "pip install -q cryptography && python /u4a/lib/test_http_sig.py"
+
+## policy-test: her agent rules — what may tighten, what may relax, what wins
+.PHONY: policy-test
+policy-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		python lib/test_policy.py
 
 ## store-test: prove single-use really is single-use, on both storage backends
 # The authorization server's state has two implementations — in-process for

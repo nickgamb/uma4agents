@@ -438,6 +438,71 @@ a decision has changed the trust model without changing the wire. The test that
 catches it is the negative one — the owner's policy contains no identity
 vocabulary at all. See [docs/FLOW.md](docs/FLOW.md) and `make flow-check`.
 
+*Refined by recommendation 13.* Description can now tip a decision in exactly
+one direction — towards asking her — and still cannot tip one towards granting.
+The negative test above still holds, because the vocabulary her policy uses
+names properties of evidence rather than identity systems.
+
+**13. Agent assurance should be decomposed, not scaled.** The recurring request
+is for policy that faces the requesting side, and the recurring fallback is an
+allow-list of agents, which is an ACL with extra steps. There is a better shape,
+and the first thing to get right is not to write it as a level.
+
+Identity assurance already ran this experiment. LOA 1-4 was one ordinal scale
+until NIST SP 800-63-3 split it into IAL, AAL and FAL, because a single scale
+forces unrelated evidence into one order and lets a strong showing on one axis
+compensate for a weak one on another. Agents make that worse, not better: an
+agent can be perfectly recognisable and wholly unaccountable. So: **three
+independent axes — binding, provenance, accountability — and no composite
+score.** A composite is the mechanism by which strong key binding excuses an
+unknown operator, which is a trade nobody would make if asked directly.
+
+Second, and this is the part that makes client-facing policy safe at all,
+separate what the agent can *show* from what the owner has *seen*, and make
+them asymmetric:
+
+> Assurance may only tighten a requirement. Only standing — the owner's own
+> record of this agent — may relax one.
+
+The rule is not arbitrary; it follows from who produced the evidence. And it
+has a consequence worth putting in a spec verbatim: **a lie can only cost the
+liar friction.** That is what lets an authorization server read a self-asserted
+operator name without inheriting a trust framework, an accreditation scheme, or
+a registry — none of which exist, and choosing one would be a larger claim than
+this problem needs. Enforce it where policy is *stored* rather than where it is
+evaluated: a rule that could widen access on evidence the counterparty controls
+should fail to save, not fail silently.
+
+See [docs/ASSURANCE.md](docs/ASSURANCE.md), `make assurance-check`,
+`make policy-test`.
+
+**14. The owner's attention needs a budget, and the spec should say so.** UMA
+2.0 has `request_submitted` and no opinion about how many of them a resource
+owner can be made to hold. Keys are free, so an unbounded pend queue makes the
+property that justifies the whole profile — she decides — into its own
+denial-of-service surface. Nothing in the protocol notices; every one of those
+requests is individually well-formed.
+
+Rate limiting is the wrong instrument. Per key it is theatre, per source
+address it is the wrong layer, and neither expresses the thing that matters,
+which is not how fast strangers arrive but **how much of her queue they may
+occupy at once**. A depth limit does express it, and has three properties a
+rate limit does not:
+
+- it is self-healing — every answer frees a slot, so the cap is on the backlog
+  and never on the relationship;
+- **a flood cannot crowd out the agents she already has standing with**, which
+  is the property that decides whether an attack is an annoyance or an outage;
+- it needs no new state, being a read of the pending queue she already has.
+
+Refuse past the cap rather than queueing, and say why: an honest 429 lets a
+legitimate agent come back, where silence is indistinguishable from a broken
+server and provokes exactly the retry storm the cap exists to prevent. A cap of
+zero is a coherent posture (invitation-only) and should be expressible, but is
+the wrong default for a profile whose argument is that a stranger can negotiate.
+
+See [docs/ASSURANCE.md](docs/ASSURANCE.md) and `make assurance-check`.
+
 
 ---
 

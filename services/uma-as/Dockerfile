@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir fastapi uvicorn 'pyjwt[crypto]' python-multipart 
 WORKDIR /app
 COPY lib/uma4a_http_sig.py .
 COPY services/uma-as/app.py services/uma-as/policy.py ./
+COPY services/uma-as/assurance.py ./
 COPY services/uma-as/store.py services/uma-as/store_memory.py ./
 COPY services/uma-as/store_postgres.py services/uma-as/schema.sql ./
 EXPOSE 9000

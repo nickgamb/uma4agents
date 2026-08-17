@@ -139,10 +139,22 @@ class Store(Protocol):
     async def touch_connection(self, handle: str, when: str) -> None:
         """Record last access. Best-effort telemetry: never fails a call."""
 
+    async def note_tier_grant(self, handle: str, tier_id: str) -> None:
+        """Remember that this connection has now been granted at this tier.
+
+        Not telemetry: `standing.first_at_tier` is a policy input, so this is
+        the write that stops the second request at a tier from asking her
+        again. It appends rather than replacing, and a lost update under
+        concurrency costs an extra ask rather than skipping one — the only
+        direction a race here is allowed to fail in.
+        """
+
     async def revoke_connection(self, handle: str) -> int | None:
         """Deactivate the connection and every live RPT issued under it, in
         one step. Returns how many tokens were killed, or ``None`` if the
-        connection is unknown.
+        connection is unknown. Also bumps the revocation count, which survives
+        a later re-connection: `standing.never_revoked` is worth nothing if
+        an agent can clear its record by asking again.
 
         One step because the two halves are the same decision: a revocation
         that flipped the connection and then failed to burn the tokens would

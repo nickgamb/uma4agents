@@ -96,6 +96,15 @@ Alice cannot write a policy like "only agents from this issuer." She can decide
 per agent, per tier and per operation, and she can revoke a connection — but
 she cannot express a rule over an identity system she is deliberately blind to.
 
+She *can*, since [ASSURANCE.md](ASSURANCE.md), write "an agent whose credential
+I cannot trace must ask me." That is a rule about the evidence, not about an
+issuer: her policy vocabulary contains no issuer, no `cimd`, no thumbprint and
+no `agent_token`, so swapping the mechanism underneath leaves it unchanged. And
+it can only ever *add* friction — nothing an agent asserts about itself can
+lower what her policy requires. The four runs above still receive identical
+terms, an identical grant and identical `as_uri`; what can now differ is how
+often she is asked, which is hers to decide and no agent's to influence.
+
 Whether that is a limitation or the point is the interesting question. Today it
 is the point: it is what lets an agent from an organisation she has never heard
 of ask her for something without either side onboarding to the other. A
@@ -106,5 +115,6 @@ should say so rather than reaching for this one.
 
 - [FIXTURE.md](FIXTURE.md) — the minimal fixture, and how little the protocol
   needs underneath it
+- [ASSURANCE.md](ASSURANCE.md) — policy that faces the agent without naming one
 - [KWAAI-BINDING.md](KWAAI-BINDING.md) — a personal AI as the owner's side
 - `clients/demo-driver/flow_check.py` — the check itself

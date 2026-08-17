@@ -260,6 +260,23 @@ services:
 
   # Four agents, four identity regimes, one unchanged owner. Verifies that
   # nothing about who the agent is reaches Alice's authorization decision.
+  assurance-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/assurance_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
+    volumes:
+      - ./clients/demo-driver/assurance_check.py:/driver/assurance_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
   flow-check:
     image: python:3.12-slim
     entrypoint:
