@@ -155,32 +155,73 @@ RANK = {AUTO: 0, ASK: 1, REFUSE: 2}
 # limit per key is theatre and one per source address is the wrong layer. The
 # property that actually matters is not "how fast" but "how much of her queue
 # can strangers occupy at once", so this is a *depth* limit rather than a rate:
+# past the cap, a request is refused with a reason instead of queued.
 #
-#   at most PEND_BUDGET requests from agents she has no standing with may be
-#   waiting for her at any moment. Past that they are refused, with a reason,
-#   rather than queued.
+# The first version of this had one queue, and it was wrong in the way that
+# mattered most. An agent she already knows was never counted — but **an agent
+# she does not know yet is exactly what Bob's is on first contact**, so a flood
+# of anonymous bots filled the only lane there was and Bob could never become
+# one of the agents she knows. It protected continuity and left onboarding
+# undefended, which is the half that decides whether any of this is adoptable.
 #
-# Three things make this the right shape:
+# So the queue is split, and the split is the same asymmetry as everywhere
+# else: better evidence buys *less friction*, never more access. A lane is not
+# permission — every request in it still faces her policy unchanged.
 #
-#   * It is self-healing. Every request she answers frees a slot, so the cap
-#     is on the backlog and not on the relationship.
-#   * **A flood cannot crowd out the people she already knows.** An agent with
-#     standing is never counted and never refused for budget, so the failure
-#     mode of an attack is that strangers are turned away — not that Bob's
-#     agent stops working.
-#   * It needs no new state. The outstanding count is a read of the pending
-#     queue her portal already lists.
+#   unattributable   nobody checkable stands behind it. Cheap to mint by the
+#                    thousand, so it gets a deliberately small lane.
+#   attributable     a named operator published *this agent's key* in its own
+#                    directory (accountability 2). Faking that means standing
+#                    up a domain, serving a metadata document that claims its
+#                    own URL, and publishing a key per agent.
+#
+# The point is not that the second is expensive. It is that it is
+# **attributable**: every agent minted that way is tied to one operator, so a
+# flood in that lane has a name on it and can be shut out in one action, while
+# a flood in the first lane cannot reach the second at all.
+#
+# What this does not claim: if she accepts anonymous strangers at all, they can
+# fill the anonymous lane. Nothing here prevents that, and no scheme does
+# without charging the requester something. What it guarantees is that the
+# damage stays in that lane.
+#
+# Three properties, all of which survive the split:
+#
+#   * It is self-healing. Every request she answers frees a slot, so the cap is
+#     on the backlog and not on the relationship.
+#   * **A flood cannot crowd out an agent she knows, nor one that can be
+#     named.** The failure mode of an attack is that anonymous strangers are
+#     turned away.
+#   * It needs no new state. The counts are a read of the pending queue her
+#     portal already lists.
 #
 # The refusal is honest rather than silent: the agent is told the owner is not
 # accepting new requests right now, which is true, and can come back. Silence
 # would be indistinguishable from a broken server, and would push a legitimate
 # agent into retrying — which is the behaviour the cap exists to prevent.
 #
-# Setting it to 0 turns her authority into invitation-only: no agent without
-# standing can reach her at all. That is a legitimate posture and it is one
-# environment variable, but it is not the default, because the whole argument
-# of this profile is that a stranger can negotiate.
+# Setting the unattributable lane to 0 turns her authority into
+# introduce-yourself-first: an agent with nobody behind it cannot reach her at
+# all. That is a legitimate posture and it is one environment variable. It is
+# not the default, because the whole argument of this profile is that a
+# stranger can negotiate.
 PEND_BUDGET = int(os.environ.get("UMA_AS_PEND_BUDGET", "5"))
+PEND_BUDGET_ATTRIBUTED = int(
+    os.environ.get("UMA_AS_PEND_BUDGET_ATTRIBUTED", "40"))
+
+# The line between the lanes. Accountability 2 is the only level an agent
+# cannot reach on its own say-so: it requires the operator it names to have
+# published this agent's key, in a directory this authority fetched itself.
+ATTRIBUTABLE_AT = 2
+
+
+def pend_lane(axes: dict) -> str:
+    return ("attributable" if axes.get("accountability", 0) >= ATTRIBUTABLE_AT
+            else "unattributable")
+
+
+def pend_budget(lane: str) -> int:
+    return PEND_BUDGET_ATTRIBUTED if lane == "attributable" else PEND_BUDGET
 
 # Facts her own authority produced, rather than the requesting side.
 #

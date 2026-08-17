@@ -1457,16 +1457,25 @@ async def token(
 
     needs_operation_approval = requirement == policy.ASK
 
-    # Her attention has a depth limit, and only strangers spend it. An agent
-    # she already has standing with is never counted and never turned away for
-    # budget, so a flood of unknown agents cannot crowd out the ones she knows.
+    # Her attention has a depth limit, and only strangers spend it. An agent she
+    # already has standing with is never counted at all.
+    #
+    # Strangers are counted per *lane*, and that split is the whole point: Bob's
+    # agent is a stranger too on first contact, so a single queue let a flood of
+    # anonymous bots keep him out of the relationship he needed to form. An
+    # agent whose named operator published its key queues against other
+    # attributable agents only, where a flood has somebody's name on it. See
+    # policy.py.
     if needs_connection:
-        waiting = sum(1 for p in await STORE.pending_negotiations()
-                      if p.get("pending_kind") == "connection"
-                      and p["family"] != family)
-        if waiting >= policy.PEND_BUDGET:
+        lane = policy.pend_lane(axes)
+        budget = policy.pend_budget(lane)
+        waiting = sum(
+            1 for p in await STORE.pending_negotiations()
+            if p.get("pending_kind") == "connection" and p["family"] != family
+            and policy.pend_lane(p.get("assurance") or {}) == lane)
+        if waiting >= budget:
             event("policy.evaluated", corr=family, result="attention-budget",
-                  waiting=waiting, budget=policy.PEND_BUDGET)
+                  lane=lane, waiting=waiting, budget=budget)
             await close_negotiation(rec)
             return JSONResponse(
                 {"error": "request_denied",

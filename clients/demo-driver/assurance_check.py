@@ -20,9 +20,15 @@ policy to read a self-asserted operator name at all.
 **Her attention has a depth limit.** Nothing above stops someone minting ten
 thousand keys and putting ten thousand first-contact requests in front of her.
 Keys are free. So there is a cap on how many requests from agents she has no
-standing with may be waiting at once — and an agent she already knows is never
-counted against it, which is the property that matters: a flood turns strangers
-away without touching the relationships she has.
+standing with may be waiting at once, and an agent she already knows is never
+counted against it.
+
+That alone was not enough, and the gap is the interesting part: **Bob's agent
+is a stranger too, the first time.** One queue meant a flood of anonymous bots
+could keep him out of the relationship he still had to form — the cap protected
+continuity and left onboarding undefended. So strangers queue by lane. An agent
+whose named operator published its key contends only with other agents somebody
+can be held to; the anonymous flood cannot reach that lane at all.
 
 Run against the full stack with `make assurance-check`.
 """
@@ -242,6 +248,23 @@ def main() -> int:
         check("and the ones past the cap are refused with a reason, not queued",
               refused is not None, f"first refusal at stranger {refused}")
 
+        # Her queue is still full of anonymous strangers, and nobody is
+        # answering it. This is the case the single-queue version got wrong:
+        # Bob's agent is a stranger too the first time, so a flood used to shut
+        # the door on the relationship he still had to form.
+        print("\n== And a newcomer that can be named still gets in ==")
+        newcomer = AgentKeys.load_or_create(f"{KEYS}/assurance-newcomer-{RUN}.pem")
+        newcomer.client_id = f"{OPERATOR}/agent.json"
+        newcomer.signature_agent = newcomer.publish(client, OPERATOR)
+        n_ok, _, n_why = negotiate(client, newcomer, "get_positions", max_wait_s=2)
+        check("a first contact she could name is not refused for budget",
+              "not accepting new agent requests" not in (n_why or ""),
+              n_why or "")
+        lanes = [p["assurance"].get("accountability", 0) for p in pending(client)]
+        check("and it is waiting for her, in its own lane",
+              any(a >= 2 for a in lanes),
+              f"accountability of what is waiting: {sorted(lanes)}")
+
         # Her queue is still full of strangers, and nobody is answering it.
         print("\n== And the flood does not reach the agent she knows ==")
         a_ok, a_asked, _ = negotiate(client, accountable, "get_positions",
@@ -254,7 +277,8 @@ def main() -> int:
     if FAIL:
         return 1
     print("\nPASS: assurance tightened and never widened, standing was per tier,")
-    print("      and a flood of strangers could not crowd out the agent she knows.")
+    print("      and a flood of anonymous strangers could crowd out neither the")
+    print("      agent she knows nor a newcomer she could put a name to.")
     return 0
 
 

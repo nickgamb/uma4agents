@@ -161,16 +161,16 @@ authorization server that took it is **deleted**, the database primary is
 ### 6. What her policy may say about the agent asking
 
 ```bash
-make k8s-assurance-check        # expect 14 passed
+make k8s-assurance-check        # expect 16 passed
 make rules-test                 # the rule engine alone; nothing need be running
 ```
 
 **Notice** that the two agents differ only in whether a metadata document says
 who operates them, and that the difference shows up on the *second* request:
 the accountable one is granted quietly, the nameless one asks her again. And
-that the flood at the end is capped at five waiting without the established
-agent noticing — an agent she has standing with is never counted against the
-budget, so a flood turns strangers away rather than taking her side down.
+that the flood at the end is capped at five waiting without reaching either the
+established agent or a newcomer whose operator can be named. Strangers queue by
+lane, because the agent you want to let in is a stranger too the first time.
 
 Her rules are editable in the portal under **My Terms**, as sentences. The same
 page adds terms of her own over any resource no tier governs yet.

@@ -508,8 +508,15 @@ rate limit does not:
 
 - it is self-healing — every answer frees a slot, so the cap is on the backlog
   and never on the relationship;
-- **a flood cannot crowd out the agents she already has standing with**, which
-  is the property that decides whether an attack is an annoyance or an outage;
+- **a flood crowds out neither the agents she has standing with nor a newcomer
+  that can be named**, which is the property that decides whether an attack is
+  an annoyance or an outage — and the second half is easy to miss. A single
+  queue protects continuity and leaves *onboarding* undefended, because the
+  agent you want to let in is a stranger too the first time. Split the queue on
+  something an agent cannot assert for itself (here: its named operator having
+  published its key), so a flood of the cheap kind cannot reach the lane where
+  new relationships form. A lane is not permission — everything in it still
+  faces the owner's policy unchanged;
 - it needs no new state, being a read of the pending queue she already has.
 
 Refuse past the cap rather than queueing, and say why: an honest 429 lets a

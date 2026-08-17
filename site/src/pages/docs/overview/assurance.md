@@ -140,15 +140,27 @@ That is not how fast strangers arrive but **how much of her queue they may
 occupy at once** — so the control is a depth limit rather than a rate.
 
 At most *n* requests from agents she has no standing with may wait for her at
-once. Past that they are refused, with a reason, rather than queued. Three
-properties make it the right shape:
+once. Past that they are refused, with a reason, rather than queued.
+
+One queue is not enough, and the gap is easy to miss: **the agent you want to
+let in is a stranger too, the first time.** A single cap protects the agents
+she already knows and leaves onboarding undefended, so a flood of anonymous
+bots keeps a legitimate newcomer out of the relationship it still has to form.
+
+So strangers queue by lane, split on the one level an agent cannot reach by its
+own say-so — whether a named operator published this agent's key. A lane is not
+permission; everything in it faces her policy unchanged. The point is not that
+the second lane is expensive to enter but that it is **attributable**: a flood
+there has a name on it and can be shut out in one action, and a flood in the
+other lane cannot reach it at all.
+
+If she accepts anonymous strangers at all, they can fill the anonymous lane.
+No scheme prevents that without charging the requester something. What the
+split guarantees is that the damage stays in that lane.
 
 - **It is self-healing.** Every request she answers frees a slot. The cap is
   on the backlog, never on the relationship.
-- **A flood cannot crowd out the agents she knows.** An agent with standing is
-  never counted and never refused for budget, so an attack turns strangers
-  away instead of taking her side down.
-- **It needs no new state** — the count is a read of the queue her surface
+- **It needs no new state** — the counts are a read of the queue her surface
   already lists.
 
 Refuse honestly rather than silently. Silence is indistinguishable from a

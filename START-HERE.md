@@ -187,9 +187,11 @@ make k8s-assurance-check
 Watch what it proves. Two agents identical but for a metadata document saying
 who operates them: the accountable one goes quiet on its second request, the
 nameless one asks her every time. An agent whose claimed operator does not
-resolve gains nothing by claiming it. And a flood of unknown agents is capped
-without touching the agent she already knows — because her attention is the
-one resource in this system that was previously unbounded.
+resolve gains nothing by claiming it. And a flood of anonymous agents is capped
+without reaching either the agent she already knows **or a newcomer whose
+operator can be named** — because her attention is the one resource here that
+was previously unbounded, and the agent you want to let in is a stranger too
+the first time.
 
 The rule the first part reads is one line, and it names no agent:
 
