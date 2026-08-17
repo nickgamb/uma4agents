@@ -26,6 +26,9 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_OWNER_ISSUER` | `https://keycloak.uma.lab/realms/alice` | The issuer the owner's tokens must claim |
 | `UMA_AS_OWNER_METADATA_URL` | `{OWNER_ISSUER}/.well-known/openid-configuration` | Where to fetch her identity provider's metadata |
 | `UMA_AS_OWNER` | `alice` | The owner's username |
+| `UMA_AS_PEND_BUDGET` | `5` | How many requests from agents with no standing, and nobody checkable behind them, may wait for her at once. `0` makes her authority introduce-yourself-first |
+| `UMA_AS_PEND_BUDGET_ATTRIBUTED` | `40` | The same cap for agents whose named operator published their key. A separate lane, so a flood of the cheap kind cannot fill it |
+| `UMA_AS_DIRECTORY_TTL` | `300` | Seconds an operator key directory is cached **for a hit only**. A miss is always re-fetched, because a stale hit keeps attesting a key the operator has disowned while a stale miss merely fails to recognise one just published |
 | `UMA_AS_OWNER_CLIENTS` | `alice-portal` | Comma-separated audiences accepted on owner tokens |
 | `UMA_AS_PENDING_TTL` | `3600` | How long a held ask-me ticket stays valid, in seconds |
 | `UMA_AS_STORE` | `memory` | `memory` or `postgres` |

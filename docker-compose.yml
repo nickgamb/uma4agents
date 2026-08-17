@@ -77,6 +77,11 @@ services:
       UMA_AS_OWNER_ISSUER: https://keycloak.uma.lab/realms/alice
       UMA_AS_OWNER_KEY: /owner/owner-ed25519.pub
       UMA_AS_OWNER_AUTHORITY: alice-as.uma.lab
+      # Her attention, in two lanes. Declared on the server *and* read from the
+      # same variable by the check below, so the two cannot drift into a false
+      # failure — a checker counting to a number the server does not enforce.
+      UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
+      UMA_AS_PEND_BUDGET_ATTRIBUTED: ${UMA_AS_PEND_BUDGET_ATTRIBUTED:-40}
       UMA_AS_OWNER: alice
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).

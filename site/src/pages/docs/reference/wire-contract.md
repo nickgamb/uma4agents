@@ -134,6 +134,12 @@ The agreement is the template echoed and signed by the agent's key:
 }
 ```
 
+The header may also carry `client_id`, a URL describing who operates the agent,
+and `signature_agent`, the operator's key directory. Both are optional and
+neither widens anything: the authorization server resolves them itself, and what
+it learns can only make a request stricter. See
+[agent assurance](/docs/overview/assurance/).
+
 The JWS protected header carries either `jwk` (pseudonymous bare key) or an
 `agent_token` (an `aa-agent+jwt` whose `cnf.jwk` is the signing key, verified
 against the issuer's published keys). The same key signs the agreement and later

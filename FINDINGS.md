@@ -491,7 +491,7 @@ counting against the agent: an operator's outage is not evidence about an
 agent.
 
 See [docs/ASSURANCE.md](docs/ASSURANCE.md), `make assurance-check`,
-`make policy-test`.
+`make rules-test`.
 
 **14. The owner's attention needs a budget, and the spec should say so.** UMA
 2.0 has `request_submitted` and no opinion about how many of them a resource

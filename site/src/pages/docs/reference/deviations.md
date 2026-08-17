@@ -161,6 +161,40 @@ caller decide. The same JSON rides the JSON-RPC encoding byte for byte, which
 demonstrates that the payload is portable and only the envelope is
 binding-specific.
 
+## 13. A cap on the owner's pending queue
+
+**Baseline.** UMA 2.0 defines `request_submitted` and has no opinion about how
+many of them a resource owner can be made to hold at once.
+
+**Here.** Requests from agents with no standing queue against a depth limit,
+in two lanes split on whether the operator an agent names has published that
+agent's key. Past the cap the answer is `429` with
+`error="request_denied"` and a reason, rather than another pend.
+
+**Why.** Keys are free, so an unbounded pending queue turns *the owner decides*
+into its own denial-of-service surface, and every request in the flood is
+individually well-formed. A rate limit does not express the constraint — the
+scarce thing is queue depth, not arrival rate. The lanes exist because the agent
+you want to admit is a stranger too on first contact, so a single queue defends
+continuity and leaves onboarding undefended. See
+[the owner's attention](/docs/overview/attention/).
+
+## 14. Owner-side blocking at operator granularity
+
+**Baseline.** UMA 2.0 has no notion of the party operating a requesting agent,
+and so nothing to revoke at that level.
+
+**Here.** `POST /owner/operators/block` ends every connection an operator holds
+and burns the grants under them in one step, and refuses its future requests by
+name.
+
+**Why.** One connection at a time is not an answer to a flood, and the queue
+lanes exist precisely to make a flood large enough to matter arrive
+attributable. Blocking is a restriction, so it may rest on the agent's own
+claim: an agent that misstates its operator only refuses itself. It does not
+stop the same party returning anonymously, which is why the lanes matter more
+than the block.
+
 ## Security properties these depend on
 
 Each is enforced somewhere in the code, and the tests that prove refusals rather

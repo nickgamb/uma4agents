@@ -66,12 +66,14 @@ make k8s-reset      # kubernetes
 ## Worth running either way
 
 ```bash
-make assurance-check    # what her policy can say about an agent, and the cap
-make rules-test        #   on how much of her attention a stranger can spend
+make assurance-check    # what her authority can verify about an agent, and
+                        # the cap on how much of her attention one can spend
+make rules-test         # the rule engine alone; nothing need be running
+make store-test         # both storage backends, against one property suite
 ```
 
-Neither is a demo — they are checks — but the first one reads like one, and it
-is the shortest route to what [ASSURANCE.md](ASSURANCE.md) argues.
+None of these is a demo — they are checks — but the first reads like one, and
+it is the shortest route to what [ASSURANCE.md](ASSURANCE.md) argues.
 
 ## The third thing, which is not a demo
 

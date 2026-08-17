@@ -80,6 +80,13 @@ spec:
               value: oidc,local-key
             - name: UMA_AS_OWNER_KEY
               value: /owner/owner-ed25519.pub
+            # Her attention, in two lanes. Kept beside the other policy inputs
+            # rather than left to the default, so what the cluster enforces is
+            # readable here and matches what the check counts to.
+            - name: UMA_AS_PEND_BUDGET
+              value: "5"
+            - name: UMA_AS_PEND_BUDGET_ATTRIBUTED
+              value: "40"
             - name: UMA_AS_OWNER_AUTHORITY
               value: alice-as.uma.lab
             - name: UMA_AS_RS_RESOURCE_URI

@@ -67,12 +67,18 @@ either way. See [put the authority on her device](/docs/guides/personal-authorit
 | `GET /owner/pending` | Requests in awaiting-owner state |
 | `POST /owner/pending/{family}/decision` | Approve or deny |
 | `GET /owner/policies` | Tier policy |
-| `PUT /owner/policies/{tier_id}` | Edit a tier's terms or its ask-me flag |
+| `POST /owner/policies` | Add a tier of her own, over resources that are registered and not already governed |
+| `PUT /owner/policies/{tier_id}` | Edit a tier's terms, its ask-me flag, or its rules |
+| `DELETE /owner/policies/{tier_id}` | Remove a tier. Its resources become ungoverned, and ungoverned is denied |
+| `GET /owner/policy-vocabulary` | The conditions a rule may use, and which of them may relax one |
 | `GET /owner/resources` | Registered resources joined with tiers |
 | `GET /owner/resource-servers` | Resource servers holding her protection access |
 | `POST /owner/resource-servers/{id}/revoke` | Cut a resource server off from the Protection API |
 | `GET /owner/connections` | Standing agent relationships |
 | `POST /owner/connections/{handle}/revoke` | Revoke a connection and its live RPTs |
+| `GET /owner/operators` | The operators behind those connections, and whether any are blocked |
+| `POST /owner/operators/block` | Shut out every agent one operator runs, revoking what is connected in the same step |
+| `POST /owner/operators/unblock` | Restores the right to negotiate, not the access that was withdrawn |
 | `GET /owner/ledger` | The activity ledger |
 | `GET /owner/events` | Server-sent event stream for portal notification |
 

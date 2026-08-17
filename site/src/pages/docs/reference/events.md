@@ -56,7 +56,11 @@ shows a fragment. Correlate by family, not by process.
 | `need_info.terms_dictated` | The authority proffers terms |
 | `contract.committed` | A signed agreement verifies |
 | `contract.rejected` | An agreement fails verification |
-| `policy.evaluated` | A tier policy decision is made |
+| `assurance.assessed` | What her authority could verify about the agent asking |
+| `operator_directory.checked` | An operator's key directory was fetched and searched for this agent's key |
+| `operator_directory.rejected` | A directory was named that is not same-origin with the operator claimed |
+| `operator_directory.unresolved` | A directory would not resolve; the claim stays where it was |
+| `policy.evaluated` | A tier policy decision is made. `result` includes `attention-budget` when a lane is full and `operator-blocked` when she has shut that operator out |
 
 ### The owner
 
@@ -68,6 +72,10 @@ shows a fragment. Correlate by family, not by process.
 | `connection.approved` | A standing relationship is recorded |
 | `connection.revoked` | She revokes one |
 | `policy.updated` | She edits a tier |
+| `policy.created` | She adds terms of her own |
+| `policy.deleted` | She removes a tier; its resources become ungoverned |
+| `operator.blocked` | She shuts out an operator, with the connections and grants it cost |
+| `operator.unblocked` | She lets one ask again |
 
 ### The grant and its use
 
@@ -91,7 +99,8 @@ family:
 | **personally approved / denied** | `owner.decision` |
 | **touched** | `access.allowed` |
 | **connected** | `connection.approved` |
-| **revoked** | `connection.revoked` |
+| **revoked** | `connection.revoked`, and `operator.blocked` for every connection it ended |
+| **relaxed** | a rule she wrote lowered an ask-me tier to automatic, naming the rule that fired |
 
 Those first three columns answer the question she will actually ask: did what
 happened match what I agreed to. Reading them side by side is the point —

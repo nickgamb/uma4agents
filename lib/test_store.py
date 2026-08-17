@@ -232,6 +232,93 @@ async def test_events_reach_a_subscriber(store) -> None:
           f"received {received!r}")
 
 
+async def test_tier_grants_and_approvals_are_kept_apart(store) -> None:
+    """`standing.first_at_tier` and `standing.approved_at_tier` read two
+    different lists, and only the second may relax a rule. If a backend wrote
+    them to one field, an automatic grant would start justifying the next."""
+    await store.put_connection({"handle": "jkt:tiers", "status": "active",
+                                "first_seen": "2026-08-11T00:00:00Z",
+                                "identity": {"level": "pseudonymous"},
+                                "label": "test", "last_access": None,
+                                "tiers_granted": [], "tiers_approved": [],
+                                "revocations": 0})
+    await store.note_tier_grant("jkt:tiers", "tier1")
+    await store.note_tier_grant("jkt:tiers", "tier1")      # idempotent
+    await store.note_tier_grant("jkt:tiers", "tier2")
+    await store.note_tier_approval("jkt:tiers", "tier2")
+    conn = await store.connection("jkt:tiers")
+    check("standing: a tier grant is recorded once",
+          conn["tiers_granted"] == ["tier1", "tier2"],
+          f"got {conn.get('tiers_granted')!r}")
+    check("standing: what she approved is a separate list",
+          conn["tiers_approved"] == ["tier2"],
+          f"got {conn.get('tiers_approved')!r}")
+    await store.note_tier_grant("jkt:never-seen", "tier1")   # must not raise
+
+
+async def test_revocations_survive_reconnection(store) -> None:
+    """`standing.never_revoked` is worth nothing if an agent can clear its
+    record by asking a second time, so the count is kept by the store."""
+    await store.put_connection({"handle": "jkt:again", "status": "active",
+                                "first_seen": "2026-08-11T00:00:00Z",
+                                "identity": {"level": "pseudonymous"},
+                                "label": "test", "last_access": None,
+                                "tiers_granted": [], "tiers_approved": [],
+                                "revocations": 0})
+    await store.revoke_connection("jkt:again")
+    conn = await store.connection("jkt:again")
+    check("standing: revoking increments the count the policy reads",
+          int(conn.get("revocations", 0)) == 1,
+          f"got {conn.get('revocations')!r}")
+
+
+async def test_tiers_can_be_added_and_removed(store) -> None:
+    """Terms she writes herself. Creating is the uniqueness check and the write
+    in one step, so two replicas cannot both believe they created it."""
+    tier = {"name": "Statements", "resources": [], "ask_me": True, "rules": [],
+            "terms": {"template_id": "alice/statements/v1", "purpose": "p",
+                      "scope": [], "expires_in": 60, "prohibited": []}}
+    await store.create_tier("statements", tier)
+    check("policy: a tier she wrote is readable back",
+          (await store.tiers())["statements"]["name"] == "Statements",
+          "the new tier did not stick")
+    try:
+        await store.create_tier("statements", tier)
+        check("policy: a duplicate tier id raises", False, "no KeyError")
+    except KeyError:
+        check("policy: a duplicate tier id raises", True)
+    check("policy: deleting reports success",
+          await store.delete_tier("statements") is True, "delete failed")
+    check("policy: it is gone", "statements" not in await store.tiers(),
+          "the tier survived deletion")
+    check("policy: deleting an unknown tier is not-found",
+          await store.delete_tier("statements") is False,
+          "deleting nothing reported success")
+
+
+async def test_blocked_operators_round_trip(store) -> None:
+    """Blocking is idempotent because her portal and her personal AI may both
+    be looking at a stale list."""
+    check("operators: none are blocked to begin with",
+          await store.blocked_operators() == {}, "something was already blocked")
+    await store.block_operator("https://agent.example", "2026-08-11T00:00:00Z")
+    await store.block_operator("https://agent.example", "2026-08-12T00:00:00Z")
+    blocked = await store.blocked_operators()
+    check("operators: a block is readable back once",
+          list(blocked) == ["https://agent.example"], f"got {list(blocked)!r}")
+    check("operators: blocking twice keeps the first answer",
+          blocked["https://agent.example"]["blocked_at"] == "2026-08-11T00:00:00Z",
+          "the second block overwrote the first")
+    check("operators: unblocking reports success",
+          await store.unblock_operator("https://agent.example") is True,
+          "unblock failed")
+    check("operators: and it is gone",
+          await store.blocked_operators() == {}, "the block survived")
+    check("operators: unblocking one that is not blocked is not-found",
+          await store.unblock_operator("https://agent.example") is False,
+          "unblocking nothing reported success")
+
+
 TESTS = [
     test_ticket_is_spent_once,
     test_negotiation_survives_its_ticket,
@@ -242,6 +329,10 @@ TESTS = [
     test_resource_server_revocation_is_visible,
     test_terms_versions_are_immutable,
     test_tier_edits_bump_the_version,
+    test_tier_grants_and_approvals_are_kept_apart,
+    test_revocations_survive_reconnection,
+    test_tiers_can_be_added_and_removed,
+    test_blocked_operators_round_trip,
     test_expired_negotiations_are_reaped,
     test_events_reach_a_subscriber,
 ]
@@ -291,7 +382,8 @@ async def _truncate(dsn: str) -> None:
     try:
         await conn.execute(
             "DROP TABLE IF EXISTS tickets, negotiations, rpts, connections, "
-            "resource_servers, ledger, terms_docs, tiers, owner_events CASCADE")
+            "resource_servers, ledger, terms_docs, tiers, owner_events, "
+            "blocked_operators CASCADE")
     finally:
         await conn.close()
 

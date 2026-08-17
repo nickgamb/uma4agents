@@ -36,8 +36,9 @@ spec:
               value: "1"
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
-            # Matches the default in policy.py. Set both together, or the
-            # check counts to a different number than the server enforces.
+            # Must match UMA_AS_PEND_BUDGET on the uma-as Deployment, where it
+            # is set explicitly for exactly this reason: a check counting to a
+            # number the server does not enforce fails for the wrong cause.
             - name: UMA_AS_PEND_BUDGET
               value: "5"
           volumeMounts:
