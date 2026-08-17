@@ -338,9 +338,13 @@ window.decide = async (family, decision) => {
 
 async function renderConnections(target) {
   const conns = await api("/api/agent/connections");
-  if (!conns.length) { target.innerHTML = `<div class="empty">No agents are connected yet. The first time an
-    agent presents your terms, you'll be asked whether to establish a relationship — approved agents appear here.</div>`; return; }
-  target.innerHTML = `<div class="card pad-lg"><table>
+  const operators = await api("/api/agent/operators").catch(() => []);
+  if (!conns.length && !operators.length) {
+    target.innerHTML = `<div class="empty">No agents are connected yet. The first time an
+    agent presents your terms, you'll be asked whether to establish a relationship — approved agents appear here.</div>`;
+    return;
+  }
+  target.innerHTML = operatorPanel(operators) + `<div class="card pad-lg"><table>
     <thead><tr><th>Agent</th><th>Identity</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${conns.map(c => `<tr>
       <td><div class="tick"><div class="badge2">🤖</div><div class="nm">${c.label}</div></div></td>
@@ -352,6 +356,40 @@ async function renderConnections(target) {
       <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${c.handle}')">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
+function operatorPanel(operators) {
+  if (!operators.length) return "";
+  return `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>Operators</h2>
+      <span class="muted" style="font-size:12.5px">Who runs these agents</span></div>
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px">
+      Blocking one shuts out every agent it runs, in a single action, and revokes what
+      is already connected. It does not remove them from the internet: the same party
+      can come back anonymously, with nothing standing behind it — as a stranger, in
+      front of you, like any other.</div>
+    <table><thead><tr><th>Operator</th><th>Agents</th><th class="r">Status</th><th></th></tr></thead>
+    <tbody>${operators.map(o => `<tr>
+      <td><div class="nm">${o.name}</div><div class="muted mono" style="font-size:12px">${o.origin}</div></td>
+      <td>${o.active} active of ${o.agents}</td>
+      <td class="r"><span class="chip ${o.blocked ? "neg" : "pos"}">${o.blocked ? "blocked" : "accepted"}</span></td>
+      <td class="r">${o.blocked
+        ? `<button class="btn ghost sm" onclick="operatorAction('unblock','${o.origin}')">Allow again</button>`
+        : `<button class="btn danger sm" onclick="operatorAction('block','${o.origin}')">Block operator</button>`}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+window.operatorAction = async (action, origin) => {
+  try {
+    const res = await api(`/api/agent/operators/${action}`, { method: "POST",
+      headers: { "content-type": "application/json" }, body: JSON.stringify({ origin }) });
+    toast(action === "block" ? "Operator blocked" : "Operator allowed again",
+      action === "block"
+        ? `${res.connections_revoked} connection(s) revoked, ${res.rpts_deactivated} grant(s) killed`
+        : `${origin} may ask again — what was revoked stays revoked`,
+      action === "block" ? "warn" : "");
+  } catch (e) { toast("Not applied", e.message, "warn"); }
+  renderConnections($("#aaBody"));
+};
+
 window.revoke = async (handle) => {
   const res = await api(`/api/agent/connections/${encodeURIComponent(handle)}/revoke`, { method: "POST" });
   toast("Agent revoked", `${res.rpts_deactivated} active grant(s) deactivated`, "warn");

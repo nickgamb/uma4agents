@@ -212,6 +212,24 @@ The refusal names the condition and says which facts may lower a requirement —
 the rule is easier to learn from a refusal that explains itself than from
 documentation nobody opened.
 
+## Blocking an operator, not an agent
+
+The lane split makes a flood attributable. This is what the owner does about one
+once it is: block the operator, and every agent it runs is shut out in a single
+action, with whatever is already connected revoked in the same step. A block
+that stopped new requests and left live grants alone would leave her believing
+she had closed a door that was still open.
+
+Blocking is a restriction, so by the asymmetry it can rest on what the agent
+claims about itself. An agent that lies about its operator only ever lies itself
+into a refusal.
+
+Two limits, stated rather than glossed. It does not remove anyone from the
+internet — drop the client identifier and the same party returns as an anonymous
+stranger, in the small lane, pending like anyone else. And unblocking is not the
+reverse of blocking: it restores the right to negotiate, not the access that was
+withdrawn.
+
 ## What is deliberately not here
 
 **No accreditation, registry, or trust framework.** Saying "agents of type X"

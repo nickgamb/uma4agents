@@ -31,6 +31,7 @@ class MemoryStore:
         self._rpts: dict[str, dict] = {}           # jti -> {consumed, ...}
         self._ledger: list[dict] = []
         self._connections: dict[str, dict] = {}
+        self._blocked_operators: dict[str, dict] = {}
         self._terms: dict[str, dict] = {}
         self._tiers: dict[str, dict] = {}
         self._rs: dict[str, dict] = {}
@@ -162,6 +163,16 @@ class MemoryStore:
                 rec["consumed"] = True
                 killed += 1
         return killed
+
+    async def blocked_operators(self) -> dict[str, dict]:
+        return {k: dict(v) for k, v in self._blocked_operators.items()}
+
+    async def block_operator(self, origin: str, when: str) -> None:
+        self._blocked_operators.setdefault(origin, {"origin": origin,
+                                                    "blocked_at": when})
+
+    async def unblock_operator(self, origin: str) -> bool:
+        return self._blocked_operators.pop(origin, None) is not None
 
     # --- resource servers ----------------------------------------------------
 

@@ -525,6 +525,15 @@ server and provokes exactly the retry storm the cap exists to prevent. A cap of
 zero is a coherent posture (invitation-only) and should be expressible, but is
 the wrong default for a profile whose argument is that a stranger can negotiate.
 
+And say what the owner does about a flood once it *is* attributable, because
+one connection at a time is not an answer: a single action against the operator,
+which shuts out every agent it runs and revokes what is already connected in the
+same step. Blocking is a restriction, so it may rest on the agent's own claim —
+an agent that lies about its operator lies itself into a refusal. A spec should
+also be honest that this does not remove anyone from the internet: dropping the
+claim returns the same party as an anonymous stranger, which is precisely why
+the queue split matters more than the block.
+
 See [docs/ASSURANCE.md](docs/ASSURANCE.md) and `make assurance-check`.
 
 

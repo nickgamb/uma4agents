@@ -143,8 +143,12 @@ accountable one is granted quietly on its second request, the nameless one asks
 her every time. An agent whose claimed operator does not resolve gains nothing.
 And a flood of unknown agents is capped without the established agent noticing.
 
-She writes these in the portal under **My Terms**, as sentences rather than
-JSON — and adds terms of her own there over any resource no tier governs yet.
+It also blocks an operator — one action, every agent it runs, and what is
+already connected revoked with it.
+
+She writes rules in the portal under **My Terms**, as sentences rather than
+JSON, and adds terms of her own there over any resource no tier governs yet.
+Operators live under **Connected agents**.
 [Agent assurance](/docs/overview/assurance/) is the argument behind it.
 
 ## Give her a personal AI instead

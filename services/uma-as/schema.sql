@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS resource_servers (
     rs        jsonb NOT NULL
 );
 
+-- Operators Alice has shut out. Keyed by origin rather than by the full
+-- client_id URL, because an operator that publishes two metadata documents is
+-- still one party -- and because the origin is what the key-directory check is
+-- already required to match.
+CREATE TABLE IF NOT EXISTS blocked_operators (
+    origin  text PRIMARY KEY,
+    blocked jsonb NOT NULL
+);
+
 -- Append-only. This is the audit trail, so nothing here is ever updated or
 -- deleted -- including refusals and denials, which are decisions too.
 CREATE TABLE IF NOT EXISTS ledger (

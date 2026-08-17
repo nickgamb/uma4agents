@@ -193,6 +193,11 @@ operator can be named** — because her attention is the one resource here that
 was previously unbounded, and the agent you want to let in is a stranger too
 the first time.
 
+It also blocks an operator: one action shuts out every agent that operator
+runs and revokes what is already connected, instead of revoking them one at a
+time. Which is what the lane split is for — it makes a flood attributable, and
+an attributable flood is one she can answer in a single click.
+
 The rule the first part reads is one line, and it names no agent:
 
 ```json

@@ -316,6 +316,29 @@ async def agent_delete_policy(tier_id: str, request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/api/agent/operators")
+async def agent_operators(request: Request):
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/operators",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/operators/{action}")
+async def agent_operator_action(action: str, request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if action not in ("block", "unblock"):
+        return JSONResponse({"error": "unknown action"}, status_code=404)
+    body = await request.json()
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/operators/{action}", json=body,
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/api/agent/policy-vocabulary")
 async def agent_policy_vocabulary(request: Request):
     if require_login(request):

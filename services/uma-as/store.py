@@ -170,6 +170,18 @@ class Store(Protocol):
         leave the agent holding exactly the authority Alice just withdrew.
         """
 
+    # --- operators she has shut out -----------------------------------------
+
+    async def blocked_operators(self) -> dict[str, dict]:
+        """Origins whose agents she will not deal with, and when she said so."""
+
+    async def block_operator(self, origin: str, when: str) -> None:
+        """Shut out an operator. Idempotent — blocking twice is not an error,
+        because her portal and her personal AI may both be looking at a stale
+        list."""
+
+    async def unblock_operator(self, origin: str) -> bool: ...
+
     # --- resource servers (the other standing relationship) -----------------
 
     async def resource_servers(self) -> dict[str, dict]: ...

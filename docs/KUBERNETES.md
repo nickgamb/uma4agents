@@ -161,7 +161,7 @@ authorization server that took it is **deleted**, the database primary is
 ### 6. What her policy may say about the agent asking
 
 ```bash
-make k8s-assurance-check        # expect 16 passed
+make k8s-assurance-check        # expect 20 passed
 make rules-test                 # the rule engine alone; nothing need be running
 ```
 

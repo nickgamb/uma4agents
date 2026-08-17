@@ -273,12 +273,49 @@ def main() -> int:
               a_ok and not a_asked)
         decide_all(client, "denied")
 
+        print("\n== One action shuts out an operator, not one agent ==")
+        hdrs = owner_hdrs(client)
+        before = client.get(f"{AS_PUBLIC}/owner/operators", headers=hdrs,
+                            timeout=15.0).json()
+        mine = [o for o in before if o["origin"] == OPERATOR]
+        check("her authority lists the operator behind those agents",
+              bool(mine) and mine[0]["active"] >= 2,
+              f"{mine[0]['active'] if mine else 0} active")
+        res = client.post(f"{AS_PUBLIC}/owner/operators/block", headers=hdrs,
+                          json={"origin": OPERATOR}, timeout=20.0).json()
+        check("blocking it revokes every agent it runs, in one step",
+              res.get("connections_revoked", 0) >= 2, str(res))
+        blocked_ok, _, why = negotiate(client, accountable, "get_positions",
+                                       max_wait_s=2)
+        check("and an agent of that operator is refused by name",
+              not blocked_ok and OPERATOR in (why or ""), why or "")
+        # It does not remove them from the internet: the same key, without the
+        # claim, is a stranger again — which is the honest limit.
+        anon_again = AgentKeys.load_or_create(f"{KEYS}/assurance-named-{RUN}.pem")
+        anon_again.client_id = None
+        again_ok, again_asked, _ = negotiate(client, anon_again, "get_positions",
+                                             max_wait_s=2)
+        check("but the same party may return anonymously, as a stranger",
+              again_asked or not again_ok)
+        client.post(f"{AS_PUBLIC}/owner/operators/unblock", headers=owner_hdrs(client),
+                    json={"origin": OPERATOR}, timeout=20.0)
+        say("unblocked — she may deal with them again, but what the block")
+        say("revoked stays revoked: it restores the right to ask, not the access")
+
+        # Leave her queue as we found it. A check that fills the pend queue and
+        # walks away makes the *next* thing anyone runs look broken — which is
+        # exactly what it did the first time.
+        drained = decide_all(client, "denied")
+        say(f"queue left empty ({drained} of this check's requests dismissed)")
+
+
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
     if FAIL:
         return 1
     print("\nPASS: assurance tightened and never widened, standing was per tier,")
-    print("      and a flood of anonymous strangers could crowd out neither the")
-    print("      agent she knows nor a newcomer she could put a name to.")
+    print("      a flood of anonymous strangers could crowd out neither the agent")
+    print("      she knows nor a newcomer she could put a name to, and one action")
+    print("      shut out an operator rather than one agent at a time.")
     return 0
 
 

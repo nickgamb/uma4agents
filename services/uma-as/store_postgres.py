@@ -320,6 +320,23 @@ class PostgresStore:
                     handle)
                 return len(killed)
 
+    # --- operators she has shut out -------------------------------------------
+
+    async def blocked_operators(self) -> dict[str, dict]:
+        rows = await self._pool.fetch("SELECT origin, blocked FROM blocked_operators")
+        return {r["origin"]: json.loads(r["blocked"]) for r in rows}
+
+    async def block_operator(self, origin: str, when: str) -> None:
+        await self._pool.execute(
+            "INSERT INTO blocked_operators (origin, blocked) VALUES ($1, $2) "
+            "ON CONFLICT (origin) DO NOTHING",
+            origin, json.dumps({"origin": origin, "blocked_at": when}))
+
+    async def unblock_operator(self, origin: str) -> bool:
+        row = await self._pool.fetchrow(
+            "DELETE FROM blocked_operators WHERE origin = $1 RETURNING origin", origin)
+        return row is not None
+
     # --- resource servers ----------------------------------------------------
 
     async def resource_servers(self) -> dict[str, dict]:

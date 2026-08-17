@@ -255,6 +255,34 @@ actually lowers an ask-me tier is written to her ledger as a `relaxed` entry
 naming the rule that fired, so an automatic grant that skipped her is a thing
 she can go and find afterwards rather than infer.
 
+## Blocking an operator, not an agent
+
+The lane split is what makes a flood attributable. This is what she does about
+one once it is.
+
+`POST /owner/operators/block` with an origin shuts out **every agent that
+operator runs**, in a single action, and revokes what is already connected in
+the same step — a block that stopped new requests and left live grants alone
+would leave her believing she had closed a door that was still open. Her portal
+lists operators under Connected agents, assembled from her connections rather
+than kept as a registry: an operator is not something she onboards, it is a
+name that turned up attached to agents she had already decided about.
+
+Blocking is a **restriction**, so by the asymmetry it can rest on what the agent
+claims about itself with no further ceremony. An agent that lies about its
+operator only ever lies itself into a refusal.
+
+Two limits worth stating plainly:
+
+- **It does not remove them from the internet.** Drop the `client_id` and the
+  same party is back as an anonymous stranger — no accountability, the small
+  lane, pending in front of her like anyone else. `make assurance-check`
+  demonstrates exactly that. Which is why the lane split matters more than the
+  block does: the block answers a named flood, the lanes contain an unnamed one.
+- **Unblocking is not the reverse of blocking.** It restores the right to
+  negotiate, not the access that was withdrawn; the connections the block
+  revoked stay revoked and must be established again.
+
 ## What is not here, and why
 
 **No accreditation, no registry, no trust framework.** Saying "agents of type
