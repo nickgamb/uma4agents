@@ -11,6 +11,7 @@ NS=sterling-vance
 
 kubectl -n "$NS" create configmap demo-driver \
   --from-file=driver.py="$ROOT/clients/demo-driver/driver.py" \
+  --from-file=assurance_check.py="$ROOT/clients/demo-driver/assurance_check.py" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
 kubectl -n "$NS" create configmap demo-lib \

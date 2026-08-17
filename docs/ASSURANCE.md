@@ -7,7 +7,8 @@ The question that keeps coming back is whether she can say anything about the
 *asking* side without giving that up — and the honest fallback, an allow-list
 of agents she trusts, is an ACL wearing a new hat. This is the alternative.
 
-Run it: `make assurance-check`. Unit tests: `make policy-test`.
+Run it: `make assurance-check` (or `make k8s-assurance-check` in the
+cluster). Unit tests, needing nothing running: `make rules-test`.
 
 ![Agent assurance starts at zero. Five steps, left to right, each one a check the owner's authority performed itself: nothing yet, with all three axes at zero, for an agent she has never seen; the agreement's signature verified against a key she can name (binding 1); the credential's issuer verified against its published keys (provenance 1); an operator metadata document resolved and self-consistent (accountability 1); and that operator's own key directory holding this very key, which the agent could not have added (accountability 2). Below, one real rule from her holdings tier — when accountability is below 1, ask — read against each step: it fires at the first three and is silent at the last two. It reads one axis, so binding and provenance move without changing its answer, and at the top the rule has simply stopped firing rather than granted anything her tier did not already allow.](assurance.svg)
 

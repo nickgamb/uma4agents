@@ -295,6 +295,37 @@ async def agent_policies(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/api/agent/policies")
+async def agent_create_policy(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    body = await request.json()
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/policies", json=body,
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.delete("/api/agent/policies/{tier_id}")
+async def agent_delete_policy(tier_id: str, request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.delete(f"{UMA_AS}/owner/policies/{tier_id}",
+                           headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/api/agent/policy-vocabulary")
+async def agent_policy_vocabulary(request: Request):
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/policy-vocabulary",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.put("/api/agent/policies/{tier_id}")
 async def agent_update_policy(tier_id: str, request: Request):
     if require_login(request):

@@ -383,6 +383,23 @@ class PostgresStore:
         rows = await self._pool.fetch("SELECT tier_id, tier FROM tiers")
         return {r["tier_id"]: json.loads(r["tier"]) for r in rows}
 
+    async def create_tier(self, tier_id: str, tier: dict) -> dict:
+        # ON CONFLICT DO NOTHING, then check what came back: the uniqueness
+        # test and the write are one statement, so two replicas cannot both
+        # believe they created it.
+        row = await self._pool.fetchrow(
+            "INSERT INTO tiers (tier_id, tier) VALUES ($1, $2) "
+            "ON CONFLICT (tier_id) DO NOTHING RETURNING tier_id",
+            tier_id, json.dumps(tier))
+        if row is None:
+            raise KeyError(tier_id)
+        return tier
+
+    async def delete_tier(self, tier_id: str) -> bool:
+        row = await self._pool.fetchrow(
+            "DELETE FROM tiers WHERE tier_id = $1 RETURNING tier_id", tier_id)
+        return row is not None
+
     async def update_tier(self, tier_id: str, patch: dict) -> dict:
         async with self._pool.acquire() as conn:
             async with conn.transaction():

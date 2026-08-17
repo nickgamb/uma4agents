@@ -1102,29 +1102,42 @@ def operator_published_key(client_id: str, directory: str,
         event("operator_directory.rejected", client_id=client_id,
               directory=directory, reason="not same origin as client_id")
         return False
+    def fetch() -> list:
+        r = httpx.get(directory, timeout=5.0, follow_redirects=False,
+                      verify=AGENT_ISSUER_CA or True)
+        r.raise_for_status()
+        keys = r.json().get("keys") or []
+        if len(_DIRECTORY_CACHE) >= _DIRECTORY_MAX:
+            _DIRECTORY_CACHE.pop(next(iter(_DIRECTORY_CACHE)), None)
+        _DIRECTORY_CACHE[directory] = (now(), keys)
+        return keys
+
     try:
-        cached = _DIRECTORY_CACHE.get(directory)
-        if cached is not None and now() - cached[0] < _DIRECTORY_TTL:
-            keys = cached[1]
-        else:
-            r = httpx.get(directory, timeout=5.0, follow_redirects=False,
-                          verify=AGENT_ISSUER_CA or True)
-            r.raise_for_status()
-            keys = r.json().get("keys") or []
-            if len(_DIRECTORY_CACHE) >= _DIRECTORY_MAX:
-                _DIRECTORY_CACHE.pop(next(iter(_DIRECTORY_CACHE)), None)
-            _DIRECTORY_CACHE[directory] = (now(), keys)
         wanted = jwk_thumbprint(signer_jwk)
 
-        def matches(k: dict) -> bool:
-            try:                       # a directory may hold key types we do
-                return jwk_thumbprint(k) == wanted   # not profile; skip them
-            except (KeyError, TypeError):
-                return False
+        def holds(keys: list) -> bool:
+            for k in keys:
+                try:                   # a directory may hold key types we do
+                    if jwk_thumbprint(k) == wanted:   # not profile; skip them
+                        return True
+                except (KeyError, TypeError):
+                    continue
+            return False
 
-        found = any(matches(k) for k in keys)
+        # Only a *hit* may be served from cache. A miss is re-fetched, because
+        # the two errors are not the same size: a stale hit keeps attesting a
+        # key the operator has disowned, while a stale miss merely fails to
+        # recognise one it has just published — which is the common case, since
+        # an agent enrols and then immediately negotiates. So the TTL bounds
+        # how long a withdrawal takes to land, and a newly published key is
+        # picked up on the next request rather than in five minutes.
+        cached = _DIRECTORY_CACHE.get(directory)
+        fresh = cached is not None and now() - cached[0] < _DIRECTORY_TTL
+        found = fresh and holds(cached[1])
+        if not found:
+            found = holds(fetch())
         event("operator_directory.checked", directory=directory,
-              published=found)
+              published=found, from_cache=bool(fresh and found))
         return found
     except Exception as exc:                                       # noqa: BLE001
         event("operator_directory.unresolved", directory=directory,
@@ -1667,6 +1680,65 @@ async def owner_policies(request: Request) -> dict:
     return await STORE.tiers()
 
 
+@app.get("/owner/policy-vocabulary")
+async def owner_policy_vocabulary(request: Request) -> list:
+    """The conditions her rules may use, and which of them may relax.
+
+    Served so her portal can offer them as choices. One source of truth: a
+    surface that hard-coded this list would eventually offer her something
+    this server rejects.
+    """
+    await require_owner(request)
+    return policy.vocabulary()
+
+
+@app.post("/owner/policies")
+async def owner_create_policy(request: Request) -> dict:
+    """Alice writing a new tier: her terms, and which of her resources they
+    govern.
+
+    The resources have to be ones her authority already protects. That is not
+    a limitation so much as the direction of the whole design — a resource
+    server registers what it holds, and she attaches policy to it. She cannot
+    write terms over something nobody is protecting.
+    """
+    await require_owner(request)
+    spec = await request.json()
+    tier_id = (spec.get("id") or "").strip()
+    try:
+        tier = policy.new_tier(tier_id, spec, await STORE.tiers(), set(RESOURCES))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    try:
+        created = await STORE.create_tier(tier_id, tier)
+    except KeyError:
+        raise HTTPException(status_code=409,
+                            detail=f"there is already a tier called {tier_id!r}")
+    event("policy.created", tier=tier_id, template_id=created["terms"]["template_id"],
+          resources=created["resources"])
+    await publish_terms(tier_id, created)
+    return created
+
+
+@app.delete("/owner/policies/{tier_id}")
+async def owner_delete_policy(tier_id: str, request: Request) -> dict:
+    """Remove a tier. Its resources become ungoverned, and an ungoverned
+    resource is *denied* — so this withdraws access rather than widening it,
+    which is the only safe direction for a destructive edit to fail in.
+
+    Published terms are not deleted with it. An agreement signed against them
+    stays checkable, which is the whole reason those documents are versioned
+    and persistent.
+    """
+    await require_owner(request)
+    tiers = await STORE.tiers()
+    orphaned = list(tiers.get(tier_id, {}).get("resources") or [])
+    if not await STORE.delete_tier(tier_id):
+        raise HTTPException(status_code=404, detail="unknown tier")
+    event("policy.deleted", tier=tier_id, ungoverned=orphaned)
+    return {"deleted": tier_id, "ungoverned": orphaned}
+
+
 @app.put("/owner/policies/{tier_id}")
 async def owner_update_policy(tier_id: str, request: Request) -> dict:
     await require_owner(request)
@@ -1675,6 +1747,11 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
         updated = await STORE.update_tier(tier_id, patch)
     except KeyError:
         raise HTTPException(status_code=404, detail="unknown tier")
+    except ValueError as exc:
+        # A rule that could widen access on evidence the agent controls, or
+        # one whose argument will not parse. Her editor shows this text, so it
+        # has to say what is wrong rather than that something is.
+        raise HTTPException(status_code=400, detail=str(exc))
     event("policy.updated", tier=tier_id, template_id=updated["terms"]["template_id"])
     # Publish the new version immediately so its terms URI dereferences from
     # the moment it exists; earlier versions remain served (persistent record).

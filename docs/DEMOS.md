@@ -67,7 +67,7 @@ make k8s-reset      # kubernetes
 
 ```bash
 make assurance-check    # what her policy can say about an agent, and the cap
-make policy-test        #   on how much of her attention a stranger can spend
+make rules-test        #   on how much of her attention a stranger can spend
 ```
 
 Neither is a demo — they are checks — but the first one reads like one, and it

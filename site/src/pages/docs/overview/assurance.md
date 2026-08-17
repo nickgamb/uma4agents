@@ -182,6 +182,24 @@ What is still missing is anyone *outside* the operator — an accreditation body
 a regulator. That would be a further level, it needs a trust framework that does
 not exist, and this deliberately does not invent one.
 
+## Where she writes them
+
+In her portal, under Settings → Security → Agent Authorization → **My Terms**.
+Rules render as sentences — *"If nobody named and reachable is standing behind
+the agent — ask me first"* — composed from a vocabulary the authorization
+server publishes, so the surface she edits through cannot offer her something
+the server will reject.
+
+The same page is where she **adds terms of her own**: a new tier, its purpose,
+expiry and prohibited actions, over any resource her authority protects that no
+tier governs yet. One resource belongs to one tier, or which terms apply would
+depend on the order they happen to be stored in.
+
+A rule that could widen access on evidence the agent controls does not save.
+The refusal names the condition and says which facts may lower a requirement —
+the rule is easier to learn from a refusal that explains itself than from
+documentation nobody opened.
+
 ## What is deliberately not here
 
 **No accreditation, registry, or trust framework.** Saying "agents of type X"

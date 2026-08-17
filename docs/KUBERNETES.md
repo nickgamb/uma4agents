@@ -158,7 +158,25 @@ make k8s-chaos                  # ~5 min; expect 5 passed
 authorization server that took it is **deleted**, the database primary is
 **killed**, a standby takes over — and she still answers *that same request*.
 
-### 6. Give Alice her own AI
+### 6. What her policy may say about the agent asking
+
+```bash
+make k8s-assurance-check        # expect 14 passed
+make rules-test                 # the rule engine alone; nothing need be running
+```
+
+**Notice** that the two agents differ only in whether a metadata document says
+who operates them, and that the difference shows up on the *second* request:
+the accountable one is granted quietly, the nameless one asks her again. And
+that the flood at the end is capped at five waiting without the established
+agent noticing — an agent she has standing with is never counted against the
+budget, so a flood turns strangers away rather than taking her side down.
+
+Her rules are editable in the portal under **My Terms**, as sentences. The same
+page adds terms of her own over any resource no tier governs yet.
+[ASSURANCE.md](ASSURANCE.md) is the argument.
+
+### 7. Give Alice her own AI
 
 ```bash
 make k8s-paios                  # Kwaai's pAI-OS, holding her key
@@ -179,7 +197,7 @@ binding — see [KWAAI-BINDING.md](KWAAI-BINDING.md).
 It starts at `replicas: 0` deliberately: while it is up, the requests it can
 answer never reach her portal, and the portal demo is the default.
 
-### 7. Look around
+### 8. Look around
 
 ```bash
 make k8s-status                 # what is running, per party

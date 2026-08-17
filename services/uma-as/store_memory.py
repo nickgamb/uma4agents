@@ -208,6 +208,15 @@ class MemoryStore:
     async def tiers(self) -> dict[str, dict]:
         return copy.deepcopy(self._tiers)
 
+    async def create_tier(self, tier_id: str, tier: dict) -> dict:
+        if tier_id in self._tiers:
+            raise KeyError(tier_id)
+        self._tiers[tier_id] = copy.deepcopy(tier)
+        return copy.deepcopy(tier)
+
+    async def delete_tier(self, tier_id: str) -> bool:
+        return self._tiers.pop(tier_id, None) is not None
+
     async def update_tier(self, tier_id: str, patch: dict) -> dict:
         if tier_id not in self._tiers:
             raise KeyError(tier_id)

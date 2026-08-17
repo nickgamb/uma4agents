@@ -221,6 +221,51 @@ check("there is no composite score to game",
 check("durations parse", [policy.parse_duration(x) for x in ("90d", "12h", "45m", "30")]
       == [7776000, 43200, 2700, 30])
 
+# --- terms she writes herself --------------------------------------------------
+
+REGISTERED = {"alice-vault/get_positions", "alice-vault/get_transactions",
+              "alice-vault/execute_trade", "alice-vault/get_statements"}
+shipped = policy.defaults()
+
+t = policy.new_tier("statements", {
+    "name": "Statements", "ask_me": True,
+    "resources": ["alice-vault/get_statements"],
+    "terms": {"purpose": "Preparing my annual return", "expires_in": 86400,
+              "prohibited": ["model-training"]}}, shipped, REGISTERED)
+check("she can write a tier of her own", t["terms"]["purpose"].startswith("Preparing"))
+check("its terms document starts at v1", t["terms"]["template_id"] == "alice/statements/v1")
+check("and it carries her ask-me choice", t["ask_me"] is True)
+
+for spec, why in (
+    ({"id": "x", "resources": ["alice-vault/get_positions"],
+      "terms": {"purpose": "p", "expires_in": 60}}, "a resource another tier governs"),
+    ({"id": "x", "resources": ["alice-vault/nope"],
+      "terms": {"purpose": "p", "expires_in": 60}}, "a resource nobody protects"),
+    ({"id": "x", "terms": {"expires_in": 60}}, "terms with no purpose"),
+    ({"id": "x", "terms": {"purpose": "p"}}, "terms that never expire"),
+    ({"id": "x", "resources": [], "rules": [{"when": ["standing.none"], "then": "auto"}],
+      "terms": {"purpose": "p", "expires_in": 60}}, "a rule that cannot relax"),
+):
+    try:
+        policy.new_tier(spec["id"], spec, shipped, REGISTERED)
+        ok = False
+    except ValueError:
+        ok = True
+    check(f"she cannot write a tier over {why}", ok)
+
+for bad in ("tier1", "", "has spaces", "../etc"):
+    try:
+        policy.new_tier(bad, {"terms": {"purpose": "p", "expires_in": 60}},
+                        shipped, REGISTERED)
+        ok = False
+    except ValueError:
+        ok = True
+    check(f"a tier id must be new and a plain slug: {bad!r}", ok)
+
+check("a tier with no resources yet is allowed",
+      policy.new_tier("later", {"terms": {"purpose": "p", "expires_in": 60}},
+                      shipped, REGISTERED)["resources"] == [])
+
 # --- the shipped defaults ------------------------------------------------------
 
 d = policy.defaults()

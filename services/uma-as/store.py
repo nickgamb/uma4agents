@@ -204,6 +204,19 @@ class Store(Protocol):
         """Apply an owner edit and bump the template version atomically.
         Raises ``KeyError`` for an unknown tier."""
 
+    async def create_tier(self, tier_id: str, tier: dict) -> dict:
+        """Add a tier Alice wrote. Raises ``KeyError`` if the id is taken —
+        checked in the same step as the write, so two replicas cannot both
+        believe they created it."""
+
+    async def delete_tier(self, tier_id: str) -> bool:
+        """Remove a tier. False if it was not there.
+
+        Its resources become ungoverned, and an ungoverned resource is denied
+        rather than defaulted — deleting a tier withdraws access rather than
+        widening it, which is the only safe direction for a destructive edit.
+        """
+
     # --- fan-out to the owner's surface -------------------------------------
 
     async def notify(self, payload: dict) -> None:

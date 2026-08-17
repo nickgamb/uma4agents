@@ -127,6 +127,26 @@ Read the pod logs directly and you will be misled. The authorization server runs
 three replicas, so `kubectl logs deploy/uma-as` shows one of them and a single
 negotiation's events are spread across all three.
 
+## What her policy may say about the agent asking
+
+Her tiers name resources. They can also read what her authority established
+about the agent making the request — and still name no agent, so the rules hold
+for the next stranger.
+
+```bash
+make k8s-assurance-check     # or `make assurance-check` on the compose path
+make rules-test              # the rule engine alone; nothing need be running
+```
+
+Two agents identical but for a metadata document saying who operates them: the
+accountable one is granted quietly on its second request, the nameless one asks
+her every time. An agent whose claimed operator does not resolve gains nothing.
+And a flood of unknown agents is capped without the established agent noticing.
+
+She writes these in the portal under **My Terms**, as sentences rather than
+JSON — and adds terms of her own there over any resource no tier governs yet.
+[Agent assurance](/docs/overview/assurance/) is the argument behind it.
+
 ## Give her a personal AI instead
 
 Everything above had Alice answering from a browser. She does not have to. The

@@ -231,6 +231,60 @@ TAKES_ARG = DURATION_ARGS | LEVEL_ARGS
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
 
+# What a policy editor needs in order to offer these as choices rather than
+# make the owner remember them. Published rather than duplicated in the portal,
+# so the surface she edits through cannot drift from what this will accept —
+# including *which* conditions may relax, which is the rule she should be shown
+# rather than discover by having a save rejected.
+#
+# Each entry is a **complete condition**, not a name plus a box to type into.
+# The level-taking ones are enumerated per level because each level is a
+# different sentence: `accountability_below:1` is "nobody is named", and
+# `accountability_below:2` is "the named operator has not vouched for this
+# key". Only durations are genuinely open-ended, and only those ask for a
+# value.
+VOCABULARY = [
+    {"condition": "assurance.binding_below:1", "takes": None,
+     "label": "the request is not bound to a key this authority verified"},
+    {"condition": "assurance.provenance_below:1", "takes": None,
+     "label": "the agent's credential cannot be traced to an issuer"},
+    {"condition": "assurance.accountability_below:1", "takes": None,
+     "label": "nobody named and reachable is standing behind the agent"},
+    {"condition": "assurance.accountability_below:2", "takes": None,
+     "label": "the named operator has not published this agent's key"},
+    {"condition": "request.max_expiry", "takes": None,
+     "label": "it asked for the longest access this tier allows"},
+    {"condition": "standing.none", "takes": None,
+     "label": "I have no standing connection with this agent"},
+    {"condition": "standing.first_at_tier", "takes": None,
+     "label": "it has never been granted at this tier before"},
+    {"condition": "standing.revoked_before", "takes": None,
+     "label": "I have revoked this agent before"},
+    {"condition": "standing.age_below", "takes": "duration",
+     "label": "I have known this agent for less than"},
+    {"condition": "standing.never_revoked", "takes": None,
+     "label": "I have never revoked this agent"},
+    {"condition": "standing.approved_at_tier", "takes": None,
+     "label": "I have personally approved something at this tier"},
+    {"condition": "standing.age_above", "takes": "duration",
+     "label": "I have known this agent for more than"},
+]
+
+
+def vocabulary() -> list[dict]:
+    """The conditions an owner may write, and what each may do.
+
+    `may_relax` is the interesting field: a surface that shows which options
+    cannot lower a requirement teaches the rule at the moment it matters,
+    instead of letting her compose something and then refusing to save it.
+    """
+    out = []
+    for entry in VOCABULARY:
+        name = entry["condition"].split(":", 1)[0]
+        out.append({**entry, "may_relax": name in RELAXING_CONDITIONS})
+    return out
+
+
 def parse_duration(text: str) -> int:
     """`90d`, `12h`, `45m`, or plain seconds."""
     text = str(text).strip()
@@ -364,6 +418,65 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
         if _rule_matches(rule, when, facts):
             result, reasons = rule["then"], list(when)
     return result, reasons
+
+
+def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
+             registered: set[str]) -> dict:
+    """Build a tier Alice is adding, or raise ValueError saying why not.
+
+    Three checks, and the middle one is the one with teeth:
+
+    * the id is hers to choose but has to be new, and has to be a plain slug —
+      it ends up in a terms `template_id` that agents will cite for years;
+    * every resource must be **registered and ungoverned**. Registered because
+      a tier over something her authority does not protect is a rule that can
+      never fire; ungoverned because `tier_for_resource` returns the first
+      match, so two tiers over one resource would make her policy depend on
+      dict ordering — which is not a policy;
+    * the rules follow the same asymmetry as everywhere else.
+
+    A tier with no resources is allowed. She may well write the terms first
+    and attach them when the resource shows up.
+    """
+    if not tier_id or not all(c.isalnum() or c in "-_" for c in tier_id):
+        raise ValueError("a tier id may contain letters, digits, - and _ only")
+    if tier_id in existing:
+        raise ValueError(f"there is already a tier called {tier_id!r}")
+
+    resources = list(spec.get("resources") or [])
+    governed = {r: tid for tid, t in existing.items() for r in t["resources"]}
+    for rid in resources:
+        if rid not in registered:
+            raise ValueError(f"{rid!r} is not a resource this authority protects")
+        if rid in governed:
+            raise ValueError(
+                f"{rid!r} is already governed by {governed[rid]!r} — a resource "
+                "belongs to one tier, or which terms apply would depend on the "
+                "order they happen to be stored in")
+
+    terms = dict(spec.get("terms") or {})
+    for field in ("purpose", "expires_in"):
+        if not terms.get(field):
+            raise ValueError(f"terms need a {field}")
+    rules = spec.get("rules") or []
+    validate_rules(rules)
+
+    return {
+        "name": spec.get("name") or tier_id,
+        "resources": resources,
+        "ask_me": bool(spec.get("ask_me")),
+        "rules": copy.deepcopy(rules),
+        "terms": {
+            # v1 because this document has never been served before. Every
+            # later edit bumps it, and every version stays dereferenceable.
+            "template_id": f"alice/{tier_id}/v1",
+            "purpose": terms["purpose"],
+            "scope": list(terms.get("scope") or []),
+            "expires_in": int(terms["expires_in"]),
+            "prohibited": list(terms.get("prohibited") or []),
+            **({"per_operation": True} if terms.get("per_operation") else {}),
+        },
+    }
 
 
 def apply_patch(tier: dict, patch: dict) -> dict:

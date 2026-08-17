@@ -1,0 +1,60 @@
+# Agent assurance, and the cap on the owner's attention — in the cluster.
+#
+# The same clients/demo-driver/assurance_check.py the compose stack runs, from
+# Bob's namespace, so what it proves it proves through the edge: an agent with
+# a named operator goes quiet on its second request while a nameless one keeps
+# asking, standing is per tier, a lie buys nothing, and a flood of strangers
+# is capped without touching the agent Alice already knows.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: assurance-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: assurance-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: assurance-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/assurance_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+            # Matches the default in policy.py. Set both together, or the
+            # check counts to a different number than the server enforces.
+            - name: UMA_AS_PEND_BUDGET
+              value: "5"
+          volumeMounts:
+            - { name: driver, mountPath: /driver/assurance_check.py, subPath: assurance_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

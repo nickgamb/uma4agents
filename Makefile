@@ -315,9 +315,11 @@ sig-test:
 	@docker run --rm -v "$(PWD)/lib:/u4a/lib:ro" python:3.12-slim \
 		sh -c "pip install -q cryptography && python /u4a/lib/test_http_sig.py"
 
-## policy-test: her agent rules — what may tighten, what may relax, what wins
-.PHONY: policy-test
-policy-test:
+## rules-test: her agent rules — what may tighten, what may relax, what wins.
+## Named apart from `k8s-policy-test`, which proves the *mesh* denies: these
+## are unit tests over the rule engine and need nothing running.
+.PHONY: rules-test
+rules-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		python lib/test_policy.py
 

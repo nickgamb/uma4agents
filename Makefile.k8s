@@ -166,6 +166,12 @@ k8s-demo-all:
 k8s-policy-test:
 	$(call run_job,policy-test,cat $(K8S)/base/jobs/policy-test.yaml,300s)
 
+## k8s-assurance-check: agent assurance and the owner's attention budget,
+## proved through the edge from the requesting party's namespace.
+.PHONY: k8s-assurance-check
+k8s-assurance-check:
+	$(call run_job,assurance-check,cat $(K8S)/base/jobs/assurance-check.yaml,420s)
+
 ## k8s-load: concurrency against the deployed shape, not against the store
 # 24 agents negotiating at once through the edge, against three authorization
 # servers sharing one database. Asserts every ticket is distinct, that a

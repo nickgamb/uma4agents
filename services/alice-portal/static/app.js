@@ -11,7 +11,17 @@ const ALLOC_COLORS = ["#5b8cff", "#2ed079", "#8f6bff", "#f2b955", "#ff5a6a", "#3
 async function api(path, opts) {
   const r = await fetch(path, opts);
   if (r.status === 401) { location.href = "/login"; throw new Error("auth"); }
-  return r.json();
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    // Her authorization server refuses a policy that could widen access on
+    // evidence the agent controls, and says which condition and why. Throwing
+    // with that text is the whole point: a rejected edit that reported success
+    // would be a control she believes she has and does not.
+    const err = new Error(body.detail || body.error || `request failed (${r.status})`);
+    err.status = r.status;
+    throw err;
+  }
+  return body;
 }
 
 function toast(title, detail, kind = "") {
@@ -290,6 +300,9 @@ async function agentAuthView(body) {
 }
 
 async function renderApprovals(target) {
+  // The dialog names the rule that routed this to her, in her own words, so
+  // the vocabulary has to be loaded even when she never opened the policy tab.
+  if (!VOCAB) VOCAB = await api("/api/agent/policy-vocabulary").catch(() => []);
   const items = await api("/api/agent/pending");
   updateBadge(items.length);
   if (!items.length) { target.innerHTML = `<div class="empty">Nothing is waiting on you. Requests that your policy
@@ -305,6 +318,10 @@ async function renderApprovals(target) {
         <span class="mono">${p.operation.tool}(${JSON.stringify(p.operation.params)})</span></div>` : ""}
       <div class="kv"><span class="k">Identity</span><span>${p.identity?.level || "unknown"}${p.identity?.sub ? " · " + p.identity.sub : ""}</span></div>
       ${p.handle ? `<div class="kv"><span class="k">Agent</span><span class="thumb">${p.handle}</span></div>` : ""}
+      ${(p.assurance_notes || []).length ? `<div class="kv"><span class="k">Checked</span><span>
+        ${p.assurance_notes.map(n => `<div class="note">${n}</div>`).join("")}</span></div>` : ""}
+      ${(p.because || []).length ? `<div class="kv"><span class="k">Why you</span><span>
+        ${p.because.map(b => `<span class="chip warn">${condLabel(b)}</span>`).join(" ")}</span></div>` : ""}
       <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span></div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn pos sm" onclick="decide('${p.family}','approved')">${isConn ? "Connect this agent" : "Approve this operation"}</button>
@@ -389,14 +406,44 @@ window.revokeRs = async (clientId) => {
 };
 
 let policyMode = "ui";
+let VOCAB = null;          // conditions her authority will accept, and which may relax
+const draft = {};          // conditions being composed, per tier
+
+const OUTCOMES = { ask: "ask me first", refuse: "refuse outright",
+                   auto: "grant without asking" };
+
+function condLabel(condition) {
+  const vocab = VOCAB || [];
+  // Level-taking conditions are enumerated per level, so the exact string is
+  // its own sentence. Only durations carry a value worth appending.
+  const exact = vocab.find(c => c.condition === condition);
+  if (exact) return exact.label;
+  const [name, value] = condition.split(":");
+  const v = vocab.find(c => c.condition === name);
+  return v ? `${v.label} ${value || ""}`.trim() : condition;
+}
+
+function ruleSentence(rule) {
+  const when = Array.isArray(rule.when) ? rule.when : [rule.when];
+  return `If ${when.map(condLabel).join(", and ")} — <b>${OUTCOMES[rule.then] || rule.then}</b>`;
+}
+
 async function renderTerms(target) {
+  if (!VOCAB) VOCAB = await api("/api/agent/policy-vocabulary");
   const tiers = await api("/api/agent/policies");
   if (policyMode === "code") return renderTermsCode(target, tiers);
+  // Resources her authority protects that no tier governs yet. A new tier can
+  // only be written over these: two tiers over one resource would make which
+  // terms apply depend on storage order.
+  const resources = await api("/api/agent/resources").catch(() => []);
+  const free = resources.filter(r => !r.tier);
   const termsUri = (t) => `https://alice-as.uma.lab/terms/${t.terms.template_id}`;
   target.innerHTML = Object.entries(tiers).map(([id, t]) => `
     <div class="card pad-lg" style="margin-bottom:14px">
       <div class="section-head"><h2>${t.name}</h2>
-        <span class="muted mono">${t.resources.join(", ")}</span></div>
+        <span class="muted mono">${t.resources.join(", ") || "no resources yet"}</span>
+        <button class="btn ghost sm" style="margin-left:auto"
+                onclick="deleteTier('${id}')">Delete tier</button></div>
       <div class="muted" style="font-size:12.5px">Published terms:
         <a class="mono" href="${termsUri(t)}" target="_blank">${t.terms.template_id}</a>
         — the persistent document agents agree to</div>
@@ -412,11 +459,168 @@ async function renderTerms(target) {
           <div style="color:var(--text-faint);font-size:12.5px">Hold the request and notify me before granting</div></div>
         <button class="btn primary sm" style="margin-left:auto" onclick="savePolicy('${id}')">Save changes</button>
       </div>
+      ${ruleEditor(id, t)}
     </div>`).join("") + `
+    ${newTierForm(free)}
     <div style="display:flex;justify-content:flex-end;margin-top:6px">
       <button class="btn ghost sm" onclick="policyMode='code';renderTerms(document.getElementById('aaBody'))">
         ⌗ Advanced — edit policy as code</button></div>`;
 }
+function newTierForm(free) {
+  return `
+    <div class="card pad-lg" style="margin-bottom:14px;border-style:dashed">
+      <div class="section-head"><h2>Add terms of your own</h2></div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:14px">
+        A tier is a set of your terms and the resources they govern. You can only
+        write terms over resources your authorization server already protects —
+        a resource server registers what it holds, and you attach policy to it.
+        ${free.length ? "" : "<b>Everything you protect is already governed by a tier</b>, so a new one would have nothing to cover. It can still be written now and attached later."}
+      </div>
+      <label class="fld"><div class="lbl">Name it</div>
+        <input type="text" id="nt-name" placeholder="e.g. Statements and tax documents"></label>
+      <label class="fld"><div class="lbl">Short id — this becomes part of the terms document agents cite</div>
+        <input type="text" id="nt-id" placeholder="e.g. statements"></label>
+      <label class="fld"><div class="lbl">Purpose your terms require the agent to accept</div>
+        <input type="text" id="nt-purpose" placeholder="e.g. Preparing my annual return"></label>
+      <label class="fld"><div class="lbl">Access expires after (seconds)</div>
+        <input type="number" id="nt-expires" value="86400"></label>
+      <label class="fld"><div class="lbl">Prohibited actions (comma-separated)</div>
+        <input type="text" id="nt-prohibited" placeholder="e.g. retention-after-filing, model-training"></label>
+      <div class="lbl" style="margin-top:14px">Which of your resources does it govern?</div>
+      ${free.length ? free.map(r => `
+        <label class="rule-row"><input type="checkbox" class="nt-res" value="${r._id}">
+          <span>${r.name} <span class="muted mono">${r._id}</span></span></label>`).join("")
+        : `<div class="muted" style="font-size:12.5px">Nothing is ungoverned right now.</div>`}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        <div class="toggle"><input type="checkbox" id="nt-askme"><span class="track"></span></div>
+        <div><div style="font-weight:560">Ask me every time</div>
+          <div style="color:var(--text-faint);font-size:12.5px">Hold the request and notify me before granting</div></div>
+        <button class="btn primary sm" style="margin-left:auto" onclick="createTier()">Create these terms</button>
+      </div>
+    </div>`;
+}
+
+window.createTier = async () => {
+  const body = {
+    id: $("#nt-id").value.trim(),
+    name: $("#nt-name").value.trim(),
+    ask_me: $("#nt-askme").checked,
+    resources: [...document.querySelectorAll(".nt-res:checked")].map(c => c.value),
+    terms: {
+      purpose: $("#nt-purpose").value.trim(),
+      expires_in: parseInt($("#nt-expires").value, 10),
+      prohibited: $("#nt-prohibited").value.split(",").map(s => s.trim()).filter(Boolean),
+    },
+  };
+  try {
+    const created = await api("/api/agent/policies", { method: "POST",
+      headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    toast("Terms created", `${created.name} → ${created.terms.template_id}`);
+  } catch (e) { toast("Not created", e.message, "warn"); }
+  renderTerms($("#aaBody"));
+};
+
+window.deleteTier = async (id) => {
+  try {
+    const res = await api(`/api/agent/policies/${id}`, { method: "DELETE" });
+    toast("Tier deleted", res.ungoverned?.length
+      ? `${res.ungoverned.join(", ")} — now ungoverned, so requests for them are refused`
+      : "It governed no resources");
+  } catch (e) { toast("Not deleted", e.message, "warn"); }
+  renderTerms($("#aaBody"));
+};
+
+function ruleEditor(id, t) {
+  const rules = t.rules || [];
+  const d = draft[id] || (draft[id] = { when: [], then: "ask" });
+  const opts = (VOCAB || []).map(c =>
+    `<option value="${c.condition}" data-takes="${c.takes || ""}" data-relax="${c.may_relax}">
+       ${c.label}${c.takes === "duration" ? " …" : ""}</option>`).join("");
+  return `
+    <div class="rules">
+      <div class="lbl" style="margin-top:20px">When may an agent be treated differently?</div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:10px">These name no agent, so they hold for
+        every agent — including ones you have never seen. Only what <b>you</b> have decided may make a
+        request easier; anything an agent shows about itself can only make one stricter.</div>
+      ${rules.length ? rules.map((r, i) => `
+        <div class="rule-row">
+          <span>${ruleSentence(r)}</span>
+          <button class="btn ghost sm" onclick="dropRule('${id}',${i})">Remove</button>
+        </div>`).join("") : `<div class="muted" style="font-size:12.5px">No rules — this tier's answer
+          applies to every agent equally.</div>`}
+      ${d.when.length ? `<div class="rule-row draft"><span>If ${d.when.map(condLabel).join(", and ")} …</span>
+        <button class="btn ghost sm" onclick="clearDraft('${id}')">Clear</button></div>` : ""}
+      <div class="rule-add">
+        <select id="${id}-cond" onchange="condChanged('${id}')">${opts}</select>
+        <input type="text" id="${id}-val" placeholder="e.g. 90d" style="max-width:110px;display:none">
+        <button class="btn ghost sm" onclick="addCond('${id}')">+ and</button>
+        <select id="${id}-then">
+          ${Object.entries(OUTCOMES).map(([k, v]) =>
+            `<option value="${k}" ${k === d.then ? "selected" : ""}>${v}</option>`).join("")}
+        </select>
+        <button class="btn primary sm" onclick="addRule('${id}')">Add rule</button>
+      </div>
+    </div>`;
+}
+
+window.condChanged = (id) => {
+  // Only a duration is open-ended. Everything else is a complete sentence
+  // already, so a value box beside it is a question with no answer.
+  const sel = $(`#${id}-cond`);
+  $(`#${id}-val`).style.display =
+    sel.selectedOptions[0].dataset.takes === "duration" ? "" : "none";
+};
+
+function currentCondition(id) {
+  const sel = $(`#${id}-cond`);
+  const takes = sel.selectedOptions[0].dataset.takes;
+  const value = $(`#${id}-val`).value.trim();
+  if (takes && !value) { toast("That condition needs a value", `Give it a ${takes}`, "warn"); return null; }
+  return takes ? `${sel.value}:${value}` : sel.value;
+}
+
+window.addCond = (id) => {
+  const c = currentCondition(id);
+  if (!c) return;
+  draft[id].when.push(c);
+  renderTerms($("#aaBody"));
+};
+window.clearDraft = (id) => { draft[id] = { when: [], then: "ask" }; renderTerms($("#aaBody")); };
+
+window.addRule = async (id) => {
+  const d = draft[id] || { when: [] };
+  const when = [...d.when];
+  const c = currentCondition(id);
+  if (c) when.push(c);
+  if (!when.length) { toast("Nothing to add", "Choose a condition first", "warn"); return; }
+  const then = $(`#${id}-then`).value;
+  await putRules(id, [...(await currentRules(id)), { when, then }]);
+};
+window.dropRule = async (id, i) => {
+  const rules = await currentRules(id);
+  rules.splice(i, 1);
+  await putRules(id, rules);
+};
+
+async function currentRules(id) {
+  const tiers = await api("/api/agent/policies");
+  return (tiers[id] && tiers[id].rules) || [];
+}
+
+async function putRules(id, rules) {
+  try {
+    const updated = await api(`/api/agent/policies/${id}`, { method: "PUT",
+      headers: { "content-type": "application/json" }, body: JSON.stringify({ rules }) });
+    draft[id] = { when: [], then: "ask" };
+    toast("Rules updated", `${updated.name} — ${(updated.rules || []).length} rule(s)`);
+  } catch (e) {
+    // The refusal is the teaching moment: her authority says which condition
+    // cannot do what she asked of it, and why.
+    toast("That rule was not accepted", e.message, "warn");
+  }
+  renderTerms($("#aaBody"));
+}
+
 window.renderTerms = renderTerms;
 window.savePolicy = async (id) => {
   const patch = { ask_me: $(`#${id}-askme`).checked, terms: {
@@ -451,13 +655,16 @@ function renderTermsCode(target, tiers) {
     $("#applyPolicy").onclick = async () => {
       let parsed; try { parsed = JSON.parse(ed.getValue()); }
       catch (e) { toast("Invalid JSON", e.message, "warn"); return; }
+      try {
       for (const [id, t] of Object.entries(parsed)) {
         await api(`/api/agent/policies/${id}`, { method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ask_me: t.ask_me, terms: t.terms }) });
+          body: JSON.stringify({ ask_me: t.ask_me, terms: t.terms,
+                                 rules: t.rules || [] }) });
       }
       toast("Policy applied", "All tiers updated from code");
       policyMode = "ui"; renderTerms($("#aaBody"));
+      } catch (e) { toast("Policy not applied", e.message, "warn"); }
     };
   });
 }

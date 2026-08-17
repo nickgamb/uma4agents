@@ -174,7 +174,44 @@ with its own terms, trail and revoke button.
 Full detail, including what changes between MCP clients, is in
 [clients/agent-shim/README.md](clients/agent-shim/README.md).
 
-## 8. Give Alice her own AI
+## 8. Say something about the agent, without naming one
+
+Everything so far treated every agent alike. Her policy can also read what her
+authority was able to *establish* about the one asking — and the rules she
+writes for that still name no agent, so they hold for the next stranger too.
+
+```bash
+make k8s-assurance-check
+```
+
+Watch what it proves. Two agents identical but for a metadata document saying
+who operates them: the accountable one goes quiet on its second request, the
+nameless one asks her every time. An agent whose claimed operator does not
+resolve gains nothing by claiming it. And a flood of unknown agents is capped
+without touching the agent she already knows — because her attention is the
+one resource in this system that was previously unbounded.
+
+The rule the first part reads is one line, and it names no agent:
+
+```json
+{"when": ["assurance.accountability_below:1"], "then": "ask"}
+```
+
+**She writes these in her portal**, under Settings → Security → Agent
+Authorization → My Terms — as sentences, not JSON. That page is also where she
+adds terms of her own: a new tier over any resource her authority protects that
+no tier governs yet.
+
+The rule engine has unit tests that need nothing running:
+
+```bash
+make rules-test
+```
+
+Why an agent can never buy access by showing more, only avoid friction it would
+otherwise have cost, is [docs/ASSURANCE.md](docs/ASSURANCE.md).
+
+## 9. Give Alice her own AI
 
 Everything so far had Alice answering from a browser. She does not have to.
 The side that decides is an authority and a way to reach her, and both can sit
@@ -202,7 +239,7 @@ personal AI is up, requests it can answer never reach her portal, which is
 exactly what you would want and worth noticing during a demo.
 [docs/DEMOS.md](docs/DEMOS.md) has both, side by side.
 
-## 9. Try to break it
+## 10. Try to break it
 
 ```bash
 make k8s-chaos
@@ -216,6 +253,8 @@ answer *that same request*. Not a fresh one.
 
 - **[docs/DEMOS.md](docs/DEMOS.md)** — the two demos, her portal and her
   personal AI, and when to reach for which
+- **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her policy may say about
+  an agent, why it starts at zero, and the cap on her attention
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where
