@@ -44,8 +44,10 @@ The axes
 ``accountability``  Is there a named party standing behind it that she could
                     reach? No client_id at all (0). A Client ID Metadata
                     Document that resolved and claims the URL it was fetched
-                    from (1). A document whose claims are attested by someone
-                    other than its subject (2) — see below.
+                    from (1). The named operator having *published this
+                    agent's signing key* in its own key directory, checked by
+                    this server against a document the agent does not control
+                    (2).
 
 Each axis is ordinal *within itself*, because the levels genuinely nest: an
 issuer-verified credential is everything a bare key is and more. Across axes
@@ -70,15 +72,33 @@ The consequence is worth stating plainly, because it is what makes the whole
 thing safe to build: **a lie can only cost the liar friction.** Which is why
 this can afford to read self-asserted metadata at all.
 
-What this lab can actually produce
-----------------------------------
-``accountability`` level 2 is defined and never emitted. A CIMD is fetched
-over TLS and checked for self-consistency, and that is the whole of it — there
-is no signature over the document and no attestation by a third party, so
-"this firm says it operates this agent" is as far as the evidence goes. Level 2
-is in the vocabulary so a deployment that *does* have an attestation has
-somewhere to put it, and so this file does not quietly imply the lab checked
-something it did not. See FINDINGS.
+The step from 1 to 2 is the whole of accountability
+---------------------------------------------------
+Level 1 is a self-assertion: an operator publishes a document about itself, and
+the only thing checked is that the document claims the URL it was fetched from.
+That rules out third parties publishing metadata about someone else's agent. It
+does not make the contents true, and in particular it says nothing about *this*
+agent — any agent can point at any operator's public CIMD.
+
+Level 2 closes exactly that gap, and needs no accreditation scheme to do it.
+The agent names the operator's Web Bot Auth key directory; this server fetches
+it and looks for the RFC 7638 thumbprint of the key that signed the contract.
+If it is there, the operator has published this agent's key — a claim the
+operator made, about a key the agent cannot add itself, checked by the party
+relying on it.
+
+Two constraints keep that honest, both in `operator_published_key`:
+
+* the directory must be **same-origin with the client_id**, or an agent points
+  at a directory it runs and attests to itself;
+* a directory that will not resolve leaves the claim at level 1 rather than
+  counting against the agent. An operator's outage is not evidence about an
+  agent, and treating it as such makes every outage look like an attack.
+
+What is still missing at level 2 is anyone *outside* the operator. Attestation
+by an accreditation body, a chamber of commerce, a regulator — that would be a
+level 3, it needs a trust framework that does not exist, and this deliberately
+does not invent one. See FINDINGS.
 
 Nothing here is ever self-asserted by the agent. An agent cannot claim a level;
 levels are derived from what this server verified. That was already the rule
@@ -110,7 +130,7 @@ DESCRIPTIONS: dict[str, dict[int, str]] = {
     "accountability": {
         0: "no operator named",
         1: "{operator} says it operates this agent (self-asserted)",
-        2: "{operator}, attested by a third party",
+        2: "{operator} published this agent's signing key as its own",
     },
 }
 
@@ -129,6 +149,11 @@ def assess(identity: dict) -> dict:
 
     if not meta:
         accountability = ACCOUNTABILITY_NONE
+    elif meta.get("verified") and identity.get("operator_attested"):
+        # The named operator published the key that signed this contract. Not
+        # a third party vouching for the operator — the operator vouching for
+        # this agent, which is the claim that was missing at level 1.
+        accountability = ACCOUNTABILITY_ATTESTED
     elif meta.get("verified"):
         # Resolved, and the document claims the URL it was fetched from. That
         # rules out third parties publishing metadata about someone else's

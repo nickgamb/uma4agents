@@ -209,6 +209,15 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     # this never becomes an authorization input.
     if keys.client_id:
         headers["client_id"] = keys.client_id
+    # Where the operator publishes the keys its agents sign with. Naming the
+    # directory here lets the owner's authorization server check, for itself,
+    # that the operator has published *this* key — turning "a firm says it
+    # operates this agent" into "that firm published this agent's key". It is
+    # still not an authorization input on its own: the connection is keyed by
+    # the agent's key or its verified issuer, and a directory the AS cannot
+    # resolve simply leaves the claim where it was.
+    if keys.signature_agent:
+        headers["signature_agent"] = keys.signature_agent
     jws = jwt.encode(contract, keys.key, algorithm="EdDSA", headers=headers)
     return base64.urlsafe_b64encode(jws.encode()).rstrip(b"=").decode()
 

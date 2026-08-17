@@ -145,6 +145,11 @@ class MemoryStore:
             if tier_id not in conn.setdefault("tiers_granted", []):
                 conn["tiers_granted"].append(tier_id)
 
+    async def note_tier_approval(self, handle: str, tier_id: str) -> None:
+        if (conn := self._connections.get(handle)) is not None:
+            if tier_id not in conn.setdefault("tiers_approved", []):
+                conn["tiers_approved"].append(tier_id)
+
     async def revoke_connection(self, handle: str) -> int | None:
         conn = self._connections.get(handle)
         if conn is None:

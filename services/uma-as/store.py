@@ -149,6 +149,15 @@ class Store(Protocol):
         direction a race here is allowed to fail in.
         """
 
+    async def note_tier_approval(self, handle: str, tier_id: str) -> None:
+        """Remember that the owner *personally approved* something at this
+        tier — as distinct from this server having granted there.
+
+        The two are separate because only this one may relax a rule. Relaxing
+        on what the server granted would be circular: that grant may itself
+        have been automatic, so one automatic grant would justify the next.
+        """
+
     async def revoke_connection(self, handle: str) -> int | None:
         """Deactivate the connection and every live RPT issued under it, in
         one step. Returns how many tokens were killed, or ``None`` if the

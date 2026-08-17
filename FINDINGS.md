@@ -464,14 +464,31 @@ them asymmetric:
 > Assurance may only tighten a requirement. Only standing — the owner's own
 > record of this agent — may relax one.
 
-The rule is not arbitrary; it follows from who produced the evidence. And it
-has a consequence worth putting in a spec verbatim: **a lie can only cost the
-liar friction.** That is what lets an authorization server read a self-asserted
+The rule is not arbitrary; it follows from who produced the evidence — and the
+line wants drawing one notch finer than "the owner's side", because one of the
+owner's own facts is circular. "We have granted here before" may record an
+*automatic* grant, so relaxing on it lets one automatic grant justify the next.
+What may safely relax is what the owner herself decided: she admitted this
+agent, she approved at this tier, she has never revoked it. Everything else,
+including the authority's own issuance records, may only tighten.
+
+The rule has a consequence worth putting in a spec verbatim: **a lie can only
+cost the liar friction.** That is what lets an authorization server read a self-asserted
 operator name without inheriting a trust framework, an accreditation scheme, or
 a registry — none of which exist, and choosing one would be a larger claim than
 this problem needs. Enforce it where policy is *stored* rather than where it is
 evaluated: a rule that could widen access on evidence the counterparty controls
 should fail to save, not fail silently.
+
+One more thing a spec can say without inventing a trust framework. The step
+from "an operator says it runs this agent" to something checkable does not
+need accreditation — it needs the operator to publish *this agent's key* and
+the relying party to go and look. A Web Bot Auth key directory, fetched by the
+authorization server and required to be same-origin with the client identifier,
+turns a self-assertion into an attestation by the only party with standing to
+make one. Failure to resolve must leave the claim where it was rather than
+counting against the agent: an operator's outage is not evidence about an
+agent.
 
 See [docs/ASSURANCE.md](docs/ASSURANCE.md), `make assurance-check`,
 `make policy-test`.

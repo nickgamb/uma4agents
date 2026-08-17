@@ -181,9 +181,39 @@ def main() -> int:
         check("and the second request at that tier is quiet",
               a_ok and not a_asked)
 
+        print("\n== Saying so, and having published the key ==")
+        # Same operator, same CIMD. The difference is that this one's signing
+        # key is in the operator's own key directory, which Alice's authority
+        # fetches and checks for itself.
+        attested = AgentKeys.load_or_create(f"{KEYS}/assurance-attested-{RUN}.pem")
+        attested.client_id = f"{OPERATOR}/agent.json"
+        attested.signature_agent = attested.publish(client, OPERATOR)
+        check("the operator's key directory was reachable",
+              attested.signature_agent is not None)
+        # Read what her authority established, from the dialog she would see.
+        approving.set()
+        time.sleep(1.5)
+        decide_all(client, "denied")
+        negotiate(client, attested, "get_positions", max_wait_s=2)
+        seen = pending(client)
+        axes = seen[0]["assurance"] if seen else {}
+        check("the operator's own directory raised accountability to 2",
+              axes.get("accountability") == 2, str(axes))
+        for note in (seen[0]["assurance_notes"] if seen else []):
+            say(note)
+        decide_all(client, "denied")
+        approving = approve_in_background(client, 60)
+        t_ok, t_asked, _ = negotiate(client, attested, "get_positions")
+        check("and it is still admitted like any other stranger — assurance "
+              "buys quiet, never access", t_ok and t_asked)
+
         print("\n== A lie can only cost the liar friction ==")
         liar = AgentKeys.load_or_create(f"{KEYS}/assurance-liar-{RUN}.pem")
         liar.client_id = "https://not-a-real-operator.invalid/agent.json"
+        # And pointing at somebody else's real directory does not help: the
+        # directory has to be same-origin with the operator being claimed,
+        # or an agent could attest to itself with a server it runs.
+        liar.signature_agent = f"{OPERATOR}/.well-known/http-message-signatures-directory"
         l_ok, l_asked, _ = negotiate(client, liar, "get_positions")
         check("metadata that does not resolve buys nothing", l_ok and l_asked)
         l_ok, l_asked, _ = negotiate(client, liar, "get_positions")

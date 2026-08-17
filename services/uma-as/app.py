@@ -1039,6 +1039,7 @@ def standing_facts(conn: dict | None, tier_id: str) -> dict:
     """
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
+                "approved_tiers": [],
                 "revocations": int((conn or {}).get("revocations", 0))}
     age = None
     if first_seen := conn.get("first_seen"):
@@ -1050,9 +1051,75 @@ def standing_facts(conn: dict | None, tier_id: str) -> dict:
     return {
         "active": True,
         "age_seconds": age,
+        # What this server did.
         "first_at_tier": tier_id not in (conn.get("tiers_granted") or []),
+        # What Alice decided. Only these may lower a requirement, so they are
+        # kept apart from the line above even though both are her side's.
+        "approved_tiers": list(conn.get("tiers_approved") or []),
         "revocations": int(conn.get("revocations", 0)),
     }
+
+
+_DIRECTORY_CACHE: dict[str, list] = {}
+
+
+def same_origin(a: str, b: str) -> bool:
+    from urllib.parse import urlparse
+
+    pa, pb = urlparse(a), urlparse(b)
+    return (pa.scheme, pa.netloc) == (pb.scheme, pb.netloc) and pa.scheme == "https"
+
+
+def operator_published_key(client_id: str, directory: str,
+                           signer_jwk: dict) -> bool:
+    """Did the operator named by `client_id` publish this signing key?
+
+    A Web Bot Auth key directory (draft-meunier-http-message-signatures-
+    directory) is a JWKS of the keys an operator's agents sign with. Fetching
+    it and looking for this key's RFC 7638 thumbprint is a check this server
+    performs itself, against a document the *operator* controls and the agent
+    does not.
+
+    Two things keep it honest:
+
+    * **Same origin as the client_id.** Otherwise an agent points at a
+      directory it runs and attests to itself, which is not an attestation.
+    * **Failure is not an accusation.** An unreachable directory leaves the
+      claim exactly where it was — self-asserted — rather than counting
+      against the agent. Availability of a third party is not evidence about
+      the agent, and treating it as such makes any operator's outage look
+      like an attack.
+    """
+    import httpx
+
+    if not same_origin(client_id, directory):
+        event("operator_directory.rejected", client_id=client_id,
+              directory=directory, reason="not same origin as client_id")
+        return False
+    try:
+        keys = _DIRECTORY_CACHE.get(directory)
+        if keys is None:
+            r = httpx.get(directory, timeout=5.0, follow_redirects=False,
+                          verify=AGENT_ISSUER_CA or True)
+            r.raise_for_status()
+            keys = r.json().get("keys") or []
+            _DIRECTORY_CACHE[directory] = keys
+        wanted = jwk_thumbprint(signer_jwk)
+
+        def matches(k: dict) -> bool:
+            try:                       # a directory may hold key types we do
+                return jwk_thumbprint(k) == wanted   # not profile; skip them
+            except (KeyError, TypeError):
+                return False
+
+        found = any(matches(k) for k in keys)
+        event("operator_directory.checked", directory=directory,
+              published=found)
+        return found
+    except Exception as exc:                                       # noqa: BLE001
+        event("operator_directory.unresolved", directory=directory,
+              reason=str(exc)[:120])
+        return False
 
 
 _CIMD_CACHE: dict[str, dict] = {}
@@ -1132,6 +1199,18 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
     # never widen access. A resolution failure is not a contract failure.
     if client_id := header.get("client_id"):
         identity["client_metadata"] = resolve_client_id(client_id)
+        # And, if the agent names the operator's key directory, check whether
+        # that operator has published *this* key. That is the difference
+        # between "a firm says it operates this agent" and "that firm
+        # published this agent's key", and it is the only thing here that
+        # makes accountability more than self-assertion.
+        #
+        # The same-origin requirement is what makes it an attestation *by the
+        # named operator*: without it an agent could point at any directory it
+        # controls and attest to itself.
+        if directory := header.get("signature_agent"):
+            identity["operator_attested"] = operator_published_key(
+                client_id, directory, signer_jwk)
 
     key = OKPAlgorithm.from_jwk(json.dumps(signer_jwk))
     contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=ISSUER)
@@ -1333,6 +1412,7 @@ async def token(
         "standing": standing_facts(conn, rec["tier"]),
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"]},
+        "tier": rec["tier"],
     }
     requirement, reasons = policy.evaluate(tier, facts)
     event("assurance.assessed", corr=family, **axes)
@@ -1372,6 +1452,13 @@ async def token(
         rec["decision"] = None
         rec["pending_kind"] = kind
         rec["handle"] = handle
+        # Persisted on the negotiation, not only pushed over SSE: her portal
+        # lists pending requests with a plain GET after a reload, and a dialog
+        # that shows what was checked only to whoever was watching live is not
+        # much of a dialog.
+        rec["assurance"] = axes
+        rec["assurance_notes"] = assurance.describe(axes, contract["_identity"])
+        rec["because"] = reasons
         rotated = await new_ticket(rec)
         event("ticket.awaiting_owner", corr=family, tier=rec["tier"], kind=kind)
         await owner_notify(
@@ -1404,6 +1491,13 @@ async def token(
     await STORE.note_tier_grant(handle, rec["tier"])
     event("policy.evaluated", corr=family, result="auto-grant", tier=rec["tier"],
           connection=handle, because=reasons or None)
+    if reasons and requirement == policy.AUTO and tier.get("ask_me"):
+        # A rule she wrote lowered an ask-me tier to automatic. That is the
+        # one direction worth being able to audit after the fact, so it is a
+        # ledger entry and not only a log line.
+        await ledger_add("relaxed", family, {"tier": rec["tier"],
+                                             "handle": handle,
+                                             "because": reasons})
     granted = await issue_rpt(rec, contract_hash, signer_jwk, None)
     await close_negotiation(rec)
     return JSONResponse(granted)
@@ -1432,6 +1526,9 @@ async def pending_poll(rec: dict) -> JSONResponse:
                 # `standing.first_at_tier` reads this, so the first request at
                 # each new tier comes back to her.
                 "tiers_granted": [],
+                # Tiers she personally said yes at. Kept separate from the
+                # line above because only this one may ever relax a rule.
+                "tiers_approved": [],
                 "revocations": int(prior.get("revocations", 0)),
             })
             event("connection.approved", corr=family, handle=handle)
@@ -1443,6 +1540,9 @@ async def pending_poll(rec: dict) -> JSONResponse:
         # negotiation carried the operation (it did — the contract binds it).
         if handle := rec.get("handle"):
             await STORE.note_tier_grant(handle, rec["tier"])
+            # She answered this one herself. That is the only kind of fact a
+            # relaxation is allowed to rest on.
+            await STORE.note_tier_approval(handle, rec["tier"])
         granted = await issue_rpt(rec, rec["contract_hash"], rec["signer_jwk"],
                                   rec["contract"].get("operation"))
         await close_negotiation(rec)
@@ -1474,6 +1574,9 @@ async def owner_pending(request: Request) -> list:
             "prohibited": rec["contract"]["prohibited"],
             "identity": rec["contract"]["_identity"],
             "handle": rec.get("handle"),
+            "assurance": rec.get("assurance", {}),
+            "assurance_notes": rec.get("assurance_notes", []),
+            "because": rec.get("because", []),
         }
         for rec in await STORE.pending_negotiations()
     ]

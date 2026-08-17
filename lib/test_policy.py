@@ -31,14 +31,18 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 
 def facts(*, binding=1, provenance=0, accountability=0,
-          active=False, age=None, first_at_tier=True, revocations=0,
-          expires_in=0, max_expires_in=3600) -> dict:
+          active=False, age=None, first_at_tier=True, approved_tiers=(),
+          revocations=0, expires_in=0, max_expires_in=3600,
+          tier_id="tier1") -> dict:
     return {
         "assurance": {"binding": binding, "provenance": provenance,
                       "accountability": accountability},
         "standing": {"active": active, "age_seconds": age,
-                     "first_at_tier": first_at_tier, "revocations": revocations},
+                     "first_at_tier": first_at_tier,
+                     "approved_tiers": list(approved_tiers),
+                     "revocations": revocations},
         "request": {"expires_in": expires_in, "max_expires_in": max_expires_in},
+        "tier": tier_id,
     }
 
 
@@ -78,6 +82,15 @@ check("and applies when they all hold",
 check("an agent she has never met is younger than any window",
       policy.evaluate(t, facts(active=False, age=None))[0] == policy.ASK)
 
+t = tier(ask_me=True, rules=[
+    {"when": ["standing.approved_at_tier"], "then": "auto"}])
+check("a tier she personally approved at may relax",
+      policy.evaluate(t, facts(active=True, approved_tiers=["tier1"]))[0]
+      == policy.AUTO)
+check("and a different tier she approved at does not",
+      policy.evaluate(t, facts(active=True, approved_tiers=["tier2"]))[0]
+      == policy.ASK)
+
 t = tier(rules=[{"when": ["assurance.provenance_below:1"], "then": "ask"},
                 {"when": ["request.max_expiry"], "then": "ask"}])
 check("separate rules are alternatives",
@@ -98,7 +111,11 @@ check("the strictest match wins, whatever order the rules are in",
       policy.evaluate(t, facts())[0] == policy.REFUSE)
 
 for condition in ("assurance.accountability_below:1", "assurance.provenance_below:1",
-                  "request.max_expiry"):
+                  "request.max_expiry",
+                  # her own records, but a record of what this *server* did.
+                  # Relaxing on it lets one automatic grant justify the next.
+                  "standing.first_at_tier", "standing.none",
+                  "standing.revoked_before", "standing.age_below:30d"):
     try:
         policy.validate_rules([{"when": [condition], "then": "auto"}])
         ok = False
@@ -115,8 +132,13 @@ except ValueError:
     ok = True
 check("nor smuggled in beside a standing condition", ok)
 
-policy.validate_rules([{"when": ["standing.never_revoked"], "then": "auto"}])
-check("a standing condition may relax", True)
+for condition in ("standing.never_revoked", "standing.approved_at_tier",
+                  "standing.age_above:90d"):
+    policy.validate_rules([{"when": [condition], "then": "auto"}])
+check("only decisions Alice made herself may relax", True)
+check("and every one of those is in RELAXING_CONDITIONS",
+      policy.RELAXING_CONDITIONS < policy.STANDING_CONDITIONS
+      and not (policy.RELAXING_CONDITIONS & policy.ASSURANCE_CONDITIONS))
 
 for bad in ([{"when": ["standing.never_revoked"], "then": "maybe"}],
             [{"when": ["agent.is_nice"], "then": "ask"}],
@@ -148,6 +170,18 @@ check("metadata that did not resolve is worth what none is worth",
                         "client_metadata": {"verified": False,
                                             "error": "timeout"}})
       ["accountability"] == 0)
+check("the operator publishing this agent's key is worth more than saying so",
+      assurance.assess({"level": "pseudonymous", "operator_attested": True,
+                        "client_metadata": {"verified": True,
+                                            "client_name": "Sterling Vance"}})
+      ["accountability"] == 2)
+check("a directory that did not check out leaves the claim self-asserted",
+      assurance.assess({"level": "pseudonymous", "operator_attested": False,
+                        "client_metadata": {"verified": True}})
+      ["accountability"] == 1)
+check("and attestation without a resolved operator is worth nothing",
+      assurance.assess({"level": "pseudonymous",
+                        "operator_attested": True})["accountability"] == 0)
 check("an agent cannot assert its own level",
       assurance.assess({"level": "pseudonymous", "assurance": {"provenance": 1},
                         "accountability": 2})["provenance"] == 0)

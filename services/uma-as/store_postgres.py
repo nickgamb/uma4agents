@@ -291,6 +291,14 @@ class PostgresStore:
             "WHERE handle = $1 AND NOT COALESCE(conn->'tiers_granted', '[]'::jsonb)"
             "                        @> to_jsonb($2::text)", handle, tier_id)
 
+    async def note_tier_approval(self, handle: str, tier_id: str) -> None:
+        await self._pool.execute(
+            "UPDATE connections SET conn = jsonb_set("
+            "  conn, '{tiers_approved}',"
+            "  COALESCE(conn->'tiers_approved', '[]'::jsonb) || to_jsonb($2::text))"
+            "WHERE handle = $1 AND NOT COALESCE(conn->'tiers_approved', '[]'::jsonb)"
+            "                        @> to_jsonb($2::text)", handle, tier_id)
+
     async def revoke_connection(self, handle: str) -> int | None:
         async with self._pool.acquire() as conn:
             # One transaction: a revocation that flipped the connection and

@@ -11,6 +11,12 @@ next:
     blurb: The other thing she can do about one agent in particular.
 ---
 
+![Agent assurance at a glance: three axes of evidence the agent can show, which
+may only make a request stricter; what the authorization server itself recorded,
+which may also only make it stricter; and what the owner decided herself — the
+only evidence that may make a request easier. One track carries the answer:
+grant quietly, ask her, refuse.](/img/docs/assurance.svg)
+
 The owner's tiers say what may be asked of her resources, and name no agent.
 That is what lets one policy hold for an unbounded number of strangers.
 
@@ -84,6 +90,15 @@ rule that could widen access on evidence the agent controls **fails to save**
 — rejected where policy is stored, not ignored where it is evaluated. A
 control that is silently inert is worse than one that was never claimed.
 
+The relaxing half needs one line finer than "her side produced it", because
+one of her side's facts is circular: *we granted here before* may record an
+automatic grant, so relaxing on it would let one automatic grant justify the
+next. Only decisions she made herself — she admitted this agent, she approved
+at this tier, she has never revoked it — may lower a requirement. And when a
+relaxation actually lowers an ask-me tier, it is written to her ledger naming
+the rule that fired, so a grant that skipped her is something she can find
+afterwards rather than infer.
+
 Notice what the vocabulary does not contain: no issuer, no CIMD, no key
 thumbprint. `accountability_below:1` says *nobody I can check is standing
 behind this*, not *no metadata document*. Swap the mechanism underneath and
@@ -133,6 +148,30 @@ broken server, and provokes exactly the retry storm the cap exists to prevent.
 A cap of zero is a coherent posture — invitation-only — and should be
 expressible. It is the wrong default for a profile whose whole argument is
 that a stranger can negotiate.
+
+## From self-assertion to attestation
+
+Level 1 is a self-assertion. An operator publishes a document about itself, and
+the only thing checked is that the document claims the URL it was fetched from
+— which rules out third parties publishing metadata about someone else's agent,
+and says nothing about *this* agent. Any agent can point at any operator's
+public metadata.
+
+Level 2 closes that without an accreditation scheme. The agent names the
+operator's key directory; the authorization server fetches it and looks for the
+thumbprint of the key that signed the contract. If it is there, the operator
+published this agent's key — a claim made by the operator, about a key the agent
+cannot add itself, checked by the party relying on it.
+
+Two constraints keep it honest: the directory must be **same-origin with the
+client identifier**, or an agent points at a directory it runs and attests to
+itself; and a directory that will not resolve leaves the claim at level 1
+rather than counting against the agent, because an operator's outage is not
+evidence about an agent.
+
+What is still missing is anyone *outside* the operator — an accreditation body,
+a regulator. That would be a further level, it needs a trust framework that does
+not exist, and this deliberately does not invent one.
 
 ## What is deliberately not here
 

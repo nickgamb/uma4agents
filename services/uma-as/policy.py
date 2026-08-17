@@ -73,8 +73,8 @@ DEFAULT_TIERS: dict[str, dict] = {
         # about money. The mechanism exists; her default policy declines to
         # use it. A deployment that disagrees would write:
         #
-        #   {"when": ["standing.age_above:90d", "standing.never_revoked"],
-        #    "then": "auto"}
+        #   {"when": ["standing.approved_at_tier", "standing.age_above:90d",
+        #             "standing.never_revoked"], "then": "auto"}
         #
         # and should have to write it deliberately.
         "rules": [],
@@ -133,11 +133,14 @@ def tier_for_resource(tiers: dict[str, dict],
 #   1. **Restrictions beat relaxations.** Relaxations are applied first and
 #      restrictions last, so no combination of matched rules can end up more
 #      permissive than the strictest thing that matched.
-#   2. **Only standing may relax.** `then: "auto"` is the only requirement
-#      that can loosen, and `validate_rules` refuses one whose conditions
-#      touch anything but standing. Assurance is evidence the requesting side
-#      supplied; standing is evidence her own authority produced. See
-#      `assurance.py` for why that line is where it is.
+#   2. **Only an owner decision may relax.** `then: "auto"` is the only
+#      requirement that can loosen, and `validate_rules` refuses one whose
+#      conditions are not in RELAXING_CONDITIONS. Assurance is evidence the
+#      requesting side supplied, so it is out. So is anything recording what
+#      this *server* did — relaxing on "we granted here before" would let one
+#      automatic grant justify the next. What is left is what Alice herself
+#      decided: she admitted this agent, she approved something at this tier,
+#      she has never revoked it. See `assurance.py` for the wider line.
 #
 # The consequence is the thing that makes reading self-asserted metadata safe
 # at all: a lie can only cost the liar friction.
@@ -179,15 +182,29 @@ RANK = {AUTO: 0, ASK: 1, REFUSE: 2}
 # of this profile is that a stranger can negotiate.
 PEND_BUDGET = int(os.environ.get("UMA_AS_PEND_BUDGET", "5"))
 
-# Facts her own authority produced. These, and only these, may relax.
-STANDING_CONDITIONS = {
-    "standing.none",            # she has no active connection with this agent
-    "standing.first_at_tier",   # never granted at this tier before
+# Facts her own authority produced, rather than the requesting side.
+#
+# Split again, and the second line is the sharper one. Relaxing on "we have
+# granted here before" is circular: that grant may itself have been automatic,
+# so a relaxation would be resting on evidence a relaxation produced. Only
+# facts traceable to a decision **Alice personally made** may lower a
+# requirement — she approved this connection, she approved something at this
+# tier, she has never revoked it. Everything else about her own records may
+# still raise one.
+RELAXING_CONDITIONS = {
+    "standing.approved_at_tier",  # she personally approved something here
     "standing.never_revoked",
+    "standing.age_above",         # :<duration>, since she admitted it
+}
+
+OBSERVED_CONDITIONS = {
+    "standing.none",            # she has no active connection with this agent
+    "standing.first_at_tier",   # never *granted* at this tier before
     "standing.revoked_before",
-    "standing.age_above",       # :<duration>
     "standing.age_below",       # :<duration>
 }
+
+STANDING_CONDITIONS = RELAXING_CONDITIONS | OBSERVED_CONDITIONS
 
 # Evidence the requesting side supplied, or facts about what it asked for.
 # These may only tighten.
@@ -239,22 +256,29 @@ def validate_rules(rules) -> None:
             name, _ = _split(condition)
             if name not in CONDITIONS:
                 raise ValueError(f"unknown condition {name!r}")
-            if then == AUTO and name not in STANDING_CONDITIONS:
+            if then == AUTO and name not in RELAXING_CONDITIONS:
+                why = ("assurance is supplied by the requesting side, and a "
+                       "signal the counterparty influences must never widen "
+                       "access") if name not in STANDING_CONDITIONS else (
+                    "it records what this server did, not what Alice decided; "
+                    "relaxing on it would let one automatic grant justify the "
+                    "next")
                 raise ValueError(
-                    f"{name!r} cannot relax a requirement: only standing — what "
-                    "this authority has itself seen of an agent — may lower one. "
-                    "Assurance is supplied by the requesting side, and a signal "
-                    "the counterparty influences must never widen access.")
+                    f"{name!r} cannot relax a requirement — {why}. Only "
+                    f"{sorted(RELAXING_CONDITIONS)} may lower one.")
 
 
 def _matches(condition: str, facts: dict) -> bool:
     name, value = _split(condition)
     standing, assurance = facts["standing"], facts["assurance"]
+    tier_id = facts.get("tier")
 
     if name == "standing.none":
         return not standing["active"]
     if name == "standing.first_at_tier":
         return standing["first_at_tier"]
+    if name == "standing.approved_at_tier":
+        return tier_id in (standing.get("approved_tiers") or [])
     if name == "standing.never_revoked":
         return standing["revocations"] == 0
     if name == "standing.revoked_before":

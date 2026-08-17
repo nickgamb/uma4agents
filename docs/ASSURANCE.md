@@ -9,6 +9,12 @@ of agents she trusts, is an ACL wearing a new hat. This is the alternative.
 
 Run it: `make assurance-check`. Unit tests: `make policy-test`.
 
+![Agent assurance: three axes of evidence the agent can show, which may only
+make a request stricter; what this server recorded, which may also only make it
+stricter; and what Alice decided herself, the only evidence that may make a
+request easier. The answer moves along one track — grant quietly, ask her,
+refuse.](assurance.svg)
+
 ## It is assurance, so it is called assurance
 
 And deliberately not an assurance **level**. Identity assurance spent a decade
@@ -28,7 +34,7 @@ is precisely the mechanism by which strong binding excuses an unknown operator.
 |---|---|---|
 | `binding` | Can this request be tied to a key she will recognise next time? | 1 always — the grant requires an RFC 9421 signature and a PoP key. It is on the list so a profile that relaxes it has to say so. |
 | `provenance` | Can her authority check where the credential came from? | 0 for a bare key. 1 for an `aa-agent+jwt` whose signature verified against its issuer's published keys. |
-| `accountability` | Is anyone named and reachable standing behind it? | 0 for none. 1 for a CIMD that resolved and claims the URL it was fetched from. **2 is defined and never emitted** — see below. |
+| `accountability` | Is anyone named and reachable standing behind it? | 0 for none. 1 for a CIMD that resolved and claims the URL it was fetched from. 2 when the named operator has published *this agent's signing key* in its own directory. |
 
 Assurance is always *derived from what this server verified*. An agent cannot
 claim a level. That was already the rule for client metadata — "resolved and
@@ -38,7 +44,7 @@ shown, never trusted" — and this generalises it.
 
 Her own record of an agent is kept separate and given a different name:
 **standing**. Whether she has met it, how long ago, whether she has ever
-revoked it, whether it has been granted at *this* tier before.
+revoked it, whether she has approved anything at *this* tier before.
 
 The distinction is the safety rule, and it is the whole design:
 
@@ -75,9 +81,9 @@ legible document rather than becoming a policy language.
 restrictions last, so no combination of matched rules can land more permissive
 than the strictest thing that matched. `then: "auto"` is the only requirement
 that can loosen, and `validate_rules` **refuses to store** one whose conditions
-touch anything but standing — rejected at the owner API rather than ignored at
-evaluation time, because a control that is silently inert is worse than one
-that was never claimed.
+are not decisions Alice made herself — rejected at the owner API rather than
+ignored at evaluation time, because a control that is silently inert is worse
+than one that was never claimed. See below for where exactly that line falls.
 
 Note what the vocabulary does *not* contain: no issuer, no `cimd`, no
 thumbprint, no `agent_token`. `accountability_below:1` says "nobody I can
@@ -145,14 +151,58 @@ standing reaches her at all. That is a legitimate posture and it is one
 environment variable. It is not the default, because the whole argument of this
 profile is that a stranger can negotiate.
 
-## What is not here, and why
+## The step from self-assertion to attestation
 
-**Accountability level 2 is never emitted.** A CIMD is fetched over TLS and
-checked for self-consistency; there is no signature over the document and no
-third party attesting anything. "This firm says it operates this agent" is the
-whole of the evidence. The level exists so a deployment that *does* have an
-attestation has somewhere to put it, and so this does not quietly imply the lab
-checked something it did not.
+Level 1 is a self-assertion. An operator publishes a document about itself and
+the only thing checked is that the document claims the URL it was fetched from,
+which rules out third parties publishing metadata about someone else's agent.
+It says nothing about *this* agent — any agent can point at any operator's
+public CIMD, and `make assurance-check` includes one that does.
+
+Level 2 closes that gap without an accreditation scheme. The agent names the
+operator's Web Bot Auth key directory in its contract header; her authorization
+server fetches it and looks for the RFC 7638 thumbprint of the key that signed
+the contract. If it is there, **the operator published this agent's key** — a
+claim the operator made, about a key the agent cannot add to that document
+itself, checked by the party relying on it.
+
+Two constraints keep it honest, both in `operator_published_key`:
+
+- the directory must be **same-origin with the `client_id`**, or an agent
+  points at a directory it runs and attests to itself. The check demonstrates
+  this: an agent claiming a fake operator while pointing at the *real*
+  operator's directory is rejected, and the reason is logged;
+- a directory that will not resolve leaves the claim at level 1 rather than
+  counting against the agent. An operator's outage is not evidence about an
+  agent, and treating it as such makes every outage look like an attack.
+
+What is still missing at level 2 is anyone *outside* the operator. Attestation
+by an accreditation body or a regulator would be a level 3; it needs a trust
+framework that does not exist, and this deliberately does not invent one.
+
+## Relaxation rests only on her own decisions
+
+The relaxing half needed a sharper line than "her side produced it", because
+one of her side's facts is circular. `standing.first_at_tier` records that this
+*server* granted here before — and that grant may itself have been automatic,
+so relaxing on it would let one automatic grant justify the next.
+
+So the standing vocabulary is split again, and only the second half may lower a
+requirement:
+
+| Facts | May relax? |
+|---|---|
+| `standing.first_at_tier`, `standing.none`, `standing.revoked_before`, `standing.age_below` — what this server recorded | no |
+| `standing.approved_at_tier`, `standing.never_revoked`, `standing.age_above` — what Alice herself decided | yes |
+
+`validate_rules` enforces it with a message that says which of the two reasons
+applies, and the connection record keeps `tiers_approved` (she said yes here)
+separately from `tiers_granted` (this server issued here). A relaxation that
+actually lowers an ask-me tier is written to her ledger as a `relaxed` entry
+naming the rule that fired, so an automatic grant that skipped her is a thing
+she can go and find afterwards rather than infer.
+
+## What is not here, and why
 
 **No accreditation, no registry, no trust framework.** Saying "agents of type
 X" requires somebody authoritative about what type an agent is. UMA deliberately
@@ -166,11 +216,10 @@ Verifying *who signed* a credential is not the same as trusting *what they say*
 about the agent, and letting an issuer's assertion lower a requirement delegates
 Alice's judgement to a party she never chose.
 
-**De-escalation deserves more scrutiny than escalation.** "Clean history" is a
-judgement about the past, and her ledger is only as good as what the resource
-server reported. The escalation half is safe under every threat model we can
-construct. The loosening half needs a real argument, which is why nothing in the
-shipped policy uses it.
+**Nothing in the shipped policy relaxes anything.** The mechanism is there, and
+the only tier where it could apply is trades — where length of relationship is
+not a good reason to stop asking about money. A deployment that disagrees has
+to write it out deliberately.
 
 ## See also
 
