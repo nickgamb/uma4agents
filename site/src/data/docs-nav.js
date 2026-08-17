@@ -57,6 +57,7 @@ const nav = {
         { title: "Single-use means indivisible", to: "/docs/overview/single-use/" },
         { title: "Revocation and the ledger", to: "/docs/overview/revocation/" },
         { title: "Agent assurance", to: "/docs/overview/assurance/" },
+        { title: "The owner's attention", to: "/docs/overview/attention/" },
       ],
     },
     {
@@ -99,6 +100,7 @@ const nav = {
       pages: [
         { title: "Make single-use indivisible", to: "/docs/guides/indivisible/" },
         { title: "Wire the owner's approval path", to: "/docs/guides/approval/" },
+        { title: "Let the owner write her own policy", to: "/docs/guides/owner-policy/" },
         { title: "Put the authority on her device", to: "/docs/guides/personal-authority/" },
         { title: "Deploy it at scale", to: "/docs/guides/at-scale/" },
       ],

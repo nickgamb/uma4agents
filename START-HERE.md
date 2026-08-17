@@ -177,46 +177,39 @@ Full detail, including what changes between MCP clients, is in
 ## 8. Say something about the agent, without naming one
 
 Everything so far treated every agent alike. Her policy can also read what her
-authority was able to *establish* about the one asking — and the rules she
-writes for that still name no agent, so they hold for the next stranger too.
+authority was able to **verify** about the one asking — never what the agent
+says about itself — and the rules she writes still name no agent, so they hold
+for the next stranger too.
 
 ```bash
 make k8s-assurance-check
 ```
 
-Watch what it proves. Two agents identical but for a metadata document saying
-who operates them: the accountable one goes quiet on its second request, the
-nameless one asks her every time. An agent whose claimed operator does not
-resolve gains nothing by claiming it. And a flood of anonymous agents is capped
-without reaching either the agent she already knows **or a newcomer whose
-operator can be named** — because her attention is the one resource here that
-was previously unbounded, and the agent you want to let in is a stranger too
-the first time.
+Three things to watch for in the output:
 
-It also blocks an operator: one action shuts out every agent that operator
-runs and revokes what is already connected, instead of revoking them one at a
-time. Which is what the lane split is for — it makes a flood attributable, and
-an attributable flood is one she can answer in a single click.
+| | |
+|---|---|
+| Two agents identical but for a document naming who operates them | the one she can check goes quiet on its second request; the nameless one asks her every time |
+| An agent whose claimed operator does not resolve | gains nothing by claiming it, on that request or the next |
+| A flood of anonymous agents | capped, without reaching the agent she knows **or** a newcomer whose operator can be named — the agent you want to let in is a stranger too, the first time |
 
-The rule the first part reads is one line, and it names no agent:
+The rule the first row reads is one line, and it names no agent:
 
 ```json
 {"when": ["assurance.accountability_below:1"], "then": "ask"}
 ```
 
 **She writes these in her portal**, under Settings → Security → Agent
-Authorization → My Terms — as sentences, not JSON. That page is also where she
-adds terms of her own: a new tier over any resource her authority protects that
-no tier governs yet.
-
-The rule engine has unit tests that need nothing running:
+Authorization → My Terms — as sentences, not JSON. The same page is where she
+adds terms of her own, and Connected agents is where she blocks an operator:
+one action, every agent it runs, connections revoked with it.
 
 ```bash
-make rules-test
+make rules-test        # the rule engine alone; nothing need be running
 ```
 
-Why an agent can never buy access by showing more, only avoid friction it would
-otherwise have cost, is [docs/ASSURANCE.md](docs/ASSURANCE.md).
+Why assurance starts at nothing and can never buy access is
+[docs/ASSURANCE.md](docs/ASSURANCE.md).
 
 ## 9. Give Alice her own AI
 
@@ -260,8 +253,8 @@ answer *that same request*. Not a fresh one.
 
 - **[docs/DEMOS.md](docs/DEMOS.md)** — the two demos, her portal and her
   personal AI, and when to reach for which
-- **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her policy may say about
-  an agent, why it starts at zero, and the cap on her attention
+- **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her authority can verify
+  about an agent, and why none of it can ever buy access
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where

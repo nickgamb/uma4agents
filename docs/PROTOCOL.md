@@ -64,12 +64,24 @@ POST /token         grant_type=client_credentials    PAT for an owner-authorized
 GET  /owner/pending                        requests in awaiting-owner state
 POST /owner/pending/{family}/decision      approve | deny
 GET  /owner/policies                       tier policy
-PUT  /owner/policies/{tier_id}             edit a tier's terms / ask-me
+POST /owner/policies                       add a tier of her own (over resources
+                                           registered and not already governed)
+PUT  /owner/policies/{tier_id}             edit a tier's terms / ask-me / rules
+DELETE /owner/policies/{tier_id}           remove one; its resources become
+                                           ungoverned, and ungoverned is denied
+GET  /owner/policy-vocabulary              conditions a rule may use, and which
+                                           of them may relax one
 GET  /owner/resources                      registered resources joined with tiers
 GET  /owner/resource-servers               RSs holding her protection access
 POST /owner/resource-servers/{id}/revoke   cut an RS off from the Protection API
 GET  /owner/connections                    standing agent relationships
 POST /owner/connections/{handle}/revoke    revoke a connection + its live RPTs
+GET  /owner/operators                      operators behind those connections
+POST /owner/operators/block                shut out every agent one operator
+                                           runs, revoking what is connected in
+                                           the same step
+POST /owner/operators/unblock              restores the right to negotiate, not
+                                           the access that was withdrawn
 GET  /owner/ledger                         the activity ledger
 GET  /owner/events                         SSE stream -> the portal notification
 ```

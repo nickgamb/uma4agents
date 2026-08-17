@@ -66,6 +66,33 @@ named by the thumbprint of its key, because a pseudonymous agent *is* its key �
 and the row stays after revocation, because the fact that she once connected to
 it is part of the record.
 
+## Revoking an operator, not an agent
+
+Revoking is per agent, and one at a time is not an answer to a flood.
+
+So the same action exists a level up: block the **operator** an agent names, and
+every agent it runs is shut out at once, with whatever is already connected
+revoked in the same step. A block that stopped new requests and left live grants
+alone would leave her believing she had closed a door that was still open — the
+same indivisibility the section above is about.
+
+This is what makes the [attention lanes](/docs/overview/attention/) worth having.
+Their job is to ensure a flood large enough to matter arrives attributable, and
+an attributable flood is one she can end here in a single action.
+
+Blocking is a restriction, so it can rest on what the agent *claims* about
+itself with none of the usual care: an agent that lies about its operator only
+ever lies itself into a refusal.
+
+Two limits, stated rather than glossed:
+
+- **It does not remove anyone from the internet.** Drop the client identifier
+  and the same party returns as an anonymous stranger — no accountability, the
+  small lane, pending in front of her like anyone else.
+- **Unblocking is not the reverse of blocking.** It restores the right to
+  negotiate, not the access that was withdrawn. Connections the block revoked
+  stay revoked and have to be established again.
+
 ## What the agent sees
 
 An agent presenting a revoked grant is told so explicitly, and the answer is
