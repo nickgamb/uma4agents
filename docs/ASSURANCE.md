@@ -9,11 +9,7 @@ of agents she trusts, is an ACL wearing a new hat. This is the alternative.
 
 Run it: `make assurance-check`. Unit tests: `make policy-test`.
 
-![Agent assurance: three axes of evidence the agent can show, which may only
-make a request stricter; what this server recorded, which may also only make it
-stricter; and what Alice decided herself, the only evidence that may make a
-request easier. The answer moves along one track — grant quietly, ask her,
-refuse.](assurance.svg)
+![Agent assurance at a glance. One track carries the answer to a request: grant quietly, ask her, refuse — starting wherever the owner's tier starts. Only one kind of evidence may move it towards easier: decisions she made herself. Everything else — what the agent could not show, and what her server recorded — may only move it towards stricter. The three things she can check (binding, provenance, accountability) are scored separately and never added up. Showing more never buys access; it only avoids the friction that showing less would have cost.](assurance.svg)
 
 ## It is assurance, so it is called assurance
 
@@ -49,6 +45,14 @@ revoked it, whether she has approved anything at *this* tier before.
 The distinction is the safety rule, and it is the whole design:
 
 > **Assurance may only tighten a requirement. Only standing may relax one.**
+
+Worth stating the direction plainly, because the rule is easy to read backwards:
+**strong assurance never makes a request stricter.** What adds friction is a
+*gap* — no operator named, a key with nothing to check it against. An agent that
+can show more is not penalised for it; it simply avoids friction that showing
+less would have cost. And at the top of the scale it still gains no access it
+would not otherwise have had: the ceiling is whatever Alice said about her own
+resources.
 
 That is not a rule bolted on afterwards; it falls out of who produced the
 evidence. Axes 1–3 are attested by the requesting side or by an issuer she did

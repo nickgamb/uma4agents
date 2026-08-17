@@ -11,11 +11,7 @@ next:
     blurb: The other thing she can do about one agent in particular.
 ---
 
-![Agent assurance at a glance: three axes of evidence the agent can show, which
-may only make a request stricter; what the authorization server itself recorded,
-which may also only make it stricter; and what the owner decided herself — the
-only evidence that may make a request easier. One track carries the answer:
-grant quietly, ask her, refuse.](/img/docs/assurance.svg)
+![Agent assurance at a glance. One track carries the answer to a request: grant quietly, ask her, refuse — starting wherever the owner's tier starts. Only one kind of evidence may move it towards easier: decisions she made herself. Everything else — what the agent could not show, and what her server recorded — may only move it towards stricter. The three things she can check (binding, provenance, accountability) are scored separately and never added up. Showing more never buys access; it only avoids the friction that showing less would have cost.](/img/docs/assurance.svg)
 
 The owner's tiers say what may be asked of her resources, and name no agent.
 That is what lets one policy hold for an unbounded number of strangers.
@@ -58,6 +54,14 @@ been granted at *this* tier before.
 The distinction is the safety rule:
 
 > Assurance may only **tighten** a requirement. Only standing may **relax** one.
+
+Worth stating the direction plainly, because the rule is easy to read backwards:
+**strong assurance never makes a request stricter.** What adds friction is a
+*gap* — no operator named, a key with nothing to check it against. An agent that
+can show more is not penalised for it; it simply avoids friction that showing
+less would have cost. And at the top of the scale it still gains no access it
+would not otherwise have had: the ceiling is whatever Alice said about her own
+resources.
 
 That is not a rule bolted on afterwards — it follows from who produced the
 evidence. The three axes are attested by the requesting side, or by an issuer
