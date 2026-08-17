@@ -151,8 +151,36 @@ for bad in ([{"when": ["standing.never_revoked"], "then": "maybe"}],
         ok = True
     check(f"invalid rule set is refused: {str(bad)[:44]}", ok)
 
+# --- a rule that saves must not be able to break the grant loop ---------------
+
+for bad in ("assurance.provenance_below", "standing.age_above",
+            "standing.age_above:soon", "assurance.provenance_below:x",
+            "standing.never_revoked:1"):
+    try:
+        policy.validate_rules([{"when": [bad], "then": "ask"}])
+        ok = False
+    except ValueError:
+        ok = True
+    check(f"a malformed argument is refused at save time: {bad}", ok)
+
+# And if one ever gets in another way, it must fail towards her rather than
+# raising inside the token endpoint.
+broken = [{"when": ["assurance.provenance_below:x"], "then": "refuse"}]
+check("an unusable restriction is treated as matching",
+      policy.evaluate(tier(rules=broken), facts())[0] == policy.REFUSE)
+broken = [{"when": ["standing.age_above:soon"], "then": "auto"}]
+check("an unusable relaxation is treated as not matching",
+      policy.evaluate(tier(ask_me=True, rules=broken), facts(active=True))[0]
+      == policy.ASK)
+
 # --- assurance is derived, never claimed --------------------------------------
 
+check("nothing is granted by construction — binding starts at 0",
+      assurance.assess({"level": "identified", "iss": "https://ps.uma.lab",
+                        "client_metadata": {"verified": True}})["binding"] == 0)
+check("and is raised only by a signature this server verified",
+      assurance.assess({"level": "pseudonymous", "key_bound": True})
+      ["binding"] == 1)
 check("a bare key is self-minted provenance",
       assurance.assess({"level": "pseudonymous"})["provenance"] == 0)
 check("a verified issuer raises provenance",

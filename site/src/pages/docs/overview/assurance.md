@@ -11,7 +11,7 @@ next:
     blurb: The other thing she can do about one agent in particular.
 ---
 
-![Agent assurance at a glance. One track carries the answer to a request: grant quietly, ask her, refuse — starting wherever the owner's tier starts. Only one kind of evidence may move it towards easier: decisions she made herself. Everything else — what the agent could not show, and what her server recorded — may only move it towards stricter. The three things she can check (binding, provenance, accountability) are scored separately and never added up. Showing more never buys access; it only avoids the friction that showing less would have cost.](/img/docs/assurance.svg)
+![Agent assurance starts at zero. Five steps, left to right, each one a check the owner's authority performed itself: nothing yet, with all three axes at zero, for an agent she has never seen; the agreement's signature verified against a key she can name (binding 1); the credential's issuer verified against its published keys (provenance 1); an operator metadata document resolved and self-consistent (accountability 1); and that operator's own key directory holding this very key, which the agent could not have added (accountability 2). Below, one real rule from her holdings tier — when accountability is below 1, ask — read against each step: it fires at the first three and is silent at the last two. It reads one axis, so binding and provenance move without changing its answer, and at the top the rule has simply stopped firing rather than granted anything her tier did not already allow.](/img/docs/assurance.svg)
 
 The owner's tiers say what may be asked of her resources, and name no agent.
 That is what lets one policy hold for an unbounded number of strangers.
@@ -44,6 +44,11 @@ strong key binding excuses an unknown operator.
 
 Levels are always **derived from what the authorization server verified**. An
 agent cannot claim one.
+
+And every axis starts at 0, raised only by a check that ran and passed in this
+negotiation. Nothing is granted by construction or by the shape of the call
+path — an unresolvable claim scores what no claim scores, and a check that did
+not run counts as one that failed.
 
 ## Assurance is what they can show; standing is what she has seen
 

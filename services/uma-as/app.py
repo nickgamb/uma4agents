@@ -1060,7 +1060,13 @@ def standing_facts(conn: dict | None, tier_id: str) -> dict:
     }
 
 
-_DIRECTORY_CACHE: dict[str, list] = {}
+# Cached, but not forever. An operator removing a key from its directory is
+# how it stops vouching for an agent, and a cache with no expiry would keep
+# attesting one it had disowned. Bounded as well as timed: the URL is named by
+# the requesting side, so an unbounded map is something an agent can grow.
+_DIRECTORY_TTL = float(os.environ.get("UMA_AS_DIRECTORY_TTL", "300"))
+_DIRECTORY_MAX = 256
+_DIRECTORY_CACHE: dict[str, tuple[float, list]] = {}
 
 
 def same_origin(a: str, b: str) -> bool:
@@ -1097,13 +1103,17 @@ def operator_published_key(client_id: str, directory: str,
               directory=directory, reason="not same origin as client_id")
         return False
     try:
-        keys = _DIRECTORY_CACHE.get(directory)
-        if keys is None:
+        cached = _DIRECTORY_CACHE.get(directory)
+        if cached is not None and now() - cached[0] < _DIRECTORY_TTL:
+            keys = cached[1]
+        else:
             r = httpx.get(directory, timeout=5.0, follow_redirects=False,
                           verify=AGENT_ISSUER_CA or True)
             r.raise_for_status()
             keys = r.json().get("keys") or []
-            _DIRECTORY_CACHE[directory] = keys
+            if len(_DIRECTORY_CACHE) >= _DIRECTORY_MAX:
+                _DIRECTORY_CACHE.pop(next(iter(_DIRECTORY_CACHE)), None)
+            _DIRECTORY_CACHE[directory] = (now(), keys)
         wanted = jwk_thumbprint(signer_jwk)
 
         def matches(k: dict) -> bool:
@@ -1214,6 +1224,11 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
 
     key = OKPAlgorithm.from_jwk(json.dumps(signer_jwk))
     contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=ISSUER)
+    # The signature verified against a key this server can name and will
+    # recognise again. Recorded rather than assumed: `assurance.assess` reads
+    # this, so the binding level is an observation and not a comment about the
+    # call path. See assurance.py.
+    identity["key_bound"] = True
 
     template = rec["template"]
     if contract.get("nonce") != template["nonce"]:

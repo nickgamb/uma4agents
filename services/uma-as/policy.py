@@ -217,6 +217,17 @@ ASSURANCE_CONDITIONS = {
 
 CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
 
+# Conditions that take an argument, and what kind. Validation checks these,
+# because the alternative is a rule that saves cleanly and then raises inside
+# the grant loop — a 500 on the token endpoint, from a policy edit that looked
+# accepted. Worse, a bad argument on a *relaxing* rule stays latent until the
+# first ask-me tier evaluates it, so the failure surfaces on trades and
+# nowhere else.
+DURATION_ARGS = {"standing.age_above", "standing.age_below"}
+LEVEL_ARGS = {"assurance.binding_below", "assurance.provenance_below",
+              "assurance.accountability_below"}
+TAKES_ARG = DURATION_ARGS | LEVEL_ARGS
+
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
 
@@ -253,9 +264,22 @@ def validate_rules(rules) -> None:
         if not when or not isinstance(when, list):
             raise ValueError("rule `when` must be a non-empty condition or list")
         for condition in when:
-            name, _ = _split(condition)
+            name, value = _split(condition)
             if name not in CONDITIONS:
                 raise ValueError(f"unknown condition {name!r}")
+            if name in TAKES_ARG:
+                if value is None:
+                    raise ValueError(
+                        f"{name!r} needs an argument, as {name}:<value>")
+                try:
+                    (parse_duration(value) if name in DURATION_ARGS
+                     else int(value))
+                except (TypeError, ValueError):
+                    kind = "duration" if name in DURATION_ARGS else "level"
+                    raise ValueError(
+                        f"{name!r} takes a {kind}, got {value!r}") from None
+            elif value is not None:
+                raise ValueError(f"{name!r} takes no argument, got {value!r}")
             if then == AUTO and name not in RELAXING_CONDITIONS:
                 why = ("assurance is supplied by the requesting side, and a "
                        "signal the counterparty influences must never widen "
@@ -298,6 +322,22 @@ def _matches(condition: str, facts: dict) -> bool:
     return False
 
 
+def _rule_matches(rule: dict, when: list, facts: dict) -> bool:
+    """Whether every condition in a rule holds.
+
+    `validate_rules` makes a malformed rule unstorable, so this should never
+    see one. It can still happen — a policy stored before validation existed, a
+    store edited directly — and the answer must not be a 500 inside the grant
+    loop. So a rule that cannot be evaluated **fails towards the owner**: an
+    unusable restriction is treated as matching, an unusable relaxation as not
+    matching. Both directions land on more friction rather than less.
+    """
+    try:
+        return all(_matches(c, facts) for c in when)
+    except (TypeError, ValueError, KeyError):
+        return rule["then"] != AUTO
+
+
 def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
     """What this request needs before it may be granted, and why.
 
@@ -313,7 +353,7 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
         when = rule["when"] if isinstance(rule["when"], list) else [rule["when"]]
         if rule["then"] != AUTO or RANK[AUTO] >= RANK[relaxed]:
             continue
-        if all(_matches(c, facts) for c in when):
+        if _rule_matches(rule, when, facts):
             relaxed, reasons = AUTO, list(when)
 
     result = relaxed
@@ -321,7 +361,7 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
         when = rule["when"] if isinstance(rule["when"], list) else [rule["when"]]
         if RANK[rule["then"]] <= RANK[result]:
             continue
-        if all(_matches(c, facts) for c in when):
+        if _rule_matches(rule, when, facts):
             result, reasons = rule["then"], list(when)
     return result, reasons
 

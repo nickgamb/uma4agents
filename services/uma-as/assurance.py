@@ -30,11 +30,12 @@ exactly the trade nobody would make if they were asked directly.
 The axes
 --------
 ``binding``         Can this request be tied to a key, and will that key be
-                    recognisable next time? This is the one U4A never
-                    compromises on: the four-beat grant requires an RFC 9421
-                    signature and a proof-of-possession key, so it is never 0
-                    in practice. It is on the list because a profile that
-                    relaxed it should have to say so out loud.
+                    recognisable next time? 0 until the agreement's signature
+                    has actually verified against a key this server can name.
+                    In the four-beat grant that happens before anything reaches
+                    here — but it is *read* from the verification result rather
+                    than assumed from the call path, which is the difference
+                    between a level and a comment.
 
 ``provenance``      Can her authority check where the agent's credential came
                     from? A bare key is self-minted (0). A key carried in an
@@ -100,10 +101,23 @@ by an accreditation body, a chamber of commerce, a regulator — that would be a
 level 3, it needs a trust framework that does not exist, and this deliberately
 does not invent one. See FINDINGS.
 
-Nothing here is ever self-asserted by the agent. An agent cannot claim a level;
-levels are derived from what this server verified. That was already the rule
-for client metadata in `app.py` ("resolved and shown, never trusted") — this
-generalises it.
+Zero trust, meaning zero
+------------------------
+Every axis starts at 0 and is raised only by a check that **ran and passed** in
+this negotiation. Nothing is granted by construction, by the shape of the call
+path, or by "we could not have got here otherwise".
+
+An earlier version of this file set ``binding`` to 1 unconditionally, with a
+comment explaining that the grant loop could not reach it without a verified
+signature. The comment was true. It was still wrong: a level that records an
+assumption rather than an observation keeps reporting the assumption after
+somebody refactors the thing that made it true, and it reports it in the one
+direction that costs the owner something. So every value here now comes from a
+field that a verification step wrote.
+
+Nothing is ever self-asserted by the agent either. An agent cannot claim a
+level. That was already the rule for client metadata in `app.py` ("resolved and
+shown, never trusted") — this generalises it.
 """
 
 from __future__ import annotations
@@ -120,7 +134,7 @@ AXES = ("binding", "provenance", "accountability")
 # should never show her a bare integer.
 DESCRIPTIONS: dict[str, dict[int, str]] = {
     "binding": {
-        0: "not bound to any key",
+        0: "not bound to any key this server verified",
         1: "bound to a key, recognisable next time",
     },
     "provenance": {
@@ -145,6 +159,11 @@ def assess(identity: dict) -> dict:
     level = identity.get("level")
     meta = identity.get("client_metadata") or {}
 
+    # Set by verify_contract when the agreement's signature verified against a
+    # key this server can name. Absent means the check did not run, and an
+    # unrun check is worth exactly what a failed one is worth.
+    binding = BINDING_KEY if identity.get("key_bound") else BINDING_NONE
+
     provenance = PROVENANCE_ISSUER if level == "identified" else PROVENANCE_SELF
 
     if not meta:
@@ -166,10 +185,7 @@ def assess(identity: dict) -> dict:
         accountability = ACCOUNTABILITY_NONE
 
     return {
-        # The grant loop cannot reach this code without a verified signature
-        # over a key it can name, so this is 1 by construction. Kept explicit
-        # so a profile that changes it has to change it here, visibly.
-        "binding": BINDING_KEY,
+        "binding": binding,
         "provenance": provenance,
         "accountability": accountability,
     }

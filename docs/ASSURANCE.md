@@ -9,7 +9,7 @@ of agents she trusts, is an ACL wearing a new hat. This is the alternative.
 
 Run it: `make assurance-check`. Unit tests: `make policy-test`.
 
-![Agent assurance at a glance. One track carries the answer to a request: grant quietly, ask her, refuse — starting wherever the owner's tier starts. Only one kind of evidence may move it towards easier: decisions she made herself. Everything else — what the agent could not show, and what her server recorded — may only move it towards stricter. The three things she can check (binding, provenance, accountability) are scored separately and never added up. Showing more never buys access; it only avoids the friction that showing less would have cost.](assurance.svg)
+![Agent assurance starts at zero. Five steps, left to right, each one a check the owner's authority performed itself: nothing yet, with all three axes at zero, for an agent she has never seen; the agreement's signature verified against a key she can name (binding 1); the credential's issuer verified against its published keys (provenance 1); an operator metadata document resolved and self-consistent (accountability 1); and that operator's own key directory holding this very key, which the agent could not have added (accountability 2). Below, one real rule from her holdings tier — when accountability is below 1, ask — read against each step: it fires at the first three and is silent at the last two. It reads one axis, so binding and provenance move without changing its answer, and at the top the rule has simply stopped firing rather than granted anything her tier did not already allow.](assurance.svg)
 
 ## It is assurance, so it is called assurance
 
@@ -28,13 +28,30 @@ is precisely the mechanism by which strong binding excuses an unknown operator.
 
 | Axis | The question | What the lab can produce |
 |---|---|---|
-| `binding` | Can this request be tied to a key she will recognise next time? | 1 always — the grant requires an RFC 9421 signature and a PoP key. It is on the list so a profile that relaxes it has to say so. |
+| `binding` | Can this request be tied to a key she will recognise next time? | 0 until the agreement's signature has verified against a key this server can name. In the four-beat grant that happens before anything reaches the evaluator — but it is *read* from the verification result, not assumed from the call path. |
 | `provenance` | Can her authority check where the credential came from? | 0 for a bare key. 1 for an `aa-agent+jwt` whose signature verified against its issuer's published keys. |
 | `accountability` | Is anyone named and reachable standing behind it? | 0 for none. 1 for a CIMD that resolved and claims the URL it was fetched from. 2 when the named operator has published *this agent's signing key* in its own directory. |
 
 Assurance is always *derived from what this server verified*. An agent cannot
 claim a level. That was already the rule for client metadata — "resolved and
 shown, never trusted" — and this generalises it.
+
+## Zero trust, meaning zero
+
+Every axis starts at 0, and is raised only by a check that **ran and passed** in
+this negotiation. Nothing is granted by construction, by the shape of the call
+path, or by "we could not have got here otherwise".
+
+The first version of this got that wrong. It set `binding` to 1 unconditionally,
+with a comment explaining that the grant loop could not reach the code without a
+verified signature. The comment was true, and it was still the wrong thing to
+write: a level that records an assumption keeps reporting the assumption after
+somebody refactors the thing that made it true, and it reports it in the one
+direction that costs the owner something. `verify_contract` now writes
+`key_bound` when the agreement's signature verifies, and the level reads that.
+
+The same rule, stated for the parts that can fail: **an unresolvable claim scores
+what no claim scores, and a check that did not run counts as one that failed.**
 
 ## Assurance is what they can show; standing is what she has seen
 
