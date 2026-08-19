@@ -1275,132 +1275,116 @@ const identityScenes = scripted("identity-vs-authz", [
 
 
 // ---------------------------------------------------------------------------
-// The two intents: what survives from her terms to the door
+// The two intents: her record, filling up
 // ---------------------------------------------------------------------------
 
-// The order is hers, not the protocol's: the two she can only ever have
-// recorded come first, so the drop-off in scene 4 reads downwards.
-const HER_TERMS = [
-  { label: "purpose", keeps: false },
-  { label: "prohibitions", keeps: false },
-  { label: "scope · expiry", keeps: true },
-  { label: "this exact operation", keeps: true },
+// The earlier version of this figure drew the *taxonomy* — four fields in,
+// two enforced and two recorded out. It was accurate and it explained
+// nothing, because the thing worth seeing about intent here happens over
+// time. This draws her register filling up instead: the rows are what she
+// can actually see, and the last one is the only interesting thing in it.
+
+const REG_ROWS = [
+  { tier: "tier1", what: "promised — “quarterly review for the client”" },
+  { tier: "tier1", what: "touched — get_positions" },
+  { tier: "tier1", what: "touched — get_positions" },
+  { tier: "tier1", what: "touched — get_positions" },
+  { tier: "tier2", what: "promised — transaction history", wide: true },
 ];
 
-const TwoIntents = () => (
-  <Frame title="What survives from the owner's terms to the door" viewBox="0 0 600 240">
+const Register = () => (
+  <Frame title="One agent, as it appears in the owner's own record" viewBox="0 0 600 296">
     <Markers />
 
-    <text x={14} y={40} fill="var(--accent)" fontSize="11" fontFamily={MONO}>
+    <text x={24} y={40} fill="var(--accent)" fontSize="11" fontFamily={MONO}>
       HER TERMS
     </text>
-    <text x={196} y={40} fill="var(--accent)" fontSize="11" fontFamily={MONO}>
-      AT COMMIT
+    <g className="tr-terms">
+      <Sheet x={24} y={56} label="" />
+      <text x={24} y={158} fill="var(--ink-3)" fontSize="11">
+        written first
+      </text>
+      <text x={24} y={174} fill="var(--ink-3)" fontSize="11">
+        names no agent
+      </text>
+    </g>
+
+    <path d="M158 34 V262" stroke="var(--edge)" strokeWidth="1"
+          strokeDasharray="4 5" fill="none" />
+
+    <text x={182} y={40} fill="var(--accent)" fontSize="11" fontFamily={MONO}>
+      HER REGISTER
     </text>
 
-    <g className="ti-terms">
-      {HER_TERMS.map(({ label, keeps }, i) => (
-        <g className={keeps ? "ti-keep" : "ti-note"} key={label}>
-          <Box
-            x={14}
-            y={64 + i * 42}
-            w={150}
-            h={32}
-            stroke={keeps ? "var(--green)" : "var(--accent)"}
-          />
-          <text x={28} y={85 + i * 42} fill="var(--ink)" fontSize="12.5">
-            {label}
-          </text>
-          <Arrow from={168} to={192} y={80 + i * 42} />
-        </g>
-      ))}
-    </g>
+    {REG_ROWS.map((row, i) => (
+      <g className={row.wide ? "tr-wide" : `tr-r${i < 2 ? 0 : 1}`} key={i}>
+        <Box
+          x={182}
+          y={52 + i * 32}
+          w={394}
+          h={26}
+          stroke={row.wide ? "var(--amber)" : "var(--edge)"}
+          fill="var(--sunken)"
+        />
+        <text
+          x={194}
+          y={70 + i * 32}
+          fill={row.wide ? "var(--amber)" : "var(--accent)"}
+          fontSize="10.5"
+          fontFamily={MONO}
+        >
+          {row.tier}
+        </text>
+        <text x={248} y={70 + i * 32} fill="var(--ink-2)" fontSize="11.5">
+          {row.what}
+        </text>
+      </g>
+    ))}
 
-    <g className="ti-echo">
-      <Box x={196} y={64} w={130} h={158} fill="var(--sunken)" stroke="var(--accent)" />
-      <text x={261} y={128} textAnchor="middle" fill="var(--ink)" fontSize="12.5">
-        the signed echo
+    <g className="tr-ask">
+      <text x={182} y={238} fill="var(--amber)" fontSize="11.5">
+        one row at a tier it has never reached before
       </text>
-      <text x={261} y={148} textAnchor="middle" fill="var(--ink-3)" fontSize="11">
-        checked field
-      </text>
-      <text x={261} y={164} textAnchor="middle" fill="var(--ink-3)" fontSize="11">
-        by field
-      </text>
-    </g>
-
-    <g className="ti-door">
-      <Arrow from={330} to={360} y={102} colour="var(--green)" />
-      <text x={364} y={56} fill="var(--green)" fontSize="10.5" fontFamily={MONO}>
-        ENFORCED ON EVERY CALL
-      </text>
-      <Box x={364} y={64} w={222} h={76} stroke="var(--green)" />
-      <text x={380} y={90} fill="var(--ink)" fontSize="12">
-        scope · expiry
-      </text>
-      <text x={380} y={110} fill="var(--ink)" fontSize="12">
-        the operation digest
-      </text>
-      <text x={380} y={130} fill="var(--ink)" fontSize="12">
-        the key it signed with
-      </text>
-    </g>
-
-    <g className="ti-record">
-      <Arrow from={330} to={360} y={192} colour="var(--amber)" dash="3 3" />
-      <text x={364} y={154} fill="var(--amber)" fontSize="10.5" fontFamily={MONO}>
-        RECORDED, NOT ENFORCED
-      </text>
-      <Box x={364} y={162} w={222} h={60} stroke="var(--amber)" />
-      <text x={380} y={188} fill="var(--ink)" fontSize="12">
-        purpose
-      </text>
-      <text x={380} y={208} fill="var(--ink)" fontSize="12">
-        prohibitions
+      <text x={182} y={258} fill="var(--ink-3)" fontSize="11">
+        nothing had to be reported to her for this to be visible
       </text>
     </g>
   </Frame>
 );
 
-// `end` is the state a scene leaves behind, and scrubbing replays every
-// earlier one in order — so each scene restates what is still on screen
-// rather than only what it changed. `.ti-note` is nested inside `.ti-terms`,
-// so the two opacities multiply and the dimming in scene 3 composes.
-const TI_TERMS = { ".ti-terms": { opacity: 1 }, ".ti-note": { opacity: 1 } };
-const TI_ECHO = { ...TI_TERMS, ".ti-echo": { opacity: 1 } };
-const TI_DOOR = { ...TI_ECHO, ".ti-door": { opacity: 1 }, ".ti-note": { opacity: DIM } };
-const TI_ALL = { ...TI_DOOR, ".ti-record": { opacity: 1 }, ".ti-note": { opacity: 1 } };
+const TR_TERMS = { ".tr-terms": { opacity: 1 } };
+const TR_FIRST = { ...TR_TERMS, ".tr-r0": { opacity: 1 } };
+const TR_MORE = { ...TR_FIRST, ".tr-r1": { opacity: 1 } };
+const TR_ALL = { ...TR_MORE, ".tr-wide": { opacity: 1 }, ".tr-ask": { opacity: 1 } };
 
-const twoIntentScenes = scripted("two-intents", [
+const registerScenes = scripted("two-intents", [
   {
     reset: {
-      ".ti-terms": { opacity: 0 },
-      ".ti-note": { opacity: 1 },
-      ".ti-echo": { opacity: 0 },
-      ".ti-door": { opacity: 0 },
-      ".ti-record": { opacity: 0 },
+      ".tr-terms": { opacity: DIM },
+      ".tr-r0": { opacity: 0 },
+      ".tr-r1": { opacity: 0 },
+      ".tr-wide": { opacity: 0 },
+      ".tr-ask": { opacity: 0 },
     },
-    end: TI_TERMS,
+    end: TR_TERMS,
+    play: (animate, $$) => animate($$(".tr-terms"), { opacity: [DIM, 1], duration: 520 }),
+  },
+  {
+    end: TR_FIRST,
     play: (animate, $$) =>
-      animate($$(".ti-terms > g"), { opacity: [0, 1], duration: 440, delay: (_, i) => i * 120 }),
+      animate($$(".tr-r0"), { opacity: [0, 1], duration: 420, delay: (_, i) => i * 160 }),
   },
   {
-    end: TI_ECHO,
-    play: (animate, $$) => animate($$(".ti-echo"), { opacity: [0, 1], duration: 520 }),
+    end: TR_MORE,
+    play: (animate, $$) =>
+      animate($$(".tr-r1"), { opacity: [0, 1], duration: 420, delay: (_, i) => i * 160 }),
   },
   {
-    end: TI_DOOR,
+    hold: 4600,
+    end: TR_ALL,
     play: (animate, $$) => {
-      animate($$(".ti-door"), { opacity: [0, 1], duration: 500 });
-      animate($$(".ti-note"), { opacity: [1, DIM], duration: 500 });
-    },
-  },
-  {
-    hold: 4200,
-    end: TI_ALL,
-    play: (animate, $$) => {
-      animate($$(".ti-record"), { opacity: [0, 1], duration: 500 });
-      animate($$(".ti-note"), { opacity: [DIM, 1], duration: 500 });
+      animate($$(".tr-wide"), { opacity: [0, 1], duration: 520 });
+      animate($$(".tr-ask"), { opacity: [0, 1], duration: 620, delay: 220 });
     },
   },
 ]);
@@ -2087,9 +2071,9 @@ const diagrams = {
     title: "Proof-of-possession",
   },
   "two-intents": {
-    Draw: TwoIntents,
-    scenes: twoIntentScenes,
-    title: "What survives from the owner's terms to the door",
+    Draw: Register,
+    scenes: registerScenes,
+    title: "One agent, as it appears in the owner's own record",
   },
   "identity-vs-authz": {
     Draw: IdentityVsAuthz,

@@ -46,12 +46,12 @@ const figureScripts = {
     ],
   },
   "two-intents": {
-    title: "What survives from the owner's terms to the door",
+    title: "One agent, as it appears in the owner's own record",
     steps: [
-      "Alice states four things, before any agent exists: what the access is for, what she will not have done with it, how far it reaches and for how long, and — on the tiers she reserves — that a request must name one specific act.",
-      "An agent that wants in echoes all four back, signed with the key it will later prove possession of. Her authority checks the echo against the template field by field. A signature over weaker terms is exactly what an adversarial agent would send, so a dropped prohibition or a stretched expiry ends the negotiation here.",
-      "Two of the four survive as something a machine can test on every later call. The grant carries the scope and the expiry, a digest of the exact operation it was issued for, and the key that must sign the request — so a grant for one order fails against another, and holding the token is not enough.",
-      "The other two cannot be tested by anything. Purpose and prohibitions are prose about the future, and no protocol prevents an agent that promised not to retain data from retaining it. They go to the record instead — signed by the agent, counter-signed by her authority, and sitting beside what the agent actually touched.",
+      "Alice writes her terms before any agent exists. They name what the access is for, what she will not have done with it, how far it reaches and for how long — and they name no agent, so they hold for whoever turns up.",
+      "An agent turns up, signs those terms, says why it is asking, and reads what it asked for. Two rows: what it promised, and what it then did. Both are hers, on her side, whether or not anyone reports anything to her.",
+      "It keeps going. Every row is at the same tier, which is the boring case and the one that should stay boring — what it did and what it said it wanted are the same shape.",
+      "Then a row at a tier it has never reached. Nobody had to tell her: the widening is a fact about her own register, and a rule she wrote — ask me the first time an agent reaches somewhere new — reads exactly that.",
     ],
   },
 
