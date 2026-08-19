@@ -557,7 +557,48 @@ show it to the owner, and let policy do exactly one thing with it: notice when
 it is missing. Then a lie costs the liar friction, which is rec 13's rule
 arriving at the same place from a different direction.
 
-**16. A decision record keyed only by transaction cannot answer a question
+**16. Say which prohibitions a resource server can actually refuse, and mark
+them as such.** A terms document that lists five prohibitions in one flat array
+tells the reader that all five are equally a matter of trust. In this profile
+that was false for two of them, and had been since before the terms existed:
+the trade tier forbids "orders beyond the approved parameters" and
+"discretionary reuse of authority", and the enforcement point had always
+refused exactly those two — an operation digest and a spent single-use grant.
+Nothing connected the words to the mechanism.
+
+The distinction is not terms against enforcement. It is whether the forbidden
+thing **has to cross the owner's boundary to happen**. Placing an order means
+calling her tool. Retaining the data afterwards happens on disks she will never
+see. Both belong in her terms; only the first can be refused, and a
+specification should require the document to say which is which — derived from
+the profile's own mechanisms rather than asserted, so it cannot drift from what
+is actually switched on. The half that remains unenforceable is not weakened by
+being labelled; it is the half the dually-signed record exists for, and calling
+it a control was the overstatement.
+
+**17. Intent drift is the resource owner's observation, not the requesting
+side's report.** The prevailing designs put drift detection with the requester:
+declare a task, watch the session, flag a departure. That is coherent while one
+party owns both the agent and the data, and it collapses the moment they come
+apart. It asks the owner to accept a report from infrastructure she cannot
+inspect, about an agent belonging to the party producing the report, with
+nothing to check it against. An agent can attest anything.
+
+She does not need the report. Every request that agent ever made of her arrived
+at her side, and once the record names the agent (rec 16 above) the shape is
+already there: what it declared, what she decided, what it then called, and
+against which of her resources. Breadth, volume, and persistence after a
+refusal are all readable without cooperation from anyone.
+
+So a core spec should locate drift evaluation at the **authorization server**,
+say that the inputs are the owner's own record rather than requester
+attestations, and keep the whole vocabulary tighten-only — an agent must not be
+able to improve its own standing by describing itself, which is rec 13 arriving
+here from a third direction. Requester-side session-intent work is complementary
+and belongs in a different document: it protects the requesting party from their
+own agent, which is a real problem and not this one.
+
+**18. A decision record keyed only by transaction cannot answer a question
 about a party.** Our ledger correlated everything by negotiation, which answers
 "what happened in this exchange" and not "what has this agent been doing" — and
 the second is the question an owner actually asks. Eleven write sites, four
@@ -579,7 +620,7 @@ for an authority whose policy it cannot read, and the standing relationship is
 the owner's record. The authority resolves the attribution itself, from the
 grant the call was made under.
 
-**17. Not every policy input needs the atomicity a single-use artifact needs,
+**19. Not every policy input needs the atomicity a single-use artifact needs,
 and the test that separates them is short.** Recommendation 9 asks for
 indivisible consumption, and the natural over-correction is to treat every
 input the same way. Policy that reads an agent's recent history — how often the

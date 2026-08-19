@@ -375,14 +375,16 @@ async def test_an_allowed_call_can_be_traced_to_its_agent(store) -> None:
     grant the call was made under, and that has to keep working after the grant
     is spent."""
     await store.record_rpt("rpt_trace", "fam_trace", "jkt:traced",
-                           {"tool": "execute_trade"})
+                           {"tool": "execute_trade"}, "tier3")
     check("audit: the grant names the agent",
-          await store.handle_for_family("fam_trace") == "jkt:traced")
+          (await store.grant_for_family("fam_trace") or {}).get("handle") == "jkt:traced")
     await store.consume_rpt("rpt_trace")
     check("audit: and still does once it is spent",
-          await store.handle_for_family("fam_trace") == "jkt:traced")
+          (await store.grant_for_family("fam_trace") or {}).get("handle") == "jkt:traced")
     check("audit: an unknown negotiation resolves to nothing",
-          await store.handle_for_family("fam_missing") is None)
+          await store.grant_for_family("fam_missing") is None)
+    check("audit: and it carries the tier the call was made against",
+          (await store.grant_for_family("fam_trace") or {}).get("tier") == "tier3")
 
 
 async def test_trajectory_reads_the_window(store) -> None:
@@ -396,16 +398,25 @@ async def test_trajectory_reads_the_window(store) -> None:
     await store.ledger_add("denied", "f3", recent, {"tier": "tier3"}, handle="jkt:t")
     await store.ledger_add("promised", "f4", recent, {"tier": "tier1"}, handle="jkt:t")
     await store.ledger_add("denied", "f5", recent, {"tier": "tier3"}, handle="jkt:other")
+    await store.ledger_add("touched", "f4", recent, {"tool": "get_positions",
+                                                     "tier": "tier1"}, handle="jkt:t")
+    await store.ledger_add("touched", "f4", recent, {"tool": "get_positions",
+                                                     "tier": "tier1"}, handle="jkt:t")
+    await store.ledger_add("touched", "f4", old, {"tool": "get_positions",
+                                                  "tier": "tier1"}, handle="jkt:t")
 
     t = await store.trajectory("jkt:t", since)
     check("trajectory: denials inside the window are counted",
           t["denials"] == 2, f"got {t['denials']}")
     check("trajectory: distinct tiers, not repeats",
           sorted(t["tiers"]) == ["tier1", "tier3"], f"got {sorted(t['tiers'])}")
+    check("trajectory: what it actually did is counted, inside the window",
+          t["calls"] == 2, f"got {t['calls']}")
     check("trajectory: another agent's rows are not counted",
           (await store.trajectory("jkt:other", since))["denials"] == 1)
     check("trajectory: an agent with no history counts as nothing",
-          await store.trajectory("jkt:none", since) == {"denials": 0, "tiers": []})
+          await store.trajectory("jkt:none", since)
+          == {"denials": 0, "tiers": [], "calls": 0})
 
 
 TESTS = [

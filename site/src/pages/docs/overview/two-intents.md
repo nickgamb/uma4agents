@@ -86,25 +86,47 @@ Nothing reads the agent's own three lines and judges them. There is no
 natural-language comparison anywhere in the grant, and adding one would make
 the same request answerable two ways.
 
-## Two of the four survive to the door
+## Which of her terms can be refused
 
-Of the things she stated, two can be tested on every later call and two cannot.
+The line worth drawing is not terms against enforcement. It is whether the
+thing forbidden has to **cross her boundary** to happen.
 
-**Testable.** The grant carries the scope and expiry, a digest of the exact
-operation, and the key that must sign the request. The enforcement point checks
-all three before the call reaches the resource, in a fixed order, and spends a
-single-use grant last. A grant issued for one order and presented against
-another is refused, though the signature is valid and the token has not expired.
+Her trade tier prohibits two things:
 
-**Not testable by anything.** Purpose and prohibitions are prose about the
-future. Nothing at the wire level stops an agent that agreed not to retain data
-from retaining it.
+```json
+"prohibited": ["orders-beyond-approved-parameters",
+               "discretionary-reuse-of-authority"]
+```
 
-So they are recorded instead. The grant returns a receipt embedding the
-complete signed agreement, counter-signed, and the ledger holds a `promised`
-row with the purpose, the prohibitions, the terms URI and the agreement hash.
-That is a weaker guarantee than enforcement and a stronger one than a consent
-checkbox: the signature buys attribution, not prevention.
+Both of those are calls. Placing an order beyond the approved parameters means
+invoking her tool while the enforcement point holds a grant carrying a digest
+of the parameters she approved, so it is refused — `operation_mismatch`.
+Reusing the authority means presenting a spent grant, which is refused too —
+`already_consumed`. Neither was added for this; both have been enforced since
+the grant was built, and her terms simply never said so.
+
+Her holdings tier prohibits retention after review, marketing, and model
+training. Those happen on the requester's own disks, after the bytes have left.
+No protocol reaches them.
+
+So the published terms mark each line with the mechanism that refuses it, and
+say nothing where there is none:
+
+```json
+"prohibited": ["orders-beyond-approved-parameters",
+               "discretionary-reuse-of-authority"],
+"enforced":   {"orders-beyond-approved-parameters": "operation-binding",
+               "discretionary-reuse-of-authority": "single-use"}
+```
+
+It is derived from the tier on every read rather than stored, so it cannot
+drift from what the tier actually switches on, and it is not part of what the
+agent echoes: the agent agrees to the prohibitions, not to her account of how
+she keeps them.
+
+What is left over is genuinely unenforceable, and the signed record is the
+remedy path rather than the control. That is a weaker guarantee than
+enforcement and a stronger one than a consent checkbox.
 
 ## What the agent says it is for
 
@@ -157,28 +179,43 @@ explicit that the protocol supplies correlation rather than containment. What
 she could establish, given something to dereference, is that a mandate exists
 at all.
 
-## Where drift shows
+## Drift, from the side that can see it
 
-**Before the fact**, her rules face the requesting side without naming an
-agent. The shipped policy uses one for exactly this:
+The rest of the field asks the requesting side whether its agent is behaving:
+declare a task, watch the session, report a departure. That works when one
+party owns both the agent and the data. Here it asks Alice to accept a report
+from infrastructure she cannot see, produced by the party whose agent is the
+subject. She has no way to check it and no reason to weight it.
+
+She does not need it. Every request that agent ever made of her arrived at her
+side, and her record holds all of them — what it promised, what she decided,
+what it went on to call, and which of her tiers each call was made against.
+Drift is a shape in that record, and reading it needs no cooperation from
+anyone.
+
+**Before the fact**, her rules read that record while deciding. They name no
+agent:
 
 ```json
 {"when": ["standing.first_at_tier"], "then": "ask"}
+{"when": ["standing.tiers_above:1"], "then": "ask"}
+{"when": ["standing.calls_above:50"], "then": "ask"}
 ```
 
-Being admitted is not being admitted *here*. Two more read her own record over
-a configured window — how often she has denied this agent, and how many
-different tiers it has reached. Neither can be written into a relaxation.
+Breadth, volume, and persistence after a refusal
+(`standing.denials_above:<n>`), over a configured window. An agent admitted to
+read holdings that begins reaching across her resources looks different in her
+own ledger, and she can require herself to be asked at exactly that point. None
+of these can be written into a relaxation — the authorization server refuses to
+store them under `then: auto`.
 
-**After the fact**, every ledger entry names the agent it was about, so one
-agent's promises, her decisions and what it went on to touch are a single list:
+**After the fact**, the same record read as a list:
 
 ![Alice's activity ledger in the lab's portal. One negotiation runs bottom to top: a promised row carrying the purpose, the two prohibitions the agent accepted, the exact order it proposed, the terms version and the hash of the agreement; then her approval; then a touched row naming the tool that was actually called with the same parameters. Every row is tagged with the negotiation it belongs to.](/img/docs/owner-ledger.png)
 
-Drift is the distance between the promised row and the touched rows, and
-reading it needs no model of the agent. Above, the two carry the same three
-parameters, because on this tier the grant would not have opened the door for
-any others.
+`GET /owner/ledger?handle=…`, and the Connected agents tab in her portal. The
+promised row states an errand; the touched rows under it name what was actually
+called. The distance between them is the whole of it.
 
 One entry can never be attributed, and that is a property rather than a gap. A
 decline arrives at beat 2, before the requesting side has signed anything, so

@@ -104,6 +104,46 @@ DEFAULT_TIERS: dict[str, dict] = {
 }
 
 
+# Which prohibitions the enforcement point can actually refuse, and what
+# refuses them.
+#
+# A prohibition is enforceable exactly when the thing it forbids has to cross
+# the owner's boundary to happen. "Do not retain this after the review" is a
+# promise about the requester's own storage: she hands the bytes over and can
+# never see what becomes of them. "Do not place orders beyond the approved
+# parameters" is different in kind -- placing one means calling her tool, and
+# the enforcement point is holding a grant that names the exact parameters.
+#
+# Both were already true before this map existed. Two of the three tiers ship
+# prohibitions the PEP has always refused (`operation_mismatch`,
+# `already_consumed`) without anything saying so, which left her terms reading
+# as though every line were equally a matter of trust. Naming the mechanism
+# does not add enforcement; it stops understating it.
+#
+# Keyed on the prohibition string and gated on the tier switch that turns the
+# mechanism on, so a tier that forbids reuse without setting `per_operation`
+# is honestly reported as undertaken rather than enforced.
+ENFORCED_PROHIBITIONS = {
+    "orders-beyond-approved-parameters": ("per_operation", "operation-binding"),
+    "discretionary-reuse-of-authority": ("per_operation", "single-use"),
+}
+
+
+def enforced_prohibitions(tier: dict) -> dict:
+    """Which of this tier's prohibitions are refused at the door, and by what.
+
+    Derived on every read rather than stored: the answer follows from the
+    tier's own switches, and a copy would be one owner edit away from lying.
+    """
+    terms = tier.get("terms") or {}
+    out = {}
+    for name in terms.get("prohibited") or []:
+        gate, mechanism = ENFORCED_PROHIBITIONS.get(name, (None, None))
+        if gate and terms.get(gate):
+            out[name] = mechanism
+    return out
+
+
 def defaults() -> dict[str, dict]:
     return copy.deepcopy(DEFAULT_TIERS)
 
@@ -261,6 +301,7 @@ OBSERVED_CONDITIONS = {
     # able to save.
     "standing.denials_above",   # :<n>, denials in the window
     "standing.tiers_above",     # :<n>, distinct tiers reached in the window
+    "standing.calls_above",     # :<n>, calls actually made in the window
 }
 
 STANDING_CONDITIONS = RELAXING_CONDITIONS | OBSERVED_CONDITIONS
@@ -287,7 +328,8 @@ CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
 DURATION_ARGS = {"standing.age_above", "standing.age_below"}
 LEVEL_ARGS = {"assurance.binding_below", "assurance.provenance_below",
               "assurance.accountability_below"}
-COUNT_ARGS = {"standing.denials_above", "standing.tiers_above"}
+COUNT_ARGS = {"standing.denials_above", "standing.tiers_above",
+              "standing.calls_above"}
 TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS
 
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
@@ -338,6 +380,8 @@ VOCABULARY = [
      "label": "I have recently denied this agent more times than"},
     {"condition": "standing.tiers_above", "takes": "count",
      "label": "it has recently asked at more tiers than"},
+    {"condition": "standing.calls_above", "takes": "count",
+     "label": "it has recently made more calls than"},
 ]
 
 
@@ -452,6 +496,8 @@ def _matches(condition: str, facts: dict) -> bool:
         return standing.get("trajectory", {}).get("denials", 0) > int(value)
     if name == "standing.tiers_above":
         return len(standing.get("trajectory", {}).get("tiers", [])) > int(value)
+    if name == "standing.calls_above":
+        return standing.get("trajectory", {}).get("calls", 0) > int(value)
 
     if name.startswith("assurance."):
         axis = name[len("assurance."):-len("_below")]

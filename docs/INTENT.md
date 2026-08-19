@@ -50,25 +50,45 @@ judge whether it is plausible; there is no natural-language comparison anywhere
 in the grant. Adding one would make the same request answerable two ways, which
 is the property `make flow-check` exists to protect.
 
-## What survives to the door
+## Which prohibitions can be refused
 
-Of the things she stated, two are testable on every later call and two are not.
+A prohibition is enforceable exactly when the thing it forbids has to cross the
+owner's boundary to happen.
 
-**Enforced.** The grant carries the scope and expiry, the digest of the exact
-operation, and the key that must sign the request. `lib/uma4a_pep.py` checks all
-three in a fixed order and spends a single-use grant last. A grant issued for
-one order and presented against another is refused, though the signature is
-valid and the token has not expired.
+| Tier | Prohibition | Refused by |
+|---|---|---|
+| tier3 | `orders-beyond-approved-parameters` | `operation-binding` — the grant carries a digest of the parameters she approved |
+| tier3 | `discretionary-reuse-of-authority` | `single-use` — the grant is consumed on use |
+| tier1 | `retention-after-review`, `marketing`, `model-training` | nothing. They happen on the requester's disks after disclosure |
 
-**Recorded.** Purpose and prohibitions are prose about the future. Nothing at
-the wire level stops an agent that agreed not to retain data from retaining it,
-and no protocol will. What they get instead is a dually-signed record: the
-receipt embeds the complete agent-signed agreement and counter-signs it, and the
-ledger holds a `promised` row carrying the purpose, the prohibitions, the terms
-URI and the hash.
+Neither mechanism is new. Both have been enforced since the grant loop was
+built (`operation_mismatch`, `already_consumed` in `lib/uma4a_pep.py`); her
+terms just never said so, which left every line reading as equally a matter of
+trust.
 
-That is a weaker guarantee than enforcement and a stronger one than a consent
-checkbox. The signature buys attribution, not prevention.
+`policy.enforced_prohibitions(tier)` derives the mapping from the tier's own
+switches and both the proffered template and the published document carry it:
+
+```json
+"enforced": {"orders-beyond-approved-parameters": "operation-binding",
+             "discretionary-reuse-of-authority": "single-use"}
+```
+
+Derived on read rather than stored — a copy would be one owner edit away from
+lying — and gated on the switch that turns the mechanism on, so a tier that
+forbids reuse without setting `per_operation` is honestly reported as
+undertaken. It is **not** echoed: the agent agrees to the prohibitions, not to
+her account of how she keeps them.
+
+What remains unenforceable is genuinely so, and the dually-signed record is the
+remedy path rather than the control.
+
+## What is checked on every later call
+
+Scope, expiry, the operation digest, and the key that must sign. The
+enforcement point checks all four in a fixed order and spends a single-use
+grant last. A grant issued for one order and presented against another is
+refused, though the signature is valid and the token has not expired.
 
 ## What the agent says it is for
 
@@ -129,30 +149,39 @@ the approver: whether this request falls inside Bob's mandate is Bob's person
 server's question. What she could establish, given something to dereference,
 is that somebody on the other side is running a mandate at all.
 
-## Drift, and the two places it shows
+## Drift, from the side that can see it
 
-**Before the fact.** Rules face the requesting side without naming an agent. The
-shipped policy uses one for exactly this:
+The prevailing approach asks the requesting side whether its agent is behaving:
+declare a task, watch the session, report a departure. That is coherent when
+one party owns both the agent and the data. It does not survive the split this
+profile exists for — it asks the owner to accept a report from infrastructure
+she cannot inspect, about an agent belonging to the party producing the report.
+There is nothing for her to check it against.
 
-```json
-{"when": ["standing.first_at_tier"], "then": "ask"}
-```
+She does not need it. Every request that agent has ever made of her arrived at
+her side. Her record holds what it promised, what she decided, what it called,
+and which tier each call was made against, and drift is a shape in that record.
 
-Being admitted is not being admitted *here*. Two more read her own record over
-`UMA_AS_TRAJECTORY_WINDOW`: `standing.denials_above:<n>` and
-`standing.tiers_above:<n>` — repetition and breadth. Both are in
-`OBSERVED_CONDITIONS`, so neither can be written into a relaxation. "She has
-denied you repeatedly, so grant automatically" is not a storable sentence.
+**Before the fact.** Rules read it while deciding, and name no agent:
 
-**After the fact.** Every ledger entry names the agent it was about, so one
-agent's promises, her decisions, and what it went on to touch are a single list
-— `GET /owner/ledger?handle=…`, and the Connected agents tab in her portal.
-Drift is the distance between the promised row and the touched rows.
+| Condition | The shape it catches |
+|---|---|
+| `standing.first_at_tier` | reaching somewhere new |
+| `standing.tiers_above:<n>` | breadth — how far across her resources it has spread |
+| `standing.calls_above:<n>` | volume — how much it did with what it was given |
+| `standing.denials_above:<n>` | persistence after she has already said no |
+
+All four are in `OBSERVED_CONDITIONS`, over `UMA_AS_TRAJECTORY_WINDOW`. None can
+be written into a relaxation; `validate_rules` refuses them under `then: auto`.
+
+**After the fact.** `GET /owner/ledger?handle=…` is one agent's history: the
+errand it declared, her decisions, and the calls it then made. Every `touched`
+row carries the tier it was made against, resolved by the authority from the
+grant the call was issued under — the enforcement point is never told either.
 
 One entry cannot be attributed and that is a property rather than a gap: a
 decline arrives at beat 2, before the requesting side has signed anything, so
-there is no key and nothing to file it under. Her record says her terms were
-refused, which is true and is all that is knowable.
+there is no key and nothing to file it under.
 
 ### Why the trajectory count is not one of the indivisible operations
 

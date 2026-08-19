@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, seventeen recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, nineteen recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -55,7 +55,7 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The seventeen recommendations
+## The nineteen recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -193,7 +193,32 @@ decision, and the property that four differently-arranged requesting sides
 produce one unchanged answer is gone. Bound it, record it, show it to her, and
 let policy notice only its absence.
 
-**16. A decision record keyed only by transaction cannot answer a question about
+**16. Say which prohibitions a resource server can actually refuse.** A terms
+document listing five prohibitions in one flat array tells the reader all five
+are equally a matter of trust. Here that was false for two, and had been since
+before the terms existed: the trade tier forbids orders beyond the approved
+parameters and discretionary reuse of authority, and the enforcement point had
+always refused exactly those two. The distinction is not terms against
+enforcement — it is whether the forbidden thing has to cross the owner's
+boundary to happen. Placing an order means calling her tool; retaining the data
+afterwards happens on disks she will never see. A spec should require the
+document to mark which is which, derived from the profile's own mechanisms so it
+cannot drift from what is switched on.
+
+**17. Intent drift is the owner's observation, not the requesting side's
+report.** Prevailing designs put drift detection with the requester: declare a
+task, watch the session, flag a departure. That collapses the moment the agent
+and the data belong to different parties — it asks the owner to accept a report
+from infrastructure she cannot inspect, about an agent belonging to whoever
+produced the report. She does not need it. Every request that agent made of her
+arrived at her side, so breadth, volume and persistence after a refusal are all
+readable from her own record. Locate drift evaluation at the authorization
+server, read the owner's record rather than requester attestations, and keep the
+vocabulary tighten-only. Requester-side session intent is complementary and
+belongs in a different document: it protects the requesting party from their own
+agent.
+
+**18. A decision record keyed only by transaction cannot answer a question about
 a party.** Correlating by negotiation answers "what happened in this exchange",
 not "what has this agent been doing" — and the second is the question an owner
 asks. The sharp edge is not a missing filter: a denied or refused negotiation
@@ -204,7 +229,7 @@ anonymous. Related deployment note: the enforcement point reports what it
 allowed and must not be told the handle. It enforces for a policy it cannot
 read; the authority resolves the attribution itself.
 
-**17. Not every policy input needs the atomicity a single-use artifact needs.**
+**19. Not every policy input needs the atomicity a single-use artifact needs.**
 Recommendation 9 asks for indivisible consumption, and the over-correction is to
 treat every input that way. The question that separates them: can a stale read
 widen access beyond what a differently-timed arrival would have? A count that

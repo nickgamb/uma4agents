@@ -139,6 +139,14 @@ she asked costs her nothing. Then it proves the record can answer a question
 about an agent rather than only about a request, and that a rule reading that
 record can tighten but never relax.
 
+It also shows the part that is easy to miss: **drift is read from her side.**
+Nothing asks Bob whether his agent is behaving — she cannot see his
+infrastructure and has no way to check a report from it. What she has is every
+request that ever arrived at hers, filed under the agent that made it and the
+tier it was made against. An agent admitted to read holdings that starts
+reaching further looks different in her own ledger, and she can write a rule
+that catches it there.
+
 ## 7. Bring your own agent
 
 Everything so far has been Bob's agent — one requesting party among however

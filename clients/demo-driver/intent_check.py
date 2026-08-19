@@ -1,10 +1,9 @@
 """Two intents, and what the grant does with each.
 
 Alice states what she will accept, in advance, in her tiers. An agent states
-what it wants and — optionally — why it is asking. The grant is the only place
-both are in hand at once, and what it does there is narrow on purpose.
-
-Four things this checks, against the running stack.
+what it wants and — optionally — why it is asking and under whose mandate. The
+grant is the only place both are in hand at once, and what it does there is
+narrow on purpose.
 
 **Her terms cannot be signed weaker than she wrote them.** The echo is compared
 field by field. A valid signature over a dropped prohibition or a stretched
@@ -20,21 +19,35 @@ it is notice it is missing:
 
     a lie can only cost the liar friction; silence costs it the same
 
-**The record can answer a question about an agent, not only about a request.**
-Every entry names who it was about, so one agent's promises, the decisions she
-took, and what it went on to touch are one list. The exception is real and
-worth seeing: a decline arrives before anything is signed, so there is nobody
-to name.
+**A cited mandate is a claim, not an axis.** An AAuth mission reference travels
+in AAuth's own shape and is recorded, never dereferenced — missions are served
+to administrators, so from here an agent citing a real one and an agent
+inventing a hash are the same agent.
 
-**Policy can read that record.** An agent that keeps being told no, or whose
-requests keep widening, can be made to face her every time — using rules that
-name no agent and read only decisions she made herself.
+**Drift is read from her side.** Nothing asks the requesting side whether its
+agent is behaving; she cannot inspect that infrastructure and has nothing to
+check a report against. What she has is every request that arrived at hers,
+filed under the agent that made it and the tier it was made against. Breadth
+and volume are shapes in her own record.
+
+**Some of her prohibitions are refused and some are only promised.** The line
+is whether the forbidden thing has to cross her boundary to happen. Placing an
+order beyond approved parameters means calling her tool; retaining the data
+afterwards happens where she cannot see. Her published terms mark which is
+which.
+
+**The record answers a question about an agent, not only about a request.**
+One exception is real and worth seeing: a decline arrives before anything is
+signed, so there is nobody to name.
 
 Run against the full stack with `make intent-check`.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import os
 import sys
 import uuid
@@ -147,6 +160,24 @@ def refused_by_as(client, hdrs, tier_id: str, rules: list) -> bool:
                       timeout=15.0)
         return False
     return True
+
+
+def thumbprint(keys: AgentKeys) -> str:
+    """The handle a pseudonymous agent is filed under — RFC 7638, computed
+    here rather than read back, so the check knows which rows are its own."""
+    jwk = keys.public_jwk()
+    canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
+                           separators=(",", ":"), sort_keys=True)
+    return "jkt:" + base64.urlsafe_b64encode(
+        hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
+
+
+def terms_doc(client: httpx.Client, template_id: str) -> dict:
+    """Her published terms, as an agent or an auditor would fetch them."""
+    r = client.get(f"{AS_PUBLIC}/terms/{template_id}",
+                   headers={"accept": "application/json"}, timeout=15.0)
+    r.raise_for_status()
+    return r.json()
 
 
 def challenge_for(client: httpx.Client, tool: str, args: dict):
@@ -393,6 +424,86 @@ def main() -> int:
               "there is no signature at beat 2, so there is no agent yet")
 
         # ---------------------------------------------------------------
+        print("\n== Drift, seen from the side that can actually see it ==")
+        # ---------------------------------------------------------------
+        # Nothing here asks Bob's side whether its agent is behaving. She
+        # cannot see his infrastructure and has no reason to believe a report
+        # from it. What she can see is every request that arrived at hers, and
+        # that is enough: an agent admitted for one thing and then reaching
+        # across her resources looks different in her own record.
+        drifter = AgentKeys.load_or_create(f"{KEYS}/intent-drift-{RUN}.pem")
+        drifting = approve_in_background(client, 90)
+        try:
+            negotiate(client, drifter, "get_positions", {},
+                      reason="Quarterly review for the client.")
+            for _ in range(2):
+                negotiate(client, drifter, "get_positions", {})
+            negotiate(client, drifter, "get_transactions",
+                      {"account": "brokerage-main"},
+                      reason="Still the quarterly review.")
+        finally:
+            drifting.set()
+
+        traj = ledger(client, handle=thumbprint(drifter))
+        touched = [e for e in traj if e["kind"] == "touched"]
+        tiers = sorted({e.get("tier") for e in traj if e.get("tier")})
+        check("her record holds what it did, not only what it asked",
+              len(touched) >= 3, f"{len(touched)} calls recorded")
+        check("every call is filed under the tier it was made against",
+              all(e.get("tier") for e in touched),
+              f"{[e.get('tier') for e in touched]}")
+        check("and the widening is visible as more than one tier",
+              len(tiers) >= 2, f"reached {tiers}")
+        say(f"one agent, {len(touched)} calls across {len(tiers)} of her tiers")
+
+        # A rule reading exactly that. It names no agent, and it is written
+        # against her own record rather than against anything the agent said.
+        r = client.post(f"{AS_PUBLIC}/owner/policies", headers=hdrs, timeout=15.0,
+                        json={"id": f"drift{RUN}", "name": "Watch the trajectory",
+                              "resources": [], "ask_me": False,
+                              "rules": [{"when": ["standing.tiers_above:1"],
+                                         "then": "ask"},
+                                        {"when": ["standing.calls_above:2"],
+                                         "then": "ask"}],
+                              "terms": {"purpose": "drift", "expires_in": 900}})
+        check("she can write a rule about the trajectory itself",
+              r.status_code < 300, r.text[:160])
+        check("and it cannot be turned into a reason to grant",
+              refused_by_as(client, hdrs, f"driftauto{RUN}",
+                            [{"when": ["standing.calls_above:2"], "then": "auto"}]))
+        if r.status_code < 300:
+            client.delete(f"{AS_PUBLIC}/owner/policies/drift{RUN}",
+                          headers=hdrs, timeout=15.0)
+
+        # ---------------------------------------------------------------
+        print("\n== Which of her terms are refused, and which are only promised ==")
+        # ---------------------------------------------------------------
+        # The line worth drawing is not terms-versus-enforcement. It is
+        # whether the thing forbidden has to cross her boundary to happen.
+        # Placing an order beyond the approved parameters means calling her
+        # tool, and the enforcement point is holding a grant that names those
+        # parameters. Retaining the data afterwards happens on the requester's
+        # own disks, and no protocol reaches it.
+        t1 = terms_doc(client, "alice/advisor-tier1/v2")
+        t3 = terms_doc(client, "alice/advisor-tier3/v2")
+        check("her trade tier marks the prohibitions it actually refuses",
+              set(t3.get("enforced") or {})
+              == {"orders-beyond-approved-parameters",
+                  "discretionary-reuse-of-authority"},
+              f"got {sorted((t3.get('enforced') or {}))}")
+        check("and names the mechanism that refuses each",
+              (t3["enforced"]["orders-beyond-approved-parameters"]
+               == "operation-binding")
+              and (t3["enforced"]["discretionary-reuse-of-authority"]
+                   == "single-use"))
+        check("her holdings tier claims none, because none of them cross her door",
+              not (t1.get("enforced") or {}),
+              f"got {sorted((t1.get('enforced') or {}))}")
+        check("the enforced ones are a subset of what she actually prohibits",
+              set(t3["enforced"]) <= set(t3["prohibited"]))
+        say("two of her trade prohibitions are refused; the rest are undertakings")
+
+        # ---------------------------------------------------------------
         print("\n== And policy can read it, naming no agent ==")
         # ---------------------------------------------------------------
         tier_id = f"intentcheck{RUN}"
@@ -434,10 +545,11 @@ def main() -> int:
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
     if FAIL:
         return 1
-    print("\nPASS: her terms could not be signed weaker than she wrote them, what")
-    print("      the agent said it wanted was recorded and never judged, the record")
-    print("      answered a question about an agent rather than about a request,")
-    print("      and a rule reading it could tighten but never relax.")
+    print("\nPASS: her terms could not be signed weaker than she wrote them, the")
+    print("      ones her enforcement point actually refuses are marked as such,")
+    print("      what the agent said it wanted was recorded and never judged,")
+    print("      and drift was read from her own record rather than reported by")
+    print("      the side being watched — tightening only, and naming no agent.")
     return 0
 
 

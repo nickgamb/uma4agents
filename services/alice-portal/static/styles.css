@@ -151,6 +151,7 @@ button { font-family: inherit; cursor: pointer; }
 .claimed { font-style: italic; border-left: 2px solid var(--border);
            padding-left: 8px; display: inline-block; }
 
+.chip.prohibit.enforced { background: var(--pos-soft); color: var(--pos); }
 .chip.prohibit { background: var(--neg-soft); color: #ff8a95; border-color: transparent; font-family: var(--mono); font-size: 11px; }
 
 /* ---- Tables ------------------------------------------------------------- */

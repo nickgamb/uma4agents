@@ -114,7 +114,7 @@ class Store(Protocol):
     # --- RPTs: the atomicity everything else rests on ----------------------
 
     async def record_rpt(self, jti: str, family: str, handle: str,
-                         operation: dict | None) -> None: ...
+                         operation: dict | None, tier: str | None = None) -> None: ...
 
     async def rpt(self, jti: str) -> dict | None: ...
 
@@ -211,7 +211,7 @@ class Store(Protocol):
     async def ledger(self, handle: str | None = None) -> list[dict]:
         """The whole record, or one agent's part of it, oldest first."""
 
-    async def handle_for_family(self, family: str) -> str | None:
+    async def grant_for_family(self, family: str) -> dict | None:
         """Which agent a negotiation belonged to, after the negotiation
         itself is gone.
 
@@ -223,7 +223,9 @@ class Store(Protocol):
 
     async def trajectory(self, handle: str, since: str) -> dict:
         """What this agent has been doing lately: ``{"denials": int,
-        "tiers": [str]}`` over the entries at or after ``since``.
+        "tiers": [str], "calls": int}`` over the entries at or after
+        ``since`` — how often she refused it, how far across her resources it
+        has reached, and how much it actually did.
 
         Deliberately *not* one of the indivisible operations above. Those are
         indivisible because a wrong answer is an access-control failure; this

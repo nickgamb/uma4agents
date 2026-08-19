@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS ledger (
 -- timestamp"; `ts` is fixed-width UTC, so comparing it as text is comparing
 -- it as time.
 ALTER TABLE ledger ADD COLUMN IF NOT EXISTS handle text;
+ALTER TABLE rpts ADD COLUMN IF NOT EXISTS tier text;
 CREATE INDEX IF NOT EXISTS ledger_by_handle
     ON ledger (handle, kind, ts) WHERE handle IS NOT NULL;
 

@@ -328,6 +328,7 @@ async def publish_terms(tier_id: str, tier: dict) -> str:
             "name": tier["name"],
             "tier": tier_id,
             **{k: v for k, v in tier["terms"].items() if k != "template_id"},
+            "enforced": policy.enforced_prohibitions(tier),
             "published_at": utcstamp(),
         })
         event("terms.published", template_id=template_id, tier=tier_id)
@@ -359,7 +360,13 @@ def terms_as_html(doc: dict) -> str:
     markup. Escaping here costs nothing and does not depend on that argument
     staying true."""
     e = html.escape
-    prohibited = "".join(f"<li>{e(str(p))}</li>" for p in doc.get("prohibited", []))
+    enforced = doc.get("enforced") or {}
+    prohibited = "".join(
+        f"<li>{e(str(p))}"
+        + (f" — <b>refused at the door</b> ({e(str(enforced[p]))})"
+           if p in enforced else " — undertaken, not enforced")
+        + "</li>"
+        for p in doc.get("prohibited", []))
     scopes = e(", ".join(doc.get("scope", [])))
     hours = round(doc.get("expires_in", 0) / 3600, 1)
     return f"""<!doctype html><html><head><meta charset="utf-8">
@@ -926,12 +933,14 @@ async def audit_access(request: Request) -> dict:
     body = await request.json()
     family = body.get("family", "?")
     # The enforcement point reports what it allowed; the authority decides
-    # whose it was. It is never told the handle — it enforces for a policy it
+    # whose it was, and against which of her tiers. It is never told the handle — it enforces for a policy it
     # cannot read, and the connection is the owner's record, not its.
+    grant = await STORE.grant_for_family(family)
     await ledger_add("touched", family, {
         "tool": body.get("tool"),
         "summary": body.get("summary"),
-    }, handle=await STORE.handle_for_family(family))
+        "tier": (grant or {}).get("tier"),
+    }, handle=(grant or {}).get("handle"))
     event("access.allowed", corr=body.get("family"), tool=body.get("tool"))
     return {"recorded": True}
 
@@ -1394,7 +1403,8 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
     handle = connection_handle(rec["contract"]["_identity"], signer_jwk)
-    await STORE.record_rpt(jti, family, handle, claims.get("operation"))
+    await STORE.record_rpt(jti, family, handle, claims.get("operation"),
+                           rec["tier"])
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
           tier=rec["tier"])
 
@@ -1647,6 +1657,7 @@ async def token(
                 "reason": contract.get("reason"),
                 "mission": contract.get("mission"),
                 "prohibited": contract["prohibited"],
+                "enforced": rec["template"].get("enforced") or {},
                 "identity": contract["_identity"],
                 "handle": handle,
                 # What her authority could and could not establish, in
@@ -1750,6 +1761,7 @@ async def owner_pending(request: Request) -> list:
             "reason": rec["contract"].get("reason"),
             "mission": rec["contract"].get("mission"),
             "prohibited": rec["contract"]["prohibited"],
+            "enforced": rec.get("template", {}).get("enforced") or {},
             "identity": rec["contract"]["_identity"],
             "handle": rec.get("handle"),
             "assurance": rec.get("assurance", {}),

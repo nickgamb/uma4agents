@@ -107,9 +107,10 @@ class MemoryStore:
     # --- RPTs ---------------------------------------------------------------
 
     async def record_rpt(self, jti: str, family: str, handle: str,
-                         operation: dict | None) -> None:
+                         operation: dict | None, tier: str | None = None) -> None:
         self._rpts[jti] = {"jti": jti, "consumed": False, "family": family,
-                           "operation": operation, "handle": handle}
+                           "operation": operation, "handle": handle,
+                           "tier": tier}
 
     async def rpt(self, jti: str) -> dict | None:
         rec = self._rpts.get(jti)
@@ -207,22 +208,24 @@ class MemoryStore:
             r for r in self._ledger if r.get("handle") == handle]
         return [dict(r) for r in rows]
 
-    async def handle_for_family(self, family: str) -> str | None:
+    async def grant_for_family(self, family: str) -> dict | None:
         for rec in self._rpts.values():
             if rec["family"] == family and rec.get("handle"):
-                return rec["handle"]
+                return {"handle": rec["handle"], "tier": rec.get("tier")}
         return None
 
     async def trajectory(self, handle: str, since: str) -> dict:
-        denials, tiers = 0, []
+        denials, calls, tiers = 0, 0, []
         for row in self._ledger:
             if row.get("handle") != handle or row["ts"] < since:
                 continue
             if row["kind"] == "denied":
                 denials += 1
+            if row["kind"] == "touched":
+                calls += 1
             if (tier := row.get("tier")) and tier not in tiers:
                 tiers.append(tier)
-        return {"denials": denials, "tiers": tiers}
+        return {"denials": denials, "tiers": sorted(tiers), "calls": calls}
 
     async def publish_terms(self, doc: dict) -> None:
         self._terms.setdefault(doc["template_id"], dict(doc))

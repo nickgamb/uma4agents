@@ -230,12 +230,12 @@ class PostgresStore:
     # --- RPTs ---------------------------------------------------------------
 
     async def record_rpt(self, jti: str, family: str, handle: str,
-                         operation: dict | None) -> None:
+                         operation: dict | None, tier: str | None = None) -> None:
         await self._pool.execute(
-            "INSERT INTO rpts (jti, family, handle, operation, consumed) "
-            "VALUES ($1, $2, $3, $4, false)",
+            "INSERT INTO rpts (jti, family, handle, operation, consumed, tier) "
+            "VALUES ($1, $2, $3, $4, false, $5)",
             jti, family, handle,
-            json.dumps(operation) if operation is not None else None)
+            json.dumps(operation) if operation is not None else None, tier)
 
     async def rpt(self, jti: str) -> dict | None:
         row = await self._pool.fetchrow(
@@ -383,21 +383,24 @@ class PostgresStore:
                  "family": r["family"], "ts": r["ts"], "handle": r["handle"]}
                 for r in rows]
 
-    async def handle_for_family(self, family: str) -> str | None:
-        return await self._pool.fetchval(
-            "SELECT handle FROM rpts WHERE family = $1 AND handle IS NOT NULL "
-            "ORDER BY jti LIMIT 1", family)
+    async def grant_for_family(self, family: str) -> dict | None:
+        row = await self._pool.fetchrow(
+            "SELECT handle, tier FROM rpts WHERE family = $1 "
+            "AND handle IS NOT NULL ORDER BY jti LIMIT 1", family)
+        return {"handle": row["handle"], "tier": row["tier"]} if row else None
 
     async def trajectory(self, handle: str, since: str) -> dict:
         # One pass over the (handle, kind, ts) index. `ts` is fixed-width
         # UTC, so the lexicographic comparison is a time comparison.
         row = await self._pool.fetchrow(
             "SELECT count(*) FILTER (WHERE kind = 'denied') AS denials, "
+            "       count(*) FILTER (WHERE kind = 'touched') AS calls, "
             "       coalesce(array_agg(DISTINCT entry->>'tier') "
             "                FILTER (WHERE entry ? 'tier'), '{}') AS tiers "
             "  FROM ledger WHERE handle = $1 AND ts >= $2", handle, since)
         return {"denials": int(row["denials"] or 0),
-                "tiers": list(row["tiers"] or [])}
+                "tiers": sorted(row["tiers"] or []),
+                "calls": int(row["calls"] or 0)}
 
     async def publish_terms(self, doc: dict) -> None:
         # DO NOTHING, not DO UPDATE: a published version's content never

@@ -339,7 +339,13 @@ async function renderApprovals(target) {
         ${p.assurance_notes.map(n => `<div class="note">${esc(n)}</div>`).join("")}</span></div>` : ""}
       ${(p.because || []).length ? `<div class="kv"><span class="k">Why you</span><span>
         ${p.because.map(b => `<span class="chip warn">${esc(condLabel(b))}</span>`).join(" ")}</span></div>` : ""}
-      <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x => `<span class="chip prohibit">${esc(x)}</span>`).join(" ")}</span></div>
+      <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x =>
+        (p.enforced || {})[x]
+          ? `<span class="chip prohibit enforced" title="Refused at the door by ${esc((p.enforced || {})[x])}">${esc(x)} ✓</span>`
+          : `<span class="chip prohibit">${esc(x)}</span>`).join(" ")}
+        <div class="muted" style="font-size:12px;margin-top:4px">✓ is refused by your
+        enforcement point. The rest are undertakings — they happen where you cannot see.</div>
+        </span></div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn pos sm" onclick="decide('${p.family}','approved')">${isConn ? "Connect this agent" : "Approve this operation"}</button>
         <button class="btn danger sm" onclick="decide('${p.family}','denied')">Deny</button></div>
