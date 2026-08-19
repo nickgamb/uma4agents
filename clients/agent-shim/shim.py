@@ -269,7 +269,9 @@ class Upstream:
         return None
 
     async def call_tool(self, ctx: Context, tool: str, args: dict,
-                        operation: dict | None = None) -> str:
+                        operation: dict | None = None,
+                        reason: str | None = None) -> str:
+        mission = MISSION
         await self.ensure_discovered()
         params = {"name": tool, "arguments": args}
         r, payload = await self.request("tools/call", params)
@@ -309,7 +311,8 @@ class Upstream:
 
             rpt = await run_grant_async(
                 self.client, as_uri, ticket, keys, approve,
-                operation=operation, on_status=log,
+                operation=operation, reason=reason, mission=mission,
+                on_status=log,
                 on_receipt=store_receipt,
                 max_wait_s=PEND_HANDBACK_S,
                 on_pending=still_waiting,
@@ -401,6 +404,29 @@ async def approve_terms(ctx: Context, tool: str, template: dict) -> bool:
 upstream = Upstream()
 
 
+# The mandate this agent is running under, if its operator gave it one. An
+# AAuth mission lives at the requesting party's own person server and is named
+# by content hash, so what travels is the citation rather than the text — set
+# both halves or neither.
+#
+# Alice's authority records it and shows it to her. It cannot check it: AAuth
+# serves missions to administrators, so a relying party in another trust
+# domain has nothing to dereference. Citing one buys less friction, never more
+# access, which is the same bargain every other claim here makes.
+MISSION = (
+    {"approver": os.environ["UMA4A_MISSION_APPROVER"],
+     "s256": os.environ["UMA4A_MISSION_S256"]}
+    if os.environ.get("UMA4A_MISSION_APPROVER")
+    and os.environ.get("UMA4A_MISSION_S256")
+    else None
+)
+
+
+# `reason` is the agent's own account of the errand, in its own words. It is
+# optional, it is never checked against Alice's terms, and her policy can do
+# exactly one thing with it: require her to look when it is missing. So the
+# model above this shim can fill it from whatever it actually knows, and
+# leaving it blank costs friction rather than access.
 @mcp.tool()
 async def get_positions(ctx: Context) -> str:
     """Alice's current holdings summary (tier 1: auto-grant under her standard terms)."""
@@ -408,20 +434,29 @@ async def get_positions(ctx: Context) -> str:
 
 
 @mcp.tool()
-async def get_transactions(ctx: Context, account: str = "brokerage-main") -> str:
-    """Alice's transaction history (tier 2: stricter dictated terms)."""
-    return await upstream.call_tool(ctx, "get_transactions", {"account": account})
+async def get_transactions(ctx: Context, account: str = "brokerage-main",
+                           reason: str = "") -> str:
+    """Alice's transaction history (tier 2: stricter dictated terms).
+
+    `reason`: why you are asking, in one sentence, for Alice to read."""
+    return await upstream.call_tool(ctx, "get_transactions", {"account": account},
+                                    reason=reason)
 
 
 @mcp.tool()
-async def execute_trade(ctx: Context, symbol: str, side: str, quantity: int) -> str:
+async def execute_trade(ctx: Context, symbol: str, side: str, quantity: int,
+                        reason: str = "") -> str:
     """Propose a trade in Alice's account (tier 3: pends until Alice approves;
-    the grant is single-use and bound to exactly this order)."""
+    the grant is single-use and bound to exactly this order).
+
+    `reason`: why this order, in one sentence. Alice reads it beside the order
+    itself when she is asked to approve, so it is the most useful here."""
     order = {"symbol": symbol, "side": side, "quantity": quantity}
     try:
         return await upstream.call_tool(
             ctx, "execute_trade", order,
             operation={"tool": "execute_trade", "params": order},
+            reason=reason,
         )
     except GrantDenied as exc:
         return f"Alice did not authorize this trade: {exc}"

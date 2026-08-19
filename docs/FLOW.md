@@ -1,7 +1,7 @@
 # Flow: identity stays where it is
 
-The load-bearing idea in this profile is not the ticket or the token. It is
-that **Alice never has to know how Bob's agent is identified.**
+The idea this profile turns on is not the ticket or the token. It is that
+**Alice never has to know how Bob's agent is identified.**
 
 She writes her terms and sets her tiers. Whether the agent asking is a bare
 key with no issuer anywhere, an AAuth-identified agent whose session keys

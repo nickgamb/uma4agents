@@ -28,6 +28,8 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_OWNER` | `alice` | The owner's username |
 | `UMA_AS_PEND_BUDGET` | `5` | How many requests from agents with no standing, and nobody checkable behind them, may wait for her at once. `0` makes her authority introduce-yourself-first |
 | `UMA_AS_PEND_BUDGET_ATTRIBUTED` | `40` | The same cap for agents whose named operator published their key. A separate lane, so a flood of the cheap kind cannot fill it |
+| `UMA_AS_MAX_REASON` | `512` | How much the requesting side may write about its own errand. Small on purpose: a sentence for a person to read in an approval, not a document |
+| `UMA_AS_TRAJECTORY_WINDOW` | `7d` | How far back a rule about an agent's recent behaviour looks. One window for all of them, so a rule reads *recently* and the deployment says how long that is |
 | `UMA_AS_DIRECTORY_TTL` | `300` | Seconds an operator key directory is cached **for a hit only**. A miss is always re-fetched, because a stale hit keeps attesting a key the operator has disowned while a stale miss merely fails to recognise one just published |
 | `UMA_AS_OWNER_CLIENTS` | `alice-portal` | Comma-separated audiences accepted on owner tokens |
 | `UMA_AS_PENDING_TTL` | `3600` | How long a held ask-me ticket stays valid, in seconds |

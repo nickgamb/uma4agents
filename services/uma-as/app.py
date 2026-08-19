@@ -16,6 +16,7 @@ import asyncio
 import base64
 import hashlib
 import calendar
+import html
 import json
 import logging
 import os
@@ -187,6 +188,15 @@ app = FastAPI(title="uma-as")
 # answer there is an access-control failure — which is the line between the
 # two.
 # ---------------------------------------------------------------------------
+# How much the requesting side may write about itself. Small on purpose: this
+# is a sentence for a person to read in an approval dialog, not a document.
+MAX_REASON = int(os.environ.get("UMA_AS_MAX_REASON", "512"))
+
+# How far back a rule about an agent's recent behaviour looks. One window for
+# all of them, so a rule reads "recently" and the deployment says how long that
+# is, rather than every rule carrying its own duration.
+TRAJECTORY_WINDOW = os.environ.get("UMA_AS_TRAJECTORY_WINDOW", "7d")
+
 STORE: store.Store = store.make_store()
 RESOURCES: dict[str, dict] = {}
 
@@ -206,8 +216,11 @@ def utcstamp() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-async def ledger_add(kind: str, family: str, entry: dict) -> None:
-    await STORE.ledger_add(kind, family, utcstamp(), entry)
+async def ledger_add(kind: str, family: str, entry: dict,
+                     handle: str | None = None) -> None:
+    """One decision record. `handle` names the agent it was about, where
+    there is one — see Store.ledger_add for why it is not part of `entry`."""
+    await STORE.ledger_add(kind, family, utcstamp(), entry, handle)
 
 
 async def owner_notify(payload: dict) -> None:
@@ -337,25 +350,33 @@ async def terms_index() -> dict:
 
 def terms_as_html(doc: dict) -> str:
     """The plain-language representation IEEE 7012 (4.4.1) requires the terms
-    themselves to carry — same URI as the machine-readable form."""
-    prohibited = "".join(f"<li>{p}</li>" for p in doc.get("prohibited", []))
-    scopes = ", ".join(doc.get("scope", []))
+    themselves to carry — same URI as the machine-readable form.
+
+    Every interpolation is escaped. Alice writes most of this herself through
+    the owner API, so it is not obviously attacker-controlled — but a terms
+    document is a public URL that agents dereference and quote, and a rendering
+    that trusts its own stored values is one owner-API bug away from serving
+    markup. Escaping here costs nothing and does not depend on that argument
+    staying true."""
+    e = html.escape
+    prohibited = "".join(f"<li>{e(str(p))}</li>" for p in doc.get("prohibited", []))
+    scopes = e(", ".join(doc.get("scope", [])))
     hours = round(doc.get("expires_in", 0) / 3600, 1)
     return f"""<!doctype html><html><head><meta charset="utf-8">
-<title>{doc['name']} — {doc['template_id']}</title>
+<title>{e(str(doc['name']))} — {e(str(doc['template_id']))}</title>
 <style>body{{background:#0b0e14;color:#e6e9f0;font-family:system-ui;max-width:640px;
 margin:3rem auto;padding:0 1rem;line-height:1.6}}h1{{font-size:1.3rem}}
 code{{background:#161b26;padding:2px 7px;border-radius:5px}}
 .k{{color:#8a93a8}}li{{margin:.2rem 0}}</style></head><body>
-<h1>{doc['name']}</h1>
-<p class="k">Terms <code>{doc['template_id']}</code>, proffered by
-<code>{doc['proffered_by']}</code>, published {doc['published_at']}.</p>
+<h1>{e(str(doc['name']))}</h1>
+<p class="k">Terms <code>{e(str(doc['template_id']))}</code>, proffered by
+<code>{e(str(doc['proffered_by']))}</code>, published {e(str(doc['published_at']))}.</p>
 <p>The owner of these accounts offers access on the following terms. By
 signing an agreement that names this document, you accept all of them.</p>
 <ul>
-<li><b>Purpose</b> — access is granted only for: {doc['purpose']}.</li>
+<li><b>Purpose</b> — access is granted only for: {e(str(doc['purpose']))}.</li>
 <li><b>What you may access</b> — {scopes}.</li>
-<li><b>How long</b> — access expires {doc['expires_in']} seconds
+<li><b>How long</b> — access expires {int(doc['expires_in'])} seconds
     (~{hours} hours) after grant.</li>
 <li><b>Prohibited</b> — you agree you will not engage in:<ul>{prohibited}</ul></li>
 <li><b>Anything not expressly permitted here is not permitted.</b></li>
@@ -903,10 +924,14 @@ async def audit_access(request: Request) -> dict:
     grounded in enforcement, not client claims."""
     await require_pat(request)
     body = await request.json()
-    await ledger_add("touched", body.get("family", "?"), {
+    family = body.get("family", "?")
+    # The enforcement point reports what it allowed; the authority decides
+    # whose it was. It is never told the handle — it enforces for a policy it
+    # cannot read, and the connection is the owner's record, not its.
+    await ledger_add("touched", family, {
         "tool": body.get("tool"),
         "summary": body.get("summary"),
-    })
+    }, handle=await STORE.handle_for_family(family))
     event("access.allowed", corr=body.get("family"), tool=body.get("tool"))
     return {"recorded": True}
 
@@ -1029,17 +1054,23 @@ def connection_handle(identity: dict, signer_jwk: dict) -> str:
     return jwk_thumbprint(signer_jwk)
 
 
-def standing_facts(conn: dict | None, tier_id: str) -> dict:
+def standing_facts(conn: dict | None, tier_id: str,
+                   trajectory: dict | None = None) -> dict:
     """What Alice's own authority has seen of this agent.
 
     Kept apart from assurance because only these may relax a requirement —
     they are the one kind of evidence here that the requesting side had no
     hand in producing. `age_seconds` is None when she has never met it, which
     the conditions read as "younger than everything, older than nothing".
+
+    `trajectory` is read from her ledger by the caller and passed in, so
+    `policy.evaluate` stays a pure function of a dict and can be tested with
+    no store at all.
     """
+    trajectory = trajectory or {"denials": 0, "tiers": []}
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
-                "approved_tiers": [],
+                "approved_tiers": [], "trajectory": trajectory,
                 "revocations": int((conn or {}).get("revocations", 0))}
     age = None
     if first_seen := conn.get("first_seen"):
@@ -1057,7 +1088,25 @@ def standing_facts(conn: dict | None, tier_id: str) -> dict:
         # kept apart from the line above even though both are her side's.
         "approved_tiers": list(conn.get("tiers_approved") or []),
         "revocations": int(conn.get("revocations", 0)),
+        # What it has been doing lately. Restrictions only — see policy.py.
+        "trajectory": trajectory,
     }
+
+
+async def trajectory_facts(handle: str) -> dict:
+    """This agent's recent history, from the ledger her decisions already
+    wrote. No counters, no second source of truth.
+
+    Not one of the store's indivisible operations, and it does not need to be:
+    the count only ever tightens a requirement, so a replica reading one write
+    stale behaves as if the request had arrived a moment earlier — an ordering
+    the system already permits. The rule of thumb worth keeping: can a stale
+    read widen access beyond what a differently-timed arrival would have? If it
+    can, it belongs with the single-use operations instead.
+    """
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                          time.gmtime(now() - policy.parse_duration(TRAJECTORY_WINDOW)))
+    return await STORE.trajectory(handle, since)
 
 
 # Cached, but not forever. An operator removing a key from its directory is
@@ -1278,6 +1327,38 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
     if template.get("per_operation") and not contract.get("operation"):
         raise ValueError("per-operation tier requires a proposed operation in the contract")
 
+    # The one claim the requesting side authors. It is bounded and nothing
+    # else: not compared to her purpose, not parsed, not scored. Reading it
+    # would put a judgement about natural language inside the grant, which
+    # would make the same request answerable two ways and end the property
+    # `make flow-check` asserts. It is checked for size because it is stored
+    # and shown to her, and because a field with no ceiling is a place to put
+    # a megabyte.
+    if (reason := contract.get("reason")) is not None:
+        if not isinstance(reason, str):
+            raise ValueError("reason must be a string")
+        if len(reason.encode()) > MAX_REASON:
+            raise ValueError(
+                f"reason exceeds the permitted length ({MAX_REASON} bytes)")
+
+    # A citation, checked for shape and nothing else. Whether this request is
+    # inside the mission it names is the approver's question, not hers — she
+    # has no standing to read Bob's mandate and rule on it, and her authority
+    # could not resolve it if it wanted to (AAuth serves missions to admins
+    # only). What it establishes is narrower and still worth having: somebody
+    # on the other side is running a mandate at all.
+    if (mission := contract.get("mission")) is not None:
+        if not isinstance(mission, dict):
+            raise ValueError("mission must be an object")
+        approver, digest = mission.get("approver"), mission.get("s256")
+        if not isinstance(approver, str) or not approver.startswith("https://"):
+            raise ValueError("mission.approver must be an https URL")
+        if not isinstance(digest, str) or not (16 <= len(digest) <= 128):
+            raise ValueError("mission.s256 must be a content hash")
+        # Normalised down to the two fields AAuth's own header carries, so a
+        # citation with extra baggage cannot use her ledger as storage.
+        contract["mission"] = {"approver": approver, "s256": digest}
+
     contract["_identity"] = identity
     return contract, signer_jwk
 
@@ -1385,6 +1466,11 @@ async def token(
     if decline == "true" and rec["state"] == "need_info":
         event("terms.declined", corr=family, tier=rec.get("tier"),
               template_id=rec.get("template", {}).get("template_id"))
+        # The one entry with no agent to name, and it is a property of the
+        # protocol rather than a gap here: a decline arrives at beat 2, before
+        # the requesting side has signed anything, so there is no key, no
+        # identity and nothing to file it under. Her record says her terms were
+        # refused, which is true and is all that is knowable.
         await ledger_add("refused", family, {
             "tier": rec.get("tier"),
             "terms_uri": rec.get("template", {}).get("terms_uri"),
@@ -1431,6 +1517,12 @@ async def token(
         rec["agent_sub"] = contract["_identity"]["sub"]
     event("contract.committed", corr=family, tier=rec["tier"],
           contract=contract_hash, identity=contract["_identity"]["level"])
+
+    # Named before the first ledger write rather than after it. The promise is
+    # the first entry that has an agent to attribute, and both inputs have been
+    # in hand since verify_contract returned.
+    handle = connection_handle(contract["_identity"], signer_jwk)
+
     await ledger_add("promised", family, {
         "tier": rec["tier"],
         "purpose": contract["purpose"],
@@ -1439,13 +1531,14 @@ async def token(
         "contract": contract_hash,
         "terms_uri": contract["terms_uri"],
         "operation": contract.get("operation"),
-    })
+        "reason": contract.get("reason"),
+        "mission": contract.get("mission"),
+    }, handle=handle)
 
     # Day-1 handshake: an agent without a standing connection pends — the same
     # request_submitted machinery, asking a different question ("do you want a
     # relationship with this agent?"). Alice's approval creates the connection
     # AND releases this negotiation in one tap.
-    handle = connection_handle(contract["_identity"], signer_jwk)
     conn = await STORE.connection(handle)
     needs_connection = conn is None or conn["status"] != "active"
 
@@ -1466,7 +1559,8 @@ async def token(
               operator=origin)
         await ledger_add("refused", family, {"tier": rec["tier"],
                                              "operator": origin,
-                                             "because": ["operator is blocked"]})
+                                             "because": ["operator is blocked"]},
+                         handle=handle)
         await close_negotiation(rec)
         return JSONResponse(
             {"error": "request_denied",
@@ -1476,9 +1570,12 @@ async def token(
     axes = assurance.assess(contract["_identity"])
     facts = {
         "assurance": axes,
-        "standing": standing_facts(conn, rec["tier"]),
+        "standing": standing_facts(conn, rec["tier"],
+                                   await trajectory_facts(handle)),
         "request": {"expires_in": contract.get("expires_in", 0),
-                    "max_expires_in": tier["terms"]["expires_in"]},
+                    "max_expires_in": tier["terms"]["expires_in"],
+                    "reason": contract.get("reason"),
+                    "mission": contract.get("mission")},
         "tier": rec["tier"],
     }
     requirement, reasons = policy.evaluate(tier, facts)
@@ -1488,7 +1585,8 @@ async def token(
         event("policy.evaluated", corr=family, result="refused", tier=rec["tier"],
               because=reasons)
         await ledger_add("refused", family, {"tier": rec["tier"],
-                                             "because": reasons})
+                                             "because": reasons},
+                         handle=handle)
         await close_negotiation(rec)
         return JSONResponse({"error": "request_denied",
                              "error_description": "; ".join(reasons)},
@@ -1546,6 +1644,8 @@ async def token(
                 "tier_name": tier["name"],
                 "purpose": contract["purpose"],
                 "operation": contract.get("operation"),
+                "reason": contract.get("reason"),
+                "mission": contract.get("mission"),
                 "prohibited": contract["prohibited"],
                 "identity": contract["_identity"],
                 "handle": handle,
@@ -1572,8 +1672,8 @@ async def token(
         # one direction worth being able to audit after the fact, so it is a
         # ledger entry and not only a log line.
         await ledger_add("relaxed", family, {"tier": rec["tier"],
-                                             "handle": handle,
-                                             "because": reasons})
+                                             "because": reasons},
+                         handle=handle)
     granted = await issue_rpt(rec, contract_hash, signer_jwk, None)
     await close_negotiation(rec)
     return JSONResponse(granted)
@@ -1608,8 +1708,8 @@ async def pending_poll(rec: dict) -> JSONResponse:
                 "revocations": int(prior.get("revocations", 0)),
             })
             event("connection.approved", corr=family, handle=handle)
-            await ledger_add("connected", family, {"handle": handle,
-                                                   "identity": identity})
+            await ledger_add("connected", family, {"identity": identity},
+                             handle=handle)
         event("policy.evaluated", corr=family, result="owner-approved", tier=rec["tier"])
         # Tier policy still applies after connection: an ask-me tier needs its
         # per-operation approval, which Alice's single tap covered only if this
@@ -1647,6 +1747,8 @@ async def owner_pending(request: Request) -> list:
             "tier": rec["tier"],
             "purpose": rec["contract"]["purpose"],
             "operation": rec["contract"].get("operation"),
+            "reason": rec["contract"].get("reason"),
+            "mission": rec["contract"].get("mission"),
             "prohibited": rec["contract"]["prohibited"],
             "identity": rec["contract"]["_identity"],
             "handle": rec.get("handle"),
@@ -1670,10 +1772,16 @@ async def owner_decision(family: str, request: Request) -> dict:
     if not await STORE.decide(family, decision):
         raise HTTPException(status_code=404, detail="no pending negotiation for that family")
     event("owner.decision", corr=family, decision=decision)
+    # Read after the decision, not before: `decide` is the guard, and doing the
+    # lookup first would invite someone to move the guard behind it. The
+    # negotiation survives its own decision — `close_negotiation` runs when the
+    # grant is issued — so the handle it was pending under is still there.
+    pended = await STORE.negotiation(family)
     # Record both outcomes: "what did I decide" is an audit question, and a
     # denial is as much a decision as an approval.
     await ledger_add("approved" if decision == "approved" else "denied", family,
-                     {"decision": decision})
+                     {"decision": decision, "tier": (pended or {}).get("tier")},
+                     handle=(pended or {}).get("handle"))
     await owner_notify({"type": "decided", "family": family, "decision": decision})
     return {"family": family, "decision": decision}
 
@@ -1905,15 +2013,20 @@ async def owner_revoke_connection(handle: str, request: Request) -> dict:
     if killed is None:
         raise HTTPException(status_code=404, detail="unknown connection")
     event("connection.revoked", handle=handle, rpts_deactivated=killed)
-    await ledger_add("revoked", "-", {"handle": handle, "rpts_deactivated": killed})
+    await ledger_add("revoked", "-", {"rpts_deactivated": killed}, handle=handle)
     await owner_notify({"type": "decided", "family": "-", "decision": "revoked"})
     return {"handle": handle, "status": "revoked", "rpts_deactivated": killed}
 
 
 @app.get("/owner/ledger")
 async def owner_ledger(request: Request) -> list:
+    """The record, or one agent's part of it.
+
+    `?handle=` is what turns a list of negotiations into a trajectory: every
+    promise that agent made, every decision she took about it, and everything
+    it actually touched, in order."""
     await require_owner(request)
-    return await STORE.ledger()
+    return await STORE.ledger(request.query_params.get("handle") or None)
 
 
 @app.get("/owner/events")

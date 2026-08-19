@@ -265,6 +265,23 @@ services:
 
   # Four agents, four identity regimes, one unchanged owner. Verifies that
   # nothing about who the agent is reaches Alice's authorization decision.
+  intent-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/intent_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      UMA_AS_MAX_REASON: ${UMA_AS_MAX_REASON:-512}
+    volumes:
+      - ./clients/demo-driver/intent_check.py:/driver/intent_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
   assurance-check:
     image: python:3.12-slim
     entrypoint:

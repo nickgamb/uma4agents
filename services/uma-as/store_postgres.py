@@ -364,16 +364,40 @@ class PostgresStore:
     # --- owner-visible documents ---------------------------------------------
 
     async def ledger_add(self, kind: str, family: str, ts: str,
-                         entry: dict) -> None:
+                         entry: dict, handle: str | None = None) -> None:
         await self._pool.execute(
-            "INSERT INTO ledger (kind, family, ts, entry) VALUES ($1, $2, $3, $4)",
-            kind, family, ts, json.dumps(entry))
+            "INSERT INTO ledger (kind, family, ts, entry, handle) "
+            "VALUES ($1, $2, $3, $4, $5)",
+            kind, family, ts, json.dumps(entry), handle)
 
-    async def ledger(self) -> list[dict]:
-        rows = await self._pool.fetch(
-            "SELECT kind, family, ts, entry FROM ledger ORDER BY seq")
-        return [{"kind": r["kind"], "family": r["family"], "ts": r["ts"],
-                 **json.loads(r["entry"])} for r in rows]
+    async def ledger(self, handle: str | None = None) -> list[dict]:
+        if handle is None:
+            rows = await self._pool.fetch(
+                "SELECT kind, family, ts, entry, handle FROM ledger ORDER BY seq")
+        else:
+            rows = await self._pool.fetch(
+                "SELECT kind, family, ts, entry, handle FROM ledger "
+                "WHERE handle = $1 ORDER BY seq", handle)
+        # Columns last, so an `entry` key can never shadow one of them.
+        return [{**json.loads(r["entry"]), "kind": r["kind"],
+                 "family": r["family"], "ts": r["ts"], "handle": r["handle"]}
+                for r in rows]
+
+    async def handle_for_family(self, family: str) -> str | None:
+        return await self._pool.fetchval(
+            "SELECT handle FROM rpts WHERE family = $1 AND handle IS NOT NULL "
+            "ORDER BY jti LIMIT 1", family)
+
+    async def trajectory(self, handle: str, since: str) -> dict:
+        # One pass over the (handle, kind, ts) index. `ts` is fixed-width
+        # UTC, so the lexicographic comparison is a time comparison.
+        row = await self._pool.fetchrow(
+            "SELECT count(*) FILTER (WHERE kind = 'denied') AS denials, "
+            "       coalesce(array_agg(DISTINCT entry->>'tier') "
+            "                FILTER (WHERE entry ? 'tier'), '{}') AS tiers "
+            "  FROM ledger WHERE handle = $1 AND ts >= $2", handle, since)
+        return {"denials": int(row["denials"] or 0),
+                "tiers": list(row["tiers"] or [])}
 
     async def publish_terms(self, doc: dict) -> None:
         # DO NOTHING, not DO UPDATE: a published version's content never

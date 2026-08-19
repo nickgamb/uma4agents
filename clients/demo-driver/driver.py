@@ -128,6 +128,7 @@ class McpSession:
 
 def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
               client: httpx.Client, operation: dict | None = None,
+              reason: str | None = None, mission: dict | None = None,
               simulate_alice: bool = False, owner_token=None,
               as_internal: str | None = None,
               resource_metadata: dict | None = None,
@@ -193,7 +194,8 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
             f" · agreement {payload['agreement'][:20]}…")
 
     rpt = run_grant(client, as_uri, ticket, keys, approve_terms,
-                    operation=operation, on_status=say, on_receipt=hold_receipt)
+                    operation=operation, reason=reason, mission=mission,
+                    on_status=say, on_receipt=hold_receipt)
 
     if on_grant is not None:
         on_grant(rpt)
@@ -320,6 +322,8 @@ def main() -> int:
             print("\n== Act 1 (midday): Bob's agent requests Alice's holdings summary ==")
             print("   (first contact: an unconnected agent pends until Alice connects it)")
             out = call_tool(session, keys, "get_positions", {}, client,
+                            reason="Suitability review for a new advisory "
+                                   "engagement, at the client's request.",
                             simulate_alice=args.simulate_alice,
                             owner_token=owner_token, as_internal=args.as_internal,
                             resource_metadata=prm, resource_url=args.gateway)
@@ -329,6 +333,8 @@ def main() -> int:
             print("\n== Act 2 (midday): transaction history — watch the terms tighten ==")
             out = call_tool(session, keys, "get_transactions",
                             {"account": "brokerage-main"}, client,
+                            reason="Cost-basis check before proposing a "
+                                   "rebalance in this account.",
                             simulate_alice=args.simulate_alice,
                             owner_token=owner_token, as_internal=args.as_internal,
                             resource_metadata=prm, resource_url=args.gateway)
@@ -360,7 +366,10 @@ def main() -> int:
                 replay_ok["held"] = r.status_code == 401
 
             out = call_tool(session, keys, "execute_trade", order, client,
-                            operation=operation, simulate_alice=args.simulate_alice,
+                            operation=operation,
+                            reason="Trimming an overweight equity position "
+                                   "the client approved by phone this morning.",
+                            simulate_alice=args.simulate_alice,
                             owner_token=owner_token, as_internal=args.as_internal,
                             resource_metadata=prm, resource_url=args.gateway,
                             on_grant=replay_with_a_stolen_token)

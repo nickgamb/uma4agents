@@ -51,7 +51,7 @@ specification should not require it.
 
 **The requesting agent came back.** UMA's 2010 drafts distinguished the
 requesting party from the requesting agent. 2.0 collapsed them, reasonably at the
-time. Agents make the distinction load-bearing again — see
+time. Agents make the distinction matter again — see
 [the three parties](/docs/overview/parties/).
 
 **The challenge became parameters.** UMA carries the challenge in

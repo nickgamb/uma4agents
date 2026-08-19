@@ -276,7 +276,7 @@ understands the type.
 
 ---
 
-## The split-horizon, and why it is load-bearing
+## The split-horizon, and why the deployment depends on it
 
 Alice's authorization server pulls its registry from the resource server's
 *published* metadata — which means it dereferences `https://gateway.uma.lab/…`

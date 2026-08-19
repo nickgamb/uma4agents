@@ -131,9 +131,28 @@ The agreement is the template echoed and signed by the agent's key:
   "expires_in": 172800,
   "prohibited": ["retention-after-review", "marketing", "model-training"],
   "family": "<negotiation-family-id>",
-  "nonce": "<nonce>"
+  "nonce": "<nonce>",
+
+  "reason": "Suitability review before Thursday's client meeting.",
+  "mission": { "approver": "https://ps.uma.lab", "s256": "<content-hash>" }
 }
 ```
+
+Everything above the blank line is the owner's template, repeated. The last two
+are the only claims the requesting side authors, both optional:
+
+- `reason` — free text, capped at `UMA_AS_MAX_REASON` bytes. Recorded and shown
+  to the owner; never parsed, scored, or compared to her purpose.
+- `mission` — a reference to a mandate approved at the requesting party's own
+  person server, in the `approver`/`s256` shape AAuth's own `AAuth-Mission`
+  header uses. Recorded, never dereferenced: the authorization server has
+  nothing to fetch, so it is a claim rather than an attestation.
+
+Neither can widen anything. Her policy may read only their absence
+(`request.reason_absent`, `request.mission_absent`), and both conditions are
+unstorable under `then: auto`. On per-operation tiers the agreement also
+carries `operation`, which is the one requester-authored claim that *is*
+enforced — see [the two intents](/docs/overview/two-intents/).
 
 The header may also carry `client_id`, a URL describing who operates the agent,
 and `signature_agent`, the operator's key directory. Both are optional and
@@ -149,7 +168,8 @@ proves possession of the grant.
 **Verification.** Signature against the header key; echo matches the proffered
 template on nonce, family, template id, terms URI and purpose; `prohibited` not
 weakened; `expires_in` not extended; an operation present if the tier is
-per-operation. Then policy, then one of:
+per-operation; `reason` within the byte cap; `mission`, if present, an object
+with an https `approver` and a content hash. Then policy, then one of:
 
 | Outcome | Response |
 |---|---|

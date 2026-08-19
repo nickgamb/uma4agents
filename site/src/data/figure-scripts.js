@@ -45,6 +45,16 @@ const figureScripts = {
       "On grant, her authority returns a receipt that embeds the agent's signed agreement and counter-signs it. Both sides now hold the same dually-signed record, and neither can produce a version the other cannot check.",
     ],
   },
+  "two-intents": {
+    title: "What survives from the owner's terms to the door",
+    steps: [
+      "Alice states four things, before any agent exists: what the access is for, what she will not have done with it, how far it reaches and for how long, and — on the tiers she reserves — that a request must name one specific act.",
+      "An agent that wants in echoes all four back, signed with the key it will later prove possession of. Her authority checks the echo against the template field by field. A signature over weaker terms is exactly what an adversarial agent would send, so a dropped prohibition or a stretched expiry ends the negotiation here.",
+      "Two of the four survive as something a machine can test on every later call. The grant carries the scope and the expiry, a digest of the exact operation it was issued for, and the key that must sign the request — so a grant for one order fails against another, and holding the token is not enough.",
+      "The other two cannot be tested by anything. Purpose and prohibitions are prose about the future, and no protocol prevents an agent that promised not to retain data from retaining it. They go to the record instead — signed by the agent, counter-signed by her authority, and sitting beside what the agent actually touched.",
+    ],
+  },
+
   "identity-vs-authz": {
     title: "Identity is not authorization",
     steps: [
@@ -145,7 +155,7 @@ const figureScripts = {
   "compare-uma": {
     title: "Keep, change, add",
     steps: [
-      "Most of UMA 2.0 carries unchanged. The cross-principal topology is the load-bearing idea and nothing else on the table has it; the permission ticket and the pending state come through clean.",
+      "Most of UMA 2.0 carries unchanged. The cross-principal topology is the idea the rest hangs off and nothing else on the table has it; the permission ticket and the pending state come through clean.",
       "Three things change shape. Claims-gathering becomes the owner proffering terms rather than naming formats, the RPT keeps its semantics but drops bearer for proof-of-possession, and registration becomes something the authority pulls.",
       "Two things are genuinely new, and both come from the agent era rather than from the specification: grants bound to one operation and spent once, and the owner's own app as the surface where she is asked.",
     ],

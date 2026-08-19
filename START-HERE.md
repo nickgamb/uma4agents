@@ -100,9 +100,21 @@ proves it by replaying the same token and being refused.
 make k8s-audit
 ```
 
-The ledger, in three columns: what the agent **promised** (the signed terms,
-hash and all), what Alice **personally approved**, and what was actually
-**touched** — every row correlated by its negotiation id.
+The ledger: what the agent **promised** (the signed terms, hash and all),
+what it **said it wanted the access for**, what Alice **personally approved**,
+and what was actually **touched** — every row correlated by its negotiation
+id, and every row naming the agent it was about.
+
+That last part is what makes the portal's **Connected agents** tab worth
+opening. Click an agent's handle and you get its own history rather than the
+whole stream: everything it has asked of her, what she decided, and what it
+went on to do. A request that widens over time is legible there as the
+distance between the two.
+
+The stated reason is the agent's own words and is shown as such. Her
+authority never compares it to her terms — reading it and ruling on it would
+put a judgement about natural language inside an authorization decision. What
+her policy can do is require her to look when there is no reason at all.
 
 > Reading raw pod logs instead will mislead you. The authorization server
 > runs **three replicas**, so `kubectl logs deploy/uma-as` shows one of them
@@ -114,10 +126,18 @@ hash and all), what Alice **personally approved**, and what was actually
 ```bash
 make k8s-smoke-test     # expect 13 passed, 0 failed
 make k8s-policy-test    # expect 11 passed, 0 failed
+make k8s-intent-check   # whose intent the grant carries
 ```
 
 Eight of those eleven are **refusals**. A policy suite that only proves the
 allows would pass on a cluster with no policy at all.
+
+The intent check is the same shape. It tampers with her terms four ways and
+expects three refusals — a rewritten purpose, a dropped prohibition, a
+stretched expiry — and one acceptance, because binding itself to *more* than
+she asked costs her nothing. Then it proves the record can answer a question
+about an agent rather than only about a request, and that a rule reading that
+record can tighten but never relax.
 
 ## 7. Bring your own agent
 

@@ -38,8 +38,8 @@ step, and reports whether the caller won:
 
 A caller that gets ``None`` denies. That is the whole contract.
 
-Two behaviours are load-bearing and easy to "fix" by accident
--------------------------------------------------------------
+Two behaviours are required and easy to "fix" by accident
+---------------------------------------------------------
 1. ``consume_ticket`` removes only the *index* entry. The negotiation stays
    addressable by family, so the owner's portal can still see and decide a
    pending request in the window between one ticket being consumed and its
@@ -111,7 +111,7 @@ class Store(Protocol):
         """Record the owner's decision. False if there is no such negotiation
         awaiting her, so a double-tap or a stale portal cannot decide twice."""
 
-    # --- RPTs: the load-bearing atomicity ----------------------------------
+    # --- RPTs: the atomicity everything else rests on ----------------------
 
     async def record_rpt(self, jti: str, family: str, handle: str,
                          operation: dict | None) -> None: ...
@@ -195,9 +195,43 @@ class Store(Protocol):
     # --- owner-visible documents -------------------------------------------
 
     async def ledger_add(self, kind: str, family: str, ts: str,
-                         entry: dict) -> None: ...
+                         entry: dict, handle: str | None = None) -> None:
+        """Append one decision record.
 
-    async def ledger(self) -> list[dict]: ...
+        ``handle`` is a column rather than a key in ``entry`` because both
+        implementations flatten ``entry`` into the returned row: a key of the
+        same name would silently shadow the column, and the caller would never
+        find out. One writer, one place.
+
+        It is ``None`` for the entries that genuinely have no counterparty —
+        a resource-server revocation, and a decline at beat 2, which happens
+        before the requesting side has signed anything and so has no key to
+        attribute."""
+
+    async def ledger(self, handle: str | None = None) -> list[dict]:
+        """The whole record, or one agent's part of it, oldest first."""
+
+    async def handle_for_family(self, family: str) -> str | None:
+        """Which agent a negotiation belonged to, after the negotiation
+        itself is gone.
+
+        ``close_negotiation`` drops the record as soon as the grant is issued,
+        so by the time the enforcement point reports an allowed call the only
+        surviving link is the grant it was issued under. Reading it here keeps
+        attribution on the owner's side: the enforcement point never needs to
+        be told the handle, and it enforces for an authority it cannot read."""
+
+    async def trajectory(self, handle: str, since: str) -> dict:
+        """What this agent has been doing lately: ``{"denials": int,
+        "tiers": [str]}`` over the entries at or after ``since``.
+
+        Deliberately *not* one of the indivisible operations above. Those are
+        indivisible because a wrong answer is an access-control failure; this
+        one only ever tightens a requirement, so a replica reading one write
+        stale behaves exactly as if the request had arrived a moment earlier —
+        an ordering the system already permits. The question that separates
+        the two classes: can a stale read widen access beyond what a
+        differently-timed arrival would have? Here it cannot."""
 
     async def publish_terms(self, doc: dict) -> None:
         """Archive a terms version. Idempotent per template_id — a published

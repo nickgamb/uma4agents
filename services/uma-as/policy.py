@@ -77,6 +77,17 @@ DEFAULT_TIERS: dict[str, dict] = {
         #             "standing.never_revoked"], "then": "auto"}
         #
         # and should have to write it deliberately.
+        #
+        # Going the other way is always available and never needs an argument
+        # from anyone. An agent whose requests have started to widen, or that
+        # she keeps saying no to, can be made to face her every time:
+        #
+        #   {"when": ["standing.tiers_above:1"], "then": "ask"}
+        #   {"when": ["standing.denials_above:2"], "then": "refuse"}
+        #
+        # Both read the ledger her own decisions wrote, over
+        # UMA_AS_TRAJECTORY_WINDOW. Left out of the default because tier 3
+        # already asks; they earn their keep on a tier that does not.
         "rules": [],
         "terms": {
             "template_id": "alice/advisor-tier3/v2",
@@ -243,6 +254,13 @@ OBSERVED_CONDITIONS = {
     "standing.first_at_tier",   # never *granted* at this tier before
     "standing.revoked_before",
     "standing.age_below",       # :<duration>
+    # What the agent has been doing lately, read from her own ledger over
+    # UMA_AS_TRAJECTORY_WINDOW. Her decisions, so they belong on this side of
+    # the line — but observed rather than relaxing, because "she has denied you
+    # repeatedly, so grant automatically" is not a sentence anyone should be
+    # able to save.
+    "standing.denials_above",   # :<n>, denials in the window
+    "standing.tiers_above",     # :<n>, distinct tiers reached in the window
 }
 
 STANDING_CONDITIONS = RELAXING_CONDITIONS | OBSERVED_CONDITIONS
@@ -254,6 +272,8 @@ ASSURANCE_CONDITIONS = {
     "assurance.provenance_below",      # :<level>
     "assurance.accountability_below",  # :<level>
     "request.max_expiry",              # it asked for the tier's ceiling
+    "request.reason_absent",           # it did not say what it wanted this for
+    "request.mission_absent",          # it cited no mandate for the errand
 }
 
 CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
@@ -267,7 +287,8 @@ CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
 DURATION_ARGS = {"standing.age_above", "standing.age_below"}
 LEVEL_ARGS = {"assurance.binding_below", "assurance.provenance_below",
               "assurance.accountability_below"}
-TAKES_ARG = DURATION_ARGS | LEVEL_ARGS
+COUNT_ARGS = {"standing.denials_above", "standing.tiers_above"}
+TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS
 
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
@@ -295,6 +316,10 @@ VOCABULARY = [
      "label": "the named operator has not published this agent's key"},
     {"condition": "request.max_expiry", "takes": None,
      "label": "it asked for the longest access this tier allows"},
+    {"condition": "request.reason_absent", "takes": None,
+     "label": "it did not say what it wants the access for"},
+    {"condition": "request.mission_absent", "takes": None,
+     "label": "it cited no mandate for what it is doing"},
     {"condition": "standing.none", "takes": None,
      "label": "I have no standing connection with this agent"},
     {"condition": "standing.first_at_tier", "takes": None,
@@ -309,6 +334,10 @@ VOCABULARY = [
      "label": "I have personally approved something at this tier"},
     {"condition": "standing.age_above", "takes": "duration",
      "label": "I have known this agent for more than"},
+    {"condition": "standing.denials_above", "takes": "count",
+     "label": "I have recently denied this agent more times than"},
+    {"condition": "standing.tiers_above", "takes": "count",
+     "label": "it has recently asked at more tiers than"},
 ]
 
 
@@ -367,10 +396,16 @@ def validate_rules(rules) -> None:
                     raise ValueError(
                         f"{name!r} needs an argument, as {name}:<value>")
                 try:
-                    (parse_duration(value) if name in DURATION_ARGS
-                     else int(value))
+                    if name in DURATION_ARGS:
+                        parse_duration(value)
+                    elif int(value) < 0:
+                        # A negative count would make the condition always true
+                        # and the rule always fire, which reads as a working
+                        # restriction and is really a stuck one.
+                        raise ValueError("negative")
                 except (TypeError, ValueError):
-                    kind = "duration" if name in DURATION_ARGS else "level"
+                    kind = ("duration" if name in DURATION_ARGS
+                            else "count" if name in COUNT_ARGS else "level")
                     raise ValueError(
                         f"{name!r} takes a {kind}, got {value!r}") from None
             elif value is not None:
@@ -409,11 +444,24 @@ def _matches(condition: str, facts: dict) -> bool:
         return (age > parse_duration(value) if name == "standing.age_above"
                 else age < parse_duration(value))
 
+    # Read from her own ledger before evaluation and handed in with the rest of
+    # her standing facts, so nothing here needs a store and this stays a pure
+    # function of the dict. `trajectory` is absent when she has never met this
+    # agent, and both conditions read that as nothing having happened.
+    if name == "standing.denials_above":
+        return standing.get("trajectory", {}).get("denials", 0) > int(value)
+    if name == "standing.tiers_above":
+        return len(standing.get("trajectory", {}).get("tiers", [])) > int(value)
+
     if name.startswith("assurance."):
         axis = name[len("assurance."):-len("_below")]
         return assurance.get(axis, 0) < int(value)
     if name == "request.max_expiry":
         return facts["request"]["expires_in"] >= facts["request"]["max_expires_in"]
+    if name == "request.reason_absent":
+        return not (facts["request"].get("reason") or "").strip()
+    if name == "request.mission_absent":
+        return not facts["request"].get("mission")
     return False
 
 

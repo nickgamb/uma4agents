@@ -145,6 +145,12 @@ button { font-family: inherit; cursor: pointer; }
 .chip.pos { background: var(--pos-soft); color: var(--pos); border-color: transparent; }
 .chip.neg { background: var(--neg-soft); color: var(--neg); border-color: transparent; }
 .chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+/* What the requesting side said about itself. Deliberately not styled like a
+   fact her authority established: quoted, set apart, never a chip beside the
+   terms it agreed to. */
+.claimed { font-style: italic; border-left: 2px solid var(--border);
+           padding-left: 8px; display: inline-block; }
+
 .chip.prohibit { background: var(--neg-soft); color: #ff8a95; border-color: transparent; font-family: var(--mono); font-size: 11px; }
 
 /* ---- Tables ------------------------------------------------------------- */

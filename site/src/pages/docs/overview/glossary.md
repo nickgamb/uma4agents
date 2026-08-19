@@ -78,7 +78,7 @@ thumbprint.
 
 **Requesting agent** — the software making the request. Distinct from the
 requesting party. A 2010-era UMA term, revived here because the distinction has
-become load-bearing again.
+started to matter again.
 
 **Requesting party (RqP)** — the human or organisation on whose behalf the agent
 asks. Accountable; not present at the keyboard. **RO ≠ RqP** is the shorthand

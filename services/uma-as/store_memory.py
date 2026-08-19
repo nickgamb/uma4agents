@@ -7,7 +7,7 @@ provided here by the single event loop, which is why every method that
 guards a single-use resource does its check and its write without an
 ``await`` in between.
 
-That constraint is load-bearing. Adding an ``await`` inside
+That constraint is not optional. Adding an ``await`` inside
 ``consume_ticket`` or ``consume_rpt`` would reintroduce exactly the race the
 interface exists to remove — under one loop it would be a real bug, not a
 theoretical one.
@@ -197,11 +197,32 @@ class MemoryStore:
     # --- owner-visible documents ---------------------------------------------
 
     async def ledger_add(self, kind: str, family: str, ts: str,
-                         entry: dict) -> None:
-        self._ledger.append({"kind": kind, "family": family, "ts": ts, **entry})
+                         entry: dict, handle: str | None = None) -> None:
+        # Columns last, so an `entry` key can never shadow one of them.
+        self._ledger.append({**entry, "kind": kind, "family": family,
+                             "ts": ts, "handle": handle})
 
-    async def ledger(self) -> list[dict]:
-        return list(self._ledger)
+    async def ledger(self, handle: str | None = None) -> list[dict]:
+        rows = self._ledger if handle is None else [
+            r for r in self._ledger if r.get("handle") == handle]
+        return [dict(r) for r in rows]
+
+    async def handle_for_family(self, family: str) -> str | None:
+        for rec in self._rpts.values():
+            if rec["family"] == family and rec.get("handle"):
+                return rec["handle"]
+        return None
+
+    async def trajectory(self, handle: str, since: str) -> dict:
+        denials, tiers = 0, []
+        for row in self._ledger:
+            if row.get("handle") != handle or row["ts"] < since:
+                continue
+            if row["kind"] == "denied":
+                denials += 1
+            if (tier := row.get("tier")) and tier not in tiers:
+                tiers.append(tier)
+        return {"denials": denials, "tiers": tiers}
 
     async def publish_terms(self, doc: dict) -> None:
         self._terms.setdefault(doc["template_id"], dict(doc))

@@ -18,7 +18,7 @@ available on request.
 
 | UMA 2.0 primitive | Verdict | One-line rationale |
 |---|---|---|
-| Cross-principal grant topology (RO ≠ RqP; AS is the owner's policy home) | **Keep** | The load-bearing idea; nothing else on the table has it |
+| Cross-principal grant topology (RO ≠ RqP; AS is the owner's policy home) | **Keep** | The idea the rest hangs off; nothing else on the table has it |
 | Permission ticket as negotiation handle | **Keep** | Carried clean; its single-use rotation is exactly what makes "pending" safe |
 | `request_submitted` pending state | **Keep** | Already specifies "ask me"; the agent era only adds *where* the owner is asked |
 | Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats |
@@ -292,7 +292,7 @@ what makes them actionable:
   client's human. There is no member, and no extension point on the members,
   for *blocked on a different principal who is not on this connection*. MCP's
   type system cannot express the case this entire experiment is about. The fix
-  is small: a `subject` block on an input request, whose load-bearing field is
+  is small: a `subject` block on an input request, whose one required field is
   `reachable_by_client: false`. Without it a conforming client will try to
   satisfy the wait from its own user, who has no part in the decision.
 - The Tasks extension (SEP-2663) states plainly that it cannot scope
@@ -537,6 +537,64 @@ the queue split matters more than the block.
 See [docs/ASSURANCE.md](docs/ASSURANCE.md) and `make assurance-check`.
 
 
+**15. Give the requesting side somewhere to say what it is asking for — and
+make it tighten-only.** Nothing in UMA 2.0, and nothing in this profile before
+this build, lets the requester state its own errand. The agreement is the
+owner's template echoed back; on a tier without per-operation binding the
+requesting side contributes a signature and nothing else. Meanwhile every
+agent-intent design in the market is exactly that missing field: AP2's Intent
+Mandate, the verifiable-intent work on top of it, session-intent drift
+detection. They are all requester-side, and they all assume the party declaring
+the intent owns the resource.
+
+So the field is worth specifying, and the constraint on it matters more than
+the field. It must be **carried, never evaluated.** An authority that reads a
+stated purpose and rules on whether it is plausible has put a judgement about
+natural language inside an authorization decision — the same request becomes
+answerable two ways, and the property that four differently-arranged requesting
+sides produce one unchanged decision (rec 12) is gone. Bound it, record it,
+show it to the owner, and let policy do exactly one thing with it: notice when
+it is missing. Then a lie costs the liar friction, which is rec 13's rule
+arriving at the same place from a different direction.
+
+**16. A decision record keyed only by transaction cannot answer a question
+about a party.** Our ledger correlated everything by negotiation, which answers
+"what happened in this exchange" and not "what has this agent been doing" — and
+the second is the question an owner actually asks. Eleven write sites, four
+carrying an agent handle, inconsistently, inside the entry body.
+
+The sharp edge is not the missing filter. A **denied or refused** negotiation
+issues no token, so nothing anywhere links that entry to an agent, and the one
+pattern most worth seeing — *this agent has asked four times and I have said no
+four times* — was underivable from what we stored. Normative text should say a
+decision record carries the counterparty, and should name the class that
+genuinely cannot: a decline arrives before the requesting side has signed
+anything, so there is no key and nothing to file it under. That entry is
+honestly anonymous, and a spec that does not say so invites an implementation
+to invent an attribution.
+
+One deployment note that generalises past this profile: the enforcement point
+reports the calls it allowed and **must not be told the handle**. It enforces
+for an authority whose policy it cannot read, and the standing relationship is
+the owner's record. The authority resolves the attribution itself, from the
+grant the call was made under.
+
+**17. Not every policy input needs the atomicity a single-use artifact needs,
+and the test that separates them is short.** Recommendation 9 asks for
+indivisible consumption, and the natural over-correction is to treat every
+input the same way. Policy that reads an agent's recent history — how often the
+owner refused it, how many tiers it has reached — is a count over an append-only
+record, and making it indivisible would buy nothing.
+
+The distinguishing question: **can a stale read widen access beyond what a
+differently-timed arrival would have?** A count that only ever tightens is
+monotone inside its window, so a replica one write behind behaves exactly as if
+the request had arrived a moment earlier — an ordering the deployment already
+permits. A single-use burn fails that test immediately, which is why it is in
+the other class. Worth one sentence in a spec, because the cost of guessing
+wrong runs in both directions: an unnecessary transaction on a hot path, or a
+replayed grant.
+
 ---
 
 ## Binding notes (AAuth)
@@ -588,6 +646,24 @@ offered as engineering notes on a foundation:
   reference AAuth implementation rejects non-HTTPS agent issuers off loopback,
   so cross-host agent identity — the premise of an agent *economy* — requires
   HTTPS on every issuer from the first exchange.
+- **A mission reference is only worth carrying if a relying party can
+  dereference it.** AAuth's mission layer is the natural counterpart to the
+  owner's terms: a durable record, at the requesting party's own person server,
+  of that party setting an agent a task, referenced by content hash. This
+  profile carries a citation in AAuth's own `approver`/`s256` shape, and stops
+  there, because `GET /missions/{s256}` is served to administrators only. From
+  the owner's side an agent citing a real mandate and one inventing a hash are
+  indistinguishable, so the citation cannot become an assurance axis — awarding
+  a level for an assertion nobody checked is the thing rec 13 exists to
+  prevent. Karl McGuinness's own three-artifact model already names the piece
+  that would close this: the durable record stays private, and the **projected
+  ref** is the shareable one. A projection a relying party may fetch would turn
+  a claim into an attestation by the only party with standing to make it —
+  which is exactly the step from level 1 to level 2 on accountability, and the
+  same move the Web Bot Auth key directory makes. Worth a joint look. Note also
+  what stays out of scope on the owner's side either way: containment is the
+  approver's question, and AAuth is right that the protocol supplies
+  correlation rather than containment.
 - **Requester-side consent support is uneven across clients.** The interactive
   claims-gathering successor (agent-side elicitation of the owner's terms)
   works where the client supports it and needs a standing-config fallback

@@ -135,6 +135,13 @@ flow-check:
 assurance-check:
 	docker compose --profile test run --rm assurance-check
 
+## intent-check: whose intent the grant carries — her terms, which cannot be
+## signed weaker than she wrote them, and the agent's own account of the
+## errand, which is recorded and never judged. See docs/INTENT.md.
+.PHONY: intent-check
+intent-check:
+	docker compose --profile test run --rm intent-check
+
 ## adapter: the U4A adapter as a service — the same shim Bob runs beside
 ## Claude Code, reachable over the network so an agent that is not a local
 ## process can use it. This is what lets an unmodified agent framework be

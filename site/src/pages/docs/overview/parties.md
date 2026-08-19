@@ -16,7 +16,7 @@ next:
 
 OAuth has two parties on the requesting side: a resource owner and a client. UMA
 2.0 added a third, the requesting party, because the person asking might not be
-the person who owns the resource. Agents make a fourth distinction load-bearing.
+the person who owns the resource. Agents make a fourth distinction do real work.
 
 ## Who is who
 

@@ -1,6 +1,6 @@
 # Split-horizon DNS: *.uma.lab resolves inside the cluster too.
 #
-# This is the single most load-bearing piece of plumbing in the whole
+# This is the single most consequential piece of plumbing in the whole
 # deployment, and it exists because of a protocol property rather than a
 # convenience.
 #

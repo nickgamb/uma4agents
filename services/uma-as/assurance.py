@@ -54,6 +54,25 @@ Each axis is ordinal *within itself*, because the levels genuinely nest: an
 issuer-verified credential is everything a bare key is and more. Across axes
 there is no order at all, and none is implied.
 
+Why a cited mandate is not an axis here
+---------------------------------------
+An AAuth mission is the obvious candidate for a fourth axis: a durable record,
+at the requesting party's own person server, of that party setting this agent a
+task. It is not one, and the reason is the rule above rather than a judgement
+about missions.
+
+A citation is `approver` plus a content hash. Verifying it means dereferencing
+it at the approver, and AAuth serves `GET /missions/{s256}` to administrators
+only -- a relying party in another trust domain has nothing to fetch. So an
+agent that cites a mission and an agent that invents one are, from here,
+identical. Awarding a level for that would be exactly the "comment about the
+call path" this module refuses to make.
+
+It is carried as a *request* fact instead, beside the free-text reason it is
+currently no stronger than, and her policy can require her to look when there
+is none. If a projection a relying party may read ever exists, a verified
+mandate becomes an axis and this paragraph becomes the changelog entry.
+
 Standing is not assurance
 -------------------------
 Alice's own record of an agent — has she met it, how long ago, has she ever

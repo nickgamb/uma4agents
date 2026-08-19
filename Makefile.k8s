@@ -172,6 +172,16 @@ k8s-policy-test:
 k8s-assurance-check:
 	$(call run_job,assurance-check,cat $(K8S)/base/jobs/assurance-check.yaml,420s)
 
+## k8s-intent-check: whose intent the grant carries — her terms, which cannot
+## be signed weaker than she wrote them, and the agent's own account of the
+## errand, recorded and never judged. Worth running here as well as under
+## compose: the trajectory a rule reads is a query against a shared table, so
+## this is where "the same count whichever replica answered" stops being an
+## assumption. See docs/INTENT.md.
+.PHONY: k8s-intent-check
+k8s-intent-check:
+	$(call run_job,intent-check,cat $(K8S)/base/jobs/intent-check.yaml,420s)
+
 ## kagent: an agent framework nobody modified, governed by Alice's policy.
 ##
 ## Off by default because it brings a model with it, and that is a cost nobody

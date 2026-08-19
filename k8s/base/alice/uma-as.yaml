@@ -87,6 +87,14 @@ spec:
               value: "5"
             - name: UMA_AS_PEND_BUDGET_ATTRIBUTED
               value: "40"
+            # How much the requesting side may write about its own errand, and
+            # how far back a rule about an agent's recent behaviour looks. Set
+            # here for the same reason as the budget above: a check that counts
+            # to a number the server does not enforce fails for the wrong cause.
+            - name: UMA_AS_MAX_REASON
+              value: "512"
+            - name: UMA_AS_TRAJECTORY_WINDOW
+              value: "7d"
             - name: UMA_AS_OWNER_AUTHORITY
               value: alice-as.uma.lab
             - name: UMA_AS_RS_RESOURCE_URI

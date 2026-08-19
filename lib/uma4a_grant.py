@@ -177,10 +177,18 @@ def validate_resource_metadata(doc: dict, resource_url: str,
 
 
 def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
-                  operation: dict | None = None) -> str:
+                  operation: dict | None = None,
+                  reason: str | None = None,
+                  mission: dict | None = None) -> str:
     """Echo the proffered template, signed — the agreement half of the
     MyTerms exchange. Weakening any field is caught by the AS; this client
-    doesn't try."""
+    doesn't try.
+
+    Everything above `operation` is the owner's, repeated. `operation` and
+    `reason` are the only things the requesting side contributes: what it
+    proposes to do, and why it says it is asking. The owner's authority never
+    compares `reason` to anything — it is carried so a person can read it and
+    so the agent has signed it."""
     contract = {
         "iss": f"aauth:agent:{keys.keyid}",
         "aud": as_uri,
@@ -196,6 +204,14 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     }
     if operation is not None:
         contract["operation"] = operation
+    if reason:
+        contract["reason"] = reason
+    # An AAuth mission reference, in AAuth's own shape: the person server that
+    # approved it, and the content hash of what was approved. Carried rather
+    # than invented — `approver` and `s256` are the fields the
+    # `AAuth-Mission` request header already uses.
+    if mission:
+        contract["mission"] = mission
     headers = {"typ": "myterms-agreement-v1+jws", "kid": keys.keyid}
     if keys.agent_token:
         headers["agent_token"] = keys.agent_token
@@ -229,6 +245,8 @@ def run_grant(
     keys: AgentKeys,
     approve_terms: Callable[[dict], bool],
     operation: dict | None = None,
+    reason: str | None = None,
+    mission: dict | None = None,
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
@@ -253,7 +271,7 @@ def run_grant(
                                          "ticket": body["ticket"],
                                          "decline": "true"})
             raise TermsRejected(template["template_id"])
-        claim = sign_contract(template, keys, as_uri, operation)
+        claim = sign_contract(template, keys, as_uri, operation, reason, mission)
         on_status("agreement signed, committing")
         r = client.post(
             token_url,
@@ -329,6 +347,8 @@ async def run_grant_async(
     keys: AgentKeys,
     approve_terms,  # async Callable[[dict], bool]
     operation: dict | None = None,
+    reason: str | None = None,
+    mission: dict | None = None,
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
@@ -361,7 +381,7 @@ async def run_grant_async(
                                                "ticket": body["ticket"],
                                                "decline": "true"})
             raise TermsRejected(template["template_id"])
-        claim = sign_contract(template, keys, as_uri, operation)
+        claim = sign_contract(template, keys, as_uri, operation, reason, mission)
         r = await client.post(
             token_url,
             data={

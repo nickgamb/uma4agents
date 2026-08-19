@@ -74,6 +74,21 @@ CREATE TABLE IF NOT EXISTS ledger (
     entry  jsonb NOT NULL
 );
 
+-- Added after the ledger already existed, so it has to be an ALTER rather
+-- than a column in the CREATE above -- and idempotent, because every replica
+-- applies this file at startup and they race. The index is composite because
+-- the only two queries are "one agent's rows" and "one agent's rows since a
+-- timestamp"; `ts` is fixed-width UTC, so comparing it as text is comparing
+-- it as time.
+ALTER TABLE ledger ADD COLUMN IF NOT EXISTS handle text;
+CREATE INDEX IF NOT EXISTS ledger_by_handle
+    ON ledger (handle, kind, ts) WHERE handle IS NOT NULL;
+
+-- An allowed call is reported by the enforcement point after the negotiation
+-- has been closed, so the grant it was issued under is the only surviving
+-- link back to the agent. The enforcement point is never told the handle.
+CREATE INDEX IF NOT EXISTS rpts_by_family ON rpts (family);
+
 -- Every version of every proffered terms document, dereferenceable for the
 -- life of the AS. A published version's content never changes: that is what
 -- lets an agreement signed last year still be checked against the terms that

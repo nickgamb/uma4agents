@@ -383,8 +383,13 @@ async def agent_revoke(jkt: str, request: Request):
 async def agent_ledger(request: Request):
     if require_login(request):
         return JSONResponse([], status_code=401)
+    # `?handle=` narrows the record to one agent's trajectory. Forwarded
+    # rather than filtered here: the portal holds no authority and no state,
+    # and a filter it applied would be one the owner API could not vouch for.
+    params = {"handle": h} if (h := request.query_params.get("handle")) else None
     async with httpx.AsyncClient() as c:
-        r = await c.get(f"{UMA_AS}/owner/ledger", headers=await owner_headers(request))
+        r = await c.get(f"{UMA_AS}/owner/ledger", params=params,
+                        headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 

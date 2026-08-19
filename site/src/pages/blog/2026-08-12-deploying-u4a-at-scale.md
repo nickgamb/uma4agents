@@ -65,7 +65,7 @@ For the reference architecture that shakes out as:
 
 The one to look at twice is the middle row. Your resource server holds the assets and does the enforcing — and it should be structurally incapable of reading or rewriting the policy it enforces. In a mesh that is not a code review comment, it is a rule, and you can write a test that proves it.
 
-The row below it is worth a word on vocabulary, because the agent era makes an old distinction load-bearing again. The **requesting party** is the human or organization asking — Bob, the advisor. The **requesting agent** is the software doing the asking on his behalf. UMA's 2010 drafts had both terms and 2.0 collapsed them, which was reasonable when the client was a web app Bob was sitting in front of. It is not reasonable now: the terms get signed by the agent, the identity being attested is the agent's, and the party who is accountable is Bob. Keep them separate in your model even if your spec of choice does not.
+The row below it is worth a word on vocabulary, because the agent era makes an old distinction matter again. The **requesting party** is the human or organization asking — Bob, the advisor. The **requesting agent** is the software doing the asking on his behalf. UMA's 2010 drafts had both terms and 2.0 collapsed them, which was reasonable when the client was a web app Bob was sitting in front of. It is not reasonable now: the terms get signed by the agent, the identity being attested is the agent's, and the party who is accountable is Bob. Keep them separate in your model even if your spec of choice does not.
 
 **Try this on your own architecture right now:** name the four parties. If two of them turn out to be the same deployment, you have found the thing to separate first.
 
@@ -245,7 +245,7 @@ Copy the four ideas:
 3. **Take authorization inputs from configuration and the credential, never from the transport.** You get portability for free.
 4. **Write the test that proves the refusals**, and a chaos target that attacks the one property your design is really claiming.
 
-Here is the thing I keep coming back to. Almost everything that broke when we deployed was something the specification never had to say, because when it was written an authorization server was one process. That assumption is load-bearing and undocumented, and the agent era is about to run into it at volume — because "an agent you have never met asks your resource server for something" is a workload that arrives in parallel by definition.
+Here is the thing I keep coming back to. Almost everything that broke when we deployed was something the specification never had to say, because when it was written an authorization server was one process. That assumption is everywhere and undocumented, and the agent era is about to run into it at volume — because "an agent you have never met asks your resource server for something" is a workload that arrives in parallel by definition.
 
 The protocol was the interesting part last time. This time the interesting part is that the protocol survives being deployed properly, and the places where it needs help are small, specific, and now written down.
 

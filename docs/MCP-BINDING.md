@@ -139,7 +139,7 @@ To be unambiguous about what is built: **this implementation does not emit a
 prose, and that is the honest ceiling of what the current type allows. The
 proposal in
 [ext-auth-third-party-authorization.md](ext-auth-third-party-authorization.md)
-adds a `subject` whose load-bearing field is `reachable_by_client`.
+adds a `subject` whose one required field is `reachable_by_client`.
 
 ## SEP-2243 routing headers: a new confusion class
 

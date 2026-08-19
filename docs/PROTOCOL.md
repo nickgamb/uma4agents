@@ -318,14 +318,31 @@ later, proves possession of the RPT.
   "expires_in": 172800,
   "prohibited": ["retention-after-review", "marketing", "model-training"],
   "family": "<negotiation-family-id>",
-  "nonce": "<nonce>"
+  "nonce": "<nonce>",
+
+  "reason": "Suitability review before Thursday's client meeting.",
+  "mission": { "approver": "https://ps.uma.lab", "s256": "<content-hash>" }
 }
 ```
+
+Everything above the blank line is Alice's template repeated back. The two
+below it are the only claims the requesting side authors, both optional and
+neither able to widen anything:
+
+| Claim | Bounded by | What the AS does with it |
+|---|---|---|
+| `reason` | `UMA_AS_MAX_REASON` bytes | records it, shows it to her. Never parsed or compared to her purpose |
+| `mission` | https `approver` + a 16–128 char hash | records the citation. Never dereferenced — AAuth serves missions to admins, so there is nothing a relying party may fetch |
+
+Policy may read only their absence — `request.reason_absent`,
+`request.mission_absent` — and `validate_rules` refuses either under
+`then: auto`. See [INTENT.md](INTENT.md).
 
 uma-as verifies the signature against the header key, checks the echo matches
 the proffered template (nonce, family, template_id, `terms_uri` naming the
 proffered document, purpose; prohibited not weakened; `expires_in` not
-extended; an operation present if the tier is per-operation), evaluates
+extended; an operation present if the tier is per-operation; `reason` within
+its cap; `mission`, if present, well-formed), evaluates
 Alice's tier policy, and stores the agreement (content-addressed by `s256`).
 Then one of:
 
@@ -368,7 +385,7 @@ below is a proposal, not something this implementation emits.** It is what
 }
 ```
 
-`reachable_by_client` is the load-bearing field: without it a conforming
+`reachable_by_client` is the field that does the work: without it a conforming
 client will try to satisfy the wait from its own user, who has no part in the
 decision.
 

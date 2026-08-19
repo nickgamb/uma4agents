@@ -319,6 +319,95 @@ async def test_blocked_operators_round_trip(store) -> None:
           "unblocking nothing reported success")
 
 
+
+async def test_the_ledger_names_the_agent(store) -> None:
+    """A decision record that cannot say who it was about answers no question
+    anybody asks afterwards.
+
+    `handle` is a column rather than a key in `entry` for a reason worth
+    testing: both backends flatten `entry` into the row they return, so an
+    entry key of the same name would quietly win and the caller would never
+    know. The last check here is that it cannot.
+    """
+    await store.ledger_add("promised", "fam_a", "2026-08-01T10:00:00Z",
+                           {"tier": "tier1", "purpose": "review"},
+                           handle="jkt:one")
+    await store.ledger_add("touched", "fam_a", "2026-08-01T10:00:01Z",
+                           {"tool": "get_positions"}, handle="jkt:one")
+    await store.ledger_add("promised", "fam_b", "2026-08-01T11:00:00Z",
+                           {"tier": "tier1"}, handle="jkt:two")
+    # A decline arrives before the requesting side has signed anything, so
+    # there is no key to file it under. That is a property, not a gap.
+    await store.ledger_add("refused", "fam_c", "2026-08-01T12:00:00Z",
+                           {"tier": "tier1"})
+
+    everything = await store.ledger()
+    check("ledger: every entry is returned",
+          len(everything) == 4, f"got {len(everything)}")
+    check("ledger: an unattributed entry has no handle",
+          [e for e in everything if e["family"] == "fam_c"][0]["handle"] is None)
+
+    mine = await store.ledger(handle="jkt:one")
+    check("ledger: one agent's rows, and only that agent's",
+          [e["family"] for e in mine] == ["fam_a", "fam_a"],
+          f"got {[e.get('family') for e in mine]}")
+    check("ledger: they come back oldest first",
+          [e["kind"] for e in mine] == ["promised", "touched"],
+          f"got {[e.get('kind') for e in mine]}")
+    check("ledger: an unknown agent has no rows",
+          await store.ledger(handle="jkt:nobody") == [])
+
+    await store.ledger_add("promised", "fam_d", "2026-08-01T13:00:00Z",
+                           {"kind": "spoofed", "family": "spoofed",
+                            "ts": "spoofed", "handle": "jkt:spoofed"},
+                           handle="jkt:three")
+    row = (await store.ledger(handle="jkt:three"))[0]
+    check("ledger: an entry key cannot shadow a column",
+          (row["kind"], row["family"], row["handle"]) ==
+          ("promised", "fam_d", "jkt:three"),
+          f"got {row['kind']!r}/{row['family']!r}/{row['handle']!r}")
+
+
+async def test_an_allowed_call_can_be_traced_to_its_agent(store) -> None:
+    """The enforcement point reports an allowed call after the negotiation has
+    been closed, and it is never told the handle — it enforces for an authority
+    it cannot read. So the authority has to find the agent itself, from the
+    grant the call was made under, and that has to keep working after the grant
+    is spent."""
+    await store.record_rpt("rpt_trace", "fam_trace", "jkt:traced",
+                           {"tool": "execute_trade"})
+    check("audit: the grant names the agent",
+          await store.handle_for_family("fam_trace") == "jkt:traced")
+    await store.consume_rpt("rpt_trace")
+    check("audit: and still does once it is spent",
+          await store.handle_for_family("fam_trace") == "jkt:traced")
+    check("audit: an unknown negotiation resolves to nothing",
+          await store.handle_for_family("fam_missing") is None)
+
+
+async def test_trajectory_reads_the_window(store) -> None:
+    """Policy about an agent's recent behaviour reads the record her decisions
+    already wrote — no counters, nothing to keep in sync. What it must get
+    right is the edge of the window and whose rows it is counting."""
+    old, recent = "2026-07-01T00:00:00Z", "2026-08-01T00:00:00Z"
+    since = "2026-07-15T00:00:00Z"
+    await store.ledger_add("denied", "f1", old, {"tier": "tier3"}, handle="jkt:t")
+    await store.ledger_add("denied", "f2", recent, {"tier": "tier3"}, handle="jkt:t")
+    await store.ledger_add("denied", "f3", recent, {"tier": "tier3"}, handle="jkt:t")
+    await store.ledger_add("promised", "f4", recent, {"tier": "tier1"}, handle="jkt:t")
+    await store.ledger_add("denied", "f5", recent, {"tier": "tier3"}, handle="jkt:other")
+
+    t = await store.trajectory("jkt:t", since)
+    check("trajectory: denials inside the window are counted",
+          t["denials"] == 2, f"got {t['denials']}")
+    check("trajectory: distinct tiers, not repeats",
+          sorted(t["tiers"]) == ["tier1", "tier3"], f"got {sorted(t['tiers'])}")
+    check("trajectory: another agent's rows are not counted",
+          (await store.trajectory("jkt:other", since))["denials"] == 1)
+    check("trajectory: an agent with no history counts as nothing",
+          await store.trajectory("jkt:none", since) == {"denials": 0, "tiers": []})
+
+
 TESTS = [
     test_ticket_is_spent_once,
     test_negotiation_survives_its_ticket,
@@ -335,6 +424,9 @@ TESTS = [
     test_blocked_operators_round_trip,
     test_expired_negotiations_are_reaped,
     test_events_reach_a_subscriber,
+    test_the_ledger_names_the_agent,
+    test_an_allowed_call_can_be_traced_to_its_agent,
+    test_trajectory_reads_the_window,
 ]
 
 

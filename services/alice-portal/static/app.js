@@ -1,6 +1,14 @@
 /* Meridian portal SPA. Vanilla JS, hash routing, dark. */
 const $ = (s, r = document) => r.querySelector(s);
 const el = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
+/* Every string below that came from outside this portal goes through here.
+   These views are built by concatenation and assigned through innerHTML, and
+   most of what they render is authored by the requesting side: the reason an
+   agent gives, the operator name in a metadata document it named, the summary
+   the resource returned. Alice's surface is the one place in this system that
+   has to be trustworthy, so nothing reaches it as markup. */
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const pct = (n) => (n >= 0 ? "+" : "") + Number(n).toFixed(2) + "%";
@@ -312,17 +320,26 @@ async function renderApprovals(target) {
     return `<div class="card pending-card ${isConn ? "connection" : ""}" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span class="chip ${isConn ? "" : "warn"}">${isConn ? "New agent" : "Trade approval"}</span>
-        <b>${p.tier_name || p.tier}</b></div>
-      <div class="kv"><span class="k">Purpose</span><span>${p.purpose}</span></div>
+        <b>${esc(p.tier_name || p.tier)}</b></div>
+      <div class="kv"><span class="k">Purpose</span><span>${esc(p.purpose)}</span></div>
       ${p.operation ? `<div class="kv"><span class="k">Operation</span>
-        <span class="mono">${p.operation.tool}(${JSON.stringify(p.operation.params)})</span></div>` : ""}
-      <div class="kv"><span class="k">Identity</span><span>${p.identity?.level || "unknown"}${p.identity?.sub ? " · " + p.identity.sub : ""}</span></div>
-      ${p.handle ? `<div class="kv"><span class="k">Agent</span><span class="thumb">${p.handle}</span></div>` : ""}
+        <span class="mono">${esc(p.operation.tool)}(${esc(JSON.stringify(p.operation.params))})</span></div>` : ""}
+      ${p.reason ? `<div class="kv"><span class="k">Says it is for</span><span>
+        <span class="claimed">${esc(p.reason)}</span>
+        <div class="muted" style="font-size:12px;margin-top:4px">The agent's own words. Nothing checked this.</div>
+        </span></div>` : ""}
+      ${p.mission ? `<div class="kv"><span class="k">Cites a mandate</span><span>
+        <span class="mono" style="font-size:12px">${esc(p.mission.s256).slice(0, 24)}…</span>
+        <div class="muted" style="font-size:12px;margin-top:4px">says it was approved at
+        ${esc(p.mission.approver)}. Only they can read it, so this is a claim like the one above.</div>
+        </span></div>` : ""}
+      <div class="kv"><span class="k">Identity</span><span>${esc(p.identity?.level || "unknown")}${p.identity?.sub ? " · " + esc(p.identity.sub) : ""}</span></div>
+      ${p.handle ? `<div class="kv"><span class="k">Agent</span><span class="thumb">${esc(p.handle)}</span></div>` : ""}
       ${(p.assurance_notes || []).length ? `<div class="kv"><span class="k">Checked</span><span>
-        ${p.assurance_notes.map(n => `<div class="note">${n}</div>`).join("")}</span></div>` : ""}
+        ${p.assurance_notes.map(n => `<div class="note">${esc(n)}</div>`).join("")}</span></div>` : ""}
       ${(p.because || []).length ? `<div class="kv"><span class="k">Why you</span><span>
-        ${p.because.map(b => `<span class="chip warn">${condLabel(b)}</span>`).join(" ")}</span></div>` : ""}
-      <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span></div>
+        ${p.because.map(b => `<span class="chip warn">${esc(condLabel(b))}</span>`).join(" ")}</span></div>` : ""}
+      <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x => `<span class="chip prohibit">${esc(x)}</span>`).join(" ")}</span></div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn pos sm" onclick="decide('${p.family}','approved')">${isConn ? "Connect this agent" : "Approve this operation"}</button>
         <button class="btn danger sm" onclick="decide('${p.family}','denied')">Deny</button></div>
@@ -347,13 +364,15 @@ async function renderConnections(target) {
   target.innerHTML = operatorPanel(operators) + `<div class="card pad-lg"><table>
     <thead><tr><th>Agent</th><th>Identity</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${conns.map(c => `<tr>
-      <td><div class="tick"><div class="badge2">🤖</div><div class="nm">${c.label}</div></div></td>
-      <td>${c.identity?.level || "—"}</td>
-      <td class="thumb">${c.handle.length > 24 ? c.handle.slice(0, 22) + "…" : c.handle}</td>
+      <td><div class="tick"><div class="badge2">🤖</div><div class="nm">${esc(c.label)}</div></div></td>
+      <td>${esc(c.identity?.level || "—")}</td>
+      <td class="thumb"><a href="#" onclick="trajectory('${esc(c.handle)}');return false"
+        title="Everything this agent has asked for, and what you decided"
+        >${esc(c.handle.length > 24 ? c.handle.slice(0, 22) + "…" : c.handle)}</a></td>
       <td>${(c.first_seen || "").replace("T", " ").replace("Z", "")}</td>
       <td>${c.last_access ? c.last_access.replace("T", " ").replace("Z", "") : "—"}</td>
       <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${c.status}</span></td>
-      <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${c.handle}')">Revoke</button>` : ""}</td>
+      <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${esc(c.handle)}')">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 function operatorPanel(operators) {
@@ -368,12 +387,12 @@ function operatorPanel(operators) {
       front of you, like any other.</div>
     <table><thead><tr><th>Operator</th><th>Agents</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${operators.map(o => `<tr>
-      <td><div class="nm">${o.name}</div><div class="muted mono" style="font-size:12px">${o.origin}</div></td>
+      <td><div class="nm">${esc(o.name)}</div><div class="muted mono" style="font-size:12px">${esc(o.origin)}</div></td>
       <td>${o.active} active of ${o.agents}</td>
       <td class="r"><span class="chip ${o.blocked ? "neg" : "pos"}">${o.blocked ? "blocked" : "accepted"}</span></td>
       <td class="r">${o.blocked
-        ? `<button class="btn ghost sm" onclick="operatorAction('unblock','${o.origin}')">Allow again</button>`
-        : `<button class="btn danger sm" onclick="operatorAction('block','${o.origin}')">Block operator</button>`}</td>
+        ? `<button class="btn ghost sm" onclick="operatorAction('unblock','${esc(o.origin)}')">Allow again</button>`
+        : `<button class="btn danger sm" onclick="operatorAction('block','${esc(o.origin)}')">Block operator</button>`}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -707,27 +726,85 @@ function renderTermsCode(target, tiers) {
   });
 }
 
+/* The record, or one agent's part of it.
+
+   `promised` and `touched` under one negotiation are the two ends of the same
+   request: what the agent said it would do, and what it did. Reading a
+   trajectory is reading the distance between them. */
+const LEDGER_KINDS = {
+  promised: "", touched: "pos", approved: "warn", denied: "neg",
+  refused: "neg", relaxed: "warn", connected: "", revoked: "neg",
+};
+
+function ledgerDetail(e) {
+  switch (e.kind) {
+    case "promised": {
+      const chips = (e.prohibited || [])
+        .map((x) => `<span class="chip prohibit">${esc(x)}</span>`).join(" ");
+      const op = e.operation
+        ? `<br><span class="mono" style="font-size:12px">${esc(e.operation.tool)}(${esc(JSON.stringify(e.operation.params))})</span>`
+        : "";
+      // The agent's own account of the errand. Shown apart from her terms and
+      // labelled, because her authority checked the echo and never this.
+      const reason = e.reason
+        ? `<br><span class="claimed">${esc(e.reason)}</span><span class="muted" style="font-size:12px"> — the agent's words, unchecked</span>`
+        : "";
+      const mission = e.mission
+        ? `<br><span class="thumb">mandate ${esc(e.mission.s256).slice(0, 20)}… at ${esc(e.mission.approver)}</span>`
+        : "";
+      const terms = e.terms_uri
+        ? `<br><a class="thumb" href="${encodeURI(e.terms_uri)}" target="_blank" rel="noopener">${esc(e.terms_uri.split("/terms/")[1] || e.terms_uri)}</a>`
+        : "";
+      return `${esc(e.purpose)}<br><span style="font-size:12px">${chips}</span>${op}${reason}${mission}${terms}<br><span class="thumb">${esc(e.contract)}</span>`;
+    }
+    case "touched":   return `<span class="mono">${esc(e.tool)}</span> ${esc(e.summary || "")}`;
+    case "approved":  return "you personally approved this";
+    case "denied":    return "you denied this request";
+    case "refused":   return `${e.because ? esc(e.because.join(", ")) : "the requesting side declined your terms"}${
+      e.terms_uri ? ` · <a class="thumb" href="${encodeURI(e.terms_uri)}" target="_blank" rel="noopener">${esc(e.terms_uri.split("/terms/")[1] || e.terms_uri)}</a>` : ""}`;
+    case "relaxed":   return `a rule you wrote granted without asking · ${esc((e.because || []).join(", "))}`;
+    case "connected": return `agent connected · <span class="thumb">${esc(e.handle)}</span>`;
+    case "revoked":   return e.operator
+      ? `operator ${esc(e.operator)} blocked · ${e.connections_revoked} connection(s), ${e.rpts_deactivated} grant(s)`
+      : `access revoked · ${e.rpts_deactivated} grant(s) killed`;
+    default:          return "";
+  }
+}
+
+function ledgerTable(entries) {
+  return `<div class="card pad-lg"><table>
+    <thead><tr><th>Time</th><th>Event</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
+    <tbody>${entries.slice().reverse().map((e) => `<tr>
+      <td class="thumb">${esc((e.ts || "").replace("T", " ").replace("Z", ""))}</td>
+      <td><span class="chip ${LEDGER_KINDS[e.kind] || ""}">${esc(e.kind)}</span></td>
+      <td>${ledgerDetail(e)}</td>
+      <td class="r thumb">${esc(e.family)}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
 async function renderLedger(target) {
   const entries = await api("/api/agent/ledger");
   if (!entries.length) { target.innerHTML = `<div class="empty">No agent activity yet. Every promise made, every
     resource touched, and every approval you grant is recorded here.</div>`; return; }
-  const kindChip = { promised: "", touched: "pos", approved: "warn", denied: "neg", refused: "neg", connected: "", revoked: "neg" };
-  target.innerHTML = `<div class="card pad-lg"><table>
-    <thead><tr><th>Time</th><th>Event</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
-    <tbody>${entries.slice().reverse().map(e => {
-      let d = "";
-      if (e.kind === "promised") d = `${e.purpose}<br><span style="font-size:12px">${(e.prohibited || []).map(x => `<span class="chip prohibit">${x}</span>`).join(" ")}</span>${e.operation ? `<br><span class="mono" style="font-size:12px">${e.operation.tool}(${JSON.stringify(e.operation.params)})</span>` : ""}${e.terms_uri ? `<br><a class="thumb" href="${e.terms_uri}" target="_blank">${e.terms_uri.split("/terms/")[1] || e.terms_uri}</a>` : ""}<br><span class="thumb">${e.contract}</span>`;
-      else if (e.kind === "touched") d = `<span class="mono">${e.tool}</span> ${e.summary || ""}`;
-      else if (e.kind === "approved") d = "you personally approved this";
-      else if (e.kind === "denied") d = "you denied this request";
-      else if (e.kind === "refused") d = `the requesting side declined your terms${e.terms_uri ? ` · <a class="thumb" href="${e.terms_uri}" target="_blank">${e.terms_uri.split("/terms/")[1]}</a>` : ""}`;
-      else if (e.kind === "connected") d = `agent connected · <span class="thumb">${e.handle}</span>`;
-      else if (e.kind === "revoked") d = `access revoked · ${e.rpts_deactivated} grant(s) killed`;
-      return `<tr><td class="thumb">${(e.ts || "").replace("T", " ").replace("Z", "")}</td>
-        <td><span class="chip ${kindChip[e.kind] || ""}">${e.kind}</span></td>
-        <td>${d}</td><td class="r thumb">${e.family}</td></tr>`;
-    }).join("")}</tbody></table></div>`;
+  target.innerHTML = ledgerTable(entries);
 }
+
+/* One agent's history, from the Connected agents tab. */
+window.trajectory = async (handle) => {
+  const target = $("#aaBody");
+  const entries = await api(`/api/agent/ledger?handle=${encodeURIComponent(handle)}`);
+  target.innerHTML = `<div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>One agent</h2>
+        <button class="btn ghost sm" onclick="renderConnections($('#aaBody'))">Back to agents</button></div>
+      <div class="muted mono" style="font-size:12.5px">${esc(handle)}</div>
+      <div class="muted" style="font-size:12.5px;margin-top:10px">
+        Everything this agent has asked of you, what you decided, and what it
+        went on to touch. A request that widens over time shows up here as the
+        distance between what was promised and what was used.</div>
+    </div>` + (entries.length
+      ? ledgerTable(entries)
+      : `<div class="empty">Nothing recorded against this agent yet.</div>`);
+};
 
 function updateBadge(n) {
   const nav = $("#navbadge"), ap = $("#apCount");

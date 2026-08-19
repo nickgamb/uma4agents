@@ -32,7 +32,8 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def facts(*, binding=1, provenance=0, accountability=0,
           active=False, age=None, first_at_tier=True, approved_tiers=(),
-          revocations=0, expires_in=0, max_expires_in=3600,
+          revocations=0, denials=0, tiers_seen=(), expires_in=0,
+          max_expires_in=3600, reason=None, mission=None,
           tier_id="tier1") -> dict:
     return {
         "assurance": {"binding": binding, "provenance": provenance,
@@ -40,10 +41,26 @@ def facts(*, binding=1, provenance=0, accountability=0,
         "standing": {"active": active, "age_seconds": age,
                      "first_at_tier": first_at_tier,
                      "approved_tiers": list(approved_tiers),
-                     "revocations": revocations},
-        "request": {"expires_in": expires_in, "max_expires_in": max_expires_in},
+                     "revocations": revocations,
+                     # Read from her ledger by the caller and handed in, which
+                     # is what keeps `evaluate` testable with no store at all.
+                     "trajectory": {"denials": denials,
+                                    "tiers": list(tiers_seen)}},
+        "request": {"expires_in": expires_in, "max_expires_in": max_expires_in,
+                    "reason": reason, "mission": mission},
         "tier": tier_id,
     }
+
+
+def refused(rules) -> bool:
+    """Whether `validate_rules` declines to store this. The guarantee lives at
+    save time, so this is the assertion that matters for anything that must
+    never be writable."""
+    try:
+        policy.validate_rules(rules)
+        return False
+    except ValueError:
+        return True
 
 
 def tier(ask_me=False, rules=None) -> dict:
@@ -267,6 +284,74 @@ check("a tier with no resources yet is allowed",
                       shipped, REGISTERED)["resources"] == [])
 
 # --- the shipped defaults ------------------------------------------------------
+
+# --- what the agent said it wants the access for -------------------------------
+#
+# The reason is the one claim the requesting side authors, so the only thing
+# her policy may do with it is notice that it is missing.
+
+ask_no_reason = tier(rules=[{"when": ["request.reason_absent"], "then": "ask"}])
+check("no stated reason routes the request to her",
+      policy.evaluate(ask_no_reason, facts(reason=None))[0] == policy.ASK)
+check("an empty reason is no reason",
+      policy.evaluate(ask_no_reason, facts(reason="   "))[0] == policy.ASK)
+check("a stated reason costs nothing",
+      policy.evaluate(ask_no_reason, facts(reason="cost basis check"))[0]
+      == policy.AUTO)
+check("but it cannot buy anything either",
+      refused([{"when": ["request.reason_absent"], "then": "auto"}]))
+
+# A cited mandate is a request fact and not an assurance axis, because nothing
+# dereferenced it. From here, an agent that cites a mission and one that
+# invents a hash are the same agent.
+mandate = tier(rules=[{"when": ["request.mission_absent"], "then": "ask"}])
+check("citing no mandate routes the request to her",
+      policy.evaluate(mandate, facts())[0] == policy.ASK)
+check("citing one costs nothing",
+      policy.evaluate(mandate, facts(mission={"approver": "https://ps",
+                                              "s256": "x" * 43}))[0]
+      == policy.AUTO)
+check("and buys nothing",
+      refused([{"when": ["request.mission_absent"], "then": "auto"}]))
+
+# --- what it has been doing lately ---------------------------------------------
+
+repeat = tier(rules=[{"when": ["standing.denials_above:1"], "then": "ask"}])
+check("two denials is not more than one... ",
+      policy.evaluate(repeat, facts(active=True, denials=1))[0] == policy.AUTO)
+check("...and three is",
+      policy.evaluate(repeat, facts(active=True, denials=3))[0] == policy.ASK)
+check("an agent she has never met has no history to hold against it",
+      policy.evaluate(repeat, facts())[0] == policy.AUTO)
+
+breadth = tier(rules=[{"when": ["standing.tiers_above:1"], "then": "ask"}])
+check("reaching at one tier is not spreading",
+      policy.evaluate(breadth, facts(active=True, tiers_seen=["tier1"]))[0]
+      == policy.AUTO)
+check("reaching at three is",
+      policy.evaluate(breadth, facts(active=True,
+                                     tiers_seen=["tier1", "tier2", "tier3"]))[0]
+      == policy.ASK)
+
+check("a denial record cannot be turned into a reason to grant",
+      refused([{"when": ["standing.denials_above:1"], "then": "auto"}]))
+check("nor can the number of tiers it has reached",
+      refused([{"when": ["standing.tiers_above:1"], "then": "auto"}]))
+check("a count has to be a count",
+      refused([{"when": ["standing.denials_above:soon"], "then": "ask"}]))
+check("and it cannot be negative, which would fire always",
+      refused([{"when": ["standing.tiers_above:-1"], "then": "ask"}]))
+check("a count condition without its argument is unstorable",
+      refused([{"when": ["standing.denials_above"], "then": "ask"}]))
+
+# A rule that cannot be evaluated must land on more friction, not less. This is
+# the shape a stored-before-validation rule would have.
+check("an unevaluable restriction still asks",
+      policy.evaluate(tier(rules=[{"when": ["standing.age_above:1d"],
+                                   "then": "ask"}]),
+                      {"assurance": {}, "standing": {}, "request": {},
+                       "tier": "tier1"})[0] == policy.ASK)
+
 
 d = policy.defaults()
 for tid, t in d.items():

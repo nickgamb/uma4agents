@@ -2,7 +2,7 @@
 #
 # `make k8s-load` races callers at the deployment to prove a single-use grant
 # is spent once. This proves something different and, for the argument this
-# lab makes, more load-bearing: that Alice's side scales to an unbounded
+# lab makes, more important: that Alice's side scales to an unbounded
 # number of *distinct requesting parties* without her configuring any of them.
 #
 # The claim under test is that a pseudonymous agent is its key. N agents with

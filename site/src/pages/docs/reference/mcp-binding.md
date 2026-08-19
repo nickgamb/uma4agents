@@ -111,7 +111,7 @@ agent's human the only question that is genuinely theirs — keep waiting, or st
 — and describes the owner's role in prose. That is the honest ceiling of what
 the current type allows.
 
-The proposal adds a `subject` whose load-bearing field is
+The proposal adds a `subject` whose one required field is
 `reachable_by_client`:
 
 ```jsonc

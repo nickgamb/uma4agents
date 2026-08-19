@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, fourteen recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, seventeen recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -21,7 +21,7 @@ the repository.
 
 | Primitive | Verdict | Rationale |
 |---|---|---|
-| Cross-principal grant topology | **Keep** | The load-bearing idea; nothing else on the table has it |
+| Cross-principal grant topology | **Keep** | The idea the rest hangs off; nothing else on the table has it |
 | Permission ticket as negotiation handle | **Keep** | Carried clean; its single-use rotation is what makes pending safe |
 | `request_submitted` pending state | **Keep** | Already specifies ask-me; the agent era adds only *where* the owner is asked |
 | Claims-gathering | **Keep, transform** | Becomes the owner *proffering* a terms template, not just naming claim formats |
@@ -55,7 +55,7 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The fourteen recommendations
+## The seventeen recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -114,7 +114,7 @@ travel.
 back a state handle, but its input-request union addresses only the client's own
 model, filesystem and human. There is no member for *blocked on a different
 principal who is not on this connection*. The fix is small: a `subject` block
-whose load-bearing field is `reachable_by_client: false`. A related finding
+whose one required field is `reachable_by_client: false`. A related finding
 concerns task identifiers acting as bearer tokens.
 
 **9. Say that single-use means indivisible, not merely once.** UMA 2.0 says a
@@ -180,6 +180,37 @@ Split the queue on something an agent cannot assert for itself, because a single
 queue defends continuity and leaves *onboarding* undefended — the agent you want
 to admit is a stranger too, the first time. Refuse past the cap rather than
 queueing, and say why.
+
+**15. Give the requesting side somewhere to say what it is asking for, and make
+it tighten-only.** Before this, the agreement was the owner's template echoed
+back: on a tier without per-operation binding the requester contributed a
+signature and nothing else. Every agent-intent design in the market is that
+missing field — and all of them assume the party declaring the intent owns the
+resource. The constraint matters more than the field: it must be carried and
+never evaluated. An authority that rules on whether a stated purpose is
+plausible has put a judgement about natural language inside an authorization
+decision, and the property that four differently-arranged requesting sides
+produce one unchanged answer is gone. Bound it, record it, show it to her, and
+let policy notice only its absence.
+
+**16. A decision record keyed only by transaction cannot answer a question about
+a party.** Correlating by negotiation answers "what happened in this exchange",
+not "what has this agent been doing" — and the second is the question an owner
+asks. The sharp edge is not a missing filter: a denied or refused negotiation
+issues no token, so nothing links that entry to an agent at all. A spec should
+say a decision record carries the counterparty, and should name the class that
+cannot — a decline arrives before anything is signed, so it is honestly
+anonymous. Related deployment note: the enforcement point reports what it
+allowed and must not be told the handle. It enforces for a policy it cannot
+read; the authority resolves the attribution itself.
+
+**17. Not every policy input needs the atomicity a single-use artifact needs.**
+Recommendation 9 asks for indivisible consumption, and the over-correction is to
+treat every input that way. The question that separates them: can a stale read
+widen access beyond what a differently-timed arrival would have? A count that
+only tightens is monotone inside its window, so a replica one write behind
+behaves as if the request came a moment earlier. A single-use burn fails that
+test immediately, which is why it is in the other class.
 
 ## Parking lot
 

@@ -53,7 +53,7 @@ client will then try to satisfy the wait from its own user.
 }
 ```
 
-`reachable_by_client` is the load-bearing field. When it is `false` the client
+`reachable_by_client` is the field that does the work. When it is `false` the client
 **MUST NOT** attempt to satisfy the request from its own user; it may surface
 the wait, and it may ask its user whether to keep waiting or abandon — a
 distinct question the client owns.

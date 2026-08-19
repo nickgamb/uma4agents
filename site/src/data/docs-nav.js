@@ -45,6 +45,7 @@ const nav = {
         { title: "The four beats", to: "/docs/overview/four-beats/" },
         { title: "The three parties", to: "/docs/overview/parties/" },
         { title: "Terms as first-class", to: "/docs/overview/terms/" },
+        { title: "The two intents", to: "/docs/overview/two-intents/" },
       ],
     },
     {

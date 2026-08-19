@@ -1,0 +1,66 @@
+# Whose intent the grant carries — in the cluster.
+#
+# The same clients/demo-driver/intent_check.py the compose stack runs, from
+# Bob's namespace, so what it proves it proves through the edge and against a
+# replicated authorization server: her terms cannot be signed weaker than she
+# wrote them, what the agent says it wants is recorded and never judged, the
+# record answers a question about an agent rather than about a request, and a
+# rule reading that record can tighten but never relax.
+#
+# Worth running here rather than only under compose: the trajectory a rule
+# reads is a query against a shared table, so this is where "the count is the
+# same whichever replica answered" stops being an assumption.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: intent-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: intent-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: intent-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/intent_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+            # Must match UMA_AS_MAX_REASON on the uma-as Deployment: a check
+            # that sends one byte over a cap the server does not enforce fails
+            # for the wrong cause.
+            - name: UMA_AS_MAX_REASON
+              value: "512"
+          volumeMounts:
+            - { name: driver, mountPath: /driver/intent_check.py, subPath: intent_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}
