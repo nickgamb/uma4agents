@@ -119,10 +119,13 @@ say nothing where there is none:
                "discretionary-reuse-of-authority": "single-use"}
 ```
 
-It is derived from the tier on every read rather than stored, so it cannot
-drift from what the tier actually switches on, and it is not part of what the
-agent echoes: the agent agrees to the prohibitions, not to her account of how
-she keeps them.
+It is not part of what the agent echoes — the agent agrees to the prohibitions,
+not to her account of how she keeps them — and it is not part of the published
+document either. A published terms version never changes its bytes, which is
+what lets an agreement signed last year still be checked against exactly what
+was proffered. Her enforcement posture can change without the terms changing at
+all, so it is annotated at read time and only while that version is still the
+one in force.
 
 What is left over is genuinely unenforceable, and the signed record is the
 remedy path rather than the control. That is a weaker guarantee than

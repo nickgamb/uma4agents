@@ -74,11 +74,28 @@ switches and both the proffered template and the published document carry it:
              "discretionary-reuse-of-authority": "single-use"}
 ```
 
-Derived on read rather than stored — a copy would be one owner edit away from
-lying — and gated on the switch that turns the mechanism on, so a tier that
-forbids reuse without setting `per_operation` is honestly reported as
-undertaken. It is **not** echoed: the agent agrees to the prohibitions, not to
-her account of how she keeps them.
+Gated on the switch that turns the mechanism on, so a tier that forbids reuse
+without setting `per_operation` is honestly reported as undertaken. It is
+**not** echoed: the agent agrees to the prohibitions, not to her account of how
+she keeps them.
+
+It is also **not part of the published document**, and the reason is worth
+stating because the first implementation got it wrong. `publish_terms` is
+idempotent per `template_id` — a version's content never changes, which is what
+lets an agreement signed last year still be checked against exactly the bytes
+that were proffered. Anything that can change *without the terms changing* has
+no business inside one, and her enforcement posture is exactly that: she can
+flip `per_operation` without rewriting a word.
+
+So it is annotated on the endpoint at read time, and only while that version is
+the one in force. A superseded version carries no annotation, because labelling
+it with today's posture is a different kind of wrong from saying nothing.
+
+The mistake was invisible under the in-memory store, which starts empty and
+republishes every version on each boot. It surfaced the first time the check
+ran against Postgres, where the tier-3 document had been published days
+earlier and the new field was silently dropped by `ON CONFLICT DO NOTHING` —
+the idempotency doing exactly its job.
 
 What remains unenforceable is genuinely so, and the dually-signed record is the
 remedy path rather than the control.

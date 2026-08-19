@@ -328,7 +328,6 @@ async def publish_terms(tier_id: str, tier: dict) -> str:
             "name": tier["name"],
             "tier": tier_id,
             **{k: v for k, v in tier["terms"].items() if k != "template_id"},
-            "enforced": policy.enforced_prohibitions(tier),
             "published_at": utcstamp(),
         })
         event("terms.published", template_id=template_id, tier=tier_id)
@@ -426,11 +425,35 @@ def terms_as_jsonld(doc: dict) -> dict:
     }
 
 
+async def annotate_enforced(doc: dict) -> dict:
+    """Mark which prohibitions the enforcement point currently refuses.
+
+    Computed on read and deliberately not stored. `publish_terms` is
+    idempotent because an agreement names a version and must stay checkable
+    against exactly the bytes that were proffered — so a document cannot gain
+    a field later, and anything that can change without the terms changing has
+    no business inside one. Whether reuse is refused depends on the tier's
+    `per_operation` switch, which she can flip without rewriting a word.
+
+    Only annotated while this version is the one in force. A superseded
+    version would otherwise be labelled with today's posture, which is a
+    different kind of wrong from saying nothing.
+    """
+    tiers = await STORE.tiers()
+    tier = tiers.get(doc.get("tier") or "")
+    if not tier or tier["terms"]["template_id"] != doc["template_id"]:
+        return doc
+    return {**doc, "enforced": policy.enforced_prohibitions(tier)}
+
+
 @app.get("/terms/{template_id:path}")
 async def terms_document(template_id: str, request: Request, format: str = None):
     doc = await STORE.terms_doc(template_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="unknown terms document")
+    # The stored bytes are what was proffered and signed against. The
+    # enforcement posture is annotated on top, never folded in.
+    doc = await annotate_enforced(doc)
     if format == "jsonld":
         return JSONResponse(terms_as_jsonld(doc), media_type="application/ld+json")
     accept = request.headers.get("accept", "")
