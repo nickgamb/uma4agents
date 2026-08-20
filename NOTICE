@@ -15,105 +15,194 @@ of the License at
 Specifications implemented or profiled
 ================================================================================
 
-This work implements, profiles, or extends the following specifications. They
-are cited as normative references; no specification text is reproduced here
-beyond brief quotation for identification.
+This work implements, profiles, or extends the specifications below. They are
+cited as normative references. No specification text is reproduced in this
+repository: every occurrence of specification wording in these files is a
+citation URL, verified by ten-word phrase comparison against the published
+documents.
 
   User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization
   Federated Authorization for UMA 2.0
       Kantara Initiative. https://docs.kantarainitiative.org/uma/
 
+      Copyright (c) 2018 Kantara Initiative and the persons identified as the
+      document authors. Both documents are subject to the Kantara IPR Policy,
+      Option Patent & Copyright: Reciprocal Royalty Free with Opt-Out to
+      Reasonable And Non-discriminatory (RAND), version 2.0.
+
+      Under that policy, Article 4.1(a) of Appendix B grants a royalty-free,
+      non-exclusive patent licence to any person or entity, whether or not a
+      Kantara Participant, to implement the specification -- to the extent
+      needed to be a Fully Compliant Implementation as that policy defines it.
+      Article 3 grants a copyright licence to prepare derivative works, and
+      that grant runs between Kantara Participants rather than to the public.
+      This project relies on neither: it reproduces no specification text, and
+      copyright in a specification covers the document, not the protocol it
+      describes.
+
+      UMA 2.0 Grant Section 4 contemplates profiles (which restrict UMA's
+      options) and extensions (which use its extensibility points), and
+      recommends that the creator of one assign it a uniquely identifying URI
+      and that an authorization server supporting it advertise that URI in its
+      `uma_profiles_supported` metadata. This project is both a profile and a
+      set of extensions; the deviations are enumerated in docs/PROTOCOL.md
+      under "Extension register". It does not yet mint or advertise a profile
+      URI.
+
   RFC 9728  OAuth 2.0 Protected Resource Metadata
   RFC 9421  HTTP Message Signatures
   RFC 7638  JSON Web Key (JWK) Thumbprint
-      IETF. Reproduced under the IETF Trust Legal Provisions.
+  RFC 9396  OAuth 2.0 Rich Authorization Requests
+  RFC 9530  Digest Fields
+      IETF. Copyright (c) IETF Trust and the persons identified as the
+      document authors. Cited under the IETF Trust Legal Provisions; no RFC
+      text or code component is reproduced here.
 
   AAuth Protocol (draft-hardt-oauth-aauth-protocol), and the companion
   AAuth R3 and Bootstrap drafts
       Dick Hardt. https://github.com/dickhardt/AAuth
+      IETF Internet-Drafts, cited as work in progress. That repository
+      publishes no licence file; the drafts themselves are IETF Contributions
+      governed by BCP 78 and the IETF Trust Legal Provisions.
 
   IEEE Std 7012-2025, Standard for Machine Readable Personal Privacy Terms
   ("MyTerms")
       IEEE Standards Association. Cited by section; the standard itself is
       published by IEEE and is not redistributed with this work.
 
+  Model Context Protocol, revision 2026-07-28, and the SEP-2322 (MRTR) and
+  SEP-2663 (Tasks) extension proposals
+      Anthropic and MCP contributors. https://modelcontextprotocol.io
+      The MCP project is mid-transition from MIT to Apache-2.0: new code and
+      specification contributions are Apache-2.0, documentation other than
+      specifications is CC-BY-4.0, and contributions whose authors have not
+      consented to relicensing remain MIT.
+
+Trademark: "User-Managed Access" and "UMA" originate with the Kantara
+Initiative UMA Work Group. This project is an independent implementation and
+is neither endorsed by nor a product of Kantara Initiative, Inc.
+
 ================================================================================
-Third-party software
+Third-party software -- application stack
 ================================================================================
 
-The following third-party components are used by this project. None of them
-are vendored into this repository — they are fetched at build or run time by
-`make` and `docker compose`, and each remains under its own license.
+None of the following is vendored into this repository. Each is fetched at
+build or run time by `make` and `docker compose`, and remains under its own
+licence.
 
-  aauth (Python package, v0.3.2) ................................. MIT
+  aauth (Python package, pinned 0.3.2) .......................... MIT
       Copyright (c) 2025 Christian Posta
       Used by lib/uma4a_enroll.py for AAuth request signing and JWK
       conversion. Installed from PyPI.
 
-  agentgateway .................................................. Apache-2.0
+  agentgateway (v1.4.0 / v1.4.1) ................................ Apache-2.0
       https://github.com/agentgateway/agentgateway
-      Used as the MCP gateway / PEP host. gateway/agw.yaml is an original
+      The MCP gateway and PEP host. gateway/agw.yaml is an original
       configuration authored for this project, expressed in agentgateway's
       own configuration schema.
 
-  Keycloak ...................................................... Apache-2.0
-  Envoy Proxy ................................................... Apache-2.0
+  Keycloak (26.4.5) ............................................. Apache-2.0
+  Envoy Proxy (v1.34) ........................................... Apache-2.0
   Model Context Protocol Python SDK ............................. MIT
-  Hickory DNS ................................................... MIT OR Apache-2.0
+      Copyright (c) 2024 Anthropic, PBC
+  Hickory DNS (0.25.2) .......................................... MIT OR Apache-2.0
+  Ollama (0.6.8) ................................................ MIT
+      Optional. Serves a local model for the kagent path only.
   mkcert ........................................................ BSD-3-Clause
   Authlib ....................................................... BSD-3-Clause
-  FastAPI, Uvicorn, httpx, PyJWT, cryptography .................. MIT / BSD-3-Clause / Apache-2.0
+  python:3.12-slim (container base image) ....................... PSF-2.0 and others
+      Python itself under the PSF Licence; the Debian base and its packages
+      under their own licences.
+  FastAPI, Starlette, Uvicorn, httpx, PyJWT, cryptography,
+    asyncpg, sse-starlette, python-multipart, itsdangerous ...... MIT / BSD-3-Clause / Apache-2.0
 
-  Grafana, Loki, Promtail ....................................... AGPL-3.0
+  Grafana, Loki, Promtail (11.6.0 / 3.4.2) ...................... AGPL-3.0
       Used unmodified as container images for observability only. No part of
       this project is derived from or linked against them; the dashboard and
       datasource definitions under observability/ are original works of this
       project.
 
-The website under site/ (u4a.ai) is a separate build with its own
-dependencies, resolved from npm at build time and likewise not vendored here:
+================================================================================
+Third-party software -- Kubernetes platform
+================================================================================
 
-  Gatsby ........................................................ MIT
-      https://github.com/gatsbyjs/gatsby
-      Static site framework. The configuration, components, styles and
-      content under site/ are original works of this project.
+`make k8s-up` installs the following into a local cluster. Versions are pinned
+in k8s/platform/versions.env. None is vendored or redistributed here; the
+manifests, Helm values, and policies under k8s/ are original works of this
+project.
 
+  kind (v0.32.0) ................................................ Apache-2.0
+  Gateway API (v1.6.0) .......................................... Apache-2.0
+  cert-manager (v1.21.1) ........................................ Apache-2.0
+  trust-manager (v0.24.0) ....................................... Apache-2.0
+  Istio (1.30.3, ambient: istiod, istio-cni, ztunnel) ........... Apache-2.0
+  kgateway (v2.4.2) ............................................. Apache-2.0
+  agentgateway (v1.4.1) ......................................... Apache-2.0
+  CloudNativePG (0.29.0) ........................................ Apache-2.0
+  kagent (0.9.12) ............................................... Apache-2.0
+  kmcp (0.3.0) .................................................. Apache-2.0
+
+================================================================================
+Third-party software -- website
+================================================================================
+
+The site under site/ (u4a.ai) is a separate build whose dependencies are
+resolved from npm at build time and are likewise not vendored here. The
+configuration, components, styles, illustrations and content under site/ are
+original works of this project.
+
+  Gatsby, and the gatsby-source-filesystem, gatsby-transformer-remark,
+    gatsby-plugin-sass, gatsby-remark-prismjs and
+    gatsby-remark-copy-linked-files plugins ..................... MIT
+  React, React DOM .............................................. MIT
   anime.js (v4) ................................................. MIT
       Copyright (c) 2025 Julian Garnier
-      Drives the home page's animation. The scene machine in
+      Drives the home page animation. The scene machine in
       site/src/animation/story.js and the illustration it animates are
       original works of this project.
-
-  React, React DOM .............................................. MIT
-  Prism (syntax highlighting) ................................... MIT
+  Prism ......................................................... MIT
   Dart Sass ..................................................... MIT
+  zod ........................................................... MIT
+  Model Context Protocol TypeScript SDK ......... MIT / Apache-2.0 (in transition)
+  prop-types .................................................... MIT
+  Prettier (development only) ................................... MIT
 
   segno ......................................................... BSD-3-Clause
       Used once, offline, to generate site/static/qr.svg. Not a build or
       runtime dependency of the site.
 
+No web fonts are loaded and no third-party images are used. Every image under
+site/static/ and screenshots/ is a screenshot of this lab or an original
+drawing.
+
 ================================================================================
-Upstream AAuth reference implementations (not licensed for redistribution)
+Upstream checkouts -- fetched, not vendored
 ================================================================================
 
-The `make fetch-upstream` target clones the following repository, and
-aauth/person-server.Dockerfile builds a container image from it:
+`make fetch-upstream` clones the following into aauth/upstream/, which is
+excluded by .gitignore. They are built into container images locally by the
+person running the lab, and no part of them is redistributed here.
 
-  christian-posta/aauth-person-server
+  pAI-OS (paios), pinned at b65d858 ............................. MIT
+      Copyright (c) 2024 pAI-OS Contributors <contact@paios.org>
+      https://github.com/pAI-OS/paios
+      Kwaai's Personal AI Operating System. kwaai/Dockerfile builds an image
+      from this checkout with the U4A ability installed. Everything under
+      kwaai/ is an original work of this project.
 
-As of this writing that repository publishes no license, which under default
-copyright means all rights are reserved by its author. It is therefore NOT
-redistributed as part of this project: it is excluded by .gitignore, fetched
-directly from its origin by the person running the lab, and built locally.
+  AAuth Person Server, pinned at 4e05247 ........................ Apache-2.0
+      Copyright 2026 Christian Posta
+      https://github.com/christian-posta/aauth-person-server
+      aauth/person-server.Dockerfile builds a container image from this
+      checkout. Optional: the default demo path signs pseudonymously.
 
-The same applies to christian-posta/extauth-aauth-resource and
-christian-posta/aauth-full-demo, which were used during research spikes and
-are likewise not included in this repository.
+The following repositories were used during research spikes and publish no
+licence, which under default copyright means all rights are reserved by their
+author. They are not included here, and anyone intending to use them beyond
+local evaluation should obtain permission:
 
-Anyone intending to use this lab beyond local evaluation should obtain
-permission from the author of those repositories, or substitute their own
-AAuth person/agent server. The AAuth Person Server is optional for the
-default demo path, which signs pseudonymously.
+  christian-posta/extauth-aauth-resource
+  christian-posta/aauth-full-demo
 
 ================================================================================
 Demonstration data

@@ -82,3 +82,28 @@ Three things, and each is written up as a
 
 Everything else on this page already existed. The contribution is the
 arrangement.
+
+## Licensing and IPR
+
+UMA 2.0 and FedAuthz are published by the Kantara Initiative under its IPR
+Policy, option "Reciprocal Royalty Free with Opt-Out to RAND". Article 4.1(a)
+of that policy grants a royalty-free patent licence to any person or entity
+implementing the specification, to the extent needed for a fully compliant
+implementation. Article 3's copyright licence to prepare derivative works runs
+between Kantara Participants, and covers the specification documents rather
+than the protocol they describe. This profile reproduces no specification
+text, so the copyright grant is not engaged.
+
+Section 4 of the grant specification asks that a profile or extension be given
+a uniquely identifying URI, and that an authorization server supporting one
+advertise that URI in its `uma_profiles_supported` metadata. U4A does not do
+this yet. What such a URI would name is already written down, in the
+[deviations register](/docs/reference/deviations/).
+
+The RFCs above are cited under the IETF Trust Legal Provisions. IEEE 7012 is
+cited by section and is not redistributed here. Full attribution for every
+specification and component, with versions, is in
+[NOTICE](https://github.com/nickgamb/uma4agents/blob/main/NOTICE).
+
+"UMA" and "User-Managed Access" originate with Kantara's UMA Work Group. This
+is an independent implementation and not a Kantara product.

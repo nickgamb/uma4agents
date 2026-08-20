@@ -268,18 +268,24 @@ Licensed under the [Apache License 2.0](LICENSE). A collaboration exploring
 UMA's fit for agentic authorization, with Eve Maler.
 
 [NOTICE](NOTICE) carries the full attribution list: the specifications this
-profiles (UMA 2.0, RFC 9728, RFC 9421, AAuth, IEEE 7012), and the third-party
-components the lab uses. Nothing third-party is vendored here — `make` and
-`docker compose` fetch each piece from its own origin, under its own license.
+profiles (UMA 2.0, RFC 9728, RFC 9421, RFC 9396, IEEE 7012, AAuth, MCP), the
+application stack, the Kubernetes platform, and the site's dependencies.
+Nothing third-party is vendored here — `make` and `docker compose` fetch each
+piece from its own origin, under its own license.
 
-Two things worth reading there before you build on this:
+Three things worth reading there before you build on this:
 
-- The **AAuth Person Server** is cloned from
-  [christian-posta/aauth-person-server](https://github.com/christian-posta/aauth-person-server),
-  which publishes no license. It is not redistributed by this project, and the
-  default demo path (pseudonymous agent keys) does not need it. If you want the
-  identified-agent path for anything beyond local evaluation, get the author's
-  permission or substitute your own AAuth person/agent server.
+- **UMA 2.0** is published by the Kantara Initiative under its IPR Policy,
+  Reciprocal Royalty Free with Opt-Out to RAND. That policy grants a
+  royalty-free patent license to anyone implementing the specification; its
+  copyright license for derivative works runs between Kantara Participants.
+  This project reproduces no specification text, so only the former is in
+  play. UMA and User-Managed Access originate with Kantara's UMA Work Group,
+  and this project is neither endorsed by nor a product of Kantara.
+- The **AAuth Person Server** and **pAI-OS** are cloned by `make
+  fetch-upstream` rather than vendored, and built into images locally —
+  Apache-2.0 and MIT respectively. Two research-spike repositories listed in
+  NOTICE publish no license at all and are not used by any `make` target here.
 - **Grafana and Loki** are AGPL-3.0, used unmodified as container images for
   observability only. The dashboards under `observability/` are original to
   this project.
