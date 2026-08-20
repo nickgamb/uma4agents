@@ -49,7 +49,7 @@ and burns single-use grants. It performs those obligations *for* an authority it
 does not hold: it enforces Alice's policy and must not be able to read or
 rewrite it.
 
-That separation is the one worth testing. In the deployed shape a service mesh
+That separation is what the suite tests hardest. In the deployed shape a service mesh
 enforces it rather than a document asserting it, and the suite proves it with a
 pair of assertions on the same port and the same workload — the enforcement
 point is refused Alice's policy, and allowed her published keys.

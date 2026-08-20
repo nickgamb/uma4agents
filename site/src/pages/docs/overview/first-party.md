@@ -41,7 +41,8 @@ branch here would be telling you its party model was wrong.
 
 ## How her authority knows
 
-Two things have to hold, and the second is the one with teeth.
+Two things have to hold: something she decided, and something her authority
+checked.
 
 **She claimed the origin.** The agent names an operator, the way any agent
 does, and that operator's origin is one she marked as hers — the mirror of
@@ -57,9 +58,9 @@ about itself. A metadata document only proves it claims the URL it came from,
 so pointing at one she publishes is free. Putting a key in her directory is
 not.
 
-That matters more here than anywhere else in the profile, because this is the
-only fact that makes a requirement **looser**. Everywhere else, evidence can
-add friction and nothing more. `make first-party-check` asserts the attack
+The attestation carries more weight here than anywhere else in the profile,
+because this is the only fact that makes a requirement **looser**. Everywhere
+else, evidence can add friction and nothing more. `make first-party-check` asserts the attack
 directly: an agent naming her origin, whose key she never published, gets
 nothing.
 

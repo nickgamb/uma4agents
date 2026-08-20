@@ -662,8 +662,9 @@ is against.
 **It is the one fact that may loosen a requirement, so it needs both halves.**
 The owner claiming an origin is her decision; the operator having published
 *this agent's key* is a check the authority ran. Either alone is insufficient,
-and the second is the load-carrying one — a metadata document proves only that
-it claims its own URL, so pointing at the owner's is free. Drop the attestation
+and the attestation is the half an agent cannot supply for itself — a metadata
+document proves only that it claims its own URL, so pointing at the owner's is
+free. Drop the attestation
 and "this is my agent" becomes a sentence an agent can say about itself, which
 inverts recommendation 13 in the one place it must not bend.
 

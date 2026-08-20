@@ -35,8 +35,7 @@ Each is a question her authority answers for itself, by doing something.
 | `provenance` | Can she check where the credential came from? | The credential carrying that key was signed by an issuer whose published keys verify it. |
 | `accountability` | Is anyone named and reachable behind it? | A metadata document resolved and claims the URL it was fetched from — and, one step further, that operator's own key directory holds this very key. |
 
-The last step is the one worth dwelling on, because it is where a claim stops
-being a claim. An operator publishing a document that says "we run agents" is
+The last step is where a claim stops being a claim. An operator publishing a document that says "we run agents" is
 telling you about itself. An operator publishing *this agent's key* is telling
 you about this agent — and it is a thing the agent cannot do on its own behalf.
 Her authority fetches that directory itself and looks for the key that signed
@@ -89,7 +88,7 @@ second request either.
 
 **It is not an assurance level.** There is no ladder to climb and no rung that
 entitles an agent to anything. The numbers exist so a rule can say "below this",
-and that is the whole of their meaning.
+and they mean nothing beyond it.
 
 **It is not identity.** Her policy vocabulary contains no issuer, no metadata
 URL, no key thumbprint — the conditions name properties of evidence, so swapping

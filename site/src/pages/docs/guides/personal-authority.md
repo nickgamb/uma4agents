@@ -72,7 +72,7 @@ rule as everywhere else in the profile, and the same bug if you break it.
 
 ## 4. Decide what the surface actually has to do
 
-Very little. Holding the key and asking the person is the whole of it:
+Very little. Holding the key and asking the person is all of it:
 
 | It must | It must not |
 |---|---|
@@ -101,7 +101,7 @@ and never had to generate.
 
 ## What it is like when the host cannot ask
 
-The fourth method is the one that decides whether this is a personal AI or a
+The fourth method is what separates a personal AI from a
 standing policy, and it is the one a host is least likely to have.
 
 The lab runs this against a real personal-AI runtime — Kwaai's pAI-OS, with

@@ -273,7 +273,7 @@ Bob's. Being hers buys less friction, never more access.
 ## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other
-case, and the one that decides whether anyone can adopt this:
+case, and the one adoption turns on:
 [kagent](https://kagent.dev), unmodified, which has never heard of UMA.
 
 ```bash

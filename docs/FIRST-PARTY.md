@@ -32,16 +32,18 @@ to demonstrate that rather than to assert it.
 
 ## How her authority knows
 
-An agent is first-party when **both** of these hold:
+An agent is first-party when **both** of these hold — one her decision, one a
+check her authority ran:
 
 | | |
 |---|---|
 | the operator it names is an origin she claimed | `POST /owner/operators/claim`, stored in `owned_operators` |
 | that operator published *this agent's key* | `operator_published_key`, the same check that reaches accountability level 2 |
 
-The second half is not a refinement. A Client ID Metadata Document proves only
-that it claims the URL it was fetched from, so any agent may point at one she
-publishes and reach level 1. Only she can put a key in her directory. Without
+The attestation is not a refinement on the claim. A Client ID Metadata Document
+proves only that it claims the URL it was fetched from, so any agent may point
+at one she publishes and reach level 1. Only she can put a key in her
+directory. Without
 the attestation, "this is my agent" would be a sentence an agent could say
 about itself — and this is the one fact in the profile that makes a
 requirement *looser*, so it is the one place a claim can never be enough.
