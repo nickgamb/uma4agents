@@ -46,6 +46,7 @@ const nav = {
         { title: "The three parties", to: "/docs/overview/parties/" },
         { title: "Terms as first-class", to: "/docs/overview/terms/" },
         { title: "The two intents", to: "/docs/overview/two-intents/" },
+        { title: "Her own agent", to: "/docs/overview/first-party/" },
       ],
     },
     {

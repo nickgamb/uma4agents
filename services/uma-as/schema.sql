@@ -64,6 +64,17 @@ CREATE TABLE IF NOT EXISTS blocked_operators (
     blocked jsonb NOT NULL
 );
 
+-- Origins Alice says are hers. The mirror of blocked_operators, and the
+-- asymmetry between the two is the whole reason they are separate tables:
+-- blocking is a restriction and may rest on what an agent claims about
+-- itself, so a liar only lies into a refusal. Claiming is a relaxation, so it
+-- may not -- an agent is first-party only when this origin is here AND the
+-- operator published that agent's key where her authority could check.
+CREATE TABLE IF NOT EXISTS owned_operators (
+    origin text PRIMARY KEY,
+    owned  jsonb NOT NULL
+);
+
 -- Append-only. This is the audit trail, so nothing here is ever updated or
 -- deleted -- including refusals and denials, which are decisions too.
 CREATE TABLE IF NOT EXISTS ledger (

@@ -234,6 +234,10 @@ def main() -> int:
                     help="Bob's agent server; pass --pseudonymous to skip enrollment")
     ap.add_argument("--pseudonymous", action="store_true",
                     help="run with a bare key instead of an enrolled agent token")
+    ap.add_argument("--alice-operator",
+                    default=os.environ.get("UMA4A_ALICE_OPERATOR",
+                                           "https://alice-agent.uma.lab"),
+                    help="Alice's own operator presence, for the first-party act")
     ap.add_argument("--agent-operator",
                     default=os.environ.get("UMA4A_AGENT_OPERATOR",
                                            "https://agent.uma.lab"),
@@ -276,7 +280,7 @@ def main() -> int:
         say(f"operator metadata: {keys.client_id}")
         say(f"key published for discovery: {keys.signature_agent or 'unavailable'}")
 
-    acts = (["tier1", "tier2", "tier3", "revocation"]
+    acts = (["tier1", "tier2", "tier3", "first-party", "revocation"]
             if args.act == "all" else [args.act])
 
     # The simulated Alice authenticates like the real one: a direct-access
@@ -390,6 +394,80 @@ def main() -> int:
                 print("FAIL: single-use RPT was accepted twice")
                 return 1
 
+        if "first-party" in acts:
+            print("\n== Act 4 (evening): Alice's own agent, and the same tier ==")
+            say("RO == RqP. She activated this one; it is still not her.")
+
+            # Her agent is a separate key with a separate operator presence.
+            # Nothing about the grant differs — same four beats, same terms,
+            # same enforcement — which is the claim this act exists to test.
+            hers = AgentKeys.load_or_create(f"{args.keystore.rsplit('/', 1)[0]}"
+                                            f"/alice-agent-key.pem")
+            if args.alice_operator:
+                hers.client_id = f"{args.alice_operator}/agent.json"
+                hers.signature_agent = hers.publish(client, args.alice_operator)
+                say(f"her operator: {hers.client_id}")
+
+            def owner_post(path: str, body: dict) -> dict:
+                r = client.post(f"{args.as_internal}{path}", json=body,
+                                headers={"Authorization": f"Bearer {owner_token()}"})
+                r.raise_for_status()
+                return r.json()
+
+            def set_tier3_rules(rules: list) -> None:
+                r = client.put(f"{args.as_internal}/owner/policies/tier3",
+                               json={"rules": rules},
+                               headers={"Authorization": f"Bearer {owner_token()}"})
+                r.raise_for_status()
+
+            origin = (args.alice_operator or "").rstrip("/")
+            owner_post("/owner/operators/claim", {"origin": origin})
+            say(f"she claims {origin} as her own")
+
+            trade = {"symbol": "VTI", "side": "buy", "quantity": 5}
+            op = {"tool": "execute_trade", "params": trade}
+
+            try:
+                # 1. Before she writes anything, being hers buys nothing. Tier 3
+                #    asks, and it asks her about her own agent too.
+                say("no rule yet — tier 3 asks her, about her own agent as well")
+                call_tool(session, hers, "execute_trade", trade, client,
+                          operation=op,
+                          reason="Reinvesting this month's dividend.",
+                          simulate_alice=args.simulate_alice,
+                          owner_token=owner_token, as_internal=args.as_internal,
+                          resource_metadata=prm, resource_url=args.gateway)
+
+                # 2. Now she says so, in a rule that names no agent.
+                set_tier3_rules([{"when": ["standing.first_party"], "then": "auto"}])
+                say('rule added: {"when": ["standing.first_party"], "then": "auto"}')
+
+                out = call_tool(session, hers, "execute_trade", trade, client,
+                                operation=op,
+                                reason="Reinvesting this month's dividend.",
+                                simulate_alice=args.simulate_alice,
+                                owner_token=owner_token,
+                                as_internal=args.as_internal,
+                                resource_metadata=prm, resource_url=args.gateway)
+                say("granted without asking her — she had already decided")
+                show_result(out["payload"])
+
+                # 3. The same rule, the same tier, Bob's agent. Still asked,
+                #    because the rule reads a fact about who she activated and
+                #    Bob's agent is not one of them.
+                say("the same rule, the same tier — now Bob's agent tries it")
+                call_tool(session, keys, "execute_trade", trade, client,
+                          operation=op,
+                          reason="Following the same dividend reinvestment.",
+                          simulate_alice=args.simulate_alice,
+                          owner_token=owner_token, as_internal=args.as_internal,
+                          resource_metadata=prm, resource_url=args.gateway)
+                say("still asked — the relaxation is about whose agent it is")
+            finally:
+                # Leave her policy as it was found, so `demo-all` is repeatable.
+                set_tier3_rules([])
+                say("tier 3 restored to its shipped rules")
+
         if "revocation" in acts:
             print("\n== Act 4 (evening): Alice revokes the agent ==")
             out = call_tool(session, keys, "get_positions", {}, client,
@@ -398,12 +476,19 @@ def main() -> int:
                             resource_metadata=prm, resource_url=args.gateway)
             say("agent holds a live grant for the holdings summary")
 
+            # This agent's own connection, not whichever happens to be first.
+            # Revocation is per agent, so an act that picks an arbitrary active
+            # one proves nothing — and quietly stops proving anything at all as
+            # soon as another act leaves a second connection behind, which is
+            # exactly what happened when the first-party act was added.
             headers = {"Authorization": f"Bearer {owner_token()}"}
             conns = client.get(f"{args.as_internal}/owner/connections",
                                headers=headers).json()
-            handle = next((c["handle"] for c in conns if c["status"] == "active"), None)
+            mine = keys.connection_handle()
+            handle = next((c["handle"] for c in conns
+                           if c["status"] == "active" and c["handle"] == mine), None)
             if handle is None:
-                print("FAIL: no active connection to revoke")
+                print(f"FAIL: this agent has no active connection to revoke ({mine})")
                 return 1
             revoked = client.post(
                 f"{args.as_internal}/owner/connections/{handle}/revoke",

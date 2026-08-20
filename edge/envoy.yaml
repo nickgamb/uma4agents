@@ -57,6 +57,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: agent_operator }
+                    - name: alice_operator
+                      domains: ["alice-agent.uma.lab", "alice-agent.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: alice_operator }
                 http_filters:
                   - name: envoy.filters.http.router
                     typed_config:
@@ -127,3 +132,12 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: agent-operator, port_value: 9030 } }
+
+    - name: alice_operator
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: alice_operator
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: alice-operator, port_value: 9030 } }

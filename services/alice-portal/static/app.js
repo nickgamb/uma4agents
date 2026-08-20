@@ -283,9 +283,10 @@ async function agentAuthView(body) {
   body.innerHTML = `
     <div class="card pad-lg" style="margin-bottom:18px">
       <div class="section-head"><h2>Agent Authorization</h2></div>
-      <p style="color:var(--text-dim);margin:0;max-width:60ch">Govern what other people's AI agents may do
-      with your accounts. Your authorization server dictates the terms each request must accept, records
-      every promise and action, and asks you before anything sensitive happens.</p>
+      <p style="color:var(--text-dim);margin:0;max-width:60ch">Govern what AI agents may do with your
+      accounts — anyone's, including the ones you activated yourself. Your authorization server dictates
+      the terms each request must accept, records every promise and action, and asks you before anything
+      sensitive happens.</p>
     </div>
     <div class="subtabs">
       <button data-t="approvals">Approvals <span id="apCount"></span></button>
@@ -364,7 +365,8 @@ async function renderConnections(target) {
   const operators = await api("/api/agent/operators").catch(() => []);
   if (!conns.length && !operators.length) {
     target.innerHTML = `<div class="empty">No agents are connected yet. The first time an
-    agent presents your terms, you'll be asked whether to establish a relationship — approved agents appear here.</div>`;
+    agent presents your terms — someone else's or your own — you'll be asked whether to establish a
+    relationship, and approved agents appear here.</div>`;
     return;
   }
   target.innerHTML = operatorPanel(operators) + `<div class="card pad-lg"><table>

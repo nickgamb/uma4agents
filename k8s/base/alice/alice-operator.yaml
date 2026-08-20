@@ -1,0 +1,76 @@
+# Alice's own operator presence.
+#
+# The same image as Bob's firm's, in her namespace instead of his, because an
+# operator directory is a party's own infrastructure and which namespace it
+# sits in is the whole statement. The service holds no authoritative state and
+# is parameterised by origin, so running two is the intended shape rather than
+# a duplication -- see clients/agent-operator/server.py.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alice-operator
+  namespace: alice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alice-operator
+  namespace: alice
+spec:
+  selector: { app: alice-operator }
+  ports:
+    - { name: http, port: 9030, targetPort: 9030 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alice-operator
+  namespace: alice
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: alice-operator }
+  template:
+    metadata:
+      labels: { app: alice-operator }
+    spec:
+      serviceAccountName: alice-operator
+      containers:
+        - name: alice-operator
+          image: localhost:5001/u4a/alice-operator:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9030 }
+          env:
+            - name: AGENT_OPERATOR_ORIGIN
+              value: https://alice-agent.uma.lab
+            - name: AGENT_OPERATOR_NAME
+              value: Alice's own agent
+          startupProbe:
+            httpGet: { path: /health, port: 9030 }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health, port: 9030 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alice-operator
+  namespace: alice
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["alice-agent.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: alice-operator, port: 9030 }

@@ -214,6 +214,7 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make audit` | Print Alice's activity ledger |
 | `make shim-test` | Drive the shim under a scripted MCP client (both approval paths, and the pend) |
 | `make embedded-check` | Run the whole grant with the resource enforcing itself — no gateway in the path |
+| `make first-party-check` | The degenerate case: an agent Alice activated herself, run through the same grant |
 | `make intent-check` | Whose intent the grant carries: her terms, the agent's stated errand, the record that names it |
 | `make sig-test` | Unit-test the RFC 9421 profile |
 | `make store-test` | Race 32 callers at each single-use artifact, on both storage backends |

@@ -162,16 +162,6 @@ def refused_by_as(client, hdrs, tier_id: str, rules: list) -> bool:
     return True
 
 
-def thumbprint(keys: AgentKeys) -> str:
-    """The handle a pseudonymous agent is filed under — RFC 7638, computed
-    here rather than read back, so the check knows which rows are its own."""
-    jwk = keys.public_jwk()
-    canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
-                           separators=(",", ":"), sort_keys=True)
-    return "jkt:" + base64.urlsafe_b64encode(
-        hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
-
-
 def terms_doc(client: httpx.Client, template_id: str) -> dict:
     """Her published terms, as an agent or an auditor would fetch them."""
     r = client.get(f"{AS_PUBLIC}/terms/{template_id}",
@@ -444,7 +434,7 @@ def main() -> int:
         finally:
             drifting.set()
 
-        traj = ledger(client, handle=thumbprint(drifter))
+        traj = ledger(client, handle=drifter.connection_handle())
         touched = [e for e in traj if e["kind"] == "touched"]
         tiers = sorted({e.get("tier") for e in traj if e.get("tier")})
         check("her record holds what it did, not only what it asked",
@@ -484,8 +474,15 @@ def main() -> int:
         # tool, and the enforcement point is holding a grant that names those
         # parameters. Retaining the data afterwards happens on the requester's
         # own disks, and no protocol reaches it.
-        t1 = terms_doc(client, "alice/advisor-tier1/v2")
-        t3 = terms_doc(client, "alice/advisor-tier3/v2")
+        # The version in force, not a hardcoded one. Any owner edit bumps
+        # template_id, and the enforcement annotation is deliberately only
+        # applied to the current version — so a check that names v2 starts
+        # failing the first time she changes a rule, which is the annotation
+        # behaving correctly rather than a regression.
+        tiers = client.get(f"{AS_PUBLIC}/owner/policies", headers=hdrs,
+                           timeout=15.0).json()
+        t1 = terms_doc(client, tiers["tier1"]["terms"]["template_id"])
+        t3 = terms_doc(client, tiers["tier3"]["terms"]["template_id"])
         check("her trade tier marks the prohibitions it actually refuses",
               set(t3.get("enforced") or {})
               == {"orders-beyond-approved-parameters",

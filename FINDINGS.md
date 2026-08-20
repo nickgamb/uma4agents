@@ -636,6 +636,47 @@ the other class. Worth one sentence in a spec, because the cost of guessing
 wrong runs in both directions: an unnecessary transaction on a hot path, or a
 replayed grant.
 
+**20. Do not specify the owner-is-the-requester case as a special case.** UMA
+2.0's cross-principal topology is usually introduced by contrasting it with the
+degenerate one, and the contrast invites an implementation to branch. It should
+not, and a profile that has to is telling you its party model is wrong.
+
+The reason is the party the 2010 drafts named and 2.0 dropped. When Alice's own
+agent asks for Alice's resources the *requesting party* collapses into the
+owner, and the **requesting agent** does not: she is still not present, it still
+holds its own key, it still signs her terms, and her policy still answers every
+request. Everything the profile does for a stranger's agent it does here, for
+the same reasons and through the same messages. Building it confirmed that —
+the grant needed no branch, and what the case actually required was one policy
+condition.
+
+Two things a spec should say about that condition, because they generalise.
+
+**Recognise the owner's agent through the channels every agent already uses.**
+Here it is the operator a request names and the key directory that operator
+publishes — the same two facts read about anybody. A dedicated enrolment path
+for the owner's own agents would work and would be worse: it makes the
+degenerate case a different mechanism, which is the thing this recommendation
+is against.
+
+**It is the one fact that may loosen a requirement, so it needs both halves.**
+The owner claiming an origin is her decision; the operator having published
+*this agent's key* is a check the authority ran. Either alone is insufficient,
+and the second is the load-carrying one — a metadata document proves only that
+it claims its own URL, so pointing at the owner's is free. Drop the attestation
+and "this is my agent" becomes a sentence an agent can say about itself, which
+inverts recommendation 13 in the one place it must not bend.
+
+Worth noting why this matters beyond conformance. The degenerate case is the
+adoption path: an organisation can put owner-authoritative authorization under
+its own users' agents first and reach the cross-principal case by writing
+policy rather than by rebuilding. That order is not hypothetical — the UK
+Pensions Dashboards Programme's technical standards describe a consent and
+authorisation service on UMA profiles, and this working group's own [pensions
+dashboard use-case report](https://kantara.atlassian.net/wiki/spaces/uma/pages/135659525) puts the person viewing her own discovered
+pensions first and delegation to an adviser second. A specification that treats
+the first step as a footnote is mis-describing where its adopters will start.
+
 ---
 
 ## Binding notes (AAuth)

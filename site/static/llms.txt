@@ -27,6 +27,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · The three parties](https://u4a.ai/docs/overview/parties.md): Owner, requesting party, requesting agent — and what it costs to treat the last two as one.
 - [Overview · Terms as first-class](https://u4a.ai/docs/overview/terms.md): The owner does not just decide — she states what she requires, and the agent signs it.
 - [Overview · The two intents](https://u4a.ai/docs/overview/two-intents.md): Who decides whether an AI agent is doing what it said it would — the agent's operator, or the owner of the data it is touching. How U4A answers that, and what the owner can check for herself.
+- [Overview · Her own agent](https://u4a.ai/docs/overview/first-party.md): The case where the person asking and the person who owns the data are the same. Why it needs the same protocol anyway, and what changes when she activated the agent herself.
 - [Overview · Identity is not authorization](https://u4a.ai/docs/overview/identity.md): Knowing which agent is calling tells you nothing about whether it may proceed. Both are needed, and they answer different questions.
 - [Overview · Identity stays where it is](https://u4a.ai/docs/overview/flow.md): The owner never has to know how the asking agent is identified — checked against four identity regimes that produce one unchanged decision.
 - [Overview · Discovery, public and protected](https://u4a.ai/docs/overview/discovery.md): What a resource is can be public. Whose instances sit behind it cannot.
@@ -58,7 +59,7 @@ UMA 2.0. Listed in reading order.
 - [Reference · MCP binding](https://u4a.ai/docs/reference/mcp-binding.md): How the grant travels over Model Context Protocol — discovery channels, both challenge encodings, the pend, and what MCP's types cannot yet express.
 - [Reference · Configuration](https://u4a.ai/docs/reference/configuration.md): Every setting each component reads, its default, and the two settings people get wrong.
 - [Reference · Deviations from UMA 2.0](https://u4a.ai/docs/reference/deviations.md): The extension register — every place this profile departs from stock UMA, what the baseline says, and why each departure exists.
-- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, nineteen recommendations, and what was parked.
+- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty recommendations, and what was parked.
 
 ## Posts
 

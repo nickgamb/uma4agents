@@ -37,6 +37,7 @@ services:
           - grafana.uma.lab
           - ps.uma.lab
           - agent.uma.lab
+          - alice-agent.uma.lab
 
   keycloak:
     init: true
@@ -165,6 +166,24 @@ services:
       timeout: 5s
       retries: 10
 
+  # Alice's own web presence, and the reason there are two of these: an
+  # operator directory is a party's *own* infrastructure. Bob's firm publishes
+  # its agents' keys at agent.uma.lab; Alice publishes hers here. Nothing in
+  # the service differs — it holds no authoritative state and is parameterised
+  # by origin — which is what makes running several correct rather than a
+  # duplication. See clients/agent-operator/server.py.
+  alice-operator:
+    init: true
+    build: ./clients/agent-operator
+    environment:
+      AGENT_OPERATOR_ORIGIN: https://alice-agent.uma.lab
+      AGENT_OPERATOR_NAME: Alice's own agent
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9030/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   alice-portal:
     init: true
     build: ./services/alice-portal
@@ -253,6 +272,7 @@ services:
       PYTHONPATH: /driver/lib
       PYTHONUNBUFFERED: "1"
       PS_ADMIN_TOKEN: ${PS_ADMIN_TOKEN:-uma4agents-ps-admin}
+      UMA4A_ALICE_OPERATOR: https://alice-agent.uma.lab
     volumes:
       - ./clients/demo-driver/driver.py:/driver/driver.py:ro
       - ./lib:/driver/lib:ro
@@ -277,6 +297,24 @@ services:
       UMA_AS_MAX_REASON: ${UMA_AS_MAX_REASON:-512}
     volumes:
       - ./clients/demo-driver/intent_check.py:/driver/intent_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  first-party-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/first_party_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      UMA4A_ALICE_OPERATOR: https://alice-agent.uma.lab
+      UMA4A_AGENT_OPERATOR: https://agent.uma.lab
+    volumes:
+      - ./clients/demo-driver/first_party_check.py:/driver/first_party_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys

@@ -32,6 +32,7 @@ class MemoryStore:
         self._ledger: list[dict] = []
         self._connections: dict[str, dict] = {}
         self._blocked_operators: dict[str, dict] = {}
+        self._owned_operators: dict[str, dict] = {}
         self._terms: dict[str, dict] = {}
         self._tiers: dict[str, dict] = {}
         self._rs: dict[str, dict] = {}
@@ -174,6 +175,18 @@ class MemoryStore:
 
     async def unblock_operator(self, origin: str) -> bool:
         return self._blocked_operators.pop(origin, None) is not None
+
+    # --- operators she says are her own --------------------------------------
+
+    async def owned_operators(self) -> dict[str, dict]:
+        return {k: dict(v) for k, v in self._owned_operators.items()}
+
+    async def claim_operator(self, origin: str, when: str) -> None:
+        self._owned_operators.setdefault(origin, {"origin": origin,
+                                                  "claimed_at": when})
+
+    async def disclaim_operator(self, origin: str) -> bool:
+        return self._owned_operators.pop(origin, None) is not None
 
     # --- resource servers ----------------------------------------------------
 

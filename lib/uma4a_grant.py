@@ -11,9 +11,11 @@ while the driver applies his standing config.
 """
 
 import base64
+import hashlib
 import json
 import re
 import time
+from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -115,6 +117,29 @@ class AgentKeys:
 
     def public_jwk(self) -> dict:
         return json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))
+
+    def connection_handle(self) -> str:
+        """The handle the owner's authority will file this agent under.
+
+        Mirrors `connection_handle` on the authorization server, and the
+        requesting side can compute it because both halves are things it
+        already holds. Worth having here rather than open-coded by every
+        caller that wants to find its own row: two copies of an RFC 7638
+        thumbprint is two chances to disagree with the server about who this
+        agent is.
+
+        An identified agent is its issuer-qualified subject, because its
+        session key rotates. A pseudonymous one *is* its key.
+        """
+        if self.agent_token:
+            claims = jwt.decode(self.agent_token, options={"verify_signature": False})
+            sub, host = claims.get("sub", ""), urlparse(claims.get("iss", "")).netloc
+            return sub if sub.endswith(f"@{host}") else f"{sub}@{host}"
+        jwk = self.public_jwk()
+        canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
+                               separators=(",", ":"), sort_keys=True)
+        return "jkt:" + base64.urlsafe_b64encode(
+            hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
 
 
 @dataclass

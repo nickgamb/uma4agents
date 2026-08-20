@@ -287,6 +287,17 @@ RELAXING_CONDITIONS = {
     "standing.approved_at_tier",  # she personally approved something here
     "standing.never_revoked",
     "standing.age_above",         # :<duration>, since she admitted it
+    # An agent she activated herself. Admissible here, and it is worth being
+    # explicit about why, because it is the only relaxing condition that is
+    # not a fact about *this agent's* history with her.
+    #
+    # It holds when the operator the agent names is an origin she claimed AND
+    # her authority checked that operator's own key directory and found this
+    # agent's signing key in it. The first half is her decision. The second is
+    # a check she ran. Neither is anything the requesting side can assert, and
+    # dropping the second would be fatal: any agent can point at a metadata
+    # document she publishes, but only she can put a key in her directory.
+    "standing.first_party",
 }
 
 OBSERVED_CONDITIONS = {
@@ -370,6 +381,8 @@ VOCABULARY = [
      "label": "I have revoked this agent before"},
     {"condition": "standing.age_below", "takes": "duration",
      "label": "I have known this agent for less than"},
+    {"condition": "standing.first_party", "takes": None,
+     "label": "it is an agent I activated myself"},
     {"condition": "standing.never_revoked", "takes": None,
      "label": "I have never revoked this agent"},
     {"condition": "standing.approved_at_tier", "takes": None,
@@ -473,6 +486,8 @@ def _matches(condition: str, facts: dict) -> bool:
 
     if name == "standing.none":
         return not standing["active"]
+    if name == "standing.first_party":
+        return bool(standing.get("first_party"))
     if name == "standing.first_at_tier":
         return standing["first_at_tier"]
     if name == "standing.approved_at_tier":

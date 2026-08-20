@@ -1086,8 +1086,32 @@ def connection_handle(identity: dict, signer_jwk: dict) -> str:
     return jwk_thumbprint(signer_jwk)
 
 
+async def first_party_fact(identity: dict, axes: dict) -> bool:
+    """Did Alice activate this agent herself?
+
+    Two halves, and both are required. The operator the agent names has to be
+    an origin she claimed, and her authority has to have found this agent's
+    signing key in that operator's own key directory.
+
+    Dropping the second half would be fatal rather than merely weaker. A
+    Client ID Metadata Document proves only that it claims the URL it was
+    fetched from, so any agent may point at one she publishes and reach
+    accountability level 1. Only she can put a key in her directory, which is
+    what makes level 2 a fact about *this agent* rather than about her.
+
+    That is also why this may relax a requirement at all: the claim is her
+    decision, the attestation is her authority's own check, and the requesting
+    side has no hand in either.
+    """
+    if axes.get("accountability") != assurance.ACCOUNTABILITY_ATTESTED:
+        return False
+    origin = operator_origin(identity)
+    return origin is not None and origin in await STORE.owned_operators()
+
+
 def standing_facts(conn: dict | None, tier_id: str,
-                   trajectory: dict | None = None) -> dict:
+                   trajectory: dict | None = None,
+                   first_party: bool = False) -> dict:
     """What Alice's own authority has seen of this agent.
 
     Kept apart from assurance because only these may relax a requirement —
@@ -1095,13 +1119,14 @@ def standing_facts(conn: dict | None, tier_id: str,
     hand in producing. `age_seconds` is None when she has never met it, which
     the conditions read as "younger than everything, older than nothing".
 
-    `trajectory` is read from her ledger by the caller and passed in, so
+    `trajectory` and `first_party` are read by the caller and passed in, so
     `policy.evaluate` stays a pure function of a dict and can be tested with
     no store at all.
     """
     trajectory = trajectory or {"denials": 0, "tiers": []}
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
+                "first_party": first_party,
                 "approved_tiers": [], "trajectory": trajectory,
                 "revocations": int((conn or {}).get("revocations", 0))}
     age = None
@@ -1115,6 +1140,7 @@ def standing_facts(conn: dict | None, tier_id: str,
         "active": True,
         "age_seconds": age,
         # What this server did.
+        "first_party": first_party,
         "first_at_tier": tier_id not in (conn.get("tiers_granted") or []),
         # What Alice decided. Only these may lower a requirement, so they are
         # kept apart from the line above even though both are her side's.
@@ -1603,8 +1629,9 @@ async def token(
     axes = assurance.assess(contract["_identity"])
     facts = {
         "assurance": axes,
-        "standing": standing_facts(conn, rec["tier"],
-                                   await trajectory_facts(handle)),
+        "standing": standing_facts(
+            conn, rec["tier"], await trajectory_facts(handle),
+            await first_party_fact(contract["_identity"], axes)),
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
@@ -1708,7 +1735,19 @@ async def token(
         await ledger_add("relaxed", family, {"tier": rec["tier"],
                                              "because": reasons},
                          handle=handle)
-    granted = await issue_rpt(rec, contract_hash, signer_jwk, None)
+    # The operation, when the contract carries one — not None.
+    #
+    # This path used to hardcode None, and it was unreachable while every
+    # per-operation tier was ask-me with no rule that could lower it. A
+    # relaxation reaches it: the tier still requires a named act at commit,
+    # `verify_contract` still refuses a contract without one, and the
+    # enforcement point still checks the digest on the call. Issuing an
+    # unbound token here would have made the grant useless rather than
+    # dangerous — the PEP refuses it with `operation_mismatch` — but a tier
+    # that silently stops working when she relaxes it is its own kind of
+    # broken.
+    granted = await issue_rpt(rec, contract_hash, signer_jwk,
+                              contract.get("operation"))
     await close_negotiation(rec)
     return JSONResponse(granted)
 
@@ -1852,6 +1891,7 @@ async def owner_operators(request: Request) -> list:
     """
     await require_owner(request)
     blocked = await STORE.blocked_operators()
+    owned = await STORE.owned_operators()
     seen: dict[str, dict] = {}
     for conn in await STORE.connections():
         origin = operator_origin(conn.get("identity") or {})
@@ -1862,14 +1902,73 @@ async def owner_operators(request: Request) -> list:
             "origin": origin, "name": meta.get("client_name") or origin,
             "agents": 0, "active": 0, "blocked": origin in blocked,
             "blocked_at": (blocked.get(origin) or {}).get("blocked_at"),
+            # Annotated on read rather than stored on the connection: she can
+            # disclaim an origin at any moment, and a copy written when the
+            # agent connected would go on saying it was hers.
+            "mine": origin in owned,
+            "claimed_at": (owned.get(origin) or {}).get("claimed_at"),
         })
         row["agents"] += 1
         row["active"] += 1 if conn.get("status") == "active" else 0
     for origin, rec in blocked.items():          # blocked before ever connecting
         seen.setdefault(origin, {"origin": origin, "name": origin, "agents": 0,
                                  "active": 0, "blocked": True,
-                                 "blocked_at": rec.get("blocked_at")})
+                                 "blocked_at": rec.get("blocked_at"),
+                                 "mine": origin in owned, "claimed_at": None})
+    for origin, rec in owned.items():            # claimed before ever connecting
+        row = seen.setdefault(origin, {"origin": origin, "name": origin,
+                                       "agents": 0, "active": 0,
+                                       "blocked": False, "blocked_at": None,
+                                       "mine": True, "claimed_at": None})
+        row["mine"] = True
+        row["claimed_at"] = rec.get("claimed_at")
     return sorted(seen.values(), key=lambda r: r["origin"])
+
+
+@app.post("/owner/operators/claim")
+async def owner_claim_operator(request: Request) -> dict:
+    """Say an origin is hers, so agents it vouches for are her own.
+
+    The mirror of blocking, and deliberately not its equal. A block may rest on
+    what an agent says about itself, because the worst a liar achieves is a
+    refusal. This may not: it is the only thing in the profile that lets an
+    agent meet *less* friction, so the claim alone is never enough. An agent is
+    first-party only when this origin is claimed here **and** her authority
+    found that agent's signing key in the operator's own key directory.
+
+    Claiming an origin she does not control therefore buys nothing at all —
+    she cannot publish keys there, so no agent of theirs can reach the second
+    half. That is worth knowing before treating this as dangerous.
+    """
+    await require_owner(request)
+    origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
+    if not origin.startswith("https://"):
+        raise HTTPException(status_code=400,
+                            detail="an operator is named by its https origin")
+    await STORE.claim_operator(origin, utcstamp())
+    event("operator.claimed", operator=origin)
+    await ledger_add("claimed", "-", {"operator": origin})
+    await owner_notify({"type": "decided", "family": "-", "decision": "claimed"})
+    return {"origin": origin, "status": "mine"}
+
+
+@app.post("/owner/operators/disclaim")
+async def owner_disclaim_operator(request: Request) -> dict:
+    """Stop treating an origin as hers.
+
+    Takes effect on the next request rather than retroactively, and does not
+    revoke anything. What the relaxation bought was fewer interruptions, not
+    access she had not already granted, so there is nothing here to claw back —
+    connections stay, grants stay, and the next negotiation simply faces the
+    policy it would have faced anyway.
+    """
+    await require_owner(request)
+    origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
+    dropped = await STORE.disclaim_operator(origin)
+    event("operator.disclaimed", operator=origin, was_claimed=dropped)
+    if dropped:
+        await ledger_add("disclaimed", "-", {"operator": origin})
+    return {"origin": origin, "status": "not-mine", "was_claimed": dropped}
 
 
 @app.post("/owner/operators/block")

@@ -117,7 +117,7 @@ logs:
 ## fixture: the grant with nothing standing behind it — no identity provider,
 ## no database, no gateway, no certificate, no host state. A test harness for
 ## the protocol on its own, not a deployment. See docs/FIXTURE.md.
-.PHONY: fixture fixture-down owner flow-check assurance-check kwaai-check kwaai-host
+.PHONY: fixture fixture-down owner flow-check first-party-check assurance-check kwaai-check kwaai-host
 fixture:
 	docker compose -f compose.fixture.yml up -d --build owner-keygen uma-as alice-vault-mcp
 	docker compose -f compose.fixture.yml --profile check run --rm fixture-check
@@ -129,6 +129,13 @@ fixture-down:
 ## The check behind docs/FLOW.md — agent identity never reaches her decision.
 flow-check:
 	docker compose --profile test run --rm flow-check
+
+## first-party-check: the degenerate case — an agent Alice activated herself.
+## RO == RqP, and the requesting agent is still a third thing. Proves the grant
+## does not change, that an impostor naming her origin gets nothing, and that
+## being hers buys less friction rather than more access. See docs/FIRST-PARTY.md.
+first-party-check:
+	docker compose --profile test run --rm first-party-check
 
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.

@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, nineteen recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -55,7 +55,7 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The nineteen recommendations
+## The twenty recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -236,6 +236,20 @@ widen access beyond what a differently-timed arrival would have? A count that
 only tightens is monotone inside its window, so a replica one write behind
 behaves as if the request came a moment earlier. A single-use burn fails that
 test immediately, which is why it is in the other class.
+
+**20. Do not specify the owner-is-the-requester case as a special case.** The
+cross-principal topology is usually introduced by contrasting it with the
+degenerate one, and the contrast invites an implementation to branch. When the
+owner's own agent asks, the requesting *party* collapses into the owner and the
+requesting **agent** does not — she is still absent, it still holds its own key,
+it still signs her terms. Building it confirmed the grant needs no branch; what
+the case required was one policy condition. Recognise the owner's agent through
+the channels every agent already uses rather than a dedicated enrolment path,
+and require both halves of the signal, because this is the one fact that may
+*loosen* a requirement. It also matters commercially: the degenerate case is the
+adoption path, and Kantara's own [pensions dashboard use-case report](https://kantara.atlassian.net/wiki/spaces/uma/pages/135659525)
+describes exactly that order — the person views her own pensions first,
+delegation to an adviser comes second.
 
 ## Parking lot
 

@@ -239,7 +239,38 @@ make rules-test        # the rule engine alone; nothing need be running
 Why assurance starts at nothing and can never buy access is
 [docs/ASSURANCE.md](docs/ASSURANCE.md).
 
-## 9. Let a whole agent framework try
+## 9. The one where the agent is hers
+
+Everything so far has been somebody else's agent. This is the other case, and
+it is the one most organisations meet first: an agent Alice activated, reaching
+Alice's own accounts.
+
+```bash
+make k8s-first-party-check
+```
+
+Watch what does **not** happen. There is no shortcut. Her agent is challenged,
+signs her terms, and pends on first contact like any stranger, because it holds
+its own key and she is still not at the keyboard. Her agent is not her.
+
+What she can do is say so in policy. Marking an operator origin as her own is
+the mirror of shutting one out — and deliberately not its equal. Blocking may
+act on what an agent claims about itself, since a liar only lies into a
+refusal. Claiming may not: an agent counts as hers only when the origin is one
+she marked **and** her authority found that agent's key published in that
+operator's directory. The check proves the attack, with an agent that names her
+origin and never had its key published.
+
+Then a rule she writes, naming no agent:
+
+```json
+{"when": ["standing.first_party"], "then": "auto"}
+```
+
+The trade tier stops asking her about her own agent, and goes on asking about
+Bob's. Being hers buys less friction, never more access.
+
+## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other
 case, and the one that decides whether anyone can adopt this:
@@ -264,7 +295,7 @@ revoke button. Being a framework earns it nothing.
 reading the key from your environment. [docs/KAGENT.md](docs/KAGENT.md) has the
 rest.
 
-## 10. Give Alice her own AI
+## 11. Give Alice her own AI
 
 Everything so far had Alice answering from a browser. She does not have to.
 The side that decides is an authority and a way to reach her, and both can sit
@@ -292,7 +323,7 @@ personal AI is up, requests it can answer never reach her portal, which is
 exactly what you would want and worth noticing during a demo.
 [docs/DEMOS.md](docs/DEMOS.md) has both, side by side.
 
-## 11. Try to break it
+## 12. Try to break it
 
 ```bash
 make k8s-chaos

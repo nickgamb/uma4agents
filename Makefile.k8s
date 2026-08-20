@@ -172,6 +172,14 @@ k8s-policy-test:
 k8s-assurance-check:
 	$(call run_job,assurance-check,cat $(K8S)/base/jobs/assurance-check.yaml,420s)
 
+## k8s-first-party-check: the degenerate case — an agent Alice activated
+## herself. Same seam, same gateway, no shortcut for being hers. Run here as
+## well as under compose: the claimed-origin list is store-backed, and the two
+## backends have disagreed before. See docs/FIRST-PARTY.md.
+.PHONY: k8s-first-party-check
+k8s-first-party-check:
+	$(call run_job,first-party-check,cat $(K8S)/base/jobs/first-party-check.yaml,420s)
+
 ## k8s-intent-check: whose intent the grant carries — her terms, which cannot
 ## be signed weaker than she wrote them, and the agent's own account of the
 ## errand, recorded and never judged. Worth running here as well as under

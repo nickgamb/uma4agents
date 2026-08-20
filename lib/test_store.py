@@ -419,6 +419,35 @@ async def test_trajectory_reads_the_window(store) -> None:
           == {"denials": 0, "tiers": [], "calls": 0})
 
 
+async def test_claimed_origins_round_trip(store) -> None:
+    """Origins she says are hers, kept apart from the ones she has shut out.
+
+    Two tables rather than one with a flag, because the directions are not
+    equivalent: a block may act on an agent's own claim, a claim may not. This
+    asserts they stay separate — a bug that merged them would be invisible
+    until an origin she blocked started relaxing requirements.
+    """
+    await store.claim_operator("https://alice.example", "2026-08-01T00:00:00Z")
+    await store.claim_operator("https://alice.example", "2026-08-02T00:00:00Z")
+    owned = await store.owned_operators()
+    check("claim: an origin she claimed is hers", "https://alice.example" in owned)
+    check("claim: claiming twice keeps the first answer",
+          owned["https://alice.example"]["claimed_at"] == "2026-08-01T00:00:00Z")
+
+    await store.block_operator("https://spam.example", "2026-08-01T00:00:00Z")
+    check("claim: blocking does not claim",
+          "https://spam.example" not in await store.owned_operators())
+    check("claim: claiming does not block",
+          "https://alice.example" not in await store.blocked_operators())
+
+    check("claim: disclaiming reports that it did something",
+          await store.disclaim_operator("https://alice.example") is True)
+    check("claim: and is honest when there was nothing to drop",
+          await store.disclaim_operator("https://alice.example") is False)
+    check("claim: the origin is no longer hers",
+          "https://alice.example" not in await store.owned_operators())
+
+
 TESTS = [
     test_ticket_is_spent_once,
     test_negotiation_survives_its_ticket,
@@ -438,6 +467,7 @@ TESTS = [
     test_the_ledger_names_the_agent,
     test_an_allowed_call_can_be_traced_to_its_agent,
     test_trajectory_reads_the_window,
+    test_claimed_origins_round_trip,
 ]
 
 

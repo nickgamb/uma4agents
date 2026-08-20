@@ -182,6 +182,23 @@ class Store(Protocol):
 
     async def unblock_operator(self, origin: str) -> bool: ...
 
+    # --- operators she says are her own -------------------------------------
+
+    async def owned_operators(self) -> dict[str, dict]:
+        """Origins she has claimed as hers, and when she said so.
+
+        Kept apart from the blocked list rather than folded into one table with
+        a flag, because the two directions are not symmetric in what they may
+        rest on. A block may act on an unverified claim; a claim may not, and
+        putting them in one place invites a later edit that treats them alike.
+        """
+
+    async def claim_operator(self, origin: str, when: str) -> None:
+        """Say an origin is hers. Idempotent, for the same reason blocking is:
+        her portal and her personal AI may both be acting on a stale list."""
+
+    async def disclaim_operator(self, origin: str) -> bool: ...
+
     # --- resource servers (the other standing relationship) -----------------
 
     async def resource_servers(self) -> dict[str, dict]: ...

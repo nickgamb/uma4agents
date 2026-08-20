@@ -337,6 +337,23 @@ class PostgresStore:
             "DELETE FROM blocked_operators WHERE origin = $1 RETURNING origin", origin)
         return row is not None
 
+    # --- operators she says are her own --------------------------------------
+
+    async def owned_operators(self) -> dict[str, dict]:
+        rows = await self._pool.fetch("SELECT origin, owned FROM owned_operators")
+        return {r["origin"]: json.loads(r["owned"]) for r in rows}
+
+    async def claim_operator(self, origin: str, when: str) -> None:
+        await self._pool.execute(
+            "INSERT INTO owned_operators (origin, owned) VALUES ($1, $2) "
+            "ON CONFLICT (origin) DO NOTHING",
+            origin, json.dumps({"origin": origin, "claimed_at": when}))
+
+    async def disclaim_operator(self, origin: str) -> bool:
+        row = await self._pool.fetchrow(
+            "DELETE FROM owned_operators WHERE origin = $1 RETURNING origin", origin)
+        return row is not None
+
     # --- resource servers ----------------------------------------------------
 
     async def resource_servers(self) -> dict[str, dict]:

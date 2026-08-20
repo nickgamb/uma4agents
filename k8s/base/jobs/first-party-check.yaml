@@ -1,0 +1,62 @@
+# The degenerate case, in the cluster: an agent Alice activated herself.
+#
+# Runs from Bob's namespace like every other check, which is itself part of
+# what it proves — her own agent is reached over the same seam, through the
+# same gateway, with no shortcut because the requesting party happens to be
+# her. Worth running here as well as under compose because the claimed-origin
+# list is store-backed, and compose and Postgres have disagreed before.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: first-party-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: first-party-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: first-party-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/first_party_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_ALICE_OPERATOR
+              value: https://alice-agent.uma.lab
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+            # Must match UMA_AS_MAX_REASON on the uma-as Deployment: a check
+            # that sends one byte over a cap the server does not enforce fails
+            # for the wrong cause.
+            - name: UMA_AS_MAX_REASON
+              value: "512"
+          volumeMounts:
+            - { name: driver, mountPath: /driver/first_party_check.py, subPath: first_party_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

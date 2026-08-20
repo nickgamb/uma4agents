@@ -1390,6 +1390,144 @@ const registerScenes = scripted("two-intents", [
 ]);
 
 // ---------------------------------------------------------------------------
+// Both flows, side by side
+// ---------------------------------------------------------------------------
+
+// Still, not stepped. The claim is a comparison and the reader needs both
+// halves in the eye at once — a figure that reveals one panel at a time makes
+// them hold the first from memory while the second arrives, which is the
+// opposite of what a comparison is for.
+//
+// Wider than the 600 the other figures use, because two flows will not fit in
+// one column and splitting them into two figures would destroy the point.
+
+const Party = ({ x, y, w, title, sub, stroke }) => (
+  <g>
+    <Box x={x} y={y} w={w} h={50} stroke={stroke} />
+    <text x={x + 14} y={y + 21} fill="var(--ink)" fontSize="12.5" fontWeight="650">
+      {title}
+    </text>
+    <text x={x + 14} y={y + 38} fill="var(--ink-3)" fontSize="10.5">
+      {sub}
+    </text>
+  </g>
+);
+
+const Flow = ({ px, accent, heading, question, operator, verdict, verdictNote }) => (
+  <g>
+    <rect x={px} y={40} width={424} height={340} rx="10"
+          fill="var(--card)" stroke="var(--edge)" />
+    <text x={px + 20} y={68} fill={accent} fontSize="13.5" fontWeight="700">
+      {heading}
+    </text>
+    <text x={px + 20} y={87} fill="var(--ink-3)" fontSize="11" fontStyle="italic">
+      {question}
+    </text>
+
+    <Party x={px + 20} y={104} w={176} title="the agent" sub="holds its own key"
+           stroke="var(--agent)" />
+    <Party x={px + 228} y={104} w={176} title="Alice's authority"
+           sub="her tiers, her terms" stroke="var(--accent)" />
+
+    {/* Beats 2 and 3 out, the grant back. Both labels sit in the 28-unit gap
+        between the boxes, which is the only clear space on this row. */}
+    <Arrow from={px + 196} to={px + 224} y={126} colour="var(--accent)" />
+    <text x={px + 210} y={119} textAnchor="middle" fill="var(--accent)"
+          fontSize="9.5" fontFamily={MONO}>2·3</text>
+    <Arrow from={px + 224} to={px + 196} y={142} colour="var(--green)" />
+    <text x={px + 210} y={155} textAnchor="middle" fill="var(--green)"
+          fontSize="9.5" fontFamily={MONO}>grant</text>
+
+    <Party x={px + 20} y={196} w={176} title="her resource"
+           sub="enforcement point + vault" stroke="var(--edge)" />
+    <path d={`M${px + 108} 154 V192`} stroke="var(--accent)" strokeWidth="1.6"
+          fill="none" markerEnd="url(#arrow-accent)" />
+    <text x={px + 118} y={172} fill="var(--ink-3)" fontSize="10">1 · refused, a ticket</text>
+    <text x={px + 118} y={187} fill="var(--ink-3)" fontSize="10">4 · the signed call</text>
+
+    {/* The one input that differs between the two panels. */}
+    <text x={px + 228} y={200} fill="var(--ink-3)" fontSize="9.5" fontFamily={MONO}>
+      OPERATOR IT NAMES
+    </text>
+    {operator.map((line, i) => (
+      <text key={i} x={px + 228} y={218 + i * 16}
+            fill={i === 0 ? accent : "var(--ink-3)"} fontSize={i === 0 ? 12 : 10.5}>
+        {line}
+      </text>
+    ))}
+
+    <rect x={px + 20} y={272} width={384} height={90} rx="8"
+          fill="var(--sunken)" stroke={accent} strokeDasharray="4 4" />
+    <text x={px + 36} y={296} fill={accent} fontSize="12" fontWeight="650">
+      {verdict}
+    </text>
+    {verdictNote.map((line, i) => (
+      <text key={i} x={px + 36} y={317 + i * 16} fill="var(--ink-2)" fontSize="10.5">
+        {line}
+      </text>
+    ))}
+  </g>
+);
+
+const SideBySide = () => (
+  <Frame title="The same grant, run by somebody else's agent and by her own"
+         viewBox="0 0 900 502">
+    <Markers />
+
+    <Flow
+      px={12}
+      accent="var(--accent)"
+      heading="Bob → Alice"
+      question="“May your agent touch my stuff?”"
+      operator={["sterling-vance.example",
+                 "a firm she has never dealt with,",
+                 "vouching for its own agent's key"]}
+      verdict="Every tier she reserved asks her"
+      verdictNote={[
+        "She has no standing with that firm and no reason to acquire any.",
+        "A trade pends until she taps, every single time.",
+      ]}
+    />
+
+    <Flow
+      px={464}
+      accent="var(--green)"
+      heading="Alice → Alice"
+      question="“May my own agent touch my stuff?”"
+      operator={["alice.example",
+                 "an origin she claimed as hers,",
+                 "and published this key at herself"]}
+      verdict="The same tier, unless she says otherwise"
+      verdictNote={[
+        "One rule she wrote grants it without asking her again.",
+        "It names no agent, and nothing an agent says can earn it.",
+      ]}
+    />
+
+    <rect x={12} y={396} width={876} height={92} rx="10"
+          fill="var(--card)" stroke="var(--edge)" />
+    <text x={32} y={420} fill="var(--ink)" fontSize="12" fontWeight="700">
+      What is the same, and what is not
+    </text>
+    {[
+      ["The protocol", "Identical. Four beats, one ticket,",
+       "the same terms signed by the same key."],
+      ["The party model", "Still three. Her agent is not her —",
+       "she is not at the keyboard either way."],
+      ["The one difference", "Which operator vouched for the key,",
+       "and whether that origin is one she claimed."],
+    ].map(([head, a, b], i) => (
+      <g key={head}>
+        <text x={32 + i * 292} y={442} fill="var(--accent)" fontSize="10.5"
+              fontFamily={MONO}>{head.toUpperCase()}</text>
+        <text x={32 + i * 292} y={460} fill="var(--ink-2)" fontSize="10.5">{a}</text>
+        <text x={32 + i * 292} y={475} fill="var(--ink-2)" fontSize="10.5">{b}</text>
+      </g>
+    ))}
+  </Frame>
+);
+
+// ---------------------------------------------------------------------------
 // Revocation
 // ---------------------------------------------------------------------------
 
@@ -2074,6 +2212,12 @@ const diagrams = {
     Draw: Register,
     scenes: registerScenes,
     title: "One agent, as it appears in the owner's own record",
+  },
+  // Still: no scenes, so DocFigure renders the drawing with no player.
+  "side-by-side": {
+    Draw: SideBySide,
+    scenes: [],
+    title: "The same grant, run by somebody else's agent and by her own",
   },
   "identity-vs-authz": {
     Draw: IdentityVsAuthz,
