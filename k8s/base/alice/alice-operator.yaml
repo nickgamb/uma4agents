@@ -37,7 +37,10 @@ spec:
       serviceAccountName: alice-operator
       containers:
         - name: alice-operator
-          image: localhost:5001/u4a/alice-operator:dev
+          # The same image as Bob's firm's operator. Only the configuration
+          # differs, which is the point — one service, two parties, neither
+          # holding authoritative state.
+          image: localhost:5001/u4a/agent-operator:dev
           imagePullPolicy: Always
           ports:
             - { name: http, containerPort: 9030 }

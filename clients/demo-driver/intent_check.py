@@ -175,7 +175,11 @@ def challenge_for(client: httpx.Client, tool: str, args: dict):
                  {"name": tool, "arguments": args}, META)
     ch = parse_challenge(r.headers.get("www-authenticate", ""))
     if ch is None:
-        raise SystemExit(f"no challenge for {tool}: {r.status_code}")
+        # The body, not just the code. A bare status here sends whoever is
+        # debugging to the wrong layer: 403 from the gateway, from the pend
+        # budget and from a revoked connection all look identical until you
+        # read what came back.
+        raise SystemExit(f"no challenge for {tool}: {r.status_code} {r.text[:300]}")
     return ch
 
 

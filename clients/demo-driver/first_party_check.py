@@ -84,7 +84,11 @@ def negotiate(client, keys, tool, args=None, max_wait_s=12):
                  {"name": tool, "arguments": args or {}}, META)
     ch = parse_challenge(r.headers.get("www-authenticate", ""))
     if ch is None:
-        raise SystemExit(f"no challenge for {tool}: {r.status_code}")
+        # The body, not just the code. A bare status here sends whoever is
+        # debugging to the wrong layer: 403 from the gateway, from the pend
+        # budget and from a revoked connection all look identical until you
+        # read what came back.
+        raise SystemExit(f"no challenge for {tool}: {r.status_code} {r.text[:300]}")
     asked = {"v": False}
 
     def status(msg: str) -> None:
@@ -98,8 +102,13 @@ def negotiate(client, keys, tool, args=None, max_wait_s=12):
         return True, asked["v"]
     except GrantDenied:
         return False, asked["v"]
-    except Exception:                                          # noqa: BLE001
-        return False, True
+    except Exception as exc:                                   # noqa: BLE001
+        # Not swallowed into "she was asked". A timeout, a refused commit and
+        # a genuine pend are three different outcomes, and reporting all of
+        # them as the third sends the reader looking at policy when the fault
+        # is somewhere else entirely.
+        say(f"   [negotiate {tool}] {type(exc).__name__}: {str(exc)[:200]}")
+        return False, asked["v"]
 
 
 def set_rules(client, tier: str, rules: list) -> None:

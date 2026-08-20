@@ -163,6 +163,28 @@ spec:
               - cluster.local/ns/alice/sa/alice-portal     # the OIDC exchange
               - cluster.local/ns/alice/sa/uma-as           # her realm's JWKS
 ---
+# Alice's own operator directory. Public by design — a key directory exists to
+# be fetched by parties who have never met the agent, which is the RqP != RO
+# cold-start problem — so the allow is the edge, exactly as it is for her
+# portal. It reaches the default-deny namespace only through the Gateway.
+#
+# This needed writing because `alice` denies by default. A workload added here
+# without a rule is not broken in any way that says so: the route programmes,
+# the Service gets endpoints, and calls fail at ztunnel.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: alice-operator-callers
+  namespace: alice
+spec:
+  selector:
+    matchLabels: { app: alice-operator }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/uma-edge/sa/edge"]
+---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
