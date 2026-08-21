@@ -60,12 +60,12 @@ model_config() {
 
     anthropic)
       require_env ANTHROPIC_API_KEY
-      provider=Anthropic; name="claude-sonnet-4-5-20250929"
+      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}"
       model_secret "$ANTHROPIC_API_KEY" ;;
 
     openai)
       require_env OPENAI_API_KEY
-      provider=OpenAI; name="gpt-4o-mini"
+      provider=OpenAI; name="${OPENAI_MODEL:-gpt-4o-mini}"
       model_secret "$OPENAI_API_KEY" ;;
 
     bedrock)
@@ -97,7 +97,10 @@ spec:
   apiKeySecret: u4a-model-key
   apiKeySecretKey: api-key
 YAML
-    [ -n "$extra" ] && printf '%b\n' "$extra"
+    # `if` rather than `[ … ] && …`: as the last command in this group, a
+    # false test would be the group's exit status, and with `pipefail` that
+    # fails the whole pipeline before kubectl has applied anything.
+    if [ -n "$extra" ]; then printf '%b\n' "$extra"; fi
   } | kubectl apply -f - >/dev/null
   echo "  $name"
 }
@@ -186,15 +189,41 @@ up() {
   printf '  Alice decides in her portal, as always.\n'
 }
 
-check() {
-  bold "Asking Bob's agent for Alice's holdings"
-  echo "  Her policy holds a first contact, so approve it in her portal —"
-  echo "  or let the demo driver's simulated Alice answer, as it does headless."
+# One question, put to Bob's agent.
+#
+# `sim=1` answers her pending queue headlessly, which is what the check needs.
+# `sim=0` leaves every decision to whoever is at her portal, and the Job simply
+# waits — an ask-me tier is a slow tool call from the agent's side, so waiting
+# is the demonstration rather than a hang.
+ask() {
+  local question="$1" sim="${2:-1}"
+
+  bold "Asking Bob's agent"
+  echo "  \"$question\""
+  if [ "$sim" = "0" ]; then
+    echo "  Nobody is answering for Alice. Approve or deny it in her portal."
+  else
+    echo "  A simulated Alice will answer her pending queue."
+  fi
+
+  # --from-literal rather than a template substitution: kubectl quotes the
+  # value, so a question containing an apostrophe or a slash stays intact.
+  kubectl -n sterling-vance create configmap kagent-ask-input \
+    --from-literal=question="$question" --from-literal=sim="$sim" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+
   kubectl -n sterling-vance delete job kagent-ask --ignore-not-found >/dev/null 2>&1
   kubectl apply -f "$K8S/base/jobs/kagent-ask.yaml" >/dev/null
-  kubectl -n sterling-vance wait --for=condition=complete --timeout=600s \
-    job/kagent-ask >/dev/null 2>&1 || true
-  kubectl -n sterling-vance logs job/kagent-ask --tail=60
+  # Follow the logs rather than waiting in silence: with sim=0 the interesting
+  # part is the pause, and a demo needs it visible while it happens.
+  kubectl -n sterling-vance wait --for=condition=ready pod \
+    -l app=kagent-ask --timeout=120s >/dev/null 2>&1 || true
+  kubectl -n sterling-vance logs -f job/kagent-ask 2>/dev/null \
+    || kubectl -n sterling-vance logs job/kagent-ask --tail=60
+}
+
+check() {
+  ask "What is in Alice's portfolio?" 1
 }
 
 down() {
@@ -206,6 +235,7 @@ down() {
 case "${1:-up}" in
   up)    up "${2:-ollama}" ;;
   check) check ;;
+  ask)   ask "${2:?a question is required}" "${3:-1}" ;;
   down)  down ;;
-  *)     echo "usage: kagent.sh up|check|down [model]" >&2; exit 1 ;;
+  *)     echo "usage: kagent.sh up|check|down [model] | ask <question> [sim]" >&2; exit 1 ;;
 esac

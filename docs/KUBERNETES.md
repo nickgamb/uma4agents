@@ -181,6 +181,7 @@ page adds terms of her own over any resource no tier governs yet.
 ```bash
 make kagent                     # a model in the cluster; no account anywhere
 make kagent-check
+make kagent-ask Q="..." SIM=0   # your question; SIM=0 leaves it to her portal
 make kagent-down
 ```
 

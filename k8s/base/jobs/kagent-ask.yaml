@@ -2,8 +2,16 @@
 #
 # Two things happen at once here, and only one of them is ours. The Job asks
 # the Agent over kagent's A2A endpoint — an agent framework doing what agent
-# frameworks do — while a simulated Alice answers her pending queue, because
-# a first contact from an agent she has never met is held for her.
+# frameworks do — while Alice answers her pending queue, because a first
+# contact from an agent she has never met is held for her.
+#
+# Who "Alice" is depends on the `sim` key below. `make kagent-check` runs
+# headless and answers for her; `make kagent-ask SIM=0` leaves the decision to
+# a person at her portal, which is what a live demo needs.
+#
+# The question and that flag arrive from the `kagent-ask-input` ConfigMap
+# rather than being substituted into this file, so an apostrophe in the
+# question — "What is in Alice's portfolio?" — cannot break the manifest.
 ---
 apiVersion: batch/v1
 kind: Job
@@ -31,6 +39,12 @@ spec:
           env:
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            - name: KAGENT_QUESTION
+              valueFrom:
+                configMapKeyRef: { name: kagent-ask-input, key: question }
+            - name: KAGENT_SIM
+              valueFrom:
+                configMapKeyRef: { name: kagent-ask-input, key: sim }
             - name: KAGENT_A2A
               value: http://kagent-controller.kagent.svc.cluster.local:8083/api/a2a/sterling-vance/advisory-agent
             - name: PYTHONUNBUFFERED

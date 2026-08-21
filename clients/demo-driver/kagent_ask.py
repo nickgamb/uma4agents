@@ -27,6 +27,10 @@ AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
 CA = os.environ.get("UMA4A_CACERT", "/certs/rootCA.pem")
 QUESTION = os.environ.get("KAGENT_QUESTION", "What is in Alice's portfolio?")
+# Whether to answer her pending queue on her behalf. On by default, because
+# `make kagent-check` runs headless and something has to say yes. Off when a
+# person is at her portal, which is the only way to show that the wait is real.
+SIM = os.environ.get("KAGENT_SIM", "1") != "0"
 
 
 def say(msg: str) -> None:
@@ -97,11 +101,13 @@ def main() -> int:
         print("KAGENT_A2A is not set"); return 1
 
     before = touched_count()
-    approving = simulate_alice(420)
+    approving = simulate_alice(420) if SIM else None
     print("\n== An agent framework, asked a question ==")
     say(f"agent: sterling-vance/advisory-agent (kagent)")
     say(f"question: {QUESTION}")
     say("it has one tool server: the U4A adapter. It knows nothing else.")
+    if not SIM:
+        say("[alice] nobody is answering for her — decide it in her portal.")
 
     payload = {
         "jsonrpc": "2.0", "id": uuid.uuid4().hex, "method": "message/send",
@@ -117,7 +123,8 @@ def main() -> int:
             return 1
         body = r.json()
 
-    approving.set()
+    if approving is not None:
+        approving.set()
     text = json.dumps(body)
     print("\n== What it came back with ==")
     # A2A echoes the prompt back inside the task as well as the reply, and the
@@ -136,6 +143,19 @@ def main() -> int:
     after = touched_count()
     print(f"\n== And on Alice's side ==")
     say(f"her ledger's `touched` rows: {before} before, {after} after")
+
+    if not SIM:
+        # A person answered this one, so both outcomes are correct and neither
+        # is a failure. Refusing a trade is the tier working, not the run
+        # breaking, and asserting otherwise would make the most important beat
+        # of the demo look like a bug.
+        if after > before:
+            print("\nHer policy allowed it, and her resources were reached.")
+        else:
+            print("\nHer resources were not reached — she declined, or has not")
+            print("answered yet. Both are her decision, and the agent stopped.")
+        return 0
+
     if after <= before:
         print("\nFAIL: the agent answered without ever reaching her resources.")
         print("      A model that talks about a portfolio without calling a tool")

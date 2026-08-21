@@ -11,6 +11,7 @@ Alice's policy governs it anyway.
 ```bash
 make kagent            # opt-in: it brings a model with it
 make kagent-check
+make kagent-ask Q="..."  # your own question
 make kagent-down
 ```
 
@@ -63,8 +64,8 @@ gigabytes, or an account somewhere. The U4A path is identical in every case.
 | | |
 |---|---|
 | `make kagent` | Ollama in the cluster. No account anywhere, no key. Pulls a small tool-calling model on first start, which takes a few minutes. |
-| `make kagent MODEL=anthropic` | `ANTHROPIC_API_KEY` from your shell, into a Secret and nowhere else. |
-| `make kagent MODEL=openai` | `OPENAI_API_KEY`, likewise. |
+| `make kagent MODEL=anthropic` | `ANTHROPIC_API_KEY` from your shell, into a Secret and nowhere else. `ANTHROPIC_MODEL` overrides the pinned model. |
+| `make kagent MODEL=openai` | `OPENAI_API_KEY`, likewise, with `OPENAI_MODEL`. |
 | `make kagent MODEL=bedrock` | `AWS_BEDROCK_API_KEY`, plus `AWS_REGION` and `BEDROCK_MODEL` if the defaults are wrong. |
 
 The key never reaches this repository. `k8s/scripts/kagent.sh` reads it from
@@ -167,3 +168,29 @@ asking.
 - [KWAAI-BINDING.md](KWAAI-BINDING.md) — the same trick on the owner's side
 - `clients/agent-shim/README.md` — the adapter as Bob runs it locally
 - `k8s/components/kagent/` — the Agent, and both model shapes
+
+
+## Asking it something else
+
+`make kagent-check` asks one fixed question and answers Alice's pending queue
+itself, because a headless check has to. For anything else:
+
+```bash
+make kagent-ask Q="Show me her transaction history and cost basis."
+make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+```
+
+`SIM=0` is the difference that matters. With it, nothing answers for Alice —
+the request sits in her pending queue until a person decides it in her portal,
+which is the only way to show that the wait is real rather than staged. The
+agent simply blocks, because from its side an ask-me tier is a slow tool call.
+
+Under `SIM=0` a refusal is a valid outcome and the run still exits zero. Her
+declining a trade is the tier working, and a check that failed on it would
+report the most important beat of the demo as a bug. The `touched` count in her
+ledger is reported either way, so you can see whether her resources were
+actually reached.
+
+The question and the flag reach the Job through the `kagent-ask-input`
+ConfigMap rather than being substituted into the manifest, so an apostrophe in
+the question does not break the YAML.

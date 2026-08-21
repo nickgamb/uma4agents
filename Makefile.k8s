@@ -202,7 +202,7 @@ k8s-intent-check:
 ##
 ## Either way the U4A path is identical: the adapter holds Bob's key and runs
 ## the four beats, and the model only decides which tool to call.
-.PHONY: kagent kagent-down kagent-check
+.PHONY: kagent kagent-down kagent-check kagent-ask
 kagent: MODEL ?= ollama
 kagent:
 	@./k8s/scripts/kagent.sh up "$(MODEL)"
@@ -214,6 +214,15 @@ kagent-down:
 kagent-check: MODEL ?= ollama
 kagent-check: kagent
 	@./k8s/scripts/kagent.sh check
+
+## kagent-ask: put your own question to Bob's agent. SIM=0 leaves every
+##             decision to whoever is at Alice's portal, which is what a live
+##             demo wants; the default answers for her, as the check does.
+##               make kagent-ask Q="What is in Alice's portfolio?" SIM=0
+kagent-ask: Q ?= What is in Alice's portfolio?
+kagent-ask: SIM ?= 1
+kagent-ask:
+	@./k8s/scripts/kagent.sh ask "$(Q)" "$(SIM)"
 
 ## k8s-adapter: the U4A adapter as a service in Bob's namespace. Off by
 ## default, like every other opt-in piece, so a cold cluster stays the portal

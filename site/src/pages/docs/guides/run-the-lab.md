@@ -160,6 +160,7 @@ something you did not write can be governed the same way.
 ```bash
 make kagent            # Kubernetes only; it brings a model with it
 make kagent-check
+make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
 ```
 
 [kagent](https://kagent.dev) is unmodified and has never heard of UMA. It sees

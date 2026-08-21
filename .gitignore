@@ -42,6 +42,11 @@ site/node_modules/
 site/.cache/
 site/public/
 
-# Local secrets for a one-off test. Never committed.
+# Local secrets for a one-off test. Never committed. The patterns are
+# deliberately wider than the one file that prompted them: a key that
+# arrives as `tmp.anth.env` is not matched by `tmp.env`, and the whole
+# point of the rule is that nobody has to remember that.
 tmp.env
+tmp.*.env
+*.anth.env
 *.env.local
