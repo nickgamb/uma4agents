@@ -47,6 +47,21 @@ Two behaviours are required and easy to "fix" by accident
    record invisible in that window and `/owner/pending/{family}/decision`
    404s on a negotiation that plainly exists.
 2. The family is the stable identity; the ticket is a credential for it.
+
+One owner at a time
+-------------------
+``Store`` is a factory. All the interesting methods live on ``OwnerStore``,
+which you get from ``store.owner("alice")``, and every one of them is scoped
+to that owner without being told again.
+
+Scoping structurally rather than by parameter is the point. An ``owner``
+argument on forty methods is an argument somebody eventually forgets, and the
+failure mode is Carol reading Alice's ledger. More usefully: an ``OwnerStore``
+is exactly the surface a single person's authorization server needs, so the
+per-owner unit is already the unit that could run somewhere she controls. The
+multi-tenant deployment is many of these over one database; a personal one is
+a single one over whatever it has. Neither the grant loop nor the policy
+engine can tell the difference, and that is the property worth protecting.
 """
 
 from __future__ import annotations
@@ -56,17 +71,32 @@ from typing import AsyncIterator, Protocol
 
 
 class Store(Protocol):
-    """The authorization server's state. See the module docstring for why the
-    methods are intents rather than accessors."""
-
-    # --- lifecycle ---------------------------------------------------------
+    """The backing store. Holds no per-owner state of its own; hand it an
+    owner and it gives you their authorization server's memory."""
 
     async def start(self) -> None:
-        """Connect, create the schema if absent, and seed defaults. Idempotent:
-        every replica calls it at startup and exactly one of them wins each
-        seed."""
+        """Connect and create the schema if absent. Idempotent: every replica
+        calls it at startup and exactly one of them wins."""
 
     async def close(self) -> None: ...
+
+    def owner(self, owner: str) -> "OwnerStore":
+        """One person's state. Cheap: no I/O, no round trip."""
+
+    async def owners(self) -> list[str]:
+        """Every owner this store currently holds anything for. Administrative
+        — the grant loop never asks, because it always knows whose request it
+        is holding."""
+
+
+class OwnerStore(Protocol):
+    """One owner's state. See the module docstring for why the methods are
+    intents rather than accessors, and why this is the unit rather than a
+    parameter."""
+
+    async def seed(self) -> None:
+        """Give a new owner her starting tiers and resource servers. Idempotent
+        — an owner who already has policy keeps it."""
 
     # --- negotiations and tickets ------------------------------------------
 

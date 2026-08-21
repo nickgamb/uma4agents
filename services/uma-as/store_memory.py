@@ -24,7 +24,16 @@ import policy
 import store
 
 
-class MemoryStore:
+class MemoryOwnerStore:
+    """One owner's state, in one process.
+
+    This is the class the service always had. It did not need changing to
+    become per-owner, because it always was per-owner — the deployment simply
+    only ever ran one. That is the clearest evidence for the claim in
+    store.py: a personal authorization server is not a different design, it
+    is this object with nobody else in the process.
+    """
+
     def __init__(self) -> None:
         self._negotiations: dict[str, dict] = {}   # family -> record
         self._tickets: dict[str, str] = {}         # rotating ticket -> family
@@ -40,12 +49,12 @@ class MemoryStore:
 
     # --- lifecycle ---------------------------------------------------------
 
-    async def start(self) -> None:
-        self._tiers = policy.defaults()
-        self._rs = store.default_resource_servers()
-
-    async def close(self) -> None:
-        return None
+    async def seed(self) -> None:
+        """Starting policy for an owner who has none. Idempotent."""
+        if not self._tiers:
+            self._tiers = policy.defaults()
+        if not self._rs:
+            self._rs = store.default_resource_servers()
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -273,6 +282,9 @@ class MemoryStore:
         return copy.deepcopy(updated)
 
     # --- fan-out ---------------------------------------------------------------
+    #
+    # Per owner, which is not a detail: a subscriber list shared across owners
+    # would put Carol's pending requests on Alice's event stream.
 
     async def notify(self, payload: dict) -> None:
         for q in list(self._subscribers):
@@ -287,3 +299,26 @@ class MemoryStore:
         finally:
             if queue in self._subscribers:
                 self._subscribers.remove(queue)
+
+
+class MemoryStore:
+    """Many owners, one process. A dict of the class above and nothing else —
+    there is deliberately no shared state for a query to leak across."""
+
+    def __init__(self) -> None:
+        self._owners: dict[str, MemoryOwnerStore] = {}
+
+    async def start(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
+    def owner(self, owner: str) -> MemoryOwnerStore:
+        st = self._owners.get(owner)
+        if st is None:
+            st = self._owners[owner] = MemoryOwnerStore()
+        return st
+
+    async def owners(self) -> list[str]:
+        return sorted(self._owners)

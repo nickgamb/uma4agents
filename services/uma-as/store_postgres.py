@@ -38,11 +38,24 @@ EVENT_RETENTION_SECONDS = 3600
 
 
 class PostgresStore:
+    """The pool, the schema, and the one LISTEN connection. Holds no owner's
+    state — ``owner()`` gives you that."""
+
     def __init__(self, dsn: str) -> None:
         self._dsn = dsn
         self._pool: asyncpg.Pool | None = None
         self._listener: asyncpg.Connection | None = None
-        self._subscribers: list[asyncio.Queue] = []
+        # Per owner. A single shared list would put Carol's pending requests
+        # on Alice's event stream, which is a disclosure rather than a bug in
+        # the fan-out.
+        self._subscribers: dict[str, list[asyncio.Queue]] = {}
+
+    def owner(self, owner: str) -> "PostgresOwnerStore":
+        return PostgresOwnerStore(self, owner)
+
+    async def owners(self) -> list[str]:
+        rows = await self._pool.fetch("SELECT DISTINCT owner FROM tiers ORDER BY owner")
+        return [r["owner"] for r in rows]
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -73,7 +86,6 @@ class PostgresStore:
                     # Every replica runs this; CREATE ... IF NOT EXISTS makes
                     # the losers no-ops rather than errors.
                     await conn.execute(schema)
-                await self._seed()
                 await self._start_listener()
                 return
             except Exception as exc:            # noqa: BLE001 — any of them
@@ -89,22 +101,6 @@ class PostgresStore:
         raise RuntimeError(
             f"could not reach the grant database after 30 attempts: {last}")
 
-    async def _seed(self) -> None:
-        """Insert the defaults if nobody has yet. ON CONFLICT DO NOTHING is
-        the whole concurrency story: three replicas racing to seed leaves one
-        copy, and a later owner edit is never overwritten by a restart."""
-        async with self._pool.acquire() as conn:
-            async with conn.transaction():
-                for tier_id, tier in policy.defaults().items():
-                    await conn.execute(
-                        "INSERT INTO tiers (tier_id, tier) VALUES ($1, $2) "
-                        "ON CONFLICT (tier_id) DO NOTHING",
-                        tier_id, json.dumps(tier))
-                for cid, rs in store.default_resource_servers().items():
-                    await conn.execute(
-                        "INSERT INTO resource_servers (client_id, rs) VALUES ($1, $2) "
-                        "ON CONFLICT (client_id) DO NOTHING",
-                        cid, json.dumps(rs))
 
     async def _start_listener(self) -> None:
         """One dedicated connection per replica, listening for owner events.
@@ -125,11 +121,14 @@ class PostgresStore:
         if not self._subscribers:
             return
         row = await self._pool.fetchrow(
-            "SELECT payload FROM owner_events WHERE id = $1", event_id)
+            "SELECT owner, payload FROM owner_events WHERE id = $1", event_id)
         if row is None:
             return
         item = json.loads(row["payload"])
-        for q in list(self._subscribers):
+        # Routed, not broadcast. Every replica's listener sees every event,
+        # which is what makes a replica holding one owner's stream correct;
+        # delivering it to the wrong owner would not be.
+        for q in list(self._subscribers.get(row["owner"], ())):
             await q.put(item)
 
     async def close(self) -> None:
@@ -137,6 +136,42 @@ class PostgresStore:
             await self._listener.close()
         if self._pool is not None:
             await self._pool.close()
+
+
+class PostgresOwnerStore:
+    """One owner's state, over the shared pool.
+
+    Every statement in this class filters on ``owner``, and none of them can
+    see another owner's rows. That is the property that makes the multi-tenant
+    deployment and a single person's authorization server the same code: this
+    object does not know, and does not need to know, how many others exist.
+    """
+
+    def __init__(self, parent: PostgresStore, owner: str) -> None:
+        self._parent = parent
+        self._o = owner
+
+    @property
+    def _pool(self) -> asyncpg.Pool:
+        return self._parent._pool
+
+    async def seed(self) -> None:
+        """Starting policy for an owner who has none. ON CONFLICT DO NOTHING is
+        the whole concurrency story: three replicas racing leaves one copy, and
+        a later owner edit is never overwritten by a restart."""
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                for tier_id, tier in policy.defaults().items():
+                    await conn.execute(
+                        "INSERT INTO tiers (owner, tier_id, tier) VALUES ($1, $2, $3) "
+                        "ON CONFLICT (owner, tier_id) DO NOTHING",
+                        self._o, tier_id, json.dumps(tier))
+                for cid, rs in store.default_resource_servers().items():
+                    await conn.execute(
+                        "INSERT INTO resource_servers (owner, client_id, rs) "
+                        "VALUES ($1, $2, $3) "
+                        "ON CONFLICT (owner, client_id) DO NOTHING",
+                        self._o, cid, json.dumps(rs))
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -148,16 +183,16 @@ class PostgresStore:
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
-                    "INSERT INTO negotiations (family, expires, state, decision, rec) "
-                    "VALUES ($1, $2, $3, $4, $5) "
-                    "ON CONFLICT (family) DO UPDATE SET "
+                    "INSERT INTO negotiations (owner, family, expires, state, decision, rec) "
+                    "VALUES ($6, $1, $2, $3, $4, $5) "
+                    "ON CONFLICT (owner, family) DO UPDATE SET "
                     "  expires = EXCLUDED.expires, state = EXCLUDED.state, "
                     "  decision = EXCLUDED.decision, rec = EXCLUDED.rec",
                     rec["family"], rec["expires"], rec["state"],
-                    rec.get("decision"), json.dumps(rec))
+                    rec.get("decision"), json.dumps(rec), self._o)
                 await conn.execute(
-                    "INSERT INTO tickets (ticket, family) VALUES ($1, $2)",
-                    ticket, rec["family"])
+                    "INSERT INTO tickets (owner, ticket, family) VALUES ($3, $1, $2)",
+                    ticket, rec["family"], self._o)
         return ticket
 
     async def consume_ticket(self, ticket: str) -> dict | None:
@@ -168,47 +203,54 @@ class PostgresStore:
         row = await self._pool.fetchrow(
             """
             WITH popped AS (
-                DELETE FROM tickets WHERE ticket = $1 RETURNING family
+                DELETE FROM tickets WHERE ticket = $1 AND owner = $3
+                RETURNING family
             )
             SELECT n.rec FROM negotiations n
               JOIN popped p ON n.family = p.family
-             WHERE n.expires >= $2
+             WHERE n.expires >= $2 AND n.owner = $3
             """,
-            ticket or "", time.time())
+            ticket or "", time.time(), self._o)
         return json.loads(row["rec"]) if row else None
 
     async def negotiation(self, family: str) -> dict | None:
         row = await self._pool.fetchrow(
-            "SELECT rec FROM negotiations WHERE family = $1", family)
+            "SELECT rec FROM negotiations WHERE family = $1 AND owner = $2",
+            family, self._o)
         return json.loads(row["rec"]) if row else None
 
     async def save_negotiation(self, rec: dict) -> None:
         await self._pool.execute(
             "UPDATE negotiations SET state = $2, decision = $3, rec = $4 "
-            "WHERE family = $1",
-            rec["family"], rec["state"], rec.get("decision"), json.dumps(rec))
+            "WHERE family = $1 AND owner = $5",
+            rec["family"], rec["state"], rec.get("decision"), json.dumps(rec),
+            self._o)
 
     async def close_negotiation(self, family: str | None) -> None:
         if not family:
             return
         # Tickets cascade.
-        await self._pool.execute("DELETE FROM negotiations WHERE family = $1",
-                                 family)
+        await self._pool.execute(
+            "DELETE FROM negotiations WHERE family = $1 AND owner = $2",
+            family, self._o)
 
     async def reap_expired(self) -> int:
         result = await self._pool.execute(
-            "DELETE FROM negotiations WHERE expires < $1", time.time())
+            "DELETE FROM negotiations WHERE expires < $1 AND owner = $2",
+            time.time(), self._o)
         # Opportunistic: the event feed is bounded by the same sweep rather
         # than by a second timer nobody would remember to run.
         await self._pool.execute(
-            "DELETE FROM owner_events WHERE ts < now() - ($1 || ' seconds')::interval",
-            str(EVENT_RETENTION_SECONDS))
+            "DELETE FROM owner_events "
+            "WHERE ts < now() - ($1 || ' seconds')::interval AND owner = $2",
+            str(EVENT_RETENTION_SECONDS), self._o)
         return int(result.rsplit(" ", 1)[-1] or 0)
 
     async def pending_negotiations(self) -> list[dict]:
         rows = await self._pool.fetch(
             "SELECT rec FROM negotiations "
-            "WHERE state = 'awaiting-owner' AND decision IS NULL")
+            "WHERE state = 'awaiting-owner' AND decision IS NULL AND owner = $1",
+            self._o)
         return [json.loads(r["rec"]) for r in rows]
 
     async def decide(self, family: str, decision: str) -> bool:
@@ -220,11 +262,12 @@ class PostgresStore:
                SET decision = $2,
                    rec = jsonb_set(rec, '{decision}', to_jsonb($2::text))
              WHERE family = $1
+               AND owner = $3
                AND state = 'awaiting-owner'
                AND decision IS NULL
             RETURNING family
             """,
-            family, decision)
+            family, decision, self._o)
         return row is not None
 
     # --- RPTs ---------------------------------------------------------------
@@ -232,15 +275,16 @@ class PostgresStore:
     async def record_rpt(self, jti: str, family: str, handle: str,
                          operation: dict | None, tier: str | None = None) -> None:
         await self._pool.execute(
-            "INSERT INTO rpts (jti, family, handle, operation, consumed, tier) "
-            "VALUES ($1, $2, $3, $4, false, $5)",
+            "INSERT INTO rpts (owner, jti, family, handle, operation, consumed, tier) "
+            "VALUES ($6, $1, $2, $3, $4, false, $5)",
             jti, family, handle,
-            json.dumps(operation) if operation is not None else None, tier)
+            json.dumps(operation) if operation is not None else None, tier,
+            self._o)
 
     async def rpt(self, jti: str) -> dict | None:
         row = await self._pool.fetchrow(
             "SELECT jti, family, handle, operation, consumed FROM rpts "
-            "WHERE jti = $1", jti)
+            "WHERE jti = $1 AND owner = $2", jti, self._o)
         if row is None:
             return None
         return {"jti": row["jti"], "family": row["family"],
@@ -253,33 +297,36 @@ class PostgresStore:
         # replica burned it first, which the caller answers by denying.
         row = await self._pool.fetchrow(
             "UPDATE rpts SET consumed = true "
-            "WHERE jti = $1 AND consumed = false RETURNING family", jti)
+            "WHERE jti = $1 AND owner = $2 AND consumed = false "
+            "RETURNING family", jti, self._o)
         return row["family"] if row else None
 
     # --- standing relationships ---------------------------------------------
 
     async def connection(self, handle: str) -> dict | None:
         row = await self._pool.fetchrow(
-            "SELECT conn FROM connections WHERE handle = $1", handle)
+            "SELECT conn FROM connections WHERE handle = $1 AND owner = $2",
+            handle, self._o)
         return json.loads(row["conn"]) if row else None
 
     async def put_connection(self, conn: dict) -> None:
         await self._pool.execute(
-            "INSERT INTO connections (handle, first_seen, conn) "
-            "VALUES ($1, $2, $3) "
-            "ON CONFLICT (handle) DO UPDATE SET conn = EXCLUDED.conn",
-            conn["handle"], conn["first_seen"], json.dumps(conn))
+            "INSERT INTO connections (owner, handle, first_seen, conn) "
+            "VALUES ($4, $1, $2, $3) "
+            "ON CONFLICT (owner, handle) DO UPDATE SET conn = EXCLUDED.conn",
+            conn["handle"], conn["first_seen"], json.dumps(conn), self._o)
 
     async def connections(self) -> list[dict]:
         rows = await self._pool.fetch(
-            "SELECT conn FROM connections ORDER BY first_seen DESC")
+            "SELECT conn FROM connections WHERE owner = $1 "
+            "ORDER BY first_seen DESC", self._o)
         return [json.loads(r["conn"]) for r in rows]
 
     async def touch_connection(self, handle: str, when: str) -> None:
         await self._pool.execute(
             "UPDATE connections "
             "SET conn = jsonb_set(conn, '{last_access}', to_jsonb($2::text)) "
-            "WHERE handle = $1", handle, when)
+            "WHERE handle = $1 AND owner = $3", handle, when, self._o)
 
     async def note_tier_grant(self, handle: str, tier_id: str) -> None:
         # Append-if-absent in one statement, so two replicas granting at the
@@ -288,16 +335,18 @@ class PostgresStore:
             "UPDATE connections SET conn = jsonb_set("
             "  conn, '{tiers_granted}',"
             "  COALESCE(conn->'tiers_granted', '[]'::jsonb) || to_jsonb($2::text))"
-            "WHERE handle = $1 AND NOT COALESCE(conn->'tiers_granted', '[]'::jsonb)"
-            "                        @> to_jsonb($2::text)", handle, tier_id)
+            "WHERE handle = $1 AND owner = $3 "
+            "  AND NOT COALESCE(conn->'tiers_granted', '[]'::jsonb)"
+            "          @> to_jsonb($2::text)", handle, tier_id, self._o)
 
     async def note_tier_approval(self, handle: str, tier_id: str) -> None:
         await self._pool.execute(
             "UPDATE connections SET conn = jsonb_set("
             "  conn, '{tiers_approved}',"
             "  COALESCE(conn->'tiers_approved', '[]'::jsonb) || to_jsonb($2::text))"
-            "WHERE handle = $1 AND NOT COALESCE(conn->'tiers_approved', '[]'::jsonb)"
-            "                        @> to_jsonb($2::text)", handle, tier_id)
+            "WHERE handle = $1 AND owner = $3 "
+            "  AND NOT COALESCE(conn->'tiers_approved', '[]'::jsonb)"
+            "          @> to_jsonb($2::text)", handle, tier_id, self._o)
 
     async def revoke_connection(self, handle: str) -> int | None:
         async with self._pool.acquire() as conn:
@@ -311,71 +360,81 @@ class PostgresStore:
                     "  jsonb_set(conn, '{status}', '\"revoked\"'),"
                     "  '{revocations}',"
                     "  to_jsonb(COALESCE((conn->>'revocations')::int, 0) + 1)) "
-                    "WHERE handle = $1 RETURNING handle", handle)
+                    "WHERE handle = $1 AND owner = $2 RETURNING handle",
+                    handle, self._o)
                 if row is None:
                     return None
                 killed = await conn.fetch(
                     "UPDATE rpts SET consumed = true "
-                    "WHERE handle = $1 AND consumed = false RETURNING jti",
-                    handle)
+                    "WHERE handle = $1 AND owner = $2 AND consumed = false "
+                    "RETURNING jti", handle, self._o)
                 return len(killed)
 
     # --- operators she has shut out -------------------------------------------
 
     async def blocked_operators(self) -> dict[str, dict]:
-        rows = await self._pool.fetch("SELECT origin, blocked FROM blocked_operators")
+        rows = await self._pool.fetch(
+            "SELECT origin, blocked FROM blocked_operators WHERE owner = $1",
+            self._o)
         return {r["origin"]: json.loads(r["blocked"]) for r in rows}
 
     async def block_operator(self, origin: str, when: str) -> None:
         await self._pool.execute(
-            "INSERT INTO blocked_operators (origin, blocked) VALUES ($1, $2) "
-            "ON CONFLICT (origin) DO NOTHING",
-            origin, json.dumps({"origin": origin, "blocked_at": when}))
+            "INSERT INTO blocked_operators (owner, origin, blocked) "
+            "VALUES ($3, $1, $2) "
+            "ON CONFLICT (owner, origin) DO NOTHING",
+            origin, json.dumps({"origin": origin, "blocked_at": when}), self._o)
 
     async def unblock_operator(self, origin: str) -> bool:
         row = await self._pool.fetchrow(
-            "DELETE FROM blocked_operators WHERE origin = $1 RETURNING origin", origin)
+            "DELETE FROM blocked_operators WHERE origin = $1 AND owner = $2 "
+            "RETURNING origin", origin, self._o)
         return row is not None
 
     # --- operators she says are her own --------------------------------------
 
     async def owned_operators(self) -> dict[str, dict]:
-        rows = await self._pool.fetch("SELECT origin, owned FROM owned_operators")
+        rows = await self._pool.fetch(
+            "SELECT origin, owned FROM owned_operators WHERE owner = $1", self._o)
         return {r["origin"]: json.loads(r["owned"]) for r in rows}
 
     async def claim_operator(self, origin: str, when: str) -> None:
         await self._pool.execute(
-            "INSERT INTO owned_operators (origin, owned) VALUES ($1, $2) "
-            "ON CONFLICT (origin) DO NOTHING",
-            origin, json.dumps({"origin": origin, "claimed_at": when}))
+            "INSERT INTO owned_operators (owner, origin, owned) VALUES ($3, $1, $2) "
+            "ON CONFLICT (owner, origin) DO NOTHING",
+            origin, json.dumps({"origin": origin, "claimed_at": when}), self._o)
 
     async def disclaim_operator(self, origin: str) -> bool:
         row = await self._pool.fetchrow(
-            "DELETE FROM owned_operators WHERE origin = $1 RETURNING origin", origin)
+            "DELETE FROM owned_operators WHERE origin = $1 AND owner = $2 "
+            "RETURNING origin", origin, self._o)
         return row is not None
 
     # --- resource servers ----------------------------------------------------
 
     async def resource_servers(self) -> dict[str, dict]:
-        rows = await self._pool.fetch("SELECT client_id, rs FROM resource_servers")
+        rows = await self._pool.fetch(
+            "SELECT client_id, rs FROM resource_servers WHERE owner = $1", self._o)
         return {r["client_id"]: json.loads(r["rs"]) for r in rows}
 
     async def resource_server(self, client_id: str) -> dict | None:
         row = await self._pool.fetchrow(
-            "SELECT rs FROM resource_servers WHERE client_id = $1", client_id)
+            "SELECT rs FROM resource_servers WHERE client_id = $1 AND owner = $2",
+            client_id, self._o)
         return json.loads(row["rs"]) if row else None
 
     async def touch_pat(self, client_id: str, when: str) -> None:
         await self._pool.execute(
             "UPDATE resource_servers "
             "SET rs = jsonb_set(rs, '{last_pat_issued}', to_jsonb($2::text)) "
-            "WHERE client_id = $1", client_id, when)
+            "WHERE client_id = $1 AND owner = $3", client_id, when, self._o)
 
     async def revoke_resource_server(self, client_id: str) -> bool:
         row = await self._pool.fetchrow(
             "UPDATE resource_servers "
             "SET rs = jsonb_set(rs, '{status}', '\"revoked\"') "
-            "WHERE client_id = $1 RETURNING client_id", client_id)
+            "WHERE client_id = $1 AND owner = $2 RETURNING client_id",
+            client_id, self._o)
         return row is not None
 
     # --- owner-visible documents ---------------------------------------------
@@ -383,18 +442,20 @@ class PostgresStore:
     async def ledger_add(self, kind: str, family: str, ts: str,
                          entry: dict, handle: str | None = None) -> None:
         await self._pool.execute(
-            "INSERT INTO ledger (kind, family, ts, entry, handle) "
-            "VALUES ($1, $2, $3, $4, $5)",
-            kind, family, ts, json.dumps(entry), handle)
+            "INSERT INTO ledger (owner, kind, family, ts, entry, handle) "
+            "VALUES ($6, $1, $2, $3, $4, $5)",
+            kind, family, ts, json.dumps(entry), handle, self._o)
 
     async def ledger(self, handle: str | None = None) -> list[dict]:
         if handle is None:
             rows = await self._pool.fetch(
-                "SELECT kind, family, ts, entry, handle FROM ledger ORDER BY seq")
+                "SELECT kind, family, ts, entry, handle FROM ledger "
+                "WHERE owner = $1 ORDER BY seq", self._o)
         else:
             rows = await self._pool.fetch(
                 "SELECT kind, family, ts, entry, handle FROM ledger "
-                "WHERE handle = $1 ORDER BY seq", handle)
+                "WHERE handle = $1 AND owner = $2 ORDER BY seq",
+                handle, self._o)
         # Columns last, so an `entry` key can never shadow one of them.
         return [{**json.loads(r["entry"]), "kind": r["kind"],
                  "family": r["family"], "ts": r["ts"], "handle": r["handle"]}
@@ -402,8 +463,8 @@ class PostgresStore:
 
     async def grant_for_family(self, family: str) -> dict | None:
         row = await self._pool.fetchrow(
-            "SELECT handle, tier FROM rpts WHERE family = $1 "
-            "AND handle IS NOT NULL ORDER BY jti LIMIT 1", family)
+            "SELECT handle, tier FROM rpts WHERE family = $1 AND owner = $2 "
+            "AND handle IS NOT NULL ORDER BY jti LIMIT 1", family, self._o)
         return {"handle": row["handle"], "tier": row["tier"]} if row else None
 
     async def trajectory(self, handle: str, since: str) -> dict:
@@ -414,7 +475,8 @@ class PostgresStore:
             "       count(*) FILTER (WHERE kind = 'touched') AS calls, "
             "       coalesce(array_agg(DISTINCT entry->>'tier') "
             "                FILTER (WHERE entry ? 'tier'), '{}') AS tiers "
-            "  FROM ledger WHERE handle = $1 AND ts >= $2", handle, since)
+            "  FROM ledger WHERE handle = $1 AND ts >= $2 AND owner = $3",
+            handle, since, self._o)
         return {"denials": int(row["denials"] or 0),
                 "tiers": sorted(row["tiers"] or []),
                 "calls": int(row["calls"] or 0)}
@@ -424,24 +486,27 @@ class PostgresStore:
         # changes. An owner edit produces a new template_id, and both remain
         # dereferenceable.
         await self._pool.execute(
-            "INSERT INTO terms_docs (template_id, doc) VALUES ($1, $2) "
-            "ON CONFLICT (template_id) DO NOTHING",
-            doc["template_id"], json.dumps(doc))
+            "INSERT INTO terms_docs (owner, template_id, doc) VALUES ($3, $1, $2) "
+            "ON CONFLICT (owner, template_id) DO NOTHING",
+            doc["template_id"], json.dumps(doc), self._o)
 
     async def terms_doc(self, template_id: str) -> dict | None:
         row = await self._pool.fetchrow(
-            "SELECT doc FROM terms_docs WHERE template_id = $1", template_id)
+            "SELECT doc FROM terms_docs WHERE template_id = $1 AND owner = $2",
+            template_id, self._o)
         return json.loads(row["doc"]) if row else None
 
     async def terms_docs(self) -> list[dict]:
         rows = await self._pool.fetch(
-            "SELECT doc FROM terms_docs ORDER BY template_id")
+            "SELECT doc FROM terms_docs WHERE owner = $1 ORDER BY template_id",
+            self._o)
         return [json.loads(r["doc"]) for r in rows]
 
     # --- Alice's policy -------------------------------------------------------
 
     async def tiers(self) -> dict[str, dict]:
-        rows = await self._pool.fetch("SELECT tier_id, tier FROM tiers")
+        rows = await self._pool.fetch(
+            "SELECT tier_id, tier FROM tiers WHERE owner = $1", self._o)
         return {r["tier_id"]: json.loads(r["tier"]) for r in rows}
 
     async def create_tier(self, tier_id: str, tier: dict) -> dict:
@@ -449,16 +514,17 @@ class PostgresStore:
         # test and the write are one statement, so two replicas cannot both
         # believe they created it.
         row = await self._pool.fetchrow(
-            "INSERT INTO tiers (tier_id, tier) VALUES ($1, $2) "
-            "ON CONFLICT (tier_id) DO NOTHING RETURNING tier_id",
-            tier_id, json.dumps(tier))
+            "INSERT INTO tiers (owner, tier_id, tier) VALUES ($3, $1, $2) "
+            "ON CONFLICT (owner, tier_id) DO NOTHING RETURNING tier_id",
+            tier_id, json.dumps(tier), self._o)
         if row is None:
             raise KeyError(tier_id)
         return tier
 
     async def delete_tier(self, tier_id: str) -> bool:
         row = await self._pool.fetchrow(
-            "DELETE FROM tiers WHERE tier_id = $1 RETURNING tier_id", tier_id)
+            "DELETE FROM tiers WHERE tier_id = $1 AND owner = $2 "
+            "RETURNING tier_id", tier_id, self._o)
         return row is not None
 
     async def update_tier(self, tier_id: str, patch: dict) -> dict:
@@ -469,22 +535,22 @@ class PostgresStore:
                 # what ties a signed agreement to the terms in force when it
                 # was signed, so losing a bump is losing an audit trail.
                 row = await conn.fetchrow(
-                    "SELECT tier FROM tiers WHERE tier_id = $1 FOR UPDATE",
-                    tier_id)
+                    "SELECT tier FROM tiers WHERE tier_id = $1 AND owner = $2 "
+                    "FOR UPDATE", tier_id, self._o)
                 if row is None:
                     raise KeyError(tier_id)
                 updated = policy.apply_patch(json.loads(row["tier"]), patch)
                 await conn.execute(
-                    "UPDATE tiers SET tier = $2 WHERE tier_id = $1",
-                    tier_id, json.dumps(updated))
+                    "UPDATE tiers SET tier = $2 WHERE tier_id = $1 AND owner = $3",
+                    tier_id, json.dumps(updated), self._o)
                 return updated
 
     # --- fan-out ---------------------------------------------------------------
 
     async def notify(self, payload: dict) -> None:
         row = await self._pool.fetchrow(
-            "INSERT INTO owner_events (payload) VALUES ($1) RETURNING id",
-            json.dumps(payload))
+            "INSERT INTO owner_events (owner, payload) VALUES ($2, $1) "
+            "RETURNING id", json.dumps(payload), self._o)
         # Every replica's listener receives this, so it does not matter which
         # one holds Alice's stream.
         await self._pool.execute("SELECT pg_notify('owner_events', $1)",
@@ -492,10 +558,11 @@ class PostgresStore:
 
     async def subscribe(self) -> AsyncIterator[dict]:
         queue: asyncio.Queue = asyncio.Queue()
-        self._subscribers.append(queue)
+        subs = self._parent._subscribers.setdefault(self._o, [])
+        subs.append(queue)
         try:
             while True:
                 yield await queue.get()
         finally:
-            if queue in self._subscribers:
-                self._subscribers.remove(queue)
+            if queue in subs:
+                subs.remove(queue)
