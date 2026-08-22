@@ -357,9 +357,12 @@ def default_resource_servers(owner: str = "alice") -> dict[str, dict]:
 
 
 def _rs_resource_uri(owner: str) -> str:
+    """One protected resource per owner, addressed the same way for all of
+    them. `/mcp` remains as an alias for the primary owner so existing clients
+    keep working, but nothing depends on the asymmetry."""
     base = os.environ.get("UMA_AS_RS_RESOURCE_URI",
                           "https://gateway.uma.lab/mcp")
-    return base if owner == "alice" else f"{base}/{owner}"
+    return f"{base}/{owner}"
 
 
 def make_store() -> Store:

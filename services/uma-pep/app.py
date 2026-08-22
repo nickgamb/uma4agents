@@ -86,6 +86,28 @@ TOOLS = {
 # owner's challenge name a different authorization server from the next.
 EXTRA_OWNERS = [o for o in os.environ.get("UMA_EXTRA_OWNERS", "").split(",") if o]
 
+# Which authority governs which owner — the resource server's side of BYOAS.
+#
+# FedAuthz assumes one: the resource server is a registered client of *the*
+# authorization server. A resource server holding many people's accounts has
+# no such thing, because the choice of authority is the owner's and she may
+# not have chosen the operator's. So it is a map, defaulting to the operator's
+# AS for anyone who has not named one.
+#
+# The entries here are still provisioned out of band, which is the honest
+# limit of this step: it demonstrates one resource server serving two
+# authorities, not a resource server meeting an authority it has never seen.
+OWNER_AUTHORITIES = json.loads(os.environ.get("UMA_OWNER_AUTHORITIES", "{}"))
+
+
+def authority_for(owner: str) -> tuple[str, str]:
+    """(public, internal) for the authority that governs this owner."""
+    a = OWNER_AUTHORITIES.get(owner) or {}
+    return a.get("public", AS_PUBLIC), a.get("internal", AS_INTERNAL)
+
+
+ALL_OWNERS = [OWNER, *EXTRA_OWNERS]
+
 
 def tools_for(owner: str) -> dict:
     """The same tool surface, in that owner's namespace."""
@@ -96,10 +118,10 @@ def tools_for(owner: str) -> dict:
 
 
 def owner_for_path(path: str) -> str:
-    """Which owner a request is about. The path is the only thing on an
-    unauthenticated tool call that can say."""
+    """Which owner a request is about. On an unauthenticated tool call the
+    path is the only thing that can say, which is why every owner has one."""
     tail = path.rstrip("/").rsplit("/mcp", 1)[-1].strip("/")
-    return tail if tail in EXTRA_OWNERS else OWNER
+    return tail if tail in ALL_OWNERS else OWNER
 SINGLE_USE_TOOLS = {"execute_trade"}
 # Deny by default. An allow-list of open methods silently admits every method
 # a future protocol revision invents — 2026-07-28 alone added tasks/*,
@@ -164,11 +186,12 @@ def _enforcer_for(owner: str) -> Enforcer:
     """One per owner. Nothing is shared between them — not the PAT, not the
     tool namespace, and (from here on) not necessarily the authorization
     server either."""
-    leaf = "mcp" if owner == OWNER else f"mcp/{owner}"
+    leaf = f"mcp/{owner}"
+    as_public, as_internal = authority_for(owner)
     return Enforcer(
         owner=owner,
-        as_internal=AS_INTERNAL,
-        as_public=AS_PUBLIC,
+        as_internal=as_internal,
+        as_public=as_public,
         client_id=RS_CLIENT_ID,
         client_secret=RS_CLIENT_SECRET,
         realm=REALM,
@@ -278,8 +301,8 @@ def prm_document(owner: str = None) -> dict:
     /owner-resources ("protected webfinger" for Alice's stuff)."""
     owner = owner or OWNER
     tools = tools_for(owner)
-    leaf = "mcp" if owner == OWNER else f"mcp/{owner}"
-    tail = "" if owner == OWNER else f"/{owner}"
+    leaf = f"mcp/{owner}"
+    tail = f"/{owner}"
     enforcer = ENFORCERS.get(owner)
     scopes = sorted({s for _, (rid, ss) in tools.items() for s in ss})
     return {
@@ -303,7 +326,7 @@ def prm_document(owner: str = None) -> dict:
 
 @app.get("/.well-known/oauth-protected-resource/mcp/{owner}")
 async def protected_resource_metadata_for(owner: str) -> dict:
-    return await protected_resource_metadata(owner if owner in EXTRA_OWNERS else None)
+    return await protected_resource_metadata(owner if owner in ALL_OWNERS else None)
 
 
 @app.get("/.well-known/oauth-protected-resource")
@@ -372,21 +395,29 @@ async def pep_jwks() -> dict:
     return {"keys": [jwk]}
 
 
-_AS_KEYS_CACHE: dict = {"expires": 0.0, "keys": []}
+# Per authority, not per resource server. The owner-resources listing is
+# served only to the authority that governs that owner, and with BYOAS that is
+# a different key per owner — Carol's server signs with Carol's key, which is
+# not in Alice's JWKS and never will be. A single cache here would authorise
+# one authority to read every owner's listing, which is the exact confusion
+# this whole partition exists to prevent.
+_AS_KEYS_CACHE: dict[str, dict] = {}
 
 
-async def as_verification_keys() -> list:
-    if _AS_KEYS_CACHE["expires"] < time.time():
+async def as_verification_keys(owner: str = None) -> list:
+    _, as_internal = authority_for(owner or OWNER)
+    entry = _AS_KEYS_CACHE.setdefault(as_internal, {"expires": 0.0, "keys": []})
+    if entry["expires"] < time.time():
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{AS_INTERNAL}/jwks", timeout=5.0)
+            r = await client.get(f"{as_internal}/jwks", timeout=5.0)
             r.raise_for_status()
-        _AS_KEYS_CACHE.update(expires=time.time() + 300, keys=r.json()["keys"])
-    return _AS_KEYS_CACHE["keys"]
+        entry.update(expires=time.time() + 300, keys=r.json()["keys"])
+    return entry["keys"]
 
 
 @app.get("/owner-resources/{owner}")
 async def owner_resources_for(owner: str, request: Request) -> Response:
-    return await owner_resources(request, owner if owner in EXTRA_OWNERS else None)
+    return await owner_resources(request, owner if owner in ALL_OWNERS else None)
 
 
 @app.get("/owner-resources")
@@ -399,10 +430,10 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
     trust was established at onboarding: this gateway holds a PAT from
     exactly that AS."""
     who = owner or OWNER
-    path = "/owner-resources" if who == OWNER else f"/owner-resources/{who}"
+    path = f"/owner-resources/{who}"
     verified = False
     last_error = "no signature"
-    for jwk_dict in await as_verification_keys():
+    for jwk_dict in await as_verification_keys(who):
         try:
             pub = OKPAlgorithm.from_jwk(json.dumps(jwk_dict))
             verify(
@@ -424,7 +455,7 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
                           "error_description": "this listing is served only to "
                           f"the owner's authorization server: {last_error}"})
     tools = tools_for(who)
-    leaf = "mcp" if who == OWNER else f"mcp/{who}"
+    leaf = f"mcp/{who}"
     event("owner_resources.served", owner=who, count=len(tools))
     return Response(
         content=json.dumps({

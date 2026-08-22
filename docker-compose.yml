@@ -31,6 +31,7 @@ services:
       default:
         aliases:
           - alice-as.uma.lab
+          - carol-as.uma.lab
           - keycloak.uma.lab
           - gateway.uma.lab
           - portal.uma.lab
@@ -83,13 +84,16 @@ services:
       # failure — a checker counting to a number the server does not enforce.
       UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
       UMA_AS_PEND_BUDGET_ATTRIBUTED: ${UMA_AS_PEND_BUDGET_ATTRIBUTED:-40}
-      # Unset on purpose: this instance is the operator-hosted shape, serving
-      # whoever authenticates. Setting UMA_AS_OWNER turns the same image into
-      # one person's authorization server, which refuses every other owner at
-      # the door — that is what k8s/base/carol runs.
+      # Hers, and only hers. Carol's server is the same image with a
+      # different name in this variable, and nothing else differs between
+      # them — an owner is an owner.
       #
-      # The device key still has to name whose it is; a signature proves a
-      # holder, not an owner.
+      # Leaving this unset turns the same image into one server holding many
+      # owners, which is a packaging choice rather than a different kind of
+      # owner. The store is partitioned either way; see lib/test_store.py.
+      UMA_AS_OWNER: alice
+      # A signature proves a holder, not an owner, so the device key names
+      # whose it is.
       UMA_AS_OWNER_KEY_OWNER: alice
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).
@@ -99,6 +103,42 @@ services:
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
       # Only the public half. Her private key never leaves her side.
       - ./certs/owner-ed25519.pub:/owner/owner-ed25519.pub:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  # Carol's authorization server. The same image as Alice's with a different
+  # owner in one variable, and that is the whole difference — two owners of
+  # the same resource server, each with her own authority, her own keys, her
+  # own identity provider and her own record.
+  #
+  # Compose as many as you like. The only reason these are containers rather
+  # than laptops or edge isolates is that the lab has to fit on one machine.
+  carol-as:
+    init: true
+    build:
+      context: .
+      dockerfile: services/uma-as/Dockerfile
+    environment:
+      UMA_AS_OWNER: carol
+      UMA_AS_ISSUER: https://carol-as.uma.lab
+      UMA_AS_RS_RESOURCE_URI: https://gateway.uma.lab/mcp
+      UMA_AS_RS_CLIENT_ID: meridian-gateway
+      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      UMA_AS_OWNER_AUTH: oidc
+      # Hers, not the operator's. An authorization server that accepts the
+      # operator's tokens for its owner is only partly the owner's: whoever
+      # runs that identity provider can mint her.
+      UMA_AS_OWNER_ISSUER: https://keycloak.uma.lab/realms/carol
+      UMA_AS_OWNER_AUTHORITY: carol-as.uma.lab
+      UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
+      UMA_AS_PEND_BUDGET_ATTRIBUTED: ${UMA_AS_PEND_BUDGET_ATTRIBUTED:-40}
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
+    volumes:
+      - carol-as-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9000/health')\""]
       interval: 3s
@@ -121,6 +161,14 @@ services:
       # namespace, its own PAT, and its own RFC 9728 metadata naming the
       # authority that governs it.
       UMA_EXTRA_OWNERS: carol
+      # Which authority governs which owner. Both named, because neither is
+      # the default: the resource server holds a PAT from each and enforces
+      # for both, and it is the owner who decides which server that is.
+      UMA_OWNER_AUTHORITIES: >-
+        {"alice": {"public": "https://alice-as.uma.lab",
+                   "internal": "http://uma-as:9000"},
+         "carol": {"public": "https://carol-as.uma.lab",
+                   "internal": "http://carol-as:9000"}}
     volumes:
       - uma-pep-keys:/keys
     depends_on:
@@ -162,6 +210,14 @@ services:
       # namespace, its own PAT, and its own RFC 9728 metadata naming the
       # authority that governs it.
       UMA_EXTRA_OWNERS: carol
+      # Which authority governs which owner. Both named, because neither is
+      # the default: the resource server holds a PAT from each and enforces
+      # for both, and it is the owner who decides which server that is.
+      UMA_OWNER_AUTHORITIES: >-
+        {"alice": {"public": "https://alice-as.uma.lab",
+                   "internal": "http://uma-as:9000"},
+         "carol": {"public": "https://carol-as.uma.lab",
+                   "internal": "http://carol-as:9000"}}
       UMA_EXPECTED_AUTHORITY: gateway.uma.lab
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
@@ -520,6 +576,7 @@ services:
     profiles: ["test"]
 
 volumes:
+  carol-as-keys:
   paios-data:
   uma-as-keys:
   uma-pep-keys:

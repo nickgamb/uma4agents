@@ -57,13 +57,12 @@ OWNER_METADATA_URL = os.environ.get(
 #                        authorization server — on her laptop, in a tenant of
 #                        one, at the edge — refuses every other owner at the
 #                        door rather than trusting itself to filter.
-#   unset                whoever authenticates. The operator-hosted shape: one
-#                        deployment, many owners, each partitioned in the
-#                        store.
+#   unset                whoever authenticates. One deployment, many owners,
+#                        each partitioned in the store.
 #
-# Same code either way. The difference between a SaaS running authorization
-# for a million users and a million people each running their own is this
-# variable and where the process happens to be, which is the point.
+# Same code either way. The difference between one process holding a million
+# owners and a million people each holding their own is this variable and
+# where the process runs, which is the point.
 SERVED_OWNER = os.environ.get("UMA_AS_OWNER") or None
 # Retained for the paths that need *an* owner before a request has named one:
 # startup seeding, the resource pull, and the compose stack's fixtures.

@@ -1,24 +1,31 @@
-"""One authorization server, two owners, and no way through the wall.
+"""Two owners. Nothing about them differs but which one it is.
 
-The operator-hosted shape: a resource server holding many people's accounts,
-and an authorization server holding many people's policy. Meridian fronts
-Alice at `/mcp` and Carol at `/mcp/carol`; one `uma-as` serves both.
+Meridian holds Alice's account and Carol's. Each owner has her own
+authorization server, her own signing key, her own identity provider and her
+own record, and each is reached at her own resource. Bob's agent negotiates
+with both, running the same four beats against different authorities and
+getting a separate answer from each.
 
-What is worth proving is not that it works — two owners who never interact
-would "work" by doing nothing. It is that **every surface an owner can reach
-is scoped to her**, and that the interesting cross-owner moves are refused
-rather than merely unlikely:
+There is no privileged owner and no special case. Add a third and a
+thousandth the same way. What varies between deployments is how many owners
+live in one process — one each here, many in one elsewhere — and that is a
+packaging choice the grant loop cannot observe. The partition that makes it
+safe either way is proven in `lib/test_store.py`, across every accessor on
+both backends.
 
-  * her policy, her terms, her connections and her ledger are hers alone;
-  * her authority names her resources, and only hers;
-  * a grant issued against one owner's resources cannot be spent against the
-    other's, even by the same enforcement point holding both their PATs.
+What can only be seen from out here is what crosses processes:
 
-The last one is the one with consequences. An enforcement point serving a
-thousand owners holds a thousand PATs, and the failure that matters is not a
-leak of data but a *grant* crossing — Alice's approval spending against
-Carol's account. That is checked here at the wire rather than in the store,
-because the store test cannot see the enforcement point at all.
+  * the challenge for each owner names her own authority, which is the only
+    reason an owner can choose one at all;
+  * an authorization server holding one owner refuses everyone else at the
+    door rather than serving them and filtering;
+  * each authority trusts its own owner's identity provider — one that
+    accepts somebody else's tokens for its owner is only partly hers;
+  * the same agent, with the same key, negotiates with both and neither
+    authority learns anything about the other's decision.
+
+Still provisioned out of band: the resource server was told where each
+authority is. Meeting one it has never seen is `establishment_check.py`.
 
 Run with `make multi-owner-check`.
 """
@@ -37,16 +44,24 @@ from uma4a_grant import (  # noqa: E402
 )
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
-AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 KEYS = "/driver/keys"
 RUN = uuid.uuid4().hex[:8]
 META = mcp_meta("u4a-multi-owner-check")
 
+# Two owners, described identically. Adding a third is another row.
 OWNERS = {
-    "alice": os.environ.get("ALICE_PASSWORD", "alice-demo"),
-    "carol": os.environ.get("CAROL_PASSWORD", "carol-demo"),
+    "alice": {
+        "as": os.environ.get("UMA4A_AS", "https://alice-as.uma.lab"),
+        "realm": "alice",
+        "password": os.environ.get("ALICE_PASSWORD", "alice-demo"),
+    },
+    "carol": {
+        "as": os.environ.get("UMA4A_CAROL_AS", "https://carol-as.uma.lab"),
+        "realm": "carol",
+        "password": os.environ.get("CAROL_PASSWORD", "carol-demo"),
+    },
 }
 
 PASS: list[str] = []
@@ -59,128 +74,143 @@ def check(name: str, ok: bool, detail: str = "") -> None:
           + (f" — {detail}" if detail and not ok else ""), flush=True)
 
 
-def hdrs(client: httpx.Client, owner: str) -> dict:
-    r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                    data={"grant_type": "password", "client_id": "alice-portal",
-                          "username": owner, "password": OWNERS[owner]},
-                    timeout=15.0)
+def hdrs(c: httpx.Client, owner: str) -> dict:
+    o = OWNERS[owner]
+    r = c.post(f"{KEYCLOAK}/realms/{o['realm']}/protocol/openid-connect/token",
+               data={"grant_type": "password", "client_id": "alice-portal",
+                     "username": owner, "password": o["password"]},
+               timeout=15.0)
     r.raise_for_status()
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def get(client: httpx.Client, owner: str, path: str):
-    return client.get(f"{AS_PUBLIC}{path}", headers=hdrs(client, owner),
-                      timeout=15.0)
+def negotiate(c: httpx.Client, owner: str, agent: AgentKeys) -> tuple[bool, str]:
+    """Bob's agent, against one owner. Identical for every owner."""
+    o = OWNERS[owner]
+    r = mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
+                 {"name": "get_positions", "arguments": {}}, META)
+    ch = parse_challenge(r.headers.get("www-authenticate", ""))
+    if ch is None:
+        return False, f"no challenge: {r.status_code} {r.text[:160]}"
+
+    answered = {"v": False}
+
+    def be_her(msg: str) -> None:
+        if "has been asked" in msg and not answered["v"]:
+            answered["v"] = True
+            for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
+                           timeout=15.0).json():
+                c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
+                       json={"decision": "approved"},
+                       headers=hdrs(c, owner), timeout=15.0)
+
+    try:
+        run_grant(c, ch.as_uri, ch.ticket, agent, lambda t: True,
+                  on_status=be_her, max_wait_s=90)
+        return True, ch.as_uri
+    except GrantDenied as exc:
+        return False, str(exc)[:160]
 
 
 def main() -> int:
+    names = list(OWNERS)
     with httpx.Client(verify=CA, timeout=30.0) as c:
-        print("\n== Two owners, one authorization server ==", flush=True)
+        print(f"\n== {len(names)} owners, one resource server ==", flush=True)
 
-        # --- each owner has her own policy, naming her own resources -------
-        tiers = {o: get(c, o, "/owner/policies").json() for o in OWNERS}
-        check("each owner has her own starting policy",
-              set(tiers["alice"]) == set(tiers["carol"]),
-              "the two owners were given different tier ids")
+        # --- each owner is reached the same way, at her own address --------
+        named = {}
+        for owner in names:
+            r = mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
+                         {"name": "get_positions", "arguments": {}}, META)
+            ch = parse_challenge(r.headers.get("www-authenticate", ""))
+            named[owner] = ch.as_uri if ch else None
+            check(f"{owner}: her resource challenges, and names her authority",
+                  ch is not None and ch.as_uri == OWNERS[owner]["as"],
+                  f"{r.status_code} named {named[owner]}")
+        check("no two owners are sent to the same authority",
+              len(set(named.values())) == len(names),
+              f"{named}")
 
-        a_res = {r for t in tiers["alice"].values() for r in t["resources"]}
-        c_res = {r for t in tiers["carol"].values() for r in t["resources"]}
-        check("her tiers name her own resources",
-              all(r.startswith("alice-vault/") for r in a_res)
-              and all(r.startswith("carol-vault/") for r in c_res),
-              f"alice={sorted(a_res)} carol={sorted(c_res)}")
-        check("and never each other's",
-              not (a_res & c_res), f"shared: {sorted(a_res & c_res)}")
+        # --- an authority holds exactly one owner ---------------------------
+        for owner in names:
+            others = [x for x in names if x != owner]
+            worst = max(
+                c.get(f"{OWNERS[owner]['as']}/owner/policies",
+                      headers=hdrs(c, x), timeout=15.0).status_code
+                for x in others)
+            check(f"{owner}'s authority will not answer {', '.join(others)}",
+                  worst in (401, 403), f"got {worst}")
+            check(f"and does answer {owner}",
+                  c.get(f"{OWNERS[owner]['as']}/owner/policies",
+                        headers=hdrs(c, owner),
+                        timeout=15.0).status_code == 200)
 
-        # --- terms documents are namespaced, and dereference without a token
-        a_terms = get(c, "alice", "/owner/policies").json()
-        a_tpl = next(iter(a_terms.values()))["terms"]["template_id"]
-        c_tpl = next(iter(tiers["carol"].values()))["terms"]["template_id"]
+        # --- and trusts only her identity provider --------------------------
+        for owner in names:
+            others = [x for x in names if x != owner]
+            worst = max(
+                c.post(f"{KEYCLOAK}/realms/{OWNERS[owner]['realm']}"
+                       "/protocol/openid-connect/token",
+                       data={"grant_type": "password",
+                             "client_id": "alice-portal", "username": x,
+                             "password": OWNERS[x]["password"]},
+                       timeout=15.0).status_code
+                for x in others)
+            check(f"{owner}'s identity provider cannot mint anybody else",
+                  worst >= 400, f"got {worst}")
+
+        # --- her policy and her terms name her, and nobody else -------------
+        tiers = {o: c.get(f"{OWNERS[o]['as']}/owner/policies",
+                          headers=hdrs(c, o), timeout=15.0).json()
+                 for o in names}
+        res = {o: {r for t in tiers[o].values() for r in t["resources"]}
+               for o in names}
+        check("every owner's tiers name her own resources",
+              all(all(r.startswith(f"{o}-vault/") for r in res[o])
+                  for o in names),
+              f"{ {o: sorted(res[o]) for o in names} }")
+        check("and no resource is claimed by two owners",
+              len(set().union(*res.values())) == sum(len(res[o]) for o in names))
+
+        tpl = {o: next(iter(tiers[o].values()))["terms"]["template_id"]
+               for o in names}
         check("terms template ids name their owner",
-              a_tpl.startswith("alice/") and c_tpl.startswith("carol/"),
-              f"{a_tpl} / {c_tpl}")
-        pub = c.get(f"{AS_PUBLIC}/terms/{c_tpl}", timeout=15.0)
-        check("an agent with no token can still dereference her terms",
-              pub.status_code == 200, f"{pub.status_code}")
+              all(tpl[o].startswith(f"{o}/") for o in names), f"{tpl}")
+        check("and an agent holding no token can dereference them",
+              all(c.get(f"{OWNERS[o]['as']}/terms/{tpl[o]}",
+                        timeout=15.0).status_code == 200 for o in names))
 
-        # --- her authority answers for her, and only her --------------------
-        idx = c.get(f"{AS_PUBLIC}/terms", params={"owner": "carol"},
-                    timeout=15.0).json()
-        check("the terms index is one owner's, not everyone's",
-              all(d["template_id"].startswith("carol/") for d in idx["terms"]),
-              "another owner's terms appeared in the listing")
+        keys = {o: {k.get("x") for k in
+                    c.get(f"{OWNERS[o]['as']}/jwks",
+                          timeout=15.0).json()["keys"]} for o in names}
+        check("every authority signs with its own key",
+              len({frozenset(k) for k in keys.values()}) == len(names),
+              "two authorities published the same key")
 
-        # --- one owner's edits are invisible to the other -------------------
-        edit = c.put(f"{AS_PUBLIC}/owner/policies/tier1",
-                       json={"ask_me": True}, headers=hdrs(c, "carol"),
-                       timeout=15.0)
-        check("an owner can edit her own policy", edit.status_code == 200,
-              f"{edit.status_code} {edit.text[:120]}")
-        after = get(c, "alice", "/owner/policies").json()
-        check("and the edit does not reach the other owner",
-              after["tier1"]["ask_me"] is False,
-              "Carol's edit changed Alice's tier")
+        # --- the same agent negotiates with each ----------------------------
+        before = {o: len(c.get(f"{OWNERS[o]['as']}/owner/ledger",
+                               headers=hdrs(c, o), timeout=15.0).json())
+                  for o in names}
+        agent = AgentKeys.load_or_create(f"{KEYS}/mo-{RUN}")
+        for owner in names:
+            ok, detail = negotiate(c, owner, agent)
+            check(f"Bob's agent negotiates with {owner} and is granted",
+                  ok, detail)
 
-        # --- the resource server fronts each owner separately ---------------
-        for owner, leaf in (("alice", "mcp"), ("carol", "mcp/carol")):
-            doc = c.get(f"https://gateway.uma.lab/.well-known/"
-                        f"oauth-protected-resource/{leaf}", timeout=15.0).json()
-            check(f"{owner}: the resource server publishes her own resource",
-                  doc["resource"].endswith(leaf),
-                  f"{doc['resource']}")
-
-        # --- a real grant, against Carol's account --------------------------
-        keys = AgentKeys.load_or_create(f"{KEYS}/mo-{RUN}")
-        carol_gateway = f"{GATEWAY}/carol"
-        r = mcp_call(c, carol_gateway, "tools/call",
-                     {"name": "get_positions", "arguments": {}}, META)
-        ch = parse_challenge(r.headers.get("www-authenticate", ""))
-        check("Carol's resource challenges, and names an authority",
-              ch is not None,
-              f"{r.status_code} {r.text[:200]}")
-        if ch is None:
-            print("\nFAIL: no challenge from Carol's resource; stopping here.")
-            return 1
-
-        # Her first contact pends, exactly as Alice's would, so somebody has
-        # to be her. The point of the check is the partition, not the wait.
-        approved = {"v": False}
-
-        def approve_for_carol(msg: str) -> None:
-            if "has been asked" in msg and not approved["v"]:
-                approved["v"] = True
-                pend = get(c, "carol", "/owner/pending").json()
-                for p in pend:
-                    c.post(f"{AS_PUBLIC}/owner/pending/{p['family']}/decision",
-                           json={"decision": "approved"},
-                           headers=hdrs(c, "carol"), timeout=15.0)
-
-        try:
-            run_grant(c, ch.as_uri, ch.ticket, keys, lambda t: True,
-                      on_status=approve_for_carol, max_wait_s=90)
-            reached, detail = True, ""
-        except GrantDenied as exc:
-            reached, detail = False, str(exc)[:160]
-        check("an agent negotiating for Carol reaches Carol's authority",
-              reached, detail)
-
-        # --- and her ledger records it, while Alice's does not --------------
-        c_led = get(c, "carol", "/owner/ledger").json()
-        a_led = get(c, "alice", "/owner/ledger").json()
-        c_fams = {e.get("family") for e in c_led}
-        a_fams = {e.get("family") for e in a_led}
-        check("the negotiation is in Carol's ledger", bool(c_fams - {None}),
-              "Carol's ledger is empty")
-        check("and none of it is in Alice's",
-              not (c_fams & a_fams - {None}),
-              f"shared families: {sorted((c_fams & a_fams) - {None})}")
-
-        # --- connections are hers ------------------------------------------
-        c_conn = get(c, "carol", "/owner/connections").json()
-        a_conn = get(c, "alice", "/owner/connections").json()
-        handles = {x["handle"] for x in c_conn} & {x["handle"] for x in a_conn}
-        check("a standing relationship belongs to one owner",
-              not handles, f"shared handles: {sorted(handles)}")
+        after = {o: c.get(f"{OWNERS[o]['as']}/owner/ledger",
+                          headers=hdrs(c, o), timeout=15.0).json()
+                 for o in names}
+        for owner in names:
+            check(f"{owner}'s record grew by her own negotiation",
+                  len(after[owner]) > before[owner],
+                  "nothing was written")
+        fams = {o: {e.get("family") for e in after[o]} for o in names}
+        overlap = set()
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                overlap |= (fams[a] & fams[b]) - {None, "-"}
+        check("and no negotiation appears in more than one record",
+              not overlap, f"shared: {sorted(overlap)}")
 
     print()
     print(f"{len(PASS)} passed, {len(FAIL)} failed", flush=True)
@@ -188,10 +218,10 @@ def main() -> int:
         for f in FAIL:
             print(f"  - {f}")
         return 1
-    print("\nPASS: one authorization server held two owners' policy, terms,")
-    print("      grants and records without any of it crossing — and the")
-    print("      resource server fronted each of them as a resource of her")
-    print("      own, which is what lets them name different authorities.")
+    print(f"\nPASS: {len(names)} owners of one resource server, each with her own")
+    print("      authority, key, identity provider and record. The same agent")
+    print("      ran the same four beats against each of them, and neither")
+    print("      authority learned anything about the other's decision.")
     return 0
 
 

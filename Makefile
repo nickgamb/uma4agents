@@ -137,8 +137,8 @@ flow-check:
 first-party-check:
 	docker compose --profile test run --rm first-party-check
 
-## multi-owner-check: one authorization server holding two owners, and the
-## wall between them. See docs/MULTI-OWNER.md.
+## multi-owner-check: two owners of one resource server, one governed by the
+## operator's authorization server and one by her own. See docs/MULTI-OWNER.md.
 .PHONY: multi-owner-check
 multi-owner-check:
 	docker compose --profile test run --rm multi-owner-check
