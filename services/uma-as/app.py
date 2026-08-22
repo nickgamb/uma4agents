@@ -68,6 +68,9 @@ SERVED_OWNER = os.environ.get("UMA_AS_OWNER") or None
 # Retained for the paths that need *an* owner before a request has named one:
 # startup seeding, the resource pull, and the compose stack's fixtures.
 DEFAULT_OWNER = SERVED_OWNER or os.environ.get("UMA_AS_DEFAULT_OWNER", "alice")
+# Which owner the configured device key belongs to. See
+# require_owner_signature: the signature proves a holder, this says whose.
+OWNER_KEY_OWNER = os.environ.get("UMA_AS_OWNER_KEY_OWNER", DEFAULT_OWNER)
 
 
 def st(owner: str):
@@ -396,11 +399,24 @@ async def publish_terms(owner: str, tier_id: str, tier: dict) -> str:
     return terms_uri(template_id)
 
 
+async def ensure_owner(owner: str) -> None:
+    """Seed an owner, and publish the terms documents her tiers name.
+
+    Both halves, and the second is easy to miss: seeding creates the policy
+    but a terms document is a *served* artifact, and the challenge tells an
+    agent to go and fetch one. An owner who first appears after startup would
+    otherwise have tiers whose `terms_uri` 404s — which fails at beat 2, in
+    the agent, a long way from the cause.
+    """
+    await st(owner).seed()
+    for tier_id, tier in (await st(owner).tiers()).items():
+        await publish_terms(owner, tier_id, tier)
+
+
 @app.on_event("startup")
 async def publish_initial_terms() -> None:
     for owner in await STORE.owners() or [DEFAULT_OWNER]:
-        for tier_id, tier in (await st(owner).tiers()).items():
-            await publish_terms(owner, tier_id, tier)
+        await ensure_owner(owner)
 
 
 @app.get("/terms")
@@ -638,12 +654,15 @@ def owner_device_key():
 async def require_owner_signature(request: Request) -> str:
     """The owner signs her own request, with her own key.
 
-    **This mode names a holder, not an owner.** One configured public key
-    proves somebody holds the matching private key; it cannot say which of
-    several owners that is. So it is available only to an instance that serves
-    exactly one owner — a personal authorization server, where the question
-    does not arise. A multi-tenant deployment must use a credential that
-    carries a subject, which is why `oidc` exists.
+    **A key names a holder, not an owner**, so the binding is configuration:
+    `UMA_AS_OWNER_KEY` is registered *for* `UMA_AS_OWNER_KEY_OWNER`. Verifying
+    the signature proves the holder; the registration says whose key it is.
+
+    One key per instance is the lab's simplification, and the honest limit: a
+    multi-tenant deployment serving a million people would hold these as
+    per-owner records rather than one environment variable, keyed the same way
+    everything else here is. The verification is unchanged either way — what
+    changes is where the binding is read from.
 
     RFC 9421 over method, authority, path and authorization, verified with
     `lib/uma4a_http_sig.py` — the same module the enforcement point uses.
@@ -696,16 +715,10 @@ async def require_owner_signature(request: Request) -> str:
         raise HTTPException(
             status_code=401, detail=f"owner signature did not verify: {exc}") from exc
 
-    if SERVED_OWNER is None:
-        # Refused rather than defaulted. Treating a valid signature as "the
-        # usual owner" on a multi-tenant instance would let one key holder act
-        # as somebody else's authority, which is the whole thing this service
-        # exists to prevent.
-        raise HTTPException(
-            status_code=500,
-            detail=("local-key owner auth requires UMA_AS_OWNER to be set: a "
-                    "key proves a holder, not which owner they are"))
-    return SERVED_OWNER
+    # Named, never inferred. Treating a valid signature as "whoever the
+    # request seems to be about" would let one key holder act as somebody
+    # else's authority, which is the thing this service exists to prevent.
+    return OWNER_KEY_OWNER
 
 
 async def require_owner(request: Request) -> str:
@@ -730,7 +743,14 @@ async def require_owner(request: Request) -> str:
             detail=(f"UMA_AS_OWNER_AUTH must be a comma-separated list of "
                     f"{'|'.join(sorted(VERIFY_OWNER))}; got {unknown or 'nothing'}"))
 
+    # Which failure to report when several modes are configured and all of
+    # them fail. "The last one" is the obvious choice and the wrong one: a 403
+    # from a credential that *did* authenticate ("this server serves a
+    # different owner") is the useful answer, and it was being overwritten by
+    # a later mode's 401 for a credential that was never presented. Prefer the
+    # most advanced failure.
     last: HTTPException | None = None
+    best: HTTPException | None = None
     for mode in OWNER_AUTH:
         try:
             result = VERIFY_OWNER[mode](request)
@@ -746,11 +766,14 @@ async def require_owner(request: Request) -> str:
             # An owner seen for the first time gets her starting policy here,
             # which is also the moment a multi-tenant deployment learns she
             # exists.
-            await st(owner).seed()
+            await ensure_owner(owner)
             return owner
         except HTTPException as exc:
             last = exc
-    raise last or HTTPException(status_code=401, detail="owner authentication failed")
+            if best is None or exc.status_code > best.status_code:
+                best = exc
+    raise best or last or HTTPException(status_code=401,
+                                        detail="owner authentication failed")
 
 
 def require_owner_oidc(request: Request) -> str:

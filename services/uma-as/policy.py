@@ -144,8 +144,24 @@ def enforced_prohibitions(tier: dict) -> dict:
     return out
 
 
-def defaults() -> dict[str, dict]:
-    return copy.deepcopy(DEFAULT_TIERS)
+def defaults(owner: str = "alice") -> dict[str, dict]:
+    """Starting tiers for an owner.
+
+    The resource ids and the terms template ids are both namespaced by owner.
+    That is not cosmetic: a resource server holding a thousand people's
+    accounts holds a thousand distinct collections, and a terms document is
+    dereferenced by agents holding no token, so its id is the only thing that
+    can say whose terms it is.
+    """
+    tiers = copy.deepcopy(DEFAULT_TIERS)
+    if owner == "alice":
+        return tiers
+    for tier in tiers.values():
+        tier["resources"] = [r.replace("alice-vault/", f"{owner}-vault/", 1)
+                             for r in tier["resources"]]
+        t = tier["terms"]
+        t["template_id"] = t["template_id"].replace("alice/", f"{owner}/", 1)
+    return tiers
 
 
 def tier_for_resource(tiers: dict[str, dict],

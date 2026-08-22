@@ -161,12 +161,12 @@ class PostgresOwnerStore:
         a later owner edit is never overwritten by a restart."""
         async with self._pool.acquire() as conn:
             async with conn.transaction():
-                for tier_id, tier in policy.defaults().items():
+                for tier_id, tier in policy.defaults(self._o).items():
                     await conn.execute(
                         "INSERT INTO tiers (owner, tier_id, tier) VALUES ($1, $2, $3) "
                         "ON CONFLICT (owner, tier_id) DO NOTHING",
                         self._o, tier_id, json.dumps(tier))
-                for cid, rs in store.default_resource_servers().items():
+                for cid, rs in store.default_resource_servers(self._o).items():
                     await conn.execute(
                         "INSERT INTO resource_servers (owner, client_id, rs) "
                         "VALUES ($1, $2, $3) "

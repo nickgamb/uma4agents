@@ -49,12 +49,16 @@ class MemoryOwnerStore:
 
     # --- lifecycle ---------------------------------------------------------
 
+    def __set_owner(self, owner: str) -> None:
+        self._owner = owner
+
     async def seed(self) -> None:
         """Starting policy for an owner who has none. Idempotent."""
         if not self._tiers:
-            self._tiers = policy.defaults()
+            self._tiers = policy.defaults(getattr(self, "_owner", "alice"))
         if not self._rs:
-            self._rs = store.default_resource_servers()
+            self._rs = store.default_resource_servers(
+                getattr(self, "_owner", "alice"))
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -318,6 +322,7 @@ class MemoryStore:
         st = self._owners.get(owner)
         if st is None:
             st = self._owners[owner] = MemoryOwnerStore()
+            st._owner = owner
         return st
 
     async def owners(self) -> list[str]:

@@ -115,11 +115,20 @@ ALLOW = Decision(outcome="allow")
 
 
 class Enforcer:
-    """Carries the FedAuthz obligations against one authorization server."""
+    """Carries the FedAuthz obligations against one authorization server, for
+    one owner.
+
+    Both halves of that matter. A resource server holding many people's
+    accounts holds one of these per owner, and nothing is shared between them
+    — not the PAT, not the tool namespace, not the authorization server. That
+    last one is what lets two owners of the same resource server name two
+    different authorities.
+    """
 
     def __init__(
         self,
         *,
+        owner: str = "alice",
         as_internal: str,
         as_public: str,
         client_id: str,
@@ -134,6 +143,7 @@ class Enforcer:
         resource_metadata_url: str,
         event=None,
     ) -> None:
+        self.owner = owner
         self.as_internal = as_internal
         self.as_public = as_public
         self.client_id = client_id
@@ -162,6 +172,10 @@ class Enforcer:
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
                 "scope": "uma_protection",
+                # One PAT per owner. Without this the authorization server
+                # cannot tell which of its owners this resource server is
+                # asking on behalf of.
+                "owner": self.owner,
             },
             timeout=5.0,
         )

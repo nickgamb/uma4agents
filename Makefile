@@ -137,6 +137,12 @@ flow-check:
 first-party-check:
 	docker compose --profile test run --rm first-party-check
 
+## multi-owner-check: one authorization server holding two owners, and the
+## wall between them. See docs/MULTI-OWNER.md.
+.PHONY: multi-owner-check
+multi-owner-check:
+	docker compose --profile test run --rm multi-owner-check
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:

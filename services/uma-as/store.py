@@ -322,8 +322,8 @@ class OwnerStore(Protocol):
         replica, so it does not matter which one the portal reached."""
 
 
-def default_resource_servers() -> dict[str, dict]:
-    """Resource servers Alice has authorized to use her Protection API.
+def default_resource_servers(owner: str = "alice") -> dict[str, dict]:
+    """Resource servers this owner has authorized to use her Protection API.
 
     The PAT is an OAuth token this AS issues to these clients
     (client_credentials, scope uma_protection); the day-0 consent for her
@@ -346,10 +346,20 @@ def default_resource_servers() -> dict[str, dict]:
             "last_pat_issued": None,
             # Where the RS publishes itself — the root of declarative
             # registration (RFC 9728 metadata is derived from this identifier).
-            "resource_uri": os.environ.get(
-                "UMA_AS_RS_RESOURCE_URI", "https://gateway.uma.lab/mcp"),
+            # Where the RS publishes itself — one instance per owner, because
+            # a resource server holding many people's accounts holds a
+            # distinct protected resource for each of them. RFC 9728 metadata
+            # hangs off this identifier, which is what lets the challenge for
+            # one owner name a different authorization server from the next.
+            "resource_uri": _rs_resource_uri(owner),
         }
     }
+
+
+def _rs_resource_uri(owner: str) -> str:
+    base = os.environ.get("UMA_AS_RS_RESOURCE_URI",
+                          "https://gateway.uma.lab/mcp")
+    return base if owner == "alice" else f"{base}/{owner}"
 
 
 def make_store() -> Store:
