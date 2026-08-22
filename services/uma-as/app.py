@@ -51,18 +51,21 @@ OWNER_ISSUER = os.environ.get(
 OWNER_METADATA_URL = os.environ.get(
     "UMA_AS_OWNER_METADATA_URL",
     f"{OWNER_ISSUER}/.well-known/openid-configuration")
-# Which owners this instance serves.
+# Whose authority this is.
 #
-#   UMA_AS_OWNER=alice   one owner and nobody else. A person's own
-#                        authorization server — on her laptop, in a tenant of
-#                        one, at the edge — refuses every other owner at the
-#                        door rather than trusting itself to filter.
-#   unset                whoever authenticates. One deployment, many owners,
-#                        each partitioned in the store.
+# An authorization server belongs to one owner. `UMA_AS_OWNER` names her, and
+# every other owner is refused at the door rather than filtered out later —
+# on her laptop, in a container, at the edge, the answer to "may I read
+# somebody else's policy" is no before the question reaches the store.
 #
-# Same code either way. The difference between one process holding a million
-# owners and a million people each holding their own is this variable and
-# where the process runs, which is the point.
+# Unset, the server falls back to a default owner. That is a convenience for
+# tests and for a single-owner lab, not a deployment shape: the many-owner
+# case is one *resource server* holding many people's accounts, each governed
+# by an authority of her own, which is what k8s/base and docker-compose run.
+#
+# The store is partitioned by owner regardless, and that is what makes an
+# owner's state a clean cut — the reason her authority can move somewhere she
+# controls without the grant loop noticing.
 SERVED_OWNER = os.environ.get("UMA_AS_OWNER") or None
 # Retained for the paths that need *an* owner before a request has named one:
 # startup seeding, the resource pull, and the compose stack's fixtures.

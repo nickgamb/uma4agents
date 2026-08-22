@@ -32,6 +32,7 @@ Run with `make multi-owner-check`.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import uuid
@@ -40,7 +41,8 @@ import httpx
 
 sys.path.insert(0, "/driver/lib")
 from uma4a_grant import (  # noqa: E402
-    AgentKeys, GrantDenied, mcp_call, mcp_meta, parse_challenge, run_grant,
+    AgentKeys, GrantDenied, mcp_call, mcp_json, mcp_meta, parse_challenge,
+    run_grant, signed_headers,
 )
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
@@ -84,14 +86,15 @@ def hdrs(c: httpx.Client, owner: str) -> dict:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def negotiate(c: httpx.Client, owner: str, agent: AgentKeys) -> tuple[bool, str]:
+def negotiate(c: httpx.Client, owner: str,
+              agent: AgentKeys) -> tuple[bool, str, dict | None]:
     """Bob's agent, against one owner. Identical for every owner."""
     o = OWNERS[owner]
     r = mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
                  {"name": "get_positions", "arguments": {}}, META)
     ch = parse_challenge(r.headers.get("www-authenticate", ""))
     if ch is None:
-        return False, f"no challenge: {r.status_code} {r.text[:160]}"
+        return False, f"no challenge: {r.status_code} {r.text[:160]}", None
 
     answered = {"v": False}
 
@@ -105,11 +108,24 @@ def negotiate(c: httpx.Client, owner: str, agent: AgentKeys) -> tuple[bool, str]
                        headers=hdrs(c, owner), timeout=15.0)
 
     try:
-        run_grant(c, ch.as_uri, ch.ticket, agent, lambda t: True,
-                  on_status=be_her, max_wait_s=90)
-        return True, ch.as_uri
+        rpt = run_grant(c, ch.as_uri, ch.ticket, agent, lambda t: True,
+                        on_status=be_her, max_wait_s=90)
     except GrantDenied as exc:
-        return False, str(exc)[:160]
+        return False, str(exc)[:160], None
+
+    # Spend it, and keep what came back. A check that stops at "granted"
+    # cannot tell one owner's vault from another's, which is the whole
+    # question when a resource server holds more than one.
+    hdr = signed_headers("POST", "gateway.uma.lab", f"/mcp/{owner}", rpt, agent)
+    r = mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
+                 {"name": "get_positions", "arguments": {}}, META, headers=hdr)
+    # MCP wraps a tool result as text content inside the JSON-RPC result.
+    try:
+        payload = mcp_json(r)
+        data = json.loads(payload["result"]["content"][0]["text"])
+    except (KeyError, IndexError, ValueError, TypeError):
+        return True, ch.as_uri, None
+    return True, ch.as_uri, data
 
 
 def main() -> int:
@@ -192,10 +208,21 @@ def main() -> int:
                                headers=hdrs(c, o), timeout=15.0).json())
                   for o in names}
         agent = AgentKeys.load_or_create(f"{KEYS}/mo-{RUN}")
+        got = {}
         for owner in names:
-            ok, detail = negotiate(c, owner, agent)
+            ok, detail, body = negotiate(c, owner, agent)
             check(f"Bob's agent negotiates with {owner} and is granted",
                   ok, detail)
+            got[owner] = body
+
+        # The holdings themselves, not just the verdict.
+        symbols = {o: sorted(
+            p.get("symbol") for p in ((got[o] or {}).get("positions") or []))
+            for o in names}
+        check("each owner's agent is served her own holdings",
+              all(symbols[o] for o in names)
+              and len({tuple(symbols[o]) for o in names}) == len(names),
+              f"{symbols}")
 
         after = {o: c.get(f"{OWNERS[o]['as']}/owner/ledger",
                           headers=hdrs(c, o), timeout=15.0).json()

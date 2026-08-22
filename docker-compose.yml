@@ -225,6 +225,46 @@ services:
       timeout: 5s
       retries: 10
 
+  # Carol's vault. A separate instance holding her holdings, not a row
+  # in Alice's. Same image, different fixtures, different address.
+  carol-vault-mcp:
+    init: true
+    build:
+      context: .
+      dockerfile: mcp/alice-vault/Dockerfile
+    environment:
+      UMA_VAULT_OWNER: carol
+      UMA_VAULT_FIXTURES: /app/fixtures-carol.json
+      # gateway (default): an ext_authz service ahead of this server carries
+      # the FedAuthz obligations and this process holds no auth code.
+      # embedded: the same enforcement core runs here as an MCP Extension, and
+      # the gateway is not in the authorization path at all.
+      ENFORCEMENT_MODE: ${ENFORCEMENT_MODE:-gateway}
+      UMA_AS_PUBLIC: https://alice-as.uma.lab
+      UMA_AS_INTERNAL: http://uma-as:9000
+      UMA_AS_RS_CLIENT_ID: meridian-gateway
+      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      UMA_REALM: alice-vault
+      # Meridian holds more than one person's account. Alice is served at
+      # /mcp; every owner named here gets /mcp/<owner>, with its own tool
+      # namespace, its own PAT, and its own RFC 9728 metadata naming the
+      # authority that governs it.
+      UMA_EXTRA_OWNERS: carol
+      # Which authority governs which owner. Both named, because neither is
+      # the default: the resource server holds a PAT from each and enforces
+      # for both, and it is the owner who decides which server that is.
+      UMA_OWNER_AUTHORITIES: >-
+        {"alice": {"public": "https://alice-as.uma.lab",
+                   "internal": "http://uma-as:9000"},
+         "carol": {"public": "https://carol-as.uma.lab",
+                   "internal": "http://carol-as:9000"}}
+      UMA_EXPECTED_AUTHORITY: gateway.uma.lab
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   # Bob's agent operator's public web presence: the CIMD document Alice's AS
   # resolves for her approval dialog, and the Web Bot Auth key directory a
   # resource can consult before any relationship exists.

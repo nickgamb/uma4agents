@@ -26,14 +26,24 @@ import pathlib
 
 from mcp.server.mcpserver import MCPServer
 
-FIXTURES = json.loads((pathlib.Path(__file__).parent / "fixtures.json").read_text())
+# Whose vault this process is. One instance per owner: her holdings are not
+# rows in a table somebody else can also reach, they are a different process
+# with a different fixture file, reached at a different address. A resource
+# server with a thousand clients has a thousand of these, however it chooses
+# to pack them.
+VAULT_OWNER = os.environ.get("UMA_VAULT_OWNER", "alice")
+FIXTURES = json.loads(pathlib.Path(
+    os.environ.get("UMA_VAULT_FIXTURES",
+                   str(pathlib.Path(__file__).parent / "fixtures.json"))
+).read_text())
 
 # The tool surface, and which calls are single-use. In gateway mode the PEP
 # holds the same table; in embedded mode this is the one copy.
 TOOLS = {
-    "get_positions": ("alice-vault/get_positions", ["positions:read"]),
-    "get_transactions": ("alice-vault/get_transactions", ["transactions:read"]),
-    "execute_trade": ("alice-vault/execute_trade", ["trades:execute"]),
+    "get_positions": (f"{VAULT_OWNER}-vault/get_positions", ["positions:read"]),
+    "get_transactions": (f"{VAULT_OWNER}-vault/get_transactions",
+                         ["transactions:read"]),
+    "execute_trade": (f"{VAULT_OWNER}-vault/execute_trade", ["trades:execute"]),
 }
 SINGLE_USE_TOOLS = {"execute_trade"}
 
@@ -44,7 +54,7 @@ if ENFORCEMENT_MODE == "embedded":
     import uma_extension
     extensions.append(uma_extension.build(TOOLS, SINGLE_USE_TOOLS))
 
-mcp = MCPServer("alice-vault", extensions=extensions)
+mcp = MCPServer(f"{VAULT_OWNER}-vault", extensions=extensions)
 
 if ENFORCEMENT_MODE == "embedded":
     # A resource that protects itself also has to publish for itself.
@@ -59,7 +69,7 @@ if ENFORCEMENT_MODE == "embedded":
 
 @mcp.tool()
 def get_positions() -> dict:
-    """Alice's current holdings summary: positions and allocation (read-only)."""
+    """The owner's current holdings summary: positions and allocation."""
     return {"as_of": FIXTURES["as_of"], "positions": FIXTURES["positions"]}
 
 
