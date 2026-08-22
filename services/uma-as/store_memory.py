@@ -24,7 +24,16 @@ import policy
 import store
 
 
-class MemoryStore:
+class MemoryOwnerStore:
+    """One owner's state, in one process.
+
+    This is the class the service always had. It did not need changing to
+    become per-owner, because it always was per-owner — the deployment simply
+    only ever ran one. That is the clearest evidence for the claim in
+    store.py: a personal authorization server is not a different design, it
+    is this object with nobody else in the process.
+    """
+
     def __init__(self) -> None:
         self._negotiations: dict[str, dict] = {}   # family -> record
         self._tickets: dict[str, str] = {}         # rotating ticket -> family
@@ -40,12 +49,16 @@ class MemoryStore:
 
     # --- lifecycle ---------------------------------------------------------
 
-    async def start(self) -> None:
-        self._tiers = policy.defaults()
-        self._rs = store.default_resource_servers()
+    def __set_owner(self, owner: str) -> None:
+        self._owner = owner
 
-    async def close(self) -> None:
-        return None
+    async def seed(self) -> None:
+        """Starting policy for an owner who has none. Idempotent."""
+        if not self._tiers:
+            self._tiers = policy.defaults(getattr(self, "_owner", "alice"))
+        if not self._rs:
+            self._rs = store.default_resource_servers(
+                getattr(self, "_owner", "alice"))
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -197,6 +210,17 @@ class MemoryStore:
         rs = self._rs.get(client_id)
         return dict(rs) if rs is not None else None
 
+    async def put_resource_server(self, client_id: str, rs: dict) -> None:
+        self._rs[client_id] = copy.deepcopy(rs)
+
+    async def approve_resource_server(self, client_id: str, when: str) -> bool:
+        rs = self._rs.get(client_id)
+        if rs is None or rs.get("status") != "pending":
+            return False
+        rs["status"] = "active"
+        rs["consented"] = when
+        return True
+
     async def touch_pat(self, client_id: str, when: str) -> None:
         if (rs := self._rs.get(client_id)) is not None:
             rs["last_pat_issued"] = when
@@ -273,6 +297,9 @@ class MemoryStore:
         return copy.deepcopy(updated)
 
     # --- fan-out ---------------------------------------------------------------
+    #
+    # Per owner, which is not a detail: a subscriber list shared across owners
+    # would put Carol's pending requests on Alice's event stream.
 
     async def notify(self, payload: dict) -> None:
         for q in list(self._subscribers):
@@ -287,3 +314,27 @@ class MemoryStore:
         finally:
             if queue in self._subscribers:
                 self._subscribers.remove(queue)
+
+
+class MemoryStore:
+    """Many owners, one process. A dict of the class above and nothing else —
+    there is deliberately no shared state for a query to leak across."""
+
+    def __init__(self) -> None:
+        self._owners: dict[str, MemoryOwnerStore] = {}
+
+    async def start(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
+    def owner(self, owner: str) -> MemoryOwnerStore:
+        st = self._owners.get(owner)
+        if st is None:
+            st = self._owners[owner] = MemoryOwnerStore()
+            st._owner = owner
+        return st
+
+    async def owners(self) -> list[str]:
+        return sorted(self._owners)

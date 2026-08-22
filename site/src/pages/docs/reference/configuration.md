@@ -25,7 +25,8 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_OWNER_AUTHORITY` | host part of the issuer | The authority her signature base is rebuilt against. Configuration, never the request |
 | `UMA_AS_OWNER_ISSUER` | `https://keycloak.uma.lab/realms/alice` | The issuer the owner's tokens must claim |
 | `UMA_AS_OWNER_METADATA_URL` | `{OWNER_ISSUER}/.well-known/openid-configuration` | Where to fetch her identity provider's metadata |
-| `UMA_AS_OWNER` | `alice` | The owner's username |
+| `UMA_AS_OWNER` | `alice` | The one owner this authority serves. Set it and every request naming anybody else is refused at the door rather than served and filtered. Leave it unset for a deployment holding many, where `UMA_AS_DEFAULT_OWNER` names the one an unqualified request means |
+| `UMA_AS_SEED_RS` | `1` | Whether to seed a resource server this authority was provisioned alongside. `0` seeds none, which is the case where the authority is the owner's and nobody could have configured both ends — the resource server introduces itself instead |
 | `UMA_AS_PEND_BUDGET` | `5` | How many requests from agents with no standing, and nobody checkable behind them, may wait for her at once. `0` makes her authority introduce-yourself-first |
 | `UMA_AS_PEND_BUDGET_ATTRIBUTED` | `40` | The same cap for agents whose named operator published their key. A separate lane, so a flood of the cheap kind cannot fill it |
 | `UMA_AS_MAX_REASON` | `512` | How much the requesting side may write about its own errand. Small on purpose: a sentence for a person to read in an approval, not a document |
@@ -51,7 +52,10 @@ rather than holding a call open across it.
 | `UMA_AS_PUBLIC` | `https://alice-as.uma.lab` | The authority's public identifier, put in challenges |
 | `UMA_AS_INTERNAL` | `http://uma-as:9000` | Where to reach it for protection API calls |
 | `UMA_AS_RS_CLIENT_ID` | `meridian-gateway` | This resource server's client id, for PAT issuance |
-| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret |
+| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret, where one authority was provisioned alongside it |
+| `UMA_PEP_RS_SECRETS` | `{"<owner>": "<secret>"}` | Per owner, and the interesting part is who is missing. An owner named here is one whose authority this resource server holds a credential for. Any other owner it serves is one it must introduce itself to, by signing with the key it publishes at its own origin |
+| `UMA_EXTRA_OWNERS` | — | Comma-separated. Every owner named gets `/mcp/<owner>`, with her own tool namespace, her own PAT and her own RFC 9728 metadata |
+| `UMA_OWNER_AUTHORITIES` | — | JSON, owner → `{public, internal}`. Which authority governs which owner. This is the one thing that stays configuration: which server speaks for a person is a fact only that person holds, so she tells the resource server, the way she tells it an address |
 | `UMA_REALM` | `alice-vault` | Protection realm named in the challenge |
 | `UMA_OWNER` | `alice` | The owner whose resources are protected |
 | `UMA_PEP_SIGNING_KEY` | `/keys/uma-pep-ed25519.pem` | Key for `signed_metadata` and signed queries |

@@ -40,6 +40,31 @@ carrying the owner as subject and the resource server as authorized party. The
 owner can revoke a resource server, which kills issuance and verification at
 once.
 
+A resource server holds one PAT per owner it serves, so `client_credentials`
+takes the owner it is asking about — there is no default. It authenticates
+with a client secret where the pair was provisioned together, and otherwise
+with an RFC 9421 signature over the request from a key its own origin
+publishes. Which of the two applies follows from the stored record, so a
+resource server that registered by signature cannot fall back to guessing a
+secret. While the owner has not yet authorized it, the answer is `403
+authorization_pending` rather than a refusal.
+
+### Establishment
+
+| Endpoint | Auth | Answers |
+|---|---|---|
+| `POST /rs/register` | an RFC 9421 signature from a key published at the origin of the resource being claimed | `202` with `status: pending` |
+
+How a resource server introduces itself to an authority nobody configured it
+against. The authority fetches the RFC 9728 document at the claimed resource
+and the JWKS it names, and requires that the document claim *this* resource,
+name *this* authority, and be same-origin with its keys. Nothing is
+provisioned in advance and no secret is transmitted.
+
+Success settles who is asking and nothing else: the registration waits in the
+owner's registry until she answers. See
+[many owners, one resource server](/docs/overview/multi-owner/).
+
 ### Protection API
 
 Resource servers only, PAT-authorized. FedAuthz shape.
@@ -72,8 +97,9 @@ either way. See [put the authority on her device](/docs/guides/personal-authorit
 | `DELETE /owner/policies/{tier_id}` | Remove a tier. Its resources become ungoverned, and ungoverned is denied |
 | `GET /owner/policy-vocabulary` | The conditions a rule may use, and which of them may relax one |
 | `GET /owner/resources` | Registered resources joined with tiers |
-| `GET /owner/resource-servers` | Resource servers holding her protection access |
-| `POST /owner/resource-servers/{id}/revoke` | Cut a resource server off from the Protection API |
+| `GET /owner/resource-servers` | Resource servers holding her protection access, each `pending`, `active` or `revoked` |
+| `POST /owner/resource-servers/decision` | Approve one that introduced itself, or withdraw one. Takes the `client_id` in the body, because a self-registered resource server is identified by an https URL |
+| `POST /owner/resource-servers/{id}/revoke` | The same withdrawal by path, for relationships whose ids are plain names |
 | `GET /owner/connections` | Standing agent relationships |
 | `POST /owner/connections/{handle}/revoke` | Revoke a connection and its live RPTs |
 | `GET /owner/operators` | The operators behind those connections, and whether any are blocked |

@@ -57,10 +57,29 @@ POST   /audit/access    the PEP reports an allowed call (grounds the ledger's "t
 POST /token         grant_type=uma-ticket            the four-beat negotiation loop
 POST /token         grant_type=client_credentials    PAT for an owner-authorized RS
                     (scope=uma_protection; the owner can revoke the RS, which
-                    kills issuance and verification at once)
+                    kills issuance and verification at once). Authenticated by
+                    client_secret where the pair was provisioned together, and
+                    otherwise by an RFC 9421 signature over this request from a
+                    key the resource's own origin publishes — same check as
+                    /rs/register below. Which of the two applies is a property
+                    of the stored record, so a client registered by signature
+                    cannot fall back to guessing a secret.
+                    403 authorization_pending while the owner has not answered.
 
-# Owner API (portal only; takes the owner's own OIDC access token, validated
-# against her realm's published keys — no static owner credential exists)
+# Resource-server establishment (unauthenticated in the sense that it carries
+# no credential this server issued; the signature is the credential)
+POST /rs/register   introduce a resource server to this owner. Body names the
+                    owner and the resource_uri it serves; the request is signed
+                    (RFC 9421) with a key published at that resource's origin.
+                    202 + status=pending on success: it grants nothing until the
+                    owner answers. See docs/MULTI-OWNER.md.
+
+# Owner API (hers; takes the owner's own OIDC access token, validated against
+# her realm's published keys, or an RFC 9421 signature from her device key —
+# no static owner credential exists). Her portal is one caller and not the
+# only possible one: an authority that is hers has to be reachable by whatever
+# she runs, and every handler acts on the owner the credential proved rather
+# than on one the request named.
 GET  /owner/pending                        requests in awaiting-owner state
 POST /owner/pending/{family}/decision      approve | deny
 GET  /owner/policies                       tier policy
@@ -72,8 +91,18 @@ DELETE /owner/policies/{tier_id}           remove one; its resources become
 GET  /owner/policy-vocabulary              conditions a rule may use, and which
                                            of them may relax one
 GET  /owner/resources                      registered resources joined with tiers
-GET  /owner/resource-servers               RSs holding her protection access
-POST /owner/resource-servers/{id}/revoke   cut an RS off from the Protection API
+GET  /owner/resource-servers               RSs holding her protection access,
+                                           each with a status: pending (it has
+                                           introduced itself and is waiting on
+                                           her), active, or revoked
+POST /owner/resource-servers/decision      approved | revoked, by client_id in
+                                           the body — an RS that registered
+                                           itself is identified by an https URL,
+                                           which survives neither a path segment
+                                           nor a proxy that normalises //
+POST /owner/resource-servers/{id}/revoke   the same withdrawal, by path. Kept for
+                                           the seeded relationships, whose ids
+                                           are plain names
 GET  /owner/connections                    standing agent relationships
 POST /owner/connections/{handle}/revoke    revoke a connection + its live RPTs
 GET  /owner/operators                      operators behind those connections
@@ -532,7 +561,9 @@ Emitted events: `resource.registered`, `resources.registered_at_startup`,
 `policy.updated`, `ticket.awaiting_owner`, `owner.notified`,
 `owner.decision`, `connection.approved`, `connection.revoked`, `rpt.issued`,
 `receipt.issued`, `rpt.introspected`, `rpt.consumed`, `access.allowed`,
-`access.denied`.
+`access.denied`, `resource_server.registered`, `resource_server.approved`,
+`resource_server.revoked`, `resource_server.metadata_rejected`,
+`resource_server.metadata_unreachable`, `resource_server.registration_refused`.
 
 The activity ledger is a projection: **promised** = `contract.committed`,
 **touched** = `access.allowed`, **connected** = `connection.approved`,
@@ -556,6 +587,8 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 | 11 | Requesting-agent identity metadata: an optional CIMD `client_id` in the contract header (resolved, self-reference enforced, **display only**) and a Web Bot Auth `Signature-Agent` covered by the request signature | The agent is its key, or its issuer's token | The RqP ≠ RO cold-start problem: a party that has never met this agent needs to be able to say something true about it. Neither ever becomes an authorization input — the verifying key is always the RPT's `cnf`, and the connection handle is unchanged |
 
 | 12 | Challenge carries `error="insufficient_authorization"` + `authorization_remediation` (RFC 9396 `authorization_details` + `authorization_reference`), plus `authorization_server` and `ticket` inside it | UMA's challenge carries `as_uri` + `ticket` only | Superset of `draft-zehavi-oauth-rar-metadata` rather than a rival: the same remediation payload, plus the two parameters that let a party who is not the caller decide. The same JSON rides the JSON-RPC encoding byte for byte, which shows the payload is portable and only the envelope is binding-specific |
+| 13 | `POST /rs/register`: a resource server introduces itself to an owner's authority by signing the request (RFC 9421) with a key published at the origin of the resource it claims to serve, verified through that resource's own RFC 9728 document. Success is 202 `pending` — the owner authorizes it from her registry before any PAT is issued, and `/token` then accepts the same signature in place of a client secret | FedAuthz §1.4 requires the PAT to be issued with the resource owner's authorization, and says nothing about how the resource server comes to hold one | Where one operator runs both sides, a provisioned secret is a fair model of that gap. It is not one when the authority is the owner's: nobody is in a position to configure both ends, because the two ends belong to different people. Trusting control of the origin adds no party the protocol did not already depend on — it is the address the challenge pointed at |
+| 14 | Every owner-scoped artifact carries its owner: the ticket, the RPT (`owner` claim), the resource id namespace, the terms `template_id`, and the per-owner RFC 9728 resource at `/mcp/<owner>` naming *her* `authorization_servers` | UMA assumes one authorization server per protected resource, with the owner implicit in the deployment | Two owners of one resource server can name two different authorities, which is the difference between multi-tenancy and an authority that is hers. The store enforces it structurally rather than by parameter — see docs/MULTI-OWNER.md |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.
 

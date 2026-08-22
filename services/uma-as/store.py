@@ -47,6 +47,21 @@ Two behaviours are required and easy to "fix" by accident
    record invisible in that window and `/owner/pending/{family}/decision`
    404s on a negotiation that plainly exists.
 2. The family is the stable identity; the ticket is a credential for it.
+
+One owner at a time
+-------------------
+``Store`` is a factory. All the interesting methods live on ``OwnerStore``,
+which you get from ``store.owner("alice")``, and every one of them is scoped
+to that owner without being told again.
+
+Scoping structurally rather than by parameter is the point. An ``owner``
+argument on forty methods is an argument somebody eventually forgets, and the
+failure mode is Carol reading Alice's ledger. More usefully: an ``OwnerStore``
+is exactly the surface a single person's authorization server needs, so the
+per-owner unit is already the unit that could run somewhere she controls. The
+multi-tenant deployment is many of these over one database; a personal one is
+a single one over whatever it has. Neither the grant loop nor the policy
+engine can tell the difference, and that is the property worth protecting.
 """
 
 from __future__ import annotations
@@ -56,17 +71,32 @@ from typing import AsyncIterator, Protocol
 
 
 class Store(Protocol):
-    """The authorization server's state. See the module docstring for why the
-    methods are intents rather than accessors."""
-
-    # --- lifecycle ---------------------------------------------------------
+    """The backing store. Holds no per-owner state of its own; hand it an
+    owner and it gives you their authorization server's memory."""
 
     async def start(self) -> None:
-        """Connect, create the schema if absent, and seed defaults. Idempotent:
-        every replica calls it at startup and exactly one of them wins each
-        seed."""
+        """Connect and create the schema if absent. Idempotent: every replica
+        calls it at startup and exactly one of them wins."""
 
     async def close(self) -> None: ...
+
+    def owner(self, owner: str) -> "OwnerStore":
+        """One person's state. Cheap: no I/O, no round trip."""
+
+    async def owners(self) -> list[str]:
+        """Every owner this store currently holds anything for. Administrative
+        — the grant loop never asks, because it always knows whose request it
+        is holding."""
+
+
+class OwnerStore(Protocol):
+    """One owner's state. See the module docstring for why the methods are
+    intents rather than accessors, and why this is the unit rather than a
+    parameter."""
+
+    async def seed(self) -> None:
+        """Give a new owner her starting tiers and resource servers. Idempotent
+        — an owner who already has policy keeps it."""
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -205,6 +235,15 @@ class Store(Protocol):
 
     async def resource_server(self, client_id: str) -> dict | None: ...
 
+    async def put_resource_server(self, client_id: str, rs: dict) -> None:
+        """Record a resource server. Used by registration, which arrives
+        before the owner has said yes — so the record exists with
+        ``status: "pending"`` and grants nothing until she changes it."""
+
+    async def approve_resource_server(self, client_id: str, when: str) -> bool:
+        """Her yes. Returns False if there was nothing pending to approve, so
+        a second tap is told so rather than silently re-approving."""
+
     async def touch_pat(self, client_id: str, when: str) -> None: ...
 
     async def revoke_resource_server(self, client_id: str) -> bool: ...
@@ -292,13 +331,18 @@ class Store(Protocol):
         replica, so it does not matter which one the portal reached."""
 
 
-def default_resource_servers() -> dict[str, dict]:
-    """Resource servers Alice has authorized to use her Protection API.
+def default_resource_servers(owner: str = "alice") -> dict[str, dict]:
+    """Resource servers this owner has authorized to use her Protection API.
 
     The PAT is an OAuth token this AS issues to these clients
-    (client_credentials, scope uma_protection); the day-0 consent for her
-    brokerage's gateway is seeded — the RS-side onboarding handshake is a
-    finding, not a feature here.
+    (client_credentials, scope uma_protection). One relationship is seeded
+    here with a shared secret, which models the day-0 case: an authority the
+    brokerage stood up alongside its own gateway, provisioned together.
+
+    ``UMA_AS_SEED_RS=0`` seeds none, which is the other case — an authority
+    that is the owner's, standing somewhere the brokerage has never been
+    configured with. Nothing there can be provisioned in advance, so the
+    resource server has to introduce itself; see ``/rs/register``.
 
     Seeded into the store rather than held in a module dict because
     ``status`` is a live security control: ``require_pat`` reads it on every
@@ -306,6 +350,8 @@ def default_resource_servers() -> dict[str, dict]:
     that only reached the replica that served the request would leave the
     others honouring a PAT Alice had just withdrawn.
     """
+    if os.environ.get("UMA_AS_SEED_RS", "1") in ("0", "false", "no"):
+        return {}
     return {
         os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway"): {
             "secret": os.environ.get("UMA_AS_RS_CLIENT_SECRET",
@@ -316,10 +362,23 @@ def default_resource_servers() -> dict[str, dict]:
             "last_pat_issued": None,
             # Where the RS publishes itself — the root of declarative
             # registration (RFC 9728 metadata is derived from this identifier).
-            "resource_uri": os.environ.get(
-                "UMA_AS_RS_RESOURCE_URI", "https://gateway.uma.lab/mcp"),
+            # Where the RS publishes itself — one instance per owner, because
+            # a resource server holding many people's accounts holds a
+            # distinct protected resource for each of them. RFC 9728 metadata
+            # hangs off this identifier, which is what lets the challenge for
+            # one owner name a different authorization server from the next.
+            "resource_uri": _rs_resource_uri(owner),
         }
     }
+
+
+def _rs_resource_uri(owner: str) -> str:
+    """One protected resource per owner, addressed the same way for all of
+    them. `/mcp` remains as an alias for the primary owner so existing clients
+    keep working, but nothing depends on the asymmetry."""
+    base = os.environ.get("UMA_AS_RS_RESOURCE_URI",
+                          "https://gateway.uma.lab/mcp")
+    return f"{base}/{owner}"
 
 
 def make_store() -> Store:

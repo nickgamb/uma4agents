@@ -23,7 +23,8 @@ available on request.
 | `request_submitted` pending state | **Keep** | Already specifies "ask me"; the agent era only adds *where* the owner is asked |
 | Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats |
 | RPT (requesting party token) | **Keep semantics, replace token** | Keep the per-permission introspection array; drop the bearer token for a PoP token |
-| RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work** | The owner-authoritative direction is right; the RS burden is *relocatable* — a gateway, a framework, or the resource itself (rec 7). Both hosts run here against one AS |
+| RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work; specify the bootstrap** | The owner-authoritative direction is right; the RS burden is *relocatable* — a gateway, a framework, or the resource itself (rec 7). Both hosts run here against one AS. What is missing is how the RS becomes a client of *her* authority at all: FedAuthz assumes it already is, which holds only where one operator runs both sides. The RS can authenticate as its own origin instead (rec 21) |
+| One AS per protected resource (implicit) | **Transform** | A resource server holds many people's accounts and each of them may name a different authorization server. Every owner-scoped artifact has to carry its owner — the ticket, the RPT, the resource id, the terms template, and the RFC 9728 document itself. Two owners run here over one resource server, one of them on an authority the resource server was never configured against |
 | Resource registration model | **Transform** | Durable resources → *tool/capability surfaces*; and registration itself becomes method-agnostic — classic push RReg, or declarative pull from RFC 9728 metadata plus a protected owner-resources listing (rec 5; both run in this POC) |
 | Interactive claims gathering (browser redirect) | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Trust-elevation levels, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first POC; revival conditions noted |
@@ -210,9 +211,15 @@ so staleness is a real state — repaired here by the AS re-pulling when
 re-push after an AS restart (both failure paths hit and fixed in this
 build). (c) **The bootstrap forcing function**: RReg forced PAT issuance on
 day one; without it, the owner↔AS↔RS triangle must still be established —
-the RS-side onboarding handshake (this POC seeds Alice's day-0 consent and
-labels it honestly; a real PAT remains: issued via `client_credentials`
-with `uma_protection` scope, expiring, owner-revocable). (d) **Privacy
+the RS-side onboarding handshake. Both halves now run here. Alice's
+relationship with her brokerage keeps the seeded day-0 secret, which is the
+true account of an authority stood up alongside the resource server it
+protects. Carol's is established at runtime by the resource server signing
+with a key published at its own origin, because nobody was ever in a
+position to configure her server and that firm against each other. See
+recommendation 21 and [docs/MULTI-OWNER.md](docs/MULTI-OWNER.md). The PAT
+itself is unchanged either way: `client_credentials`, `uma_protection`
+scope, expiring, owner-revocable. (d) **Privacy
 inversion, resolved by the split**: RReg was a private RS→AS channel, so it
 could carry owner-bound descriptions; a public well-known document cannot —
 publishing which resources Alice owns would be a leak RReg never had. The
@@ -677,6 +684,66 @@ authorisation service on UMA profiles, and this working group's own [pensions
 dashboard use-case report](https://kantara.atlassian.net/wiki/spaces/uma/pages/135659525) puts the person viewing her own discovered
 pensions first and delegation to an adviser second. A specification that treats
 the first step as a footnote is mis-describing where its adopters will start.
+
+**21. Say how a resource server comes to hold a PAT when nobody could have
+configured both ends.** FedAuthz requires the PAT to be issued with the
+resource owner's authorization and is silent on how the resource server
+becomes a client of her authorization server at all. That silence is
+survivable in exactly one topology — the one where a single operator runs both
+sides and provisions each against the other — and it is the topology the
+specification exists to move past.
+
+The gap becomes structural the moment the authority is the owner's. A person
+will not paste a client secret into her broker's console, the broker will not
+hold one secret per customer, and there is no moment at which any single party
+could arrange the pair, because the pair spans two organisations and a person.
+Every deployment that hits this either invents something or quietly becomes
+multi-tenant, and multi-tenancy is the arrangement UMA was written to replace.
+
+The mechanism the pieces already imply: **the resource server authenticates as
+its origin.** It signs the registration (RFC 9421) with a key it publishes in
+the RFC 9728 document that resource already has to serve, and the authorization
+server fetches that document itself and checks three things — that it claims
+*this* resource, that its `jwks_uri` is same-origin, and that it names *this*
+authorization server. No secret is transmitted, nothing is provisioned in
+advance, and the party being trusted is the one the challenge already pointed
+at, so no new trust is introduced. It is the same discipline a profile should
+already be applying to an agent's operator metadata, pointed at the resource
+side.
+
+Three things a specification should say about it, because each is a place an
+implementation will get it wrong:
+
+**A verified signature settles who is asking and nothing else.** Registration
+must land in a state the owner has to leave — `pending`, visible in whatever
+surface she uses, granting no PAT. FedAuthz already requires her authorization;
+what this adds is that the request may now arrive from a party she has never
+heard of, which makes the pending state the whole of the security rather than
+a formality.
+
+**Unreachable is refused, and that is a departure worth stating.** Where a
+document merely *attests* a claim made by other means, failing to fetch it
+should leave the claim where it was — a third party's outage is not evidence
+about anybody. Here the document **is** the credential, and a credential that
+cannot be fetched has not been presented. A profile that reuses the attestation
+language here has specified an authentication that fails open.
+
+**Re-registration must not be a way to undo a withdrawal.** A resource server
+the owner has cut off may ask again — that is the same shape as an agent she
+has blocked asking again — and asking must return it to `pending`, never to
+`active`. The resource server also needs to throttle itself: re-registering on
+every request puts the same question in front of her as fast as traffic
+arrives, which is a way of pestering someone into a yes.
+
+What this does *not* remove, and should not: which authorization server speaks
+for a person is a fact only that person holds. The resource server still has to
+be told, by her, the way she tells it a mailing address. What the mechanism
+removes is the part that had to be arranged between the two companies — and
+that was the part that made a personal authorization server impossible.
+
+Implemented at `POST /rs/register` with `clients/demo-driver/establishment_check.py`
+covering the refusals; extension register entry 13 in
+[docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ---
 

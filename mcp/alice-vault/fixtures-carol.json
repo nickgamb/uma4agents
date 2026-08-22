@@ -1,0 +1,59 @@
+{
+  "as_of": "2026-07-06",
+  "positions": [
+    {
+      "symbol": "SCHD",
+      "name": "Schwab US Dividend Equity ETF",
+      "quantity": 1450,
+      "cost_basis": 112350.0,
+      "market_value": 121075.0
+    },
+    {
+      "symbol": "IEFA",
+      "name": "iShares Core MSCI EAFE ETF",
+      "quantity": 980,
+      "cost_basis": 68600.0,
+      "market_value": 72030.0
+    },
+    {
+      "symbol": "TLT",
+      "name": "iShares 20+ Year Treasury Bond ETF",
+      "quantity": 400,
+      "cost_basis": 39200.0,
+      "market_value": 35600.0
+    },
+    {
+      "symbol": "CASH",
+      "name": "Money Market Sweep",
+      "quantity": 1,
+      "cost_basis": 8410.22,
+      "market_value": 8410.22
+    }
+  ],
+  "transactions": [
+    {
+      "account": "brokerage-main",
+      "date": "2026-02-11",
+      "action": "buy",
+      "symbol": "SCHD",
+      "quantity": 450,
+      "price": 77.1
+    },
+    {
+      "account": "brokerage-main",
+      "date": "2026-04-02",
+      "action": "buy",
+      "symbol": "IEFA",
+      "quantity": 380,
+      "price": 69.85
+    },
+    {
+      "account": "brokerage-main",
+      "date": "2026-06-19",
+      "action": "sell",
+      "symbol": "TLT",
+      "quantity": 100,
+      "price": 90.15
+    }
+  ]
+}

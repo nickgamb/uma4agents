@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-one recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -26,7 +26,8 @@ the repository.
 | `request_submitted` pending state | **Keep** | Already specifies ask-me; the agent era adds only *where* the owner is asked |
 | Claims-gathering | **Keep, transform** | Becomes the owner *proffering* a terms template, not just naming claim formats |
 | RPT | **Keep semantics, replace token** | Keep the per-permission array; drop the bearer token for proof-of-possession |
-| Resource-server registration and PAT | **Keep direction, relocate work** | The direction is right; the burden is relocatable — a gateway, a framework, or the resource itself |
+| Resource-server registration and PAT | **Keep direction, relocate work; specify the bootstrap** | The direction is right and the burden is relocatable — a gateway, a framework, or the resource itself. What is missing is how the resource server becomes a client of *her* authority at all, which FedAuthz assumes it already is |
+| One authorization server per protected resource | **Transform** | A resource server holds many people's accounts and each may name a different authority. Every owner-scoped artifact has to carry its owner |
 | Resource registration model | **Transform** | Durable resources become tool surfaces, and registration becomes method-agnostic |
 | Interactive claims gathering | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Trust elevation, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first build |
@@ -55,7 +56,7 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The twenty recommendations
+## The twenty-one recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -250,6 +251,36 @@ and require both halves of the signal, because this is the one fact that may
 adoption path, and Kantara's own [pensions dashboard use-case report](https://kantara.atlassian.net/wiki/spaces/uma/pages/135659525)
 describes exactly that order — the person views her own pensions first,
 delegation to an adviser comes second.
+
+**21. Say how a resource server comes to hold a protection token when nobody
+could have configured both ends.** FedAuthz requires the token to be issued
+with the owner's authorization and is silent on how the resource server becomes
+a client of her authority in the first place. That silence survives in exactly
+one topology — a single operator running both sides — and it is the topology
+the specification exists to move past. A person will not paste a client secret
+into her broker's console, the broker will not hold one per customer, and no
+single party is in a position to arrange the pair.
+
+The pieces already imply the answer: the resource server authenticates as its
+origin, signing the registration with a key published in the RFC 9728 document
+that resource already serves, checked by the authority against that document —
+which must claim this resource, be same-origin with its keys, and name this
+authority. Nothing is provisioned in advance and the party trusted is the one
+the challenge already pointed at.
+
+Three things to state, because each is where an implementation goes wrong. A
+verified signature settles *who is asking* and nothing else, so registration
+must land in a state the owner has to leave. Unreachable must be **refused**,
+not shrugged at — elsewhere a document merely attests a claim and an outage is
+not evidence, but here the document is the credential. And re-registering after
+a withdrawal must return to pending, never to active, or asking again becomes a
+way to undo her answer.
+
+What it does not remove, and should not: which authority speaks for a person is
+a fact only that person holds, so she still tells the resource server where hers
+is. What goes away is the part that had to be arranged between two companies —
+the part that made a personal authorization server impossible. See
+[many owners, one resource server](/docs/overview/multi-owner/).
 
 ## Parking lot
 

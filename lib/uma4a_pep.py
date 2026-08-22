@@ -39,7 +39,22 @@ from typing import Any, Literal
 import httpx
 from jwt.algorithms import OKPAlgorithm
 
+from urllib.parse import urlencode
+
 from uma4a_http_sig import VerifyError, verify
+from uma4a_http_sig import sign as http_sign
+
+
+class Pending(Exception):
+    """The authority knows this resource server and the owner has not yet
+    said yes. Not an error in the relationship — a stage of it."""
+
+
+def _error_of(r: httpx.Response) -> str:
+    try:
+        return r.json().get("error", "")
+    except ValueError:
+        return ""
 
 
 def s256(data: bytes) -> str:
@@ -115,15 +130,29 @@ ALLOW = Decision(outcome="allow")
 
 
 class Enforcer:
-    """Carries the FedAuthz obligations against one authorization server."""
+    """Carries the FedAuthz obligations against one authorization server, for
+    one owner.
+
+    Both halves of that matter. A resource server holding many people's
+    accounts holds one of these per owner, and nothing is shared between them
+    — not the PAT, not the tool namespace, not the authorization server. That
+    last one is what lets two owners of the same resource server name two
+    different authorities.
+    """
 
     def __init__(
         self,
         *,
+        owner: str = "alice",
         as_internal: str,
         as_public: str,
         client_id: str,
-        client_secret: str,
+        client_secret: str = "",
+        signing_key: Any = None,
+        key_id: str = "",
+        resource_uri: str = "",
+        rs_name: str = "",
+        establish_backoff_s: float = 30.0,
         realm: str,
         tools: dict[str, tuple[str, list[str]]],
         single_use_tools: set[str],
@@ -134,10 +163,24 @@ class Enforcer:
         resource_metadata_url: str,
         event=None,
     ) -> None:
+        self.owner = owner
         self.as_internal = as_internal
         self.as_public = as_public
         self.client_id = client_id
         self.client_secret = client_secret
+        # The other way to be this resource server: a key published at the
+        # origin of the resource it serves. Used when there is no secret,
+        # which is every authority nobody provisioned this side against.
+        self.signing_key = signing_key
+        self.key_id = key_id
+        self.resource_uri = resource_uri
+        self.rs_name = rs_name
+        self.establish_backoff_s = establish_backoff_s
+        # When it is worth introducing ourselves again. A withdrawn resource
+        # server that re-registered on every request would put the same
+        # question in front of the owner as fast as traffic arrives, which is
+        # a way of pestering her into a yes.
+        self._establish_after = 0.0
         self.realm = realm
         self.tools = tools
         self.single_use_tools = single_use_tools
@@ -151,22 +194,106 @@ class Enforcer:
 
     # --- Protection API client ------------------------------------------
 
+    @property
+    def as_authority(self) -> str:
+        """The host a signature to this authority has to cover. The public
+        one, not the address dialled — a service mesh routes by an internal
+        name the authority has never heard of, and signing that would make
+        the signature unverifiable at the far end for no gain."""
+        return self.as_public.split("://", 1)[-1].rstrip("/")
+
+    async def _token_request(self, client: httpx.AsyncClient,
+                             form: dict) -> httpx.Response:
+        """POST /token, authenticated the way this relationship works."""
+        if self.client_secret:
+            return await client.post(f"{self.as_internal}/token",
+                                     data={**form,
+                                           "client_secret": self.client_secret},
+                                     timeout=5.0)
+        body = urlencode(form).encode()
+        headers = http_sign(
+            method="POST", authority=self.as_authority, path="/token",
+            authorization="", key=self.signing_key, keyid=self.key_id,
+            body=body)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        return await client.post(f"{self.as_internal}/token", content=body,
+                                 headers=headers, timeout=5.0)
+
+    async def establish(self, client: httpx.AsyncClient) -> str:
+        """Introduce this resource server to an authority that has never seen
+        it, and report what came back: `active`, `pending`, or `refused`.
+
+        Nothing is sent that the authority has to be configured to recognise.
+        The signature is made with a key published in the RFC 9728 document
+        this resource already serves, so verifying it is a fetch the authority
+        performs against the origin it is being asked to trust.
+        """
+        body = json.dumps({"owner": self.owner,
+                           "resource_uri": self.resource_uri,
+                           "name": self.rs_name or self.client_id}).encode()
+        headers = http_sign(
+            method="POST", authority=self.as_authority, path="/rs/register",
+            authorization="", key=self.signing_key, keyid=self.key_id,
+            body=body)
+        headers["Content-Type"] = "application/json"
+        r = await client.post(f"{self.as_internal}/rs/register", content=body,
+                              headers=headers, timeout=10.0)
+        status = "refused"
+        if r.status_code in (200, 202):
+            status = r.json().get("status", "pending")
+        self.event("resource_server.establish", owner=self.owner,
+                   authority=self.as_public, status=status,
+                   code=r.status_code)
+        return status
+
     async def pat(self, client: httpx.AsyncClient, force: bool = False) -> str:
-        """The PAT, refreshed 60s early. An OAuth token, not a shared string."""
+        """The PAT, refreshed 60s early. An OAuth token, not a shared string.
+
+        Where there is no secret this may be the first thing that ever passes
+        between the two, so an unrecognised client is not an error to raise
+        but a introduction to make: register, then ask again. The second 401
+        is real.
+        """
         if not force and self._pat["token"] and time.time() < self._pat["expires"] - 60:
             return self._pat["token"]
-        r = await client.post(
-            f"{self.as_internal}/token",
-            data={
-                "grant_type": "client_credentials",
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "scope": "uma_protection",
-            },
-            timeout=5.0,
-        )
+        form = {
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "scope": "uma_protection",
+            # One PAT per owner. Without this the authorization server
+            # cannot tell which of its owners this resource server is
+            # asking on behalf of.
+            "owner": self.owner,
+        }
+        r = await self._token_request(client, form)
+        # Unrecognised, or known and withdrawn. Neither is a credential this
+        # side got wrong — there is no secret to get wrong — so the move is to
+        # introduce ourselves again and let her decide, not to retry harder.
+        # Asking again cannot undo her withdrawal; it can only put the
+        # question back in front of her, which is what re-registering does.
+        refused = r.status_code == 401 or (
+            r.status_code == 403 and _error_of(r) == "access_denied")
+        if refused and self.signing_key is not None:
+            if time.time() >= self._establish_after:
+                self._establish_after = time.time() + self.establish_backoff_s
+                await self.establish(client)
+                # Ask again either way: the second answer separates "she has
+                # been asked" from "that origin does not check out", and only
+                # the first is worth waiting through.
+                r = await self._token_request(client, form)
+        if r.status_code == 403 and _error_of(r) == "authorization_pending":
+            # She has been asked and has not answered. Distinct from a
+            # refusal, and the difference matters: this side should keep
+            # serving challenges and try again, not treat itself as revoked.
+            raise Pending(f"{self.owner} has not yet authorized this "
+                          f"resource server at {self.as_public}")
         r.raise_for_status()
         body = r.json()
+        # A working relationship clears the throttle, so the next time this
+        # one stops working the question reaches her at once. The throttle is
+        # there to stop the same unanswered question repeating, not to sit
+        # between her and a change she just made.
+        self._establish_after = 0.0
         self._pat = {"token": body["access_token"],
                      "expires": time.time() + body.get("expires_in", 3600)}
         return self._pat["token"]
@@ -200,16 +327,24 @@ class Enforcer:
             return None
 
     async def introspect(self, token: str) -> dict:
-        """Ask the AS about an RPT. Never consumes — see `consume`."""
-        async with httpx.AsyncClient() as client:
-            r = await client.post(
-                f"{self.as_internal}/introspect",
-                data={"token": token, "consume": "false"},
-                headers=await self.pat_headers(client),
-                timeout=5.0,
-            )
-            r.raise_for_status()
-            return r.json()
+        """Ask the AS about an RPT. Never consumes — see `consume`.
+
+        A resource server still waiting on her cannot introspect either, and
+        an inactive answer is the right one: it holds no PAT, so it has no
+        way to be told this token is good.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.post(
+                    f"{self.as_internal}/introspect",
+                    data={"token": token, "consume": "false"},
+                    headers=await self.pat_headers(client),
+                    timeout=5.0,
+                )
+                r.raise_for_status()
+                return r.json()
+        except Pending:
+            return {"active": False}
 
     async def consume(self, token: str) -> bool:
         """Burn a single-use RPT, once everything else has verified."""
@@ -223,7 +358,7 @@ class Enforcer:
                 )
                 r.raise_for_status()
                 return bool(r.json().get("consumed"))
-        except httpx.HTTPError:
+        except (httpx.HTTPError, Pending):
             return False
 
     async def report_access(self, family: str, tool: str, summary: str) -> None:
@@ -236,7 +371,7 @@ class Enforcer:
                     headers=await self.pat_headers(client),
                     timeout=5.0,
                 )
-        except httpx.HTTPError:
+        except (httpx.HTTPError, Pending):
             pass
 
     # --- The verdict ----------------------------------------------------
@@ -386,7 +521,22 @@ class Enforcer:
 
     async def challenge(self, tool: str, rid: str, scopes: list[str]) -> Decision:
         """Beat 1: a real ticket from the AS, and where to take it."""
-        ticket = await self.mint_ticket(rid, scopes)
+        try:
+            ticket = await self.mint_ticket(rid, scopes)
+        except Pending as exc:
+            # Not "her authority is down" — her authority answered, and said
+            # it does not yet work for this resource server on her behalf.
+            # Reporting that as unreachable would send the caller looking in
+            # the wrong place for something only she can fix.
+            self.event("challenge.awaiting_owner", tool=tool, resource_id=rid,
+                       error=str(exc)[:200])
+            return Decision(
+                outcome="deny", status=503, error="authorization_pending",
+                description=("this resource server has registered with the "
+                             "owner's authorization server and is waiting for "
+                             "her to authorize it"),
+                as_uri=self.as_public,
+                resource_metadata=self.resource_metadata_url)
         if ticket is None:
             return Decision(outcome="deny", status=503, error="as_unreachable")
         details = self.authorization_details(rid, tool, scopes)

@@ -240,8 +240,10 @@ make kind-down                  # delete everything
 | Namespace | Runs | Is |
 |---|---|---|
 | `uma-edge` | kgateway, hickory-dns | the public on-ramp |
-| `alice` | keycloak, `uma-as` ×3, CNPG ×3, her portal | the resource owner |
-| `meridian` | agentgateway, `uma-pep` ×2, the vault | the resource server |
+| `alice` | `uma-as` ×3, CNPG ×3, her portal | a resource owner |
+| `carol` | `uma-as` ×1 | another, at a person's scale |
+| `idp` | keycloak | an identity provider, neither owner's |
+| `meridian` | agentgateway, `uma-pep` ×2, two vaults | the resource server |
 | `sterling-vance` | agent-operator ×2, the agent | the requesting party |
 | `aauth` | person-server | a third-party identity authority |
 | `observability` | — | the operator plane |
@@ -253,6 +255,31 @@ separate workload identity and the seam is enforced rather than described.
 
 `alice` versus `meridian` is the one that carries the argument: Meridian holds
 the assets and enforces the policy, and can never read it.
+
+`alice` versus `carol` is the one that makes it more than an argument about
+two companies. They are two of the same kind, not a primary and an exception:
+each namespace holds an authorization server, a signing key, a device key and
+a record, neither refers to the other, and one resource server serves both
+without either being the default. The identity provider sits outside both for
+the same reason — an authority that is hers cannot depend on a login service
+the other owner could operate.
+
+They are deliberately deployed at different sizes. Alice's authority is three
+replicas over a synchronous Postgres cluster; Carol's is one process, 128Mi,
+holding its own state. Nothing on the wire distinguishes them, which is the
+point: an authorization server is small enough to be a person's. The single
+replica is correct only because the store is in the process, which is why her
+Deployment says `Recreate` — two of her would be two authorities behind one
+name, and a ticket minted by one would be unspendable at the other.
+
+The other thing to read from these manifests is an absence. Meridian's Secret
+holds one entry, for Alice. Carol's namespace seeds no resource server and
+holds no credential for the firm. There was no provisioning step this lab
+skipped: the gateway registers itself with her authority by signing with the
+key it publishes at `gateway.uma.lab`, her server fetches that key from the
+origin it is being asked to trust, and she approves it. Prove it with
+`make k8s-establishment-check`; the reasoning is in
+[MULTI-OWNER.md](MULTI-OWNER.md).
 
 ---
 
@@ -269,6 +296,12 @@ than three minted per pod. This is what
 [`services/uma-as/store.py`](../services/uma-as/store.py) was written for,
 and why rec 9 in [FINDINGS.md](../FINDINGS.md) exists: single-use has to mean
 *indivisible*, not merely once per process.
+
+**Two owners, and one of them brought her own authority.** `make
+k8s-multi-owner-check` runs the four beats against both and asserts that
+neither authority learns anything about the other's decision; `make
+k8s-establishment-check` covers the relationship nobody provisioned, and the
+four ways of not getting in. See [MULTI-OWNER.md](MULTI-OWNER.md).
 
 **The vault is a `MCPServer`.** kmcp turns it into a Deployment and a Service;
 what a reader sees is a declaration of the thing being protected. That is what

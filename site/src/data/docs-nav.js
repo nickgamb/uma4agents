@@ -60,6 +60,7 @@ const nav = {
         { title: "Revocation and the ledger", to: "/docs/overview/revocation/" },
         { title: "Agent assurance", to: "/docs/overview/assurance/" },
         { title: "The owner's attention", to: "/docs/overview/attention/" },
+        { title: "Many owners, one resource server", to: "/docs/overview/multi-owner/" },
       ],
     },
     {

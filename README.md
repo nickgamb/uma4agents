@@ -41,6 +41,10 @@ a fifteen-minute demo guide,
 **[docs/FLOW.md](docs/FLOW.md)** is the one to read if you only read one: the
 owner never has to know how the asking agent is identified, checked against
 four different identity regimes with `make flow-check`.
+**[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** is the other half of that: one
+resource server holding two people's accounts, each governed by an
+authorization server of her own — including one the firm was never configured
+against, which had to introduce itself.
 **[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md)** puts her side inside a
 personal AI, and **[docs/FIXTURE.md](docs/FIXTURE.md)** is the minimal
 fixture the protocol is tested on with nothing underneath it.
@@ -218,8 +222,11 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make intent-check` | Whose intent the grant carries: her terms, the agent's stated errand, the record that names it |
 | `make sig-test` | Unit-test the RFC 9421 profile |
 | `make store-test` | Race 32 callers at each single-use artifact, on both storage backends |
+| `make multi-owner-check` | Two owners of one resource server, each with her own authority, keys, identity provider and record |
+| `make establishment-check` | A resource server and an authority nobody configured against each other, introducing themselves — and the ways of not getting in |
 | `make kind-up` / `make kind-down` | The whole Kubernetes lab, from nothing / delete it |
 | `make k8s-smoke-test`, `k8s-policy-test` | Verify the deployed lab; prove the trust boundary denies |
+| `make k8s-multi-owner-check`, `k8s-establishment-check` | The same two, where each owner is a namespace with no path to the other |
 | `make k8s-demo-all`, `k8s-load`, `k8s-chaos` | Walk Alice's day; 24 agents at once; break it mid-grant |
 | `make reset` | Rewind demo state |
 | `make trust-ca` | Trust the local CA in your system store |

@@ -11,3 +11,10 @@ metadata:
   namespace: meridian
 stringData:
   rs-client-secret: gateway-dev-secret
+  # Per owner, and deliberately only one entry. What is not in here is the
+  # interesting part: Carol's authority is not something this firm was ever
+  # given a credential for, so the gateway authenticates to it as its own
+  # origin instead — signing with the key it publishes at gateway.uma.lab
+  # and waiting for her to say yes. Adding an owner here would mean somebody
+  # putting a secret on her server on her behalf.
+  rs-secrets: '{"alice": "gateway-dev-secret"}' 

@@ -1,0 +1,63 @@
+# Two owners of one resource server — in the cluster, where the separation is
+# structural rather than a matter of which variable each process was given.
+#
+# Under compose the two authorities are two containers on one network. Here
+# they are two namespaces with no path between them, two ServiceAccounts, two
+# waypoints and two default-deny policies, and each authority's grant surface
+# names only the callers it will answer. What the check asserts is the same
+# either way, which is the point: the partition is a property of the protocol
+# and the store, not of how far apart the processes were put.
+#
+# It also runs against two authorities of visibly different size — Alice's is
+# three replicas over a synchronous Postgres cluster, Carol's is one process
+# holding its own state — and cannot tell them apart, which is the claim in
+# docs/MULTI-OWNER.md about an authority being small enough to be a person's.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: multi-owner-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: multi-owner-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: multi-owner-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/multi_owner_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: driver, mountPath: /driver/multi_owner_check.py, subPath: multi_owner_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

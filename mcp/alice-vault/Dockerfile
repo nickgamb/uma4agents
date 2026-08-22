@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir "mcp>=2,<3" httpx 'pyjwt[crypto]' cryptography
 WORKDIR /app
 COPY lib/uma4a_http_sig.py lib/uma4a_pep.py lib/uma4a_publish.py ./
 COPY mcp/alice-vault/server.py mcp/alice-vault/uma_extension.py ./
-COPY mcp/alice-vault/uma_publish.py mcp/alice-vault/fixtures.json ./
+COPY mcp/alice-vault/uma_publish.py ./
+# One image, one fixture file per owner. UMA_VAULT_FIXTURES picks.
+COPY mcp/alice-vault/fixtures.json mcp/alice-vault/fixtures-carol.json ./
 EXPOSE 9020
 CMD ["python", "server.py"]

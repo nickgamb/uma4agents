@@ -46,16 +46,28 @@ data:
           lambda: denied("http://uma-as.alice.svc.cluster.local:9000/health"))
     check("cannot read Alice's policy",
           lambda: denied("http://uma-as.alice.svc.cluster.local:9000/owner/policies"))
-    check("cannot reach her identity provider directly",
-          lambda: denied("http://keycloak.alice.svc.cluster.local:8080/realms/alice"))
+    check("cannot reach the identity provider directly",
+          lambda: denied("http://keycloak.idp.svc.cluster.local:8080/realms/alice"))
     check("cannot reach her portal directly",
           lambda: denied("http://alice-portal.alice.svc.cluster.local:9010/health"))
     check("cannot reach her database",
           lambda: denied("http://uma-as-db-rw.alice.svc.cluster.local:5432/"))
 
+    # The same, for the other owner of the same resource server. Written out
+    # because a second owner added without its own default-deny is not broken
+    # in any way that says so: the route programmes, the Service gets
+    # endpoints, and everything works — including the parts that should not.
+    print("\n== and out of the other owner's, which is a separate party ==")
+    check("cannot reach Carol's authorization server directly",
+          lambda: denied("http://uma-as.carol.svc.cluster.local:9000/health"))
+    check("cannot read Carol's policy",
+          lambda: denied("http://uma-as.carol.svc.cluster.local:9000/owner/policies"))
+
     print("\n== and out of the resource server's internals ==")
     check("cannot reach the vault behind the gateway",
           lambda: denied("http://alice-vault.meridian.svc.cluster.local:9020/mcp"))
+    check("nor the other owner's, in the same namespace",
+          lambda: denied("http://carol-vault.meridian.svc.cluster.local:9020/mcp"))
     check("cannot call the enforcement point's ext_authz callback",
           lambda: denied("http://uma-pep.meridian.svc.cluster.local:9002/check/mcp"))
     check("cannot read the owner-bound resource listing",

@@ -50,6 +50,22 @@ spec:
           protocol: StreamableHTTP
           path: /mcp
 ---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: carol-vault
+  namespace: meridian
+spec:
+  mcp:
+    sessionRouting: Stateful
+    targets:
+      - name: carol-vault
+        static:
+          host: carol-vault.meridian.svc.cluster.local
+          port: 9020
+          protocol: StreamableHTTP
+          path: /mcp
+---
 # The protected surface: the MCP endpoint itself, plus the discovery
 # documents the PEP serves. Discovery is deliberately unauthenticated — the
 # public metadata says what shape the door is, and the permission ticket says
@@ -69,6 +85,30 @@ spec:
         - group: agentgateway.dev
           kind: AgentgatewayBackend
           name: alice-vault
+---
+# Carol's, at her own path. Gateway API resolves the more specific prefix
+# first, so /mcp/carol reaches her instance and /mcp reaches Alice's without
+# either route having to know the other exists — unlike the compose gateway,
+# where the same two routes are ordered by hand.
+#
+# The path is what says whose resource is being asked for on a call carrying
+# no credential, which is every first call. There is nothing else on the wire
+# at that point that could.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: carol-vault-mcp
+  namespace: meridian
+spec:
+  parentRefs:
+    - name: meridian
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /mcp/carol }
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: carol-vault
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -102,6 +142,12 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: alice-vault-mcp
+    # Both. An enforcement point that covered one owner's route and not the
+    # other would not be a weaker version of this — it would be an open door
+    # to a stranger's account, and nothing about the second route says so.
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: carol-vault-mcp
   traffic:
     extAuth:
       backendRef:

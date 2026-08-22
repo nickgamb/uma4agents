@@ -37,6 +37,9 @@ import policy
 import store
 
 ISSUER = os.environ.get("UMA_AS_ISSUER", "https://alice-as.uma.lab")
+# The host a signature over a request to this server has to cover. Taken
+# from the issuer so the two cannot drift apart.
+AS_AUTHORITY = ISSUER.split("://", 1)[-1].rstrip("/")
 KEY_PATH = os.environ.get("UMA_AS_SIGNING_KEY", "/keys/uma-as-ed25519.pem")
 # The owner authenticates with her OIDC token (Keycloak); the AS validates
 # it against the realm's published keys. No static owner credential exists.
@@ -51,7 +54,58 @@ OWNER_ISSUER = os.environ.get(
 OWNER_METADATA_URL = os.environ.get(
     "UMA_AS_OWNER_METADATA_URL",
     f"{OWNER_ISSUER}/.well-known/openid-configuration")
-OWNER_USERNAME = os.environ.get("UMA_AS_OWNER", "alice")
+# Whose authority this is.
+#
+# An authorization server belongs to one owner. `UMA_AS_OWNER` names her, and
+# every other owner is refused at the door rather than filtered out later —
+# on her laptop, in a container, at the edge, the answer to "may I read
+# somebody else's policy" is no before the question reaches the store.
+#
+# Unset, the server falls back to a default owner. That is a convenience for
+# tests and for a single-owner lab, not a deployment shape: the many-owner
+# case is one *resource server* holding many people's accounts, each governed
+# by an authority of her own, which is what k8s/base and docker-compose run.
+#
+# The store is partitioned by owner regardless, and that is what makes an
+# owner's state a clean cut — the reason her authority can move somewhere she
+# controls without the grant loop noticing.
+SERVED_OWNER = os.environ.get("UMA_AS_OWNER") or None
+# Retained for the paths that need *an* owner before a request has named one:
+# startup seeding, the resource pull, and the compose stack's fixtures.
+DEFAULT_OWNER = SERVED_OWNER or os.environ.get("UMA_AS_DEFAULT_OWNER", "alice")
+# Which owner the configured device key belongs to. See
+# require_owner_signature: the signature proves a holder, this says whose.
+OWNER_KEY_OWNER = os.environ.get("UMA_AS_OWNER_KEY_OWNER", DEFAULT_OWNER)
+
+
+def st(owner: str):
+    """This owner's state. The only way to reach the store."""
+    return STORE.owner(owner)
+
+
+def serves(owner: str) -> bool:
+    return SERVED_OWNER is None or owner == SERVED_OWNER
+
+
+# Tickets are minted by this server, so they can carry the owner they belong
+# to. A multi-tenant deployment needs that: a ticket arrives with no session
+# and no token, and there is nothing else on the request that says whose
+# negotiation it indexes. A single-owner deployment does not need it and pays
+# nothing for it.
+def _enc_owner(owner: str) -> str:
+    return base64.urlsafe_b64encode(owner.encode()).decode().rstrip("=")
+
+
+def split_ticket(ticket: str | None) -> tuple[str | None, str]:
+    """(owner, the store's ticket). Owner is None if the ticket is unmarked,
+    which is what a ticket minted before this looked like."""
+    head, sep, rest = (ticket or "").partition("~")
+    if not sep:
+        return None, ticket or ""
+    try:
+        return base64.urlsafe_b64decode(head + "=" * (-len(head) % 4)).decode(), rest
+    except Exception:                                          # noqa: BLE001
+        return None, ticket or ""
 OWNER_AUDIENCES = set(
     os.environ.get("UMA_AS_OWNER_CLIENTS", "alice-portal").split(","))
 
@@ -216,27 +270,29 @@ def utcstamp() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-async def ledger_add(kind: str, family: str, entry: dict,
+async def ledger_add(owner: str, kind: str, family: str, entry: dict,
                      handle: str | None = None) -> None:
     """One decision record. `handle` names the agent it was about, where
     there is one — see Store.ledger_add for why it is not part of `entry`."""
-    await STORE.ledger_add(kind, family, utcstamp(), entry, handle)
+    await st(owner).ledger_add(kind, family, utcstamp(), entry, handle)
 
 
-async def owner_notify(payload: dict) -> None:
-    await STORE.notify(payload)
+async def owner_notify(owner: str, payload: dict) -> None:
+    await st(owner).notify(payload)
 
 
 async def new_ticket(record: dict) -> str:
-    """Mint a ticket and index it to the record's family. The record itself
-    stays addressable by family throughout."""
+    """Mint a ticket and index it to the record's family, marked with the
+    owner so it can be resolved on the way back in."""
+    owner = record["owner"]
     ttl = PENDING_TTL if record.get("state") == "awaiting-owner" else TICKET_TTL
-    return await STORE.mint_ticket(record, ttl)
+    raw = await st(owner).mint_ticket(record, ttl)
+    return f"{_enc_owner(owner)}~{raw}"
 
 
 async def close_negotiation(rec: dict | None) -> None:
     if rec:
-        await STORE.close_negotiation(rec.get("family"))
+        await st(rec["owner"]).close_negotiation(rec.get("family"))
 
 
 # --- Basics -----------------------------------------------------------------
@@ -245,6 +301,11 @@ async def close_negotiation(rec: dict | None) -> None:
 @app.on_event("startup")
 async def open_store() -> None:
     await STORE.start()
+    # An owner who has never been seen has no policy, and policy is what the
+    # grant loop reads first. Seeding the ones this instance knows about at
+    # startup keeps a cold database serviceable; an owner who appears later is
+    # seeded when she first authenticates.
+    await st(DEFAULT_OWNER).seed()
 
 
 @app.on_event("shutdown")
@@ -316,12 +377,21 @@ def terms_uri(template_id: str) -> str:
     return f"{ISSUER}/terms/{template_id}"
 
 
-async def publish_terms(tier_id: str, tier: dict) -> str:
+def owner_of_template(template_id: str) -> str:
+    """Template ids are namespaced by owner — `alice/advisor-tier1/v2` — so a
+    terms document dereferenced by an agent who has no token still resolves to
+    whose terms it is. That namespacing predates multi-owner; it just turned
+    out to be the lookup."""
+    head = (template_id or "").split("/", 1)[0]
+    return head or DEFAULT_OWNER
+
+
+async def publish_terms(owner: str, tier_id: str, tier: dict) -> str:
     """Archive the current version of a tier's terms as a served document.
     Idempotent per template_id (a version's content never changes)."""
     template_id = tier["terms"]["template_id"]
-    if await STORE.terms_doc(template_id) is None:
-        await STORE.publish_terms({
+    if await st(owner).terms_doc(template_id) is None:
+        await st(owner).publish_terms({
             "template_id": template_id,
             "terms_uri": terms_uri(template_id),
             "proffered_by": ISSUER,
@@ -334,17 +404,35 @@ async def publish_terms(tier_id: str, tier: dict) -> str:
     return terms_uri(template_id)
 
 
+async def ensure_owner(owner: str) -> None:
+    """Seed an owner, and publish the terms documents her tiers name.
+
+    Both halves, and the second is easy to miss: seeding creates the policy
+    but a terms document is a *served* artifact, and the challenge tells an
+    agent to go and fetch one. An owner who first appears after startup would
+    otherwise have tiers whose `terms_uri` 404s — which fails at beat 2, in
+    the agent, a long way from the cause.
+    """
+    await st(owner).seed()
+    for tier_id, tier in (await st(owner).tiers()).items():
+        await publish_terms(owner, tier_id, tier)
+
+
 @app.on_event("startup")
 async def publish_initial_terms() -> None:
-    for tier_id, tier in (await STORE.tiers()).items():
-        await publish_terms(tier_id, tier)
+    for owner in await STORE.owners() or [DEFAULT_OWNER]:
+        await ensure_owner(owner)
 
 
 @app.get("/terms")
-async def terms_index() -> dict:
+async def terms_index(owner: str = None) -> dict:
+    """One owner's proffered terms. `?owner=` on a multi-tenant instance;
+    the served owner otherwise."""
+    who = owner or DEFAULT_OWNER
     return {
+        "owner": who,
         "proffered_by": ISSUER,
-        "terms": await STORE.terms_docs(),
+        "terms": await st(who).terms_docs(),
     }
 
 
@@ -425,7 +513,7 @@ def terms_as_jsonld(doc: dict) -> dict:
     }
 
 
-async def annotate_enforced(doc: dict) -> dict:
+async def annotate_enforced(owner: str, doc: dict) -> dict:
     """Mark which prohibitions the enforcement point currently refuses.
 
     Computed on read and deliberately not stored. `publish_terms` is
@@ -439,7 +527,7 @@ async def annotate_enforced(doc: dict) -> dict:
     version would otherwise be labelled with today's posture, which is a
     different kind of wrong from saying nothing.
     """
-    tiers = await STORE.tiers()
+    tiers = await st(owner).tiers()
     tier = tiers.get(doc.get("tier") or "")
     if not tier or tier["terms"]["template_id"] != doc["template_id"]:
         return doc
@@ -448,12 +536,13 @@ async def annotate_enforced(doc: dict) -> dict:
 
 @app.get("/terms/{template_id:path}")
 async def terms_document(template_id: str, request: Request, format: str = None):
-    doc = await STORE.terms_doc(template_id)
+    owner = owner_of_template(template_id)
+    doc = await st(owner).terms_doc(template_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="unknown terms document")
     # The stored bytes are what was proffered and signed against. The
     # enforcement posture is annotated on top, never folded in.
-    doc = await annotate_enforced(doc)
+    doc = await annotate_enforced(owner, doc)
     if format == "jsonld":
         return JSONResponse(terms_as_jsonld(doc), media_type="application/ld+json")
     accept = request.headers.get("accept", "")
@@ -470,7 +559,7 @@ def _bearer(request: Request) -> str:
     return authz[7:]
 
 
-async def issue_pat(client_id: str) -> dict:
+async def issue_pat(owner: str, client_id: str) -> dict:
     """Mint a PAT: an OAuth access token for the Protection API, carrying
     the owner it acts about (FedAuthz's RO context) and the RS it was
     issued to."""
@@ -478,7 +567,7 @@ async def issue_pat(client_id: str) -> dict:
     token = jwt.encode(
         {
             "iss": ISSUER,
-            "sub": OWNER_USERNAME,
+            "sub": owner,
             "azp": client_id,
             "scope": "uma_protection",
             "jti": f"pat_{uuid.uuid4().hex[:12]}",
@@ -488,15 +577,19 @@ async def issue_pat(client_id: str) -> dict:
         algorithm="EdDSA",
         headers={"typ": "pat+jwt", "kid": KID},
     )
-    await STORE.touch_pat(client_id, utcstamp())
+    await st(owner).touch_pat(client_id, utcstamp())
     event("pat.issued", client_id=client_id, expires_in=PAT_TTL)
     return {"access_token": token, "token_type": "Bearer",
             "expires_in": PAT_TTL, "scope": "uma_protection"}
 
 
-async def require_pat(request: Request) -> None:
+async def require_pat(request: Request) -> str:
     """The Protection API takes the PAT this AS issued — verified, scoped,
-    and revocable via the owner's resource-server registry."""
+    and revocable via the owner's resource-server registry.
+
+    Returns the owner it was issued for. One resource server holds one PAT per
+    owner it serves, so the token is what says whose resources this call is
+    about; there is no other signal on a Protection API request."""
     try:
         claims = jwt.decode(_bearer(request), SIGNING_KEY.public_key(),
                             algorithms=["EdDSA"], issuer=ISSUER,
@@ -506,10 +599,15 @@ async def require_pat(request: Request) -> None:
                             detail=f"protection API requires a valid PAT: {exc}")
     if "uma_protection" not in claims.get("scope", "").split():
         raise HTTPException(status_code=403, detail="PAT lacks uma_protection scope")
-    rs = await STORE.resource_server(claims.get("azp", ""))
+    owner = claims.get("sub") or DEFAULT_OWNER
+    if not serves(owner):
+        raise HTTPException(status_code=403,
+                            detail="this authorization server serves a different owner")
+    rs = await st(owner).resource_server(claims.get("azp", ""))
     if rs is None or rs["status"] != "active":
         raise HTTPException(status_code=401,
                             detail="the owner has revoked this resource server")
+    return owner
 
 
 _OWNER_KEYS_CACHE: dict[str, tuple[float, list]] = {}
@@ -558,8 +656,18 @@ def owner_device_key():
     return key
 
 
-async def require_owner_signature(request: Request) -> None:
+async def require_owner_signature(request: Request) -> str:
     """The owner signs her own request, with her own key.
+
+    **A key names a holder, not an owner**, so the binding is configuration:
+    `UMA_AS_OWNER_KEY` is registered *for* `UMA_AS_OWNER_KEY_OWNER`. Verifying
+    the signature proves the holder; the registration says whose key it is.
+
+    One key per instance is the lab's simplification, and the honest limit: a
+    multi-tenant deployment serving a million people would hold these as
+    per-owner records rather than one environment variable, keyed the same way
+    everything else here is. The verification is unchanged either way — what
+    changes is where the binding is read from.
 
     RFC 9421 over method, authority, path and authorization, verified with
     `lib/uma4a_http_sig.py` — the same module the enforcement point uses.
@@ -612,9 +720,18 @@ async def require_owner_signature(request: Request) -> None:
         raise HTTPException(
             status_code=401, detail=f"owner signature did not verify: {exc}") from exc
 
+    # Named, never inferred. Treating a valid signature as "whoever the
+    # request seems to be about" would let one key holder act as somebody
+    # else's authority, which is the thing this service exists to prevent.
+    return OWNER_KEY_OWNER
 
-async def require_owner(request: Request) -> None:
-    """Whoever is calling the owner API has to be the owner.
+
+async def require_owner(request: Request) -> str:
+    """Whoever is calling the owner API has to be an owner, and gets their own.
+
+    Returns the owner the credential proved, which is the only thing every
+    handler below then uses to reach the store. There is no ambient owner: a
+    handler that forgets to ask cannot read anything.
 
     Any configured credential that verifies is enough — she is one person
     however she reached this. Every owner endpoint calls this, so none of them
@@ -631,19 +748,40 @@ async def require_owner(request: Request) -> None:
             detail=(f"UMA_AS_OWNER_AUTH must be a comma-separated list of "
                     f"{'|'.join(sorted(VERIFY_OWNER))}; got {unknown or 'nothing'}"))
 
+    # Which failure to report when several modes are configured and all of
+    # them fail. "The last one" is the obvious choice and the wrong one: a 403
+    # from a credential that *did* authenticate ("this server serves a
+    # different owner") is the useful answer, and it was being overwritten by
+    # a later mode's 401 for a credential that was never presented. Prefer the
+    # most advanced failure.
     last: HTTPException | None = None
+    best: HTTPException | None = None
     for mode in OWNER_AUTH:
         try:
             result = VERIFY_OWNER[mode](request)
             if hasattr(result, "__await__"):
-                await result
-            return
+                owner = await result
+            else:
+                owner = result
+            owner = owner or DEFAULT_OWNER
+            if not serves(owner):
+                raise HTTPException(
+                    status_code=403,
+                    detail="this authorization server serves a different owner")
+            # An owner seen for the first time gets her starting policy here,
+            # which is also the moment a multi-tenant deployment learns she
+            # exists.
+            await ensure_owner(owner)
+            return owner
         except HTTPException as exc:
             last = exc
-    raise last or HTTPException(status_code=401, detail="owner authentication failed")
+            if best is None or exc.status_code > best.status_code:
+                best = exc
+    raise best or last or HTTPException(status_code=401,
+                                        detail="owner authentication failed")
 
 
-def require_owner_oidc(request: Request) -> None:
+def require_owner_oidc(request: Request) -> str:
     """One of the credentials: Alice's own OIDC access token, validated against
     her realm's published keys. The portal proxies it; the simulated Alice
     obtains one by actually logging in (direct-access grant)."""
@@ -675,9 +813,13 @@ def require_owner_oidc(request: Request) -> None:
     if claims.get("azp") not in OWNER_AUDIENCES:
         raise HTTPException(status_code=403,
                             detail="token was not issued to an owner-surface client")
-    if claims.get("preferred_username") != OWNER_USERNAME:
+    # The authenticated username *is* the owner. Whether this instance serves
+    # her is decided once, in require_owner, rather than here.
+    owner = claims.get("preferred_username")
+    if not owner:
         raise HTTPException(status_code=403,
-                            detail="this authorization server serves a different owner")
+                            detail="owner token carries no preferred_username")
+    return owner
 
 
 
@@ -778,7 +920,10 @@ def pull_registrations(client_id: str, rs: dict) -> int:
 async def pull_at_startup() -> None:
     async def attempt_loop():
         for _ in range(60):
-            for client_id, rs in (await STORE.resource_servers()).items():
+            owners = await STORE.owners() or [DEFAULT_OWNER]
+            pairs = [(o, cid, rs) for o in owners
+                     for cid, rs in (await st(o).resource_servers()).items()]
+            for owner, client_id, rs in pairs:
                 try:
                     # Off the event loop: the RS authenticates this AS's
                     # signed query by fetching *our* JWKS, so the pull and
@@ -807,7 +952,7 @@ async def pull_at_startup() -> None:
 
 @app.post("/perm")
 async def register_permission(request: Request) -> JSONResponse:
-    await require_pat(request)
+    owner = await require_pat(request)
     body = await request.json()
     rid = body.get("resource_id")
     # FedAuthz §4.1: the AS only issues tickets against its own registry.
@@ -819,7 +964,7 @@ async def register_permission(request: Request) -> JSONResponse:
         # the RS-side re-push that classic RReg required.
         # (to_thread: see pull_at_startup — the pull triggers a JWKS
         # back-call from the RS and must not block this event loop.)
-        for client_id, rs in (await STORE.resource_servers()).items():
+        for client_id, rs in (await st(owner).resource_servers()).items():
             try:
                 await asyncio.to_thread(pull_registrations, client_id, rs)
             except Exception as exc:
@@ -845,6 +990,7 @@ async def register_permission(request: Request) -> JSONResponse:
     family = f"fam_{secrets.token_urlsafe(8)}"
     ticket = await new_ticket(
         {
+            "owner": owner,
             "family": family,
             "state": "issued",
             "resource_id": rid,
@@ -869,10 +1015,11 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
         return None, None, "expired"
     except jwt.InvalidTokenError:
         return None, None, "invalid_signature"
-    rec = await STORE.rpt(claims.get("jti", ""))
+    owner = claims.get("owner") or DEFAULT_OWNER
+    rec = await st(owner).rpt(claims.get("jti", ""))
     if rec is None:
         return claims, None, "unknown_token"
-    if (conn := await STORE.connection(rec.get("handle") or "")) is not None:
+    if (conn := await st(owner).connection(rec.get("handle") or "")) is not None:
         if conn["status"] != "active":
             return claims, rec, "connection_revoked"
     if claims.get("single_use") and rec["consumed"]:
@@ -891,15 +1038,16 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
         event("rpt.introspected", corr=(rec or {}).get("family"), result=err)
         return {"active": False, "error": err}
 
+    owner = claims.get("owner") or DEFAULT_OWNER
     if rec.get("handle"):
-        await STORE.touch_connection(rec["handle"], utcstamp())
+        await st(owner).touch_connection(rec["handle"], utcstamp())
     # Consumption is no longer done here by default: the PEP has not yet
     # verified proof-of-possession at this point, so burning the token now
     # lets an unsigned replay destroy a grant the owner just approved. The
     # PEP calls /consume once every check has passed. The parameter is kept
     # for the single-shot case where a caller has already verified.
     if claims.get("single_use") and consume == "true":
-        if await STORE.consume_rpt(claims.get("jti", "")) is None:
+        if await st(owner).consume_rpt(claims.get("jti", "")) is None:
             event("rpt.introspected", corr=rec["family"], result="already_consumed")
             return {"active": False, "error": "already_consumed"}
         event("rpt.consumed", corr=rec["family"], jti=claims.get("jti", ""))
@@ -935,13 +1083,19 @@ async def consume_rpt(request: Request, token: str = Form(...)) -> dict:
     RPT may be single-use; it never says the burn must be indivisible,
     because in 2018 an authorization server was one process.
     """
-    await require_pat(request)
+    pat_owner = await require_pat(request)
     claims, rec, err = await _decode_rpt(token)
     if err:
         return {"consumed": False, "error": err}
     if not claims.get("single_use"):
         return {"consumed": False, "error": "not_single_use"}
-    family = await STORE.consume_rpt(claims.get("jti", ""))
+    owner = claims.get("owner") or DEFAULT_OWNER
+    if owner != pat_owner:
+        # The enforcement point holds one PAT per owner it serves. Presenting
+        # a grant of Alice's under Carol's PAT is not a mix-up to tolerate.
+        event("rpt.consume_refused", corr=None, reason="owner_mismatch")
+        return {"consumed": False, "error": "owner_mismatch"}
+    family = await st(owner).consume_rpt(claims.get("jti", ""))
     if family is None:
         return {"consumed": False, "error": "already_consumed"}
     event("rpt.consumed", corr=family, jti=claims.get("jti", ""))
@@ -952,14 +1106,14 @@ async def consume_rpt(request: Request, token: str = Form(...)) -> dict:
 async def audit_access(request: Request) -> dict:
     """The PEP reports allowed calls so the ledger's 'touched' column is
     grounded in enforcement, not client claims."""
-    await require_pat(request)
+    owner = await require_pat(request)
     body = await request.json()
     family = body.get("family", "?")
     # The enforcement point reports what it allowed; the authority decides
     # whose it was, and against which of her tiers. It is never told the handle — it enforces for a policy it
     # cannot read, and the connection is the owner's record, not its.
-    grant = await STORE.grant_for_family(family)
-    await ledger_add("touched", family, {
+    grant = await st(owner).grant_for_family(family)
+    await ledger_add(owner, "touched", family, {
         "tool": body.get("tool"),
         "summary": body.get("summary"),
         "tier": (grant or {}).get("tier"),
@@ -976,7 +1130,7 @@ async def terms_template_for(rec: dict, tier_id: str, tier: dict, family: str) -
     template.update(
         {
             "proffered_by": ISSUER,
-            "terms_uri": await publish_terms(tier_id, tier),
+            "terms_uri": await publish_terms(rec["owner"], tier_id, tier),
             "nonce": rec["nonce"],
             "family": family,
             "resource_id": rec["resource_id"],
@@ -1086,7 +1240,7 @@ def connection_handle(identity: dict, signer_jwk: dict) -> str:
     return jwk_thumbprint(signer_jwk)
 
 
-async def first_party_fact(identity: dict, axes: dict) -> bool:
+async def first_party_fact(owner: str, identity: dict, axes: dict) -> bool:
     """Did Alice activate this agent herself?
 
     Two halves, and both are required. The operator the agent names has to be
@@ -1106,7 +1260,7 @@ async def first_party_fact(identity: dict, axes: dict) -> bool:
     if axes.get("accountability") != assurance.ACCOUNTABILITY_ATTESTED:
         return False
     origin = operator_origin(identity)
-    return origin is not None and origin in await STORE.owned_operators()
+    return origin is not None and origin in await st(owner).owned_operators()
 
 
 def standing_facts(conn: dict | None, tier_id: str,
@@ -1151,7 +1305,7 @@ def standing_facts(conn: dict | None, tier_id: str,
     }
 
 
-async def trajectory_facts(handle: str) -> dict:
+async def trajectory_facts(owner: str, handle: str) -> dict:
     """This agent's recent history, from the ledger her decisions already
     wrote. No counters, no second source of truth.
 
@@ -1164,7 +1318,7 @@ async def trajectory_facts(handle: str) -> dict:
     """
     since = time.strftime("%Y-%m-%dT%H:%M:%SZ",
                           time.gmtime(now() - policy.parse_duration(TRAJECTORY_WINDOW)))
-    return await STORE.trajectory(handle, since)
+    return await st(owner).trajectory(handle, since)
 
 
 # Cached, but not forever. An operator removing a key from its directory is
@@ -1267,6 +1421,150 @@ def operator_published_key(client_id: str, directory: str,
         event("operator_directory.unresolved", directory=directory,
               reason=str(exc)[:120])
         return False
+
+
+
+# --- resource server establishment ---------------------------------------
+#
+# FedAuthz starts from a resource server that already holds a PAT and says
+# nothing about how it came to. Where one operator runs both sides that gap is
+# closed by configuration, and a seeded client secret is a fair model of it.
+# It stops being closable that way as soon as the authority is the owner's:
+# she is not going to paste a secret into her brokerage's console, and the
+# brokerage is not going to hold one secret per customer.
+#
+# So the resource server authenticates as its origin. It signs with a key it
+# publishes at that origin, in the RFC 9728 document it already has to serve,
+# and this server fetches that document itself. Nothing is provisioned ahead
+# of time and no secret is ever transmitted. What is being trusted is control
+# of the origin — which is what the address in her challenge pointed at
+# anyway, so the check adds no new party to trust.
+
+_RS_META_TTL = float(os.environ.get("UMA_AS_RS_META_TTL", "300"))
+_RS_META_CACHE: dict[str, tuple[float, dict]] = {}
+
+
+def resource_server_metadata(resource_uri: str) -> dict:
+    """The RFC 9728 document the named resource publishes about itself.
+
+    Three things have to hold, and each closes a way of registering as
+    somebody else:
+
+    * the document claims *this* `resource` — so a host cannot publish
+      metadata about a resource it does not serve;
+    * its `jwks_uri` is same-origin — so the keys come from the party being
+      identified rather than one it points at;
+    * it names *this* authorization server — so a resource server cannot
+      register with an authority it does not send its own callers to.
+
+    Unlike the operator key directory, an unreachable document here is a
+    refusal rather than a shrug. That check attests a claim already made by
+    other means; this one *is* the authentication, and a credential that
+    cannot be fetched has not been presented.
+    """
+    import httpx
+    from urllib.parse import urlparse
+
+    cached = _RS_META_CACHE.get(resource_uri)
+    if cached and now() - cached[0] < _RS_META_TTL:
+        return cached[1]
+
+    p = urlparse(resource_uri)
+    if p.scheme != "https" or not p.netloc:
+        return {}
+    origin = f"{p.scheme}://{p.netloc}"
+    url = (f"{origin}/.well-known/oauth-protected-resource"
+           f"{p.path.rstrip('/')}")
+    try:
+        r = httpx.get(url, timeout=5.0, follow_redirects=False,
+                      verify=AGENT_ISSUER_CA or True)
+        r.raise_for_status()
+        doc = r.json()
+    except Exception as exc:                                       # noqa: BLE001
+        event("resource_server.metadata_unreachable", resource_uri=resource_uri,
+              url=url, reason=str(exc)[:120])
+        return {}
+
+    reasons = []
+    if doc.get("resource") != resource_uri:
+        reasons.append(f"claims resource {doc.get('resource')!r}")
+    jwks_uri = doc.get("jwks_uri") or ""
+    if not jwks_uri or not same_origin(jwks_uri, resource_uri):
+        reasons.append(f"jwks_uri {jwks_uri!r} is not same-origin")
+    if ISSUER not in (doc.get("authorization_servers") or []):
+        reasons.append("does not name this authorization server")
+    if reasons:
+        event("resource_server.metadata_rejected", resource_uri=resource_uri,
+              reasons=reasons)
+        return {}
+
+    if len(_RS_META_CACHE) >= 256:
+        _RS_META_CACHE.pop(next(iter(_RS_META_CACHE)), None)
+    _RS_META_CACHE[resource_uri] = (now(), doc)
+    return doc
+
+
+def resource_server_keys(resource_uri: str) -> list:
+    """The public keys the named resource publishes, as JWKs. Empty on any
+    failure, which the callers all read as "not authenticated"."""
+    import httpx
+
+    doc = resource_server_metadata(resource_uri)
+    if not doc:
+        return []
+    try:
+        r = httpx.get(doc["jwks_uri"], timeout=5.0, follow_redirects=False,
+                      verify=AGENT_ISSUER_CA or True)
+        r.raise_for_status()
+        return r.json().get("keys") or []
+    except Exception as exc:                                       # noqa: BLE001
+        event("resource_server.jwks_unreachable", resource_uri=resource_uri,
+              reason=str(exc)[:120])
+        return []
+
+
+def verify_resource_server_signature(request: Request, body: bytes,
+                                     resource_uri: str) -> bool:
+    """Did the origin behind `resource_uri` sign this request?
+
+    Every key that origin publishes is tried, because key rotation overlaps:
+    a resource server that has just published a new one may still be signing
+    with the old for the length of a deploy. Trying all of them accepts any
+    key the origin currently vouches for and no others, which is the same
+    answer a kid lookup gives without failing on a stale cache.
+    """
+    from uma4a_http_sig import VerifyError
+    from uma4a_http_sig import verify as verify_sig
+
+    sig_input = request.headers.get("signature-input")
+    sig = request.headers.get("signature")
+    if not sig_input or not sig:
+        return False
+    path = request.url.path
+    if request.url.query:
+        path = f"{path}?{request.url.query}"
+    for jwk in resource_server_keys(resource_uri):
+        try:
+            key = OKPAlgorithm.from_jwk(json.dumps(jwk))
+        except Exception:                                          # noqa: BLE001
+            continue                       # a JWKS may hold types we do not
+        try:                               # profile; those are simply not it
+            verify_sig(
+                method=request.method,
+                authority=AS_AUTHORITY,
+                path=path,
+                authorization=request.headers.get("authorization", ""),
+                signature_input=sig_input,
+                signature=sig,
+                public_key=key,
+                body=body if body else None,
+                require_digest=bool(body),
+                digest_header=request.headers.get("content-digest"),
+            )
+            return True
+        except VerifyError:
+            continue
+    return False
 
 
 _CIMD_CACHE: dict[str, dict] = {}
@@ -1424,12 +1722,17 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
 async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
                     operation: dict | None) -> dict:
     family = rec["family"]
-    tier = (await STORE.tiers())[rec["tier"]]
+    owner = rec["owner"]
+    tier = (await st(owner).tiers())[rec["tier"]]
     exp = int(now()) + min(3600, tier["terms"]["expires_in"])
     jti = f"rpt_{uuid.uuid4().hex[:12]}"
     claims = {
         "iss": ISSUER,
         "sub": rec.get("agent_sub", "aauth:pseudonymous-agent"),
+        # Whose resources this grant is against. `sub` is the agent, so
+        # without this a multi-tenant server has nothing on an introspection
+        # request that says which owner's registry to consult.
+        "owner": owner,
         "aud": "https://gateway.uma.lab",
         "jti": jti,
         "exp": exp,
@@ -1452,8 +1755,8 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
     handle = connection_handle(rec["contract"]["_identity"], signer_jwk)
-    await STORE.record_rpt(jti, family, handle, claims.get("operation"),
-                           rec["tier"])
+    await st(owner).record_rpt(jti, family, handle, claims.get("operation"),
+                               rec["tier"])
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
           tier=rec["tier"])
 
@@ -1483,22 +1786,57 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
 
 
 @app.post("/token")
-async def token(
-    grant_type: str = Form(...),
-    ticket: str = Form(None),
-    claim_token: str = Form(None),
-    claim_token_format: str = Form(None),
-    decline: str = Form(None),
-    client_id: str = Form(None),
-    client_secret: str = Form(None),
-    scope: str = Form(None),
-) -> JSONResponse:
+async def token(request: Request) -> JSONResponse:
+    # Read before parsing. A resource server with no shared secret
+    # authenticates by signing this request, and the signature covers a
+    # digest of the body — so the exact bytes have to be kept. Declaring the
+    # fields as FastAPI form parameters would drain the stream before the
+    # handler ran, which is why they are pulled out by hand here.
+    body = await request.body()
+    form = await request.form()
+    grant_type = form.get("grant_type") or ""
+    ticket = form.get("ticket")
+    claim_token = form.get("claim_token")
+    claim_token_format = form.get("claim_token_format")
+    decline = form.get("decline")
+    client_id = form.get("client_id")
+    client_secret = form.get("client_secret")
+    scope = form.get("scope")
+    owner = form.get("owner")
     # PAT issuance: a resource server the owner has authorized exchanges its
     # client credentials for a uma_protection-scoped token (FedAuthz's PAT).
     if grant_type == "client_credentials":
-        rs = await STORE.resource_server(client_id or "")
-        if rs is None or not secrets.compare_digest(client_secret or "", rs["secret"]):
+        # A resource server holds one PAT per owner it serves, so the request
+        # has to say which. Defaulted rather than required, because a
+        # single-owner deployment has nothing to disambiguate.
+        pat_owner = owner or DEFAULT_OWNER
+        if not serves(pat_owner):
             return JSONResponse({"error": "invalid_client"}, status_code=401)
+        await st(pat_owner).seed()
+        rs = await st(pat_owner).resource_server(client_id or "")
+        if rs is None:
+            return JSONResponse({"error": "invalid_client"}, status_code=401)
+        # Two ways to be this resource server, and which one applies is a
+        # property of the record rather than of the request — so a client
+        # that registered by signature cannot fall back to guessing a secret,
+        # and one holding a secret cannot be impersonated by anyone who can
+        # publish a key. The empty-secret case is branched on explicitly:
+        # compare_digest("", "") is true, and a record with no secret must
+        # never be openable by sending none.
+        if rs.get("secret"):
+            if not secrets.compare_digest(client_secret or "", rs["secret"]):
+                return JSONResponse({"error": "invalid_client"}, status_code=401)
+        elif not verify_resource_server_signature(
+                request, body, rs.get("resource_uri") or ""):
+            return JSONResponse({"error": "invalid_client"}, status_code=401)
+        if rs["status"] == "pending":
+            # Registered, not yet hers. The distinct code is what tells the
+            # resource server to wait rather than to register again.
+            return JSONResponse(
+                {"error": "authorization_pending",
+                 "error_description": "the owner has not yet authorized this "
+                                      "resource server"},
+                status_code=403)
         if rs["status"] != "active":
             return JSONResponse(
                 {"error": "access_denied",
@@ -1506,13 +1844,15 @@ async def token(
                 status_code=403)
         if scope != "uma_protection":
             return JSONResponse({"error": "invalid_scope"}, status_code=400)
-        return JSONResponse(await issue_pat(client_id))
+        return JSONResponse(await issue_pat(pat_owner, client_id))
 
     if grant_type != "urn:ietf:params:oauth:grant-type:uma-ticket":
         return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
 
-    await STORE.reap_expired()
-    rec = await STORE.consume_ticket(ticket)
+    ticket_owner, raw_ticket = split_ticket(ticket)
+    ticket_owner = ticket_owner or DEFAULT_OWNER
+    await st(ticket_owner).reap_expired()
+    rec = await st(ticket_owner).consume_ticket(raw_ticket)
     if rec is None:
         event("ticket.presented", corr=None, result="invalid_grant")
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
@@ -1530,7 +1870,7 @@ async def token(
         # the requesting side has signed anything, so there is no key, no
         # identity and nothing to file it under. Her record says her terms were
         # refused, which is true and is all that is knowable.
-        await ledger_add("refused", family, {
+        await ledger_add(rec["owner"], "refused", family, {
             "tier": rec.get("tier"),
             "terms_uri": rec.get("template", {}).get("terms_uri"),
         })
@@ -1541,7 +1881,7 @@ async def token(
     if rec["state"] == "awaiting-owner":
         return await pending_poll(rec)
 
-    tier_id, tier = policy.tier_for_resource(await STORE.tiers(),
+    tier_id, tier = policy.tier_for_resource(await st(rec["owner"]).tiers(),
                                              rec["resource_id"])
     if tier_id is None:
         event("policy.evaluated", corr=family, result="no-tier")
@@ -1582,7 +1922,7 @@ async def token(
     # in hand since verify_contract returned.
     handle = connection_handle(contract["_identity"], signer_jwk)
 
-    await ledger_add("promised", family, {
+    await ledger_add(rec["owner"], "promised", family, {
         "tier": rec["tier"],
         "purpose": contract["purpose"],
         "prohibited": contract["prohibited"],
@@ -1598,7 +1938,7 @@ async def token(
     # request_submitted machinery, asking a different question ("do you want a
     # relationship with this agent?"). Alice's approval creates the connection
     # AND releases this negotiation in one tap.
-    conn = await STORE.connection(handle)
+    conn = await st(rec["owner"]).connection(handle)
     needs_connection = conn is None or conn["status"] != "active"
 
     # What her authority can establish about this agent, and what she has
@@ -1613,10 +1953,10 @@ async def token(
     # other. That is the honest limit, and it is why the lane split matters
     # more than the block does.
     origin = operator_origin(contract["_identity"])
-    if origin and origin in await STORE.blocked_operators():
+    if origin and origin in await st(rec["owner"]).blocked_operators():
         event("policy.evaluated", corr=family, result="operator-blocked",
               operator=origin)
-        await ledger_add("refused", family, {"tier": rec["tier"],
+        await ledger_add(rec["owner"], "refused", family, {"tier": rec["tier"],
                                              "operator": origin,
                                              "because": ["operator is blocked"]},
                          handle=handle)
@@ -1630,8 +1970,8 @@ async def token(
     facts = {
         "assurance": axes,
         "standing": standing_facts(
-            conn, rec["tier"], await trajectory_facts(handle),
-            await first_party_fact(contract["_identity"], axes)),
+            conn, rec["tier"], await trajectory_facts(rec["owner"], handle),
+            await first_party_fact(rec["owner"], contract["_identity"], axes)),
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
@@ -1644,7 +1984,7 @@ async def token(
     if requirement == policy.REFUSE:
         event("policy.evaluated", corr=family, result="refused", tier=rec["tier"],
               because=reasons)
-        await ledger_add("refused", family, {"tier": rec["tier"],
+        await ledger_add(rec["owner"], "refused", family, {"tier": rec["tier"],
                                              "because": reasons},
                          handle=handle)
         await close_negotiation(rec)
@@ -1667,7 +2007,7 @@ async def token(
         lane = policy.pend_lane(axes)
         budget = policy.pend_budget(lane)
         waiting = sum(
-            1 for p in await STORE.pending_negotiations()
+            1 for p in await st(rec["owner"]).pending_negotiations()
             if p.get("pending_kind") == "connection" and p["family"] != family
             and policy.pend_lane(p.get("assurance") or {}) == lane)
         if waiting >= budget:
@@ -1696,6 +2036,7 @@ async def token(
         rotated = await new_ticket(rec)
         event("ticket.awaiting_owner", corr=family, tier=rec["tier"], kind=kind)
         await owner_notify(
+            rec["owner"],
             {
                 "type": "pending",
                 "kind": kind,
@@ -1724,15 +2065,15 @@ async def token(
             status_code=403,
         )
 
-    await STORE.touch_connection(handle, utcstamp())
-    await STORE.note_tier_grant(handle, rec["tier"])
+    await st(rec["owner"]).touch_connection(handle, utcstamp())
+    await st(rec["owner"]).note_tier_grant(handle, rec["tier"])
     event("policy.evaluated", corr=family, result="auto-grant", tier=rec["tier"],
           connection=handle, because=reasons or None)
     if reasons and requirement == policy.AUTO and tier.get("ask_me"):
         # A rule she wrote lowered an ask-me tier to automatic. That is the
         # one direction worth being able to audit after the fact, so it is a
         # ledger entry and not only a log line.
-        await ledger_add("relaxed", family, {"tier": rec["tier"],
+        await ledger_add(rec["owner"], "relaxed", family, {"tier": rec["tier"],
                                              "because": reasons},
                          handle=handle)
     # The operation, when the contract carries one — not None.
@@ -1762,8 +2103,8 @@ async def pending_poll(rec: dict) -> JSONResponse:
             # relationship, but not a clean record: `standing.never_revoked`
             # would be worthless if a revocation could be cleared by asking a
             # second time.
-            prior = await STORE.connection(handle) or {}
-            await STORE.put_connection({
+            prior = await st(rec["owner"]).connection(handle) or {}
+            await st(rec["owner"]).put_connection({
                 "handle": handle,
                 "identity": identity,
                 "label": identity.get("sub") or f"Agent {handle[4:12]}",
@@ -1781,17 +2122,17 @@ async def pending_poll(rec: dict) -> JSONResponse:
                 "revocations": int(prior.get("revocations", 0)),
             })
             event("connection.approved", corr=family, handle=handle)
-            await ledger_add("connected", family, {"identity": identity},
+            await ledger_add(rec["owner"], "connected", family, {"identity": identity},
                              handle=handle)
         event("policy.evaluated", corr=family, result="owner-approved", tier=rec["tier"])
         # Tier policy still applies after connection: an ask-me tier needs its
         # per-operation approval, which Alice's single tap covered only if this
         # negotiation carried the operation (it did — the contract binds it).
         if handle := rec.get("handle"):
-            await STORE.note_tier_grant(handle, rec["tier"])
+            await st(rec["owner"]).note_tier_grant(handle, rec["tier"])
             # She answered this one herself. That is the only kind of fact a
             # relaxation is allowed to rest on.
-            await STORE.note_tier_approval(handle, rec["tier"])
+            await st(rec["owner"]).note_tier_approval(handle, rec["tier"])
         granted = await issue_rpt(rec, rec["contract_hash"], rec["signer_jwk"],
                                   rec["contract"].get("operation"))
         await close_negotiation(rec)
@@ -1812,7 +2153,7 @@ async def pending_poll(rec: dict) -> JSONResponse:
 
 @app.get("/owner/pending")
 async def owner_pending(request: Request) -> list:
-    await require_owner(request)
+    owner = await require_owner(request)
     return [
         {
             "family": rec["family"],
@@ -1830,33 +2171,33 @@ async def owner_pending(request: Request) -> list:
             "assurance_notes": rec.get("assurance_notes", []),
             "because": rec.get("because", []),
         }
-        for rec in await STORE.pending_negotiations()
+        for rec in await st(owner).pending_negotiations()
     ]
 
 
 @app.post("/owner/pending/{family}/decision")
 async def owner_decision(family: str, request: Request) -> dict:
-    await require_owner(request)
+    owner = await require_owner(request)
     body = await request.json()
     decision = body.get("decision")
     if decision not in ("approved", "denied"):
         raise HTTPException(status_code=400, detail="decision must be approved|denied")
     # The store's guard, not a read-then-write here: a double tap, or two
     # portals open on the same request, must produce one decision.
-    if not await STORE.decide(family, decision):
+    if not await st(owner).decide(family, decision):
         raise HTTPException(status_code=404, detail="no pending negotiation for that family")
     event("owner.decision", corr=family, decision=decision)
     # Read after the decision, not before: `decide` is the guard, and doing the
     # lookup first would invite someone to move the guard behind it. The
     # negotiation survives its own decision — `close_negotiation` runs when the
     # grant is issued — so the handle it was pending under is still there.
-    pended = await STORE.negotiation(family)
+    pended = await st(owner).negotiation(family)
     # Record both outcomes: "what did I decide" is an audit question, and a
     # denial is as much a decision as an approval.
-    await ledger_add("approved" if decision == "approved" else "denied", family,
+    await ledger_add(owner, "approved" if decision == "approved" else "denied", family,
                      {"decision": decision, "tier": (pended or {}).get("tier")},
                      handle=(pended or {}).get("handle"))
-    await owner_notify({"type": "decided", "family": family, "decision": decision})
+    await owner_notify(owner, {"type": "decided", "family": family, "decision": decision})
     return {"family": family, "decision": decision}
 
 
@@ -1864,20 +2205,140 @@ async def owner_decision(family: str, request: Request) -> dict:
 async def owner_resource_servers(request: Request) -> list:
     """The resource servers Alice has authorized to use her Protection API —
     the other standing relationship her AS holds, beside agent connections."""
-    await require_owner(request)
+    owner = await require_owner(request)
     return [
         {"client_id": cid, **{k: v for k, v in rs.items() if k != "secret"}}
-        for cid, rs in (await STORE.resource_servers()).items()
+        for cid, rs in (await st(owner).resource_servers()).items()
     ]
+
+
+@app.post("/rs/register")
+async def rs_register(request: Request) -> JSONResponse:
+    """A resource server introduces itself to an owner's authority.
+
+    It arrives holding nothing this server issued. What it presents is a
+    signature over the request, made with a key published at the origin of
+    the resource it claims to serve — so the credential is the origin, and
+    verifying it is a fetch this server performs rather than a claim it is
+    handed.
+
+    Success is 202, not 200. A verified signature establishes *who is asking*
+    and nothing else; the answer is hers, and until she gives it the record
+    sits in her resource-server registry marked pending and opens no door. A
+    resource server she has revoked may ask again — and lands in the same
+    pending state, because a second request is not a reversal of her first
+    decision.
+    """
+    body = await request.body()
+    try:
+        req = json.loads(body or b"{}")
+    except ValueError:
+        return JSONResponse({"error": "invalid_request"}, status_code=400)
+
+    owner = (req.get("owner") or DEFAULT_OWNER).strip()
+    if not serves(owner):
+        return JSONResponse(
+            {"error": "invalid_request",
+             "error_description": "this authorization server serves a different owner"},
+            status_code=403)
+    resource_uri = (req.get("resource_uri") or "").strip()
+    if not verify_resource_server_signature(request, body, resource_uri):
+        event("resource_server.registration_refused", owner=owner,
+              resource_uri=resource_uri,
+              reason="no signature from a key published at that origin")
+        return JSONResponse(
+            {"error": "invalid_client",
+             "error_description":
+                 "register by signing with a key published at the origin of "
+                 "the resource you claim to serve"},
+            status_code=401)
+
+    client_id = _origin_of(resource_uri)
+    await ensure_owner(owner)
+    existing = await st(owner).resource_server(client_id)
+    if existing and existing.get("status") == "active":
+        # Already hers. Saying so beats re-pending a working relationship
+        # every time the resource server restarts.
+        return JSONResponse({"client_id": client_id, "status": "active"})
+
+    await st(owner).put_resource_server(client_id, {
+        "secret": "",
+        "name": html.escape(str(req.get("name") or client_id))[:120],
+        "status": "pending",
+        "consented": None,
+        "last_pat_issued": (existing or {}).get("last_pat_issued"),
+        "resource_uri": resource_uri,
+        "registered": utcstamp(),
+        # How it will authenticate from here on. Recorded because the two are
+        # not interchangeable: a seeded relationship holds a shared secret,
+        # and this one holds nothing at all.
+        "auth": "origin_signature",
+    })
+    event("resource_server.registered", owner=owner, client_id=client_id,
+          resource_uri=resource_uri, status="pending",
+          previously=(existing or {}).get("status"))
+    # Only on a change of state. A resource server she has withdrawn will keep
+    # asking for as long as traffic keeps arriving for her, and each of those
+    # is the same question she has already been asked.
+    if (existing or {}).get("status") != "pending":
+        await owner_notify(owner, {"type": "resource_server_pending",
+                                   "client_id": client_id,
+                                   "resource_uri": resource_uri})
+    return JSONResponse(
+        {"client_id": client_id, "status": "pending",
+         "error": "authorization_pending",
+         "error_description": "the owner has been asked"},
+        status_code=202)
+
+
+def _origin_of(url: str) -> str:
+    from urllib.parse import urlparse
+
+    p = urlparse(url)
+    return f"{p.scheme}://{p.netloc}"
+
+
+@app.post("/owner/resource-servers/decision")
+async def owner_resource_server_decision(request: Request) -> dict:
+    """Her answer about a resource server, in the same shape as her answer
+    about an agent's first contact — because it is the same kind of question.
+
+    The client_id is in the body rather than the path. It is an https URL for
+    anything that registered itself, and a URL inside a path survives neither
+    percent-decoding nor a proxy that normalises `//`.
+    """
+    owner = await require_owner(request)
+    body = await request.json()
+    client_id = (body.get("client_id") or "").strip()
+    decision = body.get("decision")
+    if decision == "approved":
+        if not await st(owner).approve_resource_server(client_id, utcstamp()):
+            raise HTTPException(
+                status_code=404,
+                detail="no pending registration for that resource server")
+        status = "active"
+    elif decision == "revoked":
+        if not await st(owner).revoke_resource_server(client_id):
+            raise HTTPException(status_code=404, detail="unknown resource server")
+        status = "revoked"
+    else:
+        raise HTTPException(status_code=400,
+                            detail="decision must be approved or revoked")
+    event(f"resource_server.{decision}", client_id=client_id)
+    await ledger_add(owner, "approved" if status == "active" else "revoked",
+                     "-", {"resource_server": client_id})
+    await owner_notify(owner, {"type": "resource_server_decided",
+                               "client_id": client_id, "status": status})
+    return {"client_id": client_id, "status": status}
 
 
 @app.post("/owner/resource-servers/{client_id}/revoke")
 async def owner_revoke_resource_server(client_id: str, request: Request) -> dict:
-    await require_owner(request)
-    if not await STORE.revoke_resource_server(client_id):
+    owner = await require_owner(request)
+    if not await st(owner).revoke_resource_server(client_id):
         raise HTTPException(status_code=404, detail="unknown resource server")
     event("resource_server.revoked", client_id=client_id)
-    await ledger_add("revoked", "-", {"resource_server": client_id})
+    await ledger_add(owner, "revoked", "-", {"resource_server": client_id})
     return {"client_id": client_id, "status": "revoked"}
 
 
@@ -1889,11 +2350,11 @@ async def owner_operators(request: Request) -> list:
     operator is not a thing she onboards, it is a name that turned up attached
     to agents she has already decided about.
     """
-    await require_owner(request)
-    blocked = await STORE.blocked_operators()
-    owned = await STORE.owned_operators()
+    owner = await require_owner(request)
+    blocked = await st(owner).blocked_operators()
+    owned = await st(owner).owned_operators()
     seen: dict[str, dict] = {}
-    for conn in await STORE.connections():
+    for conn in await st(owner).connections():
         origin = operator_origin(conn.get("identity") or {})
         if origin is None:
             continue
@@ -1940,15 +2401,15 @@ async def owner_claim_operator(request: Request) -> dict:
     she cannot publish keys there, so no agent of theirs can reach the second
     half. That is worth knowing before treating this as dangerous.
     """
-    await require_owner(request)
+    owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
     if not origin.startswith("https://"):
         raise HTTPException(status_code=400,
                             detail="an operator is named by its https origin")
-    await STORE.claim_operator(origin, utcstamp())
+    await st(owner).claim_operator(origin, utcstamp())
     event("operator.claimed", operator=origin)
-    await ledger_add("claimed", "-", {"operator": origin})
-    await owner_notify({"type": "decided", "family": "-", "decision": "claimed"})
+    await ledger_add(owner, "claimed", "-", {"operator": origin})
+    await owner_notify(owner, {"type": "decided", "family": "-", "decision": "claimed"})
     return {"origin": origin, "status": "mine"}
 
 
@@ -1962,12 +2423,12 @@ async def owner_disclaim_operator(request: Request) -> dict:
     connections stay, grants stay, and the next negotiation simply faces the
     policy it would have faced anyway.
     """
-    await require_owner(request)
+    owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
-    dropped = await STORE.disclaim_operator(origin)
+    dropped = await st(owner).disclaim_operator(origin)
     event("operator.disclaimed", operator=origin, was_claimed=dropped)
     if dropped:
-        await ledger_add("disclaimed", "-", {"operator": origin})
+        await ledger_add(owner, "disclaimed", "-", {"operator": origin})
     return {"origin": origin, "status": "not-mine", "was_claimed": dropped}
 
 
@@ -1984,27 +2445,27 @@ async def owner_block_operator(request: Request) -> dict:
     stopped new requests and left live grants alone would leave her believing
     she had shut a door that was still open.
     """
-    await require_owner(request)
+    owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
     if not origin.startswith("https://"):
         raise HTTPException(status_code=400,
                             detail="an operator is named by its https origin")
-    await STORE.block_operator(origin, utcstamp())
+    await st(owner).block_operator(origin, utcstamp())
     revoked, tokens = 0, 0
-    for conn in await STORE.connections():
+    for conn in await st(owner).connections():
         if conn.get("status") != "active":
             continue
         if operator_origin(conn.get("identity") or {}) != origin:
             continue
-        killed = await STORE.revoke_connection(conn["handle"])
+        killed = await st(owner).revoke_connection(conn["handle"])
         if killed is not None:
             revoked, tokens = revoked + 1, tokens + killed
     event("operator.blocked", operator=origin, connections_revoked=revoked,
           rpts_deactivated=tokens)
-    await ledger_add("revoked", "-", {"operator": origin,
+    await ledger_add(owner, "revoked", "-", {"operator": origin,
                                       "connections_revoked": revoked,
                                       "rpts_deactivated": tokens})
-    await owner_notify({"type": "decided", "family": "-", "decision": "revoked"})
+    await owner_notify(owner, {"type": "decided", "family": "-", "decision": "revoked"})
     return {"origin": origin, "connections_revoked": revoked,
             "rpts_deactivated": tokens}
 
@@ -2014,9 +2475,9 @@ async def owner_unblock_operator(request: Request) -> dict:
     """Let them ask again. Deliberately not the reverse of blocking: the
     connections it revoked stay revoked, so unblocking restores the right to
     negotiate rather than the access that was withdrawn."""
-    await require_owner(request)
+    owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
-    if not await STORE.unblock_operator(origin):
+    if not await st(owner).unblock_operator(origin):
         raise HTTPException(status_code=404, detail="that operator is not blocked")
     event("operator.unblocked", operator=origin)
     return {"origin": origin, "blocked": False}
@@ -2027,8 +2488,8 @@ async def owner_resources(request: Request) -> list:
     """The owner's view of what her AS is protecting: every registered
     resource, joined with the tier whose policy governs it. This is the
     surface Alice attaches policy to before any agent has ever called."""
-    await require_owner(request)
-    tiers = await STORE.tiers()
+    owner = await require_owner(request)
+    tiers = await st(owner).tiers()
     out = []
     for rid, desc in RESOURCES.items():
         tier_id, tier = policy.tier_for_resource(tiers, rid)
@@ -2047,8 +2508,8 @@ async def owner_resources(request: Request) -> list:
 
 @app.get("/owner/policies")
 async def owner_policies(request: Request) -> dict:
-    await require_owner(request)
-    return await STORE.tiers()
+    owner = await require_owner(request)
+    return await st(owner).tiers()
 
 
 @app.get("/owner/policy-vocabulary")
@@ -2073,21 +2534,21 @@ async def owner_create_policy(request: Request) -> dict:
     server registers what it holds, and she attaches policy to it. She cannot
     write terms over something nobody is protecting.
     """
-    await require_owner(request)
+    owner = await require_owner(request)
     spec = await request.json()
     tier_id = (spec.get("id") or "").strip()
     try:
-        tier = policy.new_tier(tier_id, spec, await STORE.tiers(), set(RESOURCES))
+        tier = policy.new_tier(tier_id, spec, await st(owner).tiers(), set(RESOURCES))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     try:
-        created = await STORE.create_tier(tier_id, tier)
+        created = await st(owner).create_tier(tier_id, tier)
     except KeyError:
         raise HTTPException(status_code=409,
                             detail=f"there is already a tier called {tier_id!r}")
     event("policy.created", tier=tier_id, template_id=created["terms"]["template_id"],
           resources=created["resources"])
-    await publish_terms(tier_id, created)
+    await publish_terms(owner, tier_id, created)
     return created
 
 
@@ -2101,10 +2562,10 @@ async def owner_delete_policy(tier_id: str, request: Request) -> dict:
     stays checkable, which is the whole reason those documents are versioned
     and persistent.
     """
-    await require_owner(request)
-    tiers = await STORE.tiers()
+    owner = await require_owner(request)
+    tiers = await st(owner).tiers()
     orphaned = list(tiers.get(tier_id, {}).get("resources") or [])
-    if not await STORE.delete_tier(tier_id):
+    if not await st(owner).delete_tier(tier_id):
         raise HTTPException(status_code=404, detail="unknown tier")
     event("policy.deleted", tier=tier_id, ungoverned=orphaned)
     return {"deleted": tier_id, "ungoverned": orphaned}
@@ -2112,10 +2573,10 @@ async def owner_delete_policy(tier_id: str, request: Request) -> dict:
 
 @app.put("/owner/policies/{tier_id}")
 async def owner_update_policy(tier_id: str, request: Request) -> dict:
-    await require_owner(request)
+    owner = await require_owner(request)
     patch = await request.json()
     try:
-        updated = await STORE.update_tier(tier_id, patch)
+        updated = await st(owner).update_tier(tier_id, patch)
     except KeyError:
         raise HTTPException(status_code=404, detail="unknown tier")
     except ValueError as exc:
@@ -2126,29 +2587,29 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
     event("policy.updated", tier=tier_id, template_id=updated["terms"]["template_id"])
     # Publish the new version immediately so its terms URI dereferences from
     # the moment it exists; earlier versions remain served (persistent record).
-    await publish_terms(tier_id, updated)
+    await publish_terms(owner, tier_id, updated)
     return updated
 
 
 @app.get("/owner/connections")
 async def owner_connections(request: Request) -> list:
-    await require_owner(request)
-    return await STORE.connections()
+    owner = await require_owner(request)
+    return await st(owner).connections()
 
 
 @app.post("/owner/connections/{handle}/revoke")
 async def owner_revoke_connection(handle: str, request: Request) -> dict:
-    await require_owner(request)
+    owner = await require_owner(request)
     # Deactivating the connection and burning the tokens issued under it is
     # one step, not two: a revocation that flipped the connection and then
     # failed would leave the agent holding exactly the authority Alice had
     # just withdrawn.
-    killed = await STORE.revoke_connection(handle)
+    killed = await st(owner).revoke_connection(handle)
     if killed is None:
         raise HTTPException(status_code=404, detail="unknown connection")
     event("connection.revoked", handle=handle, rpts_deactivated=killed)
-    await ledger_add("revoked", "-", {"rpts_deactivated": killed}, handle=handle)
-    await owner_notify({"type": "decided", "family": "-", "decision": "revoked"})
+    await ledger_add(owner, "revoked", "-", {"rpts_deactivated": killed}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-", "decision": "revoked"})
     return {"handle": handle, "status": "revoked", "rpts_deactivated": killed}
 
 
@@ -2159,8 +2620,8 @@ async def owner_ledger(request: Request) -> list:
     `?handle=` is what turns a list of negotiations into a trajectory: every
     promise that agent made, every decision she took about it, and everything
     it actually touched, in order."""
-    await require_owner(request)
-    return await STORE.ledger(request.query_params.get("handle") or None)
+    owner = await require_owner(request)
+    return await st(owner).ledger(request.query_params.get("handle") or None)
 
 
 @app.get("/owner/events")
@@ -2173,11 +2634,11 @@ async def owner_events(request: Request):
     fan-out has to be a property of the state, not of the process that
     happens to be serving her.
     """
-    await require_owner(request)
+    owner = await require_owner(request)
     from sse_starlette.sse import EventSourceResponse
 
     async def stream():
-        async for item in STORE.subscribe():
+        async for item in st(owner).subscribe():
             yield {"event": item["type"], "data": json.dumps(item)}
 
     return EventSourceResponse(stream())

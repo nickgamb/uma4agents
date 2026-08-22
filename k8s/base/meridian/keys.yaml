@@ -64,56 +64,10 @@ subjects:
   - kind: ServiceAccount
     name: keygen
     namespace: meridian
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: keygen-script
-  namespace: meridian
-data:
-  keygen.py: |
-    """Create an Ed25519 signing key as a Secret, once."""
-    import base64, json, os, ssl, sys, urllib.request
-
-    NAME = sys.argv[1]          # secret name
-    FILENAME = sys.argv[2]      # key within the secret, and the mounted filename
-    NS = os.environ.get("POD_NAMESPACE", "meridian")
-
-    SA = "/var/run/secrets/kubernetes.io/serviceaccount"
-    with open(f"{SA}/token") as f:
-        token = f.read().strip()
-    api = "https://kubernetes.default.svc"
-    ctx = ssl.create_default_context(cafile=f"{SA}/ca.crt")
-
-    def call(method, path, body=None):
-        req = urllib.request.Request(
-            api + path, method=method,
-            data=json.dumps(body).encode() if body is not None else None,
-            headers={"Authorization": f"Bearer {token}",
-                     "Content-Type": "application/json"})
-        return urllib.request.urlopen(req, context=ctx)
-
-    try:
-        call("GET", f"/api/v1/namespaces/{NS}/secrets/{NAME}")
-        print(f"{NAME} already exists; leaving it alone")
-        raise SystemExit(0)
-    except urllib.error.HTTPError as exc:
-        if exc.code != 404:
-            raise
-
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-    pem = Ed25519PrivateKey.generate().private_bytes(
-        serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8,
-        serialization.NoEncryption())
-
-    call("POST", f"/api/v1/namespaces/{NS}/secrets", {
-        "apiVersion": "v1", "kind": "Secret", "metadata": {"name": NAME},
-        "data": {FILENAME: base64.b64encode(pem).decode()},
-    })
-    print(f"{NAME} created")
+# The keygen ConfigMap is not here. It is one script, in
+# k8s/scripts/keygen.py, loaded into each namespace that needs it by
+# Makefile.k8s — three copies of the same forty lines in three manifests is
+# how one of them quietly stops matching the others.
 ---
 apiVersion: batch/v1
 kind: Job

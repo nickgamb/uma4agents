@@ -1,0 +1,63 @@
+# A resource server meeting an authority nobody configured it against — in
+# the cluster, where "nobody configured it" is visible in the manifests.
+#
+# Meridian's Secret holds one entry, for Alice. Carol's namespace seeds no
+# resource server and holds no credential for the firm. Between those two
+# absences there is no provisioning step this lab could have run and did not:
+# the gateway registers itself by signing with the key it publishes at
+# gateway.uma.lab, Carol's authority fetches that key from the origin it is
+# being asked to trust, and she answers from her own portal.
+#
+# The refusals are the substance — an origin that does not publish the key
+# that signed, a claim to a resource whose metadata names another, a stale
+# signature, and a verified registration that still grants nothing until she
+# says so. See docs/MULTI-OWNER.md.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: establishment-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: establishment-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: establishment-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/establishment_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: driver, mountPath: /driver/establishment_check.py, subPath: establishment_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

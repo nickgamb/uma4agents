@@ -27,6 +27,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: uma_as }
+                    - name: carol-as
+                      domains: ["carol-as.uma.lab", "carol-as.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: carol_as }
                     - name: keycloak
                       domains: ["keycloak.uma.lab", "keycloak.uma.lab:*"]
                       routes:
@@ -84,6 +89,14 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: uma-as, port_value: 9000 } }
+    - name: carol_as
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: carol_as
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: carol-as, port_value: 9000 } }
     - name: keycloak
       type: STRICT_DNS
       load_assignment:

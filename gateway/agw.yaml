@@ -40,6 +40,45 @@ binds:
                   pathPrefix: /owner-resources
             backends:
               - host: "uma-pep:9002"
+          # One route per owner, most specific first. Her holdings are a
+          # different process at a different address, not a filtered view of
+          # a shared one.
+          - name: carol-vault-mcp
+            matches:
+              - path:
+                  pathPrefix: /mcp/carol
+            policies:
+              cors:
+                allowOrigins: ["*"]
+                allowHeaders: [mcp-protocol-version, content-type,
+                               cache-control, mcp-session-id, authorization]
+                exposeHeaders: ["Mcp-Session-Id", "WWW-Authenticate"]
+              extAuthz:
+                host: "uma-pep:9002"
+                includeRequestBody:
+                  maxRequestBytes: 16384
+                includeRequestHeaders:
+                  - x-envoy-auth-partial-body
+                  - authorization
+                  - signature
+                  - signature-input
+                  - host
+                  - content-type
+                  - mcp-method
+                  - mcp-name
+                  - mcp-protocol-version
+                  - origin
+                  - signature-agent
+                  - traceparent
+                protocol:
+                  http:
+                    path: '"/check" + request.path'
+            backends:
+              - mcp:
+                  targets:
+                    - name: carol-vault
+                      mcp:
+                        host: http://carol-vault-mcp:9020/mcp
           - name: alice-vault-mcp
             matches:
               - path:

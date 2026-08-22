@@ -63,11 +63,23 @@ data:
 
     print("\n== discovery, before any relationship exists ==")
     def prm():
-        doc = json.load(get("https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp"))
-        return (doc.get("resource") == "https://gateway.uma.lab/mcp"
-                and "https://alice-as.uma.lab" in doc.get("authorization_servers", [])
-                and "signed_metadata" in doc), ""
-    check("the resource publishes signed RFC 9728 metadata naming Alice's AS", prm)
+        # One document per owner, each self-referential and each naming the
+        # authority that governs *her*. The bare /mcp path is an alias for the
+        # primary owner and resolves to her document, not to a shared one:
+        # there is no ownerless resource here for an agent to be pointed at.
+        docs = {o: json.load(get(
+            f"https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/{o}"))
+            for o in ("alice", "carol")}
+        alias = json.load(get(
+            "https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp"))
+        named = {o: d.get("authorization_servers", [None])[0] for o, d in docs.items()}
+        ok = (all(d.get("resource") == f"https://gateway.uma.lab/mcp/{o}"
+                  and "signed_metadata" in d for o, d in docs.items())
+              and named["alice"] == "https://alice-as.uma.lab"
+              and named["carol"] == "https://carol-as.uma.lab"
+              and alias.get("resource") == docs["alice"]["resource"])
+        return ok, f"named {named}, alias {alias.get('resource')}"
+    check("each owner's resource publishes signed RFC 9728 metadata naming her own AS", prm)
     check("the same layer in AAuth vocabulary",
           lambda: (get("https://gateway.uma.lab/.well-known/aauth-resource.json").status == 200, ""))
 

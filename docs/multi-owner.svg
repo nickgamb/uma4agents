@@ -1,0 +1,133 @@
+<svg viewBox="0 0 1200 720" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- many owners of one resource server, and an authority that is hers.
+       Colour: site/src/style/theme.js · brand direction 1b -->
+  <defs>
+    <marker id="t" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="tl" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#bcdb2c"/>
+    </marker>
+    <marker id="ta" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#f2b955"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="720" fill="#0a0b0d"/>
+
+  <g transform="translate(40 24) scale(0.53125)">
+    <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="15" fill="#0a0b0d" stroke="#8cc2d4" stroke-width="2.8"/>
+    <g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 17 L11 33 A5.75 5.75 0 0 0 22.5 33 L22.5 17" stroke="#ffffff"/>
+      <path d="M34.5 17 L26.25 31 L37.75 31 M34.5 17 L34.5 39" stroke="#bcdb2c"/>
+      <path d="M41.5 39 L47.25 17 L53 39 M43.5 31.5 L51 31.5" stroke="#ffffff"/>
+    </g>
+  </g>
+  <text x="92" y="44" fill="#ffffff" font-size="21" font-weight="600">One resource server. Two owners. Two authorities.</text>
+  <text x="92" y="66" fill="#757b83" font-size="14.5">Neither owner is the default, and one of the two authorities is not something the firm was ever configured against.</text>
+
+  <line x1="40" y1="96" x2="1160" y2="96" stroke="#24262c" stroke-width="1"/>
+
+  <!-- ─── requesting side ─────────────────────────────────────────── -->
+  <text x="40" y="130" fill="#757b83" font-size="11.5" letter-spacing="1.5" font-weight="600">REQUESTING SIDE</text>
+  <rect x="40" y="146" width="196" height="128" rx="10" fill="#121317" stroke="#2a2f36" stroke-width="1.4"/>
+  <text x="60" y="176" fill="#ffffff" font-size="14" font-weight="600">Bob&#8217;s agent</text>
+  <text x="60" y="200" fill="#757b83" font-size="12">One key. One adapter.</text>
+  <text x="60" y="219" fill="#757b83" font-size="12">It runs the same four</text>
+  <text x="60" y="238" fill="#757b83" font-size="12">beats against each</text>
+  <text x="60" y="257" fill="#757b83" font-size="12">owner it meets.</text>
+
+  <path d="M236 196 H302" stroke="#8cc2d4" stroke-width="2" fill="none" marker-end="url(#t)"/>
+  <path d="M236 224 H302" stroke="#8cc2d4" stroke-width="2" fill="none" marker-end="url(#t)"/>
+
+  <!-- ─── the firm ────────────────────────────────────────────────── -->
+  <text x="312" y="130" fill="#757b83" font-size="11.5" letter-spacing="1.5" font-weight="600">MERIDIAN &#183; ONE RESOURCE SERVER</text>
+  <rect x="312" y="146" width="292" height="228" rx="10" fill="#121317" stroke="#2a2f36" stroke-width="1.4"/>
+
+  <rect x="332" y="166" width="252" height="52" rx="8" fill="#0a0b0d" stroke="#8cc2d4" stroke-width="1.6"/>
+  <text x="348" y="188" fill="#ffffff" font-size="13" font-weight="600">enforcement point</text>
+  <text x="348" y="207" fill="#757b83" font-size="11.5">holds no policy &#183; one PAT per owner</text>
+
+  <rect x="332" y="234" width="252" height="56" rx="8" fill="#0a0b0d" stroke="#2a2f36" stroke-width="1.4"/>
+  <text x="348" y="256" fill="#ffffff" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">/mcp/alice</text>
+  <text x="348" y="277" fill="#757b83" font-size="11.5">her vault &#183; alice-vault/&#8230; tool ids</text>
+
+  <rect x="332" y="302" width="252" height="56" rx="8" fill="#0a0b0d" stroke="#2a2f36" stroke-width="1.4"/>
+  <text x="348" y="324" fill="#ffffff" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">/mcp/carol</text>
+  <text x="348" y="345" fill="#757b83" font-size="11.5">her vault &#183; carol-vault/&#8230; tool ids</text>
+
+  <text x="40" y="412" fill="#757b83" font-size="12">Shared: the resource server process, the enforcement point, the gateway, and the origin they publish under. Not shared: anything of either owner&#8217;s.</text>
+
+  <!-- ─── authorities ─────────────────────────────────────────────── -->
+  <text x="700" y="130" fill="#757b83" font-size="11.5" letter-spacing="1.5" font-weight="600">ONE AUTHORITY EACH &#183; NOTHING BETWEEN THEM</text>
+
+  <path d="M604 262 H694" stroke="#8cc2d4" stroke-width="2" fill="none" marker-end="url(#t)"/>
+  <path d="M604 330 H694" stroke="#f2b955" stroke-width="2" fill="none" marker-end="url(#ta)"/>
+
+  <rect x="700" y="146" width="460" height="104" rx="10" fill="#121317" stroke="#2a2f36" stroke-width="1.4"/>
+  <text x="722" y="176" fill="#ffffff" font-size="14" font-weight="600">Alice&#8217;s authorization server</text>
+  <text x="722" y="199" fill="#8cc2d4" font-size="11.5">3 replicas &#183; synchronous Postgres &#183; her realm &#183; her signing key</text>
+  <text x="722" y="222" fill="#757b83" font-size="12">Stood up alongside the gateway, so the two were provisioned</text>
+  <text x="722" y="240" fill="#757b83" font-size="12">against each other. It authenticates with a shared secret.</text>
+
+  <rect x="700" y="266" width="460" height="126" rx="10" fill="#121317" stroke="#f2b955" stroke-width="1.6"/>
+  <text x="722" y="296" fill="#ffffff" font-size="14" font-weight="600">Carol&#8217;s authorization server</text>
+  <text x="722" y="319" fill="#f2b955" font-size="11.5">1 process &#183; its own state &#183; 128Mi &#183; her realm &#183; her signing key</text>
+  <text x="722" y="342" fill="#757b83" font-size="12">Nobody configured this and the firm against each other &#8212; they</text>
+  <text x="722" y="360" fill="#757b83" font-size="12">belong to different people. So the resource server introduced</text>
+  <text x="722" y="378" fill="#757b83" font-size="12">itself, and Carol answered. Below.</text>
+
+  <line x1="40" y1="424" x2="1160" y2="424" stroke="#24262c" stroke-width="1"/>
+
+  <!-- ─── establishment ───────────────────────────────────────────── -->
+  <text x="40" y="456" fill="#bcdb2c" font-size="12" letter-spacing="1.6" font-weight="600">MEETING AN AUTHORITY NOBODY CONFIGURED YOU AGAINST</text>
+  <text x="40" y="480" fill="#9aa2ab" font-size="12.5">No secret is transmitted and nothing is provisioned in advance. What is trusted is control of the origin the challenge already pointed at.</text>
+
+  <line x1="72" y1="536" x2="1052" y2="536" stroke="#2a2f36" stroke-width="2.5"/>
+  <path d="M1000 536 H1090" stroke="#bcdb2c" stroke-width="2.5" fill="none" marker-end="url(#tl)"/>
+  <g stroke-width="2.5" fill="#0a0b0d">
+    <circle cx="72" cy="536" r="10" stroke="#8cc2d4"/>
+    <circle cx="304" cy="536" r="10" stroke="#8cc2d4"/>
+    <circle cx="536" cy="536" r="10" stroke="#f2b955"/>
+    <circle cx="768" cy="536" r="10" stroke="#f2b955"/>
+    <circle cx="1000" cy="536" r="10" stroke="#bcdb2c"/>
+  </g>
+
+  <text x="64" y="512" fill="#ffffff" font-size="13" font-weight="600">register</text>
+  <text x="64" y="568" fill="#8cc2d4" font-size="11.5" font-weight="600">RS &#8594; AS</text>
+  <text x="64" y="590" fill="#757b83" font-size="11.5">Signed with the key it</text>
+  <text x="64" y="607" fill="#757b83" font-size="11.5">publishes at its own</text>
+  <text x="64" y="624" fill="#757b83" font-size="11.5">origin. No credential.</text>
+
+  <text x="296" y="512" fill="#ffffff" font-size="13" font-weight="600">verify</text>
+  <text x="296" y="568" fill="#8cc2d4" font-size="11.5" font-weight="600">AS &#8594; the origin</text>
+  <text x="296" y="590" fill="#757b83" font-size="11.5">Fetch the RFC 9728</text>
+  <text x="296" y="607" fill="#757b83" font-size="11.5">document. It must claim</text>
+  <text x="296" y="624" fill="#757b83" font-size="11.5">this resource, name this</text>
+  <text x="296" y="641" fill="#757b83" font-size="11.5">authority, and hold the key.</text>
+
+  <text x="528" y="512" fill="#ffffff" font-size="13" font-weight="600">pend</text>
+  <text x="528" y="568" fill="#f2b955" font-size="11.5" font-weight="600">AS &#8594; her</text>
+  <text x="528" y="590" fill="#757b83" font-size="11.5">A verified signature says</text>
+  <text x="528" y="607" fill="#757b83" font-size="11.5">who is asking. It opens</text>
+  <text x="528" y="624" fill="#757b83" font-size="11.5">nothing. The registration</text>
+  <text x="528" y="641" fill="#757b83" font-size="11.5">waits in her registry.</text>
+
+  <text x="760" y="512" fill="#ffffff" font-size="13" font-weight="600">she decides</text>
+  <text x="760" y="568" fill="#f2b955" font-size="11.5" font-weight="600">her &#8594; AS</text>
+  <text x="760" y="590" fill="#757b83" font-size="11.5">Approve, or don&#8217;t. She can</text>
+  <text x="760" y="607" fill="#757b83" font-size="11.5">withdraw it later; asking</text>
+  <text x="760" y="624" fill="#757b83" font-size="11.5">again only puts it back in</text>
+  <text x="760" y="641" fill="#757b83" font-size="11.5">front of her.</text>
+
+  <text x="992" y="512" fill="#ffffff" font-size="13" font-weight="600">PAT</text>
+  <text x="992" y="568" fill="#bcdb2c" font-size="11.5" font-weight="600">RS &#8594; AS</text>
+  <text x="992" y="590" fill="#757b83" font-size="11.5">Signed the same way.</text>
+  <text x="992" y="607" fill="#757b83" font-size="11.5">From here the four beats</text>
+  <text x="992" y="624" fill="#757b83" font-size="11.5">run exactly as they do</text>
+  <text x="992" y="641" fill="#757b83" font-size="11.5">for Alice.</text>
+
+  <line x1="40" y1="668" x2="1160" y2="668" stroke="#24262c" stroke-width="1"/>
+  <text x="40" y="696" fill="#757b83" font-size="12.5">Nothing on the wire distinguishes the two authorities, and the checks run against both without knowing which is which &#8212;</text>
+  <text x="40" y="713" fill="#757b83" font-size="12.5">which is what makes an authorization server small enough to be a person&#8217;s.  <tspan fill="#8cc2d4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">make multi-owner-check &#183; make establishment-check</tspan></text>
+</svg>

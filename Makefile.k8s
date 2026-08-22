@@ -91,15 +91,28 @@ k8s-apply:
 	@kubectl -n cert-manager wait --for=condition=Ready certificate/uma-lab-ca --timeout=120s >/dev/null
 	@kubectl apply -f $(K8S)/base/edge/ >/dev/null
 	@$(K8S)/scripts/coredns-patch.sh
-	@kubectl -n alice create configmap alice-realm \
+	@# One key-generation script, into every namespace that runs it. Kept as
+	@# a file rather than three copies inlined in three manifests, because
+	@# three transcriptions of the same forty lines is how one of them
+	@# quietly stops writing the public half.
+	@for ns in alice carol meridian; do \
+		kubectl -n $$ns create configmap keygen-script \
+			--from-file=keygen.py=$(K8S)/scripts/keygen.py \
+			--dry-run=client -o yaml | kubectl apply -f - >/dev/null; \
+	done
+	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
+		--from-file=carol-realm.json=keycloak/carol-realm.json \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@kubectl apply -f $(K8S)/base/idp/ >/dev/null
 	@kubectl apply -f $(K8S)/base/alice/ >/dev/null
+	@kubectl apply -f $(K8S)/base/carol/ >/dev/null
 	@kubectl apply -f $(K8S)/base/meridian/ >/dev/null
 	@kubectl apply -f $(K8S)/base/sterling-vance/ >/dev/null
 	@kubectl apply -f $(K8S)/base/aauth/ >/dev/null
 	@kubectl apply -f $(K8S)/base/policy/waypoints.yaml >/dev/null
 	@kubectl -n alice wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
+	@kubectl -n carol wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
 	@kubectl -n meridian wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
 	@kubectl apply -f $(K8S)/base/policy/ >/dev/null
 	@$(K8S)/scripts/job-configmaps.sh
@@ -111,10 +124,12 @@ k8s-wait:
 	@echo
 	@echo "==> Waiting for the lab"
 	@kubectl -n alice rollout status deploy/uma-as --timeout=300s >/dev/null
-	@kubectl -n alice rollout status deploy/keycloak --timeout=300s >/dev/null
+	@kubectl -n idp rollout status deploy/keycloak --timeout=300s >/dev/null
+	@kubectl -n carol rollout status deploy/uma-as --timeout=300s >/dev/null
 	@kubectl -n alice rollout status deploy/alice-portal --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/uma-pep --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/alice-vault --timeout=300s >/dev/null
+	@kubectl -n meridian rollout status deploy/carol-vault --timeout=300s >/dev/null
 	@kubectl -n sterling-vance rollout status deploy/agent-operator --timeout=300s >/dev/null
 	@kubectl -n aauth rollout status statefulset/person-server --timeout=300s >/dev/null
 	@printf "  waiting for the declarative pull to land"
@@ -179,6 +194,20 @@ k8s-assurance-check:
 .PHONY: k8s-first-party-check
 k8s-first-party-check:
 	$(call run_job,first-party-check,cat $(K8S)/base/jobs/first-party-check.yaml,420s)
+
+## k8s-multi-owner-check: two owners of one resource server, each with her own
+## authority in her own namespace — one replicated over Postgres, one a single
+## process — and nothing shared between them. See docs/MULTI-OWNER.md.
+.PHONY: k8s-multi-owner-check
+k8s-multi-owner-check:
+	$(call run_job,multi-owner-check,cat $(K8S)/base/jobs/multi-owner-check.yaml,420s)
+
+## k8s-establishment-check: a resource server and an authority that were never
+## configured against each other, introducing themselves — and the four ways
+## of not getting in. See docs/MULTI-OWNER.md.
+.PHONY: k8s-establishment-check
+k8s-establishment-check:
+	$(call run_job,establishment-check,cat $(K8S)/base/jobs/establishment-check.yaml,420s)
 
 ## k8s-intent-check: whose intent the grant carries — her terms, which cannot
 ## be signed weaker than she wrote them, and the agent's own account of the

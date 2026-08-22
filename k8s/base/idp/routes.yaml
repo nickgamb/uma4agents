@@ -1,0 +1,18 @@
+# The identity provider's front door, published by the identity provider.
+#
+# It is here rather than in an owner's namespace for the same reason the
+# workload is: the party that controls a hostname is the party that publishes
+# it, and neither owner controls this one.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: idp
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["keycloak.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: keycloak, port: 8080 }

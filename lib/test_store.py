@@ -471,14 +471,130 @@ TESTS = [
 ]
 
 
-async def run_against(label: str, store) -> None:
+async def test_owners_cannot_see_each_other(backing) -> None:
+    """The property the whole partition exists for.
+
+    Every accessor is checked, not a representative sample, because the
+    failure mode of a missed one is Carol reading Alice's ledger — and a
+    partition that holds for nineteen of twenty tables is not a partition.
+    """
+    a = backing.owner("alice")
+    c = backing.owner("carol")
+    await a.seed()
+    await c.seed()
+
+    # policy
+    await a.create_tier("secret-tier", {"name": "Alice only", "resources": [],
+                                        "ask_me": True, "rules": [],
+                                        "terms": {"template_id": "alice/x/v1"}})
+    check("isolation: a tier of Alice's is invisible to Carol",
+          "secret-tier" not in (await c.tiers()),
+          "Carol can see Alice's tiers")
+
+    # standing relationships
+    await a.put_connection({"handle": "jkt:alice-agent", "first_seen": "t0",
+                            "status": "active"})
+    check("isolation: a connection of Alice's is invisible to Carol",
+          await c.connection("jkt:alice-agent") is None,
+          "Carol can read Alice's connection")
+    check("isolation: Carol's connection list excludes Alice's",
+          all(x["handle"] != "jkt:alice-agent" for x in await c.connections()),
+          "Alice's connection is in Carol's list")
+
+    # the audit trail
+    await a.ledger_add("promised", "fam_a", "2026-01-01T00:00:00Z",
+                       {"note": "alice"}, handle="jkt:alice-agent")
+    check("isolation: Alice's ledger rows are invisible to Carol",
+          len(await c.ledger()) == 0, "Carol sees Alice's ledger")
+    check("isolation: trajectory does not count another owner's rows",
+          (await c.trajectory("jkt:alice-agent", "2020-01-01T00:00:00Z"))["calls"] == 0,
+          "Carol's trajectory counted Alice's rows")
+
+    # operators
+    await a.block_operator("https://bad.example", "t0")
+    await a.claim_operator("https://mine.example", "t0")
+    check("isolation: a block of Alice's does not block for Carol",
+          "https://bad.example" not in (await c.blocked_operators()),
+          "Carol inherited Alice's block")
+    check("isolation: an origin Alice claims is not Carol's",
+          "https://mine.example" not in (await c.owned_operators()),
+          "Carol inherited Alice's claim")
+
+    # terms
+    await a.publish_terms({"template_id": "alice/advisor-tier1/v9",
+                           "terms_uri": "https://alice-as/terms/x"})
+    check("isolation: Alice's terms documents are invisible to Carol",
+          await c.terms_doc("alice/advisor-tier1/v9") is None,
+          "Carol can dereference Alice's terms")
+
+    # single-use, across owners
+    ticket = await a.mint_ticket(negotiation("fam_cross"), 300)
+    check("isolation: Carol cannot spend a ticket minted for Alice",
+          await c.consume_ticket(ticket) is None,
+          "Carol consumed Alice's ticket")
+    check("isolation: and the ticket still works for Alice afterwards",
+          (await a.consume_ticket(ticket)) is not None,
+          "Carol's attempt burned Alice's ticket")
+
+    await a.record_rpt("rpt_cross", "fam_cross", "jkt:alice-agent", None)
+    check("isolation: Carol cannot burn an RPT issued by Alice",
+          await c.consume_rpt("rpt_cross") is None,
+          "Carol burned Alice's grant")
+    check("isolation: and Alice can still burn it",
+          await a.consume_rpt("rpt_cross") == "fam_cross",
+          "Carol's attempt burned it")
+
+    # decisions
+    rec = negotiation("fam_decide_cross")
+    rec["state"] = "awaiting-owner"
+    await a.mint_ticket(rec, 300)
+    check("isolation: Carol cannot decide a negotiation of Alice's",
+          await c.decide("fam_decide_cross", "approved") is False,
+          "Carol decided Alice's request")
+
+    # Resource servers. Compared before and after rather than against
+    # "active": an earlier test in this suite revokes Alice's copy, and
+    # asserting on an absolute value would be asserting on test order.
+    before = (await a.resource_server("meridian-gateway"))["status"]
+    revoked = await c.revoke_resource_server("meridian-gateway")
+    after = (await a.resource_server("meridian-gateway"))["status"]
+    check("isolation: Carol has her own registration of the same RS",
+          revoked is True, "Carol had no registration to revoke")
+    check("isolation: revoking it for Carol does not touch Alice's",
+          before == after,
+          f"Alice's registration went {before} -> {after}")
+    check("isolation: and Carol's is the one that changed",
+          (await c.resource_server("meridian-gateway"))["status"] == "revoked",
+          "Carol's registration was not revoked")
+
+    # the event feed
+    seen: list[dict] = []
+
+    async def listen():
+        async for item in a.subscribe():
+            seen.append(item)
+            return
+
+    task = asyncio.ensure_future(listen())
+    await asyncio.sleep(0.05)
+    await c.notify({"kind": "carol-only"})
+    await asyncio.sleep(0.25)
+    check("isolation: Carol's events do not reach Alice's stream",
+          seen == [], f"Alice received {seen}")
+    task.cancel()
+
+
+async def run_against(label: str, backing) -> None:
     print(f"\n{label}")
-    await store.start()
+    await backing.start()
     try:
+        owner = backing.owner("alice")
+        await owner.seed()
         for test in TESTS:
-            await test(store)
+            await test(owner)
+        await test_owners_cannot_see_each_other(backing)
     finally:
-        await store.close()
+        await backing.close()
 
 
 async def main() -> int:
@@ -516,7 +632,7 @@ async def _truncate(dsn: str) -> None:
         await conn.execute(
             "DROP TABLE IF EXISTS tickets, negotiations, rpts, connections, "
             "resource_servers, ledger, terms_docs, tiers, owner_events, "
-            "blocked_operators CASCADE")
+            "blocked_operators, owned_operators CASCADE")
     finally:
         await conn.close()
 
