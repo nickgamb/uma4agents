@@ -1,0 +1,20 @@
+# Carol's front door, published by Carol.
+#
+# The same shape as Alice's and for the same reason: attaching a route to the
+# shared Gateway is how a party publishes itself, and neither owner can
+# publish the other's hostname. This one line is the whole of what the rest
+# of the lab has to know about where her authority lives — an agent finds it
+# in the challenge, and the resource server finds it because she told it.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: carol-as
+  namespace: carol
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["carol-as.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: uma-as, port: 9000 }

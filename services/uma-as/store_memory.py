@@ -210,6 +210,17 @@ class MemoryOwnerStore:
         rs = self._rs.get(client_id)
         return dict(rs) if rs is not None else None
 
+    async def put_resource_server(self, client_id: str, rs: dict) -> None:
+        self._rs[client_id] = copy.deepcopy(rs)
+
+    async def approve_resource_server(self, client_id: str, when: str) -> bool:
+        rs = self._rs.get(client_id)
+        if rs is None or rs.get("status") != "pending":
+            return False
+        rs["status"] = "active"
+        rs["consented"] = when
+        return True
+
     async def touch_pat(self, client_id: str, when: str) -> None:
         if (rs := self._rs.get(client_id)) is not None:
             rs["last_pat_issued"] = when

@@ -36,6 +36,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · Revocation and the ledger](https://u4a.ai/docs/overview/revocation.md): What was promised, what was approved, what was touched — and what happens the moment the owner changes her mind.
 - [Overview · Agent assurance](https://u4a.ai/docs/overview/assurance.md): What the owner's own authority can verify about an agent asking for her things — and why nothing an agent says about itself can widen access.
 - [Overview · The owner's attention](https://u4a.ai/docs/overview/attention.md): The scarcest resource in an owner-decides design, why an unbounded pending queue is a denial-of-service surface, and how to cap it without shutting out the agent you wanted.
+- [Overview · Many owners, one resource server](https://u4a.ai/docs/overview/multi-owner.md): A firm holds many people's accounts, and each of them may name a different authorization server — including one the firm was never configured against.
 - [Overview · Compared to UMA 2.0](https://u4a.ai/docs/overview/compare-uma.md): What this profile keeps, what it changes, and why each change was necessary rather than preferred.
 - [Overview · Compared to OAuth 2.0 and GNAP](https://u4a.ai/docs/overview/compare-oauth-gnap.md): OAuth, CIBA-style asynchronous authorization and GNAP can all carry a negotiation. None of them, on its own, puts the deciding party anywhere but the service.
 - [Overview · Compared to policy engines](https://u4a.ai/docs/overview/compare-policy-engines.md): OPA, Cedar and AuthZEN decide well. They do not decide whose policy is being expressed, and the two compose.
@@ -59,7 +60,7 @@ UMA 2.0. Listed in reading order.
 - [Reference · MCP binding](https://u4a.ai/docs/reference/mcp-binding.md): How the grant travels over Model Context Protocol — discovery channels, both challenge encodings, the pend, and what MCP's types cannot yet express.
 - [Reference · Configuration](https://u4a.ai/docs/reference/configuration.md): Every setting each component reads, its default, and the two settings people get wrong.
 - [Reference · Deviations from UMA 2.0](https://u4a.ai/docs/reference/deviations.md): The extension register — every place this profile departs from stock UMA, what the baseline says, and why each departure exists.
-- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty recommendations, and what was parked.
+- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-one recommendations, and what was parked.
 
 ## Posts
 

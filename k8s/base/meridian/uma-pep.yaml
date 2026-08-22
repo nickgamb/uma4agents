@@ -80,8 +80,32 @@ spec:
             - name: UMA_AS_RS_CLIENT_SECRET
               valueFrom:
                 secretKeyRef: { name: meridian-config, key: rs-client-secret }
+            # Only Alice's authority was provisioned with this gateway.
+            # There is no secret here for Carol's and there could not be:
+            # nobody was in a position to configure both ends. The enforcer
+            # for any owner not named here registers by signing with the key
+            # this origin publishes at /jwks, and waits for her.
+            - name: UMA_PEP_RS_SECRETS
+              valueFrom:
+                secretKeyRef: { name: meridian-config, key: rs-secrets }
             - name: UMA_REALM
               value: alice-vault
+            # Meridian holds more than one person's account. Every owner
+            # named here gets /mcp/<owner>, with her own tool namespace, her
+            # own PAT and her own RFC 9728 metadata naming the authority that
+            # governs her.
+            - name: UMA_EXTRA_OWNERS
+              value: carol
+            # Which authority governs which owner. Both named, because
+            # neither is the default — the resource server holds a PAT from
+            # each and enforces for both, and it is the owner who decides
+            # which server that is.
+            - name: UMA_OWNER_AUTHORITIES
+              value: >-
+                {"alice": {"public": "https://alice-as.uma.lab",
+                           "internal": "http://uma-as.alice.svc.cluster.local:9000"},
+                 "carol": {"public": "https://carol-as.uma.lab",
+                           "internal": "http://uma-as.carol.svc.cluster.local:9000"}}
             # The authority the RFC 9421 signature base is rebuilt from.
             # Deliberately configuration and never the request: the Host
             # header does not survive the ext_authz hop (it arrives as this

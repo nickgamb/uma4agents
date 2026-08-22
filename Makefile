@@ -143,6 +143,12 @@ first-party-check:
 multi-owner-check:
 	docker compose --profile test run --rm multi-owner-check
 
+## establishment-check: a resource server and an authority that were never
+## configured against each other, introducing themselves. See docs/MULTI-OWNER.md.
+.PHONY: establishment-check
+establishment-check:
+	docker compose --profile test run --rm establishment-check
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:
@@ -303,8 +309,13 @@ smoke-test:
 	@$(CURL) https://keycloak.uma.lab/realms/alice/.well-known/openid-configuration | grep -q issuer \
 		&& echo "  keycloak: OK" || echo "  keycloak: FAIL"
 	@echo "==> Protected Resource Metadata (RFC 9728) at the gateway..."
-	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource | grep -q authorization_servers \
-		&& echo "  resource metadata: OK" || echo "  resource metadata: FAIL"
+	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/alice \
+		| grep -q '"authorization_servers":\["https://alice-as.uma.lab"\]' \
+		&& echo "  resource metadata (alice): OK" || echo "  resource metadata (alice): FAIL"
+	@echo "==> and the other owner's, naming a different authority..."
+	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/carol \
+		| grep -q '"authorization_servers":\["https://carol-as.uma.lab"\]' \
+		&& echo "  resource metadata (carol): OK" || echo "  resource metadata (carol): FAIL"
 	@echo "==> AAuth resource metadata (R3 vocabulary, same public layer)..."
 	@$(CURL) https://gateway.uma.lab/.well-known/aauth-resource.json | grep -q r3_vocabularies \
 		&& echo "  aauth-resource: OK" || echo "  aauth-resource: FAIL"

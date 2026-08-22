@@ -86,13 +86,13 @@ server, the same ticket and the same terms — MCP SDK 2.x exposes
 
 | Service | Role | Language / base |
 |---|---|---|
-| `uma-as` | Alice's authorization server: the four-beat grant loop, tiered policy, ticket lifecycle, RPT issuance, connections, ledger, owner API, SSE | Python / FastAPI |
+| `uma-as` | An owner's authorization server: the four-beat grant loop, tiered policy, ticket lifecycle, RPT issuance, connections, ledger, owner API, SSE. One per owner here (`alice-as`, `carol-as`), which is a packaging choice — the store is scoped per owner either way | Python / FastAPI |
 | `agent-operator` | Bob's firm's public presence: its CIMD document (who operates the agent) and Web Bot Auth key directory (where its keys are published). Display and discovery only — never an authorization input | Python / FastAPI |
 | `uma-pep` | The enforcement core hosted as an ext_authz service (`ENFORCEMENT_MODE=gateway`): challenges, RPT introspection, proof-of-possession verification, tool→resource scoping, single-use operation binding | Python / FastAPI |
 | `agentgateway` | The MCP gateway/PEP host; delegates authz to `uma-pep` via HTTP ext_authz | Solo.io agentgateway |
-| `alice-vault-mcp` | Alice's brokerage vault as an MCP server (fixture data). Under `ENFORCEMENT_MODE=gateway` the protection obligations sit outside it; under `embedded` it runs the same core in-process via `uma_extension.py` | Python / MCP SDK 2.x |
+| `alice-vault-mcp` | An owner's brokerage vault as an MCP server (fixture data); one instance per owner, holding her positions rather than a row in anybody else's. Under `ENFORCEMENT_MODE=gateway` the protection obligations sit outside it; under `embedded` it runs the same core in-process via `uma_extension.py` | Python / MCP SDK 2.x |
 | `alice-portal` | Meridian Wealth: dashboard, holdings, trade, and Settings → Security → Agent Authorization | Python / FastAPI + vanilla SPA |
-| `keycloak` | Alice's identity provider and OIDC login for the portal | Keycloak |
+| `keycloak` | The identity provider, with a realm per owner and an OIDC login for the portal. Neither owner's: an authority that accepts another party's tokens for its owner is only partly hers | Keycloak |
 | `person-server` | AAuth Person/Agent server — the agent-identity component for the identified-level path (the demo default signs pseudonymously) | upstream (pinned) |
 | `agent-shim` | The U4A adapter: lets an unmodified MCP client be the requesting agent. Runs as a local stdio subprocess beside Claude Code, or as a network service (`UMA4A_SHIM_TRANSPORT=streamable-http`) when the agent is not a local process. Holds the requesting side's key and runs all four beats, so what sits above it needs no U4A code at all | Python / MCP SDK |
 | `kagent` | An agent framework, unmodified, pointed at that adapter — the adoption case rather than a protocol one. Off by default; it brings a model with it (in-cluster Ollama, or a hosted provider). Kubernetes only. See [KAGENT.md](KAGENT.md) | upstream (pinned) |
@@ -182,6 +182,20 @@ make a requirement *looser*. Her attention also has a depth limit
 queued, and never crowds out an agent she already knows. See
 [ASSURANCE.md](ASSURANCE.md).
 
+## More than one owner
+
+Everything above is written with one owner in it, because one is enough to
+explain the grant. The resource server holds more than one, and each of them
+names her own authorization server — a second copy of the right-hand column,
+with nothing shared between them but the firm in the middle.
+
+That is not an extension of the model; it is the model with the implicit part
+made explicit. Every owner-scoped artifact carries its owner, the resource is
+addressed per owner at `/mcp/<owner>`, and the RFC 9728 document for each one
+names a different authority. [MULTI-OWNER.md](MULTI-OWNER.md) covers it,
+including how a resource server comes to hold a protection token from an
+authority nobody configured it against.
+
 ## Ports and hostnames
 
 TLS everywhere via the Envoy edge and a local CA (`make init`). Browser access
@@ -191,9 +205,10 @@ explicitly so they work without host configuration.
 | Hostname | Service |
 |---|---|
 | `portal.uma.lab` | Alice's portal |
-| `gateway.uma.lab` | agentgateway (agents connect here: `/mcp`) |
-| `alice-as.uma.lab` | uma-as (token, introspection, owner API) |
-| `keycloak.uma.lab` | Keycloak |
+| `gateway.uma.lab` | agentgateway (agents connect here: `/mcp/<owner>`) |
+| `alice-as.uma.lab` | Alice's uma-as (token, introspection, owner API) |
+| `carol-as.uma.lab` | Carol's — a second owner of the same resource server, on an authority the firm was never configured against. See [MULTI-OWNER.md](MULTI-OWNER.md) |
+| `keycloak.uma.lab` | Keycloak (a realm per owner) |
 | `grafana.uma.lab` | Grafana |
 | `ps.uma.lab` | person-server |
 | `agent.uma.lab` | agent-operator (Bob's firm's CIMD + key directory) |

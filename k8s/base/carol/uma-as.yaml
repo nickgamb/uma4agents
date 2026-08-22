@@ -1,0 +1,147 @@
+# Carol's authorization server.
+#
+# The same image as Alice's, the same protocol, the same code path. What is
+# different is everything around it, and none of it is visible from outside:
+#
+#   Alice's  three replicas over a synchronous three-instance Postgres
+#            cluster, with a disruption budget — an authority deployed the
+#            way an institution deploys one.
+#   Carol's  one process holding its own state, 128Mi, no database — an
+#            authority deployed the way a person would run one. This is the
+#            shape that fits on a home server, a small VM, or an edge
+#            isolate, and it is why it is worth showing at this size rather
+#            than copying Alice's stanza and changing a name.
+#
+# The store abstraction is what makes both true from one image (rec 9 in
+# FINDINGS.md): with UMA_AS_STORE unset the process keeps its own state, and
+# a single replica is the condition under which that is correct. Restarting
+# this pod loses Carol's record and her registry, which is the honest cost of
+# the small shape and is why the checks re-establish rather than assume.
+#
+# The thing this deployment is really demonstrating is what is *absent*.
+# Nobody at Meridian configured anything for Carol. There is no client secret
+# here and none over there; the gateway introduces itself by signing with the
+# key it publishes at its own origin, and Carol answers. See
+# clients/demo-driver/establishment_check.py and docs/MULTI-OWNER.md.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: uma-as
+  namespace: carol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uma-as
+  namespace: carol
+  # Through the namespace waypoint, for the same reason as Alice's: the
+  # AuthorizationPolicy protecting this server is written in terms of paths,
+  # and a path-scoped policy evaluated at L4 can only deny.
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: uma-as }
+  ports:
+    - { name: http, port: 9000, targetPort: 9000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uma-as
+  namespace: carol
+spec:
+  # One. Not a smaller number of the same thing — a different deployment
+  # shape, and the one that has to work if an authority is going to belong to
+  # a person rather than to whoever can run a database cluster.
+  replicas: 1
+  selector:
+    matchLabels: { app: uma-as }
+  strategy:
+    # Never two at once. Two replicas of an in-process store are two
+    # different authorities answering behind one name, and a ticket minted by
+    # one would be unspendable at the other — the exact failure the Postgres
+    # backend exists to prevent where more than one is wanted.
+    type: Recreate
+  template:
+    metadata:
+      labels: { app: uma-as, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: uma-as
+      containers:
+        - name: uma-as
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9000 }
+          env:
+            - name: UMA_AS_ISSUER
+              value: https://carol-as.uma.lab
+            # Hers. An authority that accepts another party's tokens for its
+            # owner is only partly the owner's — whoever runs that identity
+            # provider can mint her. Same Keycloak, different realm, and the
+            # realm is the boundary.
+            - name: UMA_AS_OWNER_ISSUER
+              value: https://keycloak.uma.lab/realms/carol
+            - name: UMA_AS_OWNER
+              value: carol
+            - name: UMA_AS_OWNER_AUTH
+              value: oidc,local-key
+            - name: UMA_AS_OWNER_KEY
+              value: /owner/owner-ed25519.pub
+            - name: UMA_AS_OWNER_AUTHORITY
+              value: carol-as.uma.lab
+            - name: UMA_AS_PEND_BUDGET
+              value: "5"
+            - name: UMA_AS_PEND_BUDGET_ATTRIBUTED
+              value: "40"
+            - name: UMA_AS_MAX_REASON
+              value: "512"
+            - name: UMA_AS_TRAJECTORY_WINDOW
+              value: "7d"
+            # Nothing to seed. There was no moment at which anyone could have
+            # provisioned this authority and Meridian's gateway against each
+            # other: they belong to different people. The gateway registers
+            # itself instead, and waits for her.
+            - name: UMA_AS_SEED_RS
+              value: "0"
+            - name: UMA4A_CA_BUNDLE
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: owner-key, mountPath: /owner, readOnly: true }
+            - { name: signing-key, mountPath: /keys, readOnly: true }
+          startupProbe:
+            httpGet: { path: /health, port: 9000 }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health, port: 9000 }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /health, port: 9000 }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          lifecycle:
+            preStop:
+              exec: { command: ["sleep", "5"] }
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: owner-key
+          secret:
+            secretName: owner-device-key
+            items:
+              - { key: owner-ed25519.pub, path: owner-ed25519.pub }
+        - name: signing-key
+          secret: { secretName: uma-as-signing-key }

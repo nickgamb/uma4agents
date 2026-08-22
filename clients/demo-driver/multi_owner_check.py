@@ -24,8 +24,10 @@ What can only be seen from out here is what crosses processes:
   * the same agent, with the same key, negotiates with both and neither
     authority learns anything about the other's decision.
 
-Still provisioned out of band: the resource server was told where each
-authority is. Meeting one it has never seen is `establishment_check.py`.
+How each of them came to protect anything differs, and deliberately: Alice's
+authority holds a secret it was provisioned with, and Carol's holds nothing
+and was introduced at runtime. Neither is visible from here, which is the
+claim — see `establishment_check.py`, where it is the subject.
 
 Run with `make multi-owner-check`.
 """
@@ -35,6 +37,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import uuid
 
 import httpx
@@ -86,6 +89,39 @@ def hdrs(c: httpx.Client, owner: str) -> dict:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
+def ensure_resource_server(c: httpx.Client, owner: str) -> None:
+    """Whatever this owner's authority needs before it will protect anything.
+
+    An authority provisioned alongside the resource server already knows it.
+    One that is the owner's own has to be introduced, and she has to say yes
+    — so a call is made to provoke the introduction and she answers it from
+    her portal, exactly as she would the first time she linked the account.
+
+    Which of those applies is not something this check decides or asserts on;
+    it is a property of how the deployment was put together, and the point of
+    everything below is that from here the two are indistinguishable.
+    `establishment_check.py` is where the difference is the subject.
+    """
+    o = OWNERS[owner]
+    for _ in range(8):
+        registry = {r["client_id"]: r for r in
+                    c.get(f"{o['as']}/owner/resource-servers",
+                          headers=hdrs(c, owner), timeout=15.0).json()}
+        if any(r.get("status") == "active" for r in registry.values()):
+            return
+        pending = [cid for cid, r in registry.items()
+                   if r.get("status") == "pending"]
+        if pending:
+            for cid in pending:
+                c.post(f"{o['as']}/owner/resource-servers/decision",
+                       json={"client_id": cid, "decision": "approved"},
+                       headers=hdrs(c, owner), timeout=15.0)
+            continue
+        mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
+                 {"name": "get_positions", "arguments": {}}, META)
+        time.sleep(1.0)
+
+
 def negotiate(c: httpx.Client, owner: str,
               agent: AgentKeys) -> tuple[bool, str, dict | None]:
     """Bob's agent, against one owner. Identical for every owner."""
@@ -132,6 +168,8 @@ def main() -> int:
     names = list(OWNERS)
     with httpx.Client(verify=CA, timeout=30.0) as c:
         print(f"\n== {len(names)} owners, one resource server ==", flush=True)
+        for owner in names:
+            ensure_resource_server(c, owner)
 
         # --- each owner is reached the same way, at her own address --------
         named = {}

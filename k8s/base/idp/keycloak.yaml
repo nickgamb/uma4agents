@@ -1,10 +1,21 @@
-# Alice's identity provider.
+# The identity provider. Not Alice's, not Carol's.
+#
+# It sits in its own namespace because that is what it is: a third party both
+# owners resolve and neither runs, the way most people's login already works.
+# Putting it in one owner's namespace would have said the opposite — that
+# whoever holds that namespace can mint the other, which is the one thing an
+# authority that is supposed to be hers cannot allow.
+#
+# Each owner has her own realm and her own users inside it. The realms are
+# the boundary: a token from `alice` does not authenticate Carol to anything,
+# and `carol-as` will not accept one — see the identity-provider assertions
+# in clients/demo-driver/multi_owner_check.py.
 #
 # Keycloak is here for exactly what it is boring at — a realm, a user, and an
-# OIDC login for her portal. The grant loop deliberately does not use its
-# stock UMA 2.0 support, which cannot express a dictated intent contract; the
+# OIDC login for a portal. The grant loop deliberately does not use its stock
+# UMA 2.0 support, which cannot express a dictated intent contract; each
 # authorization server signs its own tokens and only asks Keycloak "is this
-# Alice?".
+# her?".
 #
 # start-dev with an in-memory database, same as compose: the realm is
 # imported at boot and there is no identity state worth persisting between
@@ -14,13 +25,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: keycloak
-  namespace: alice
+  namespace: idp
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: keycloak
-  namespace: alice
+  namespace: idp
 spec:
   selector: { app: keycloak }
   ports:
@@ -30,7 +41,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
-  namespace: alice
+  namespace: idp
 spec:
   replicas: 1
   strategy: { type: Recreate }
@@ -86,4 +97,4 @@ spec:
             limits: { memory: 1Gi }
       volumes:
         - name: realm
-          configMap: { name: alice-realm }
+          configMap: { name: realms }

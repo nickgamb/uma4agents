@@ -37,6 +37,9 @@ import policy
 import store
 
 ISSUER = os.environ.get("UMA_AS_ISSUER", "https://alice-as.uma.lab")
+# The host a signature over a request to this server has to cover. Taken
+# from the issuer so the two cannot drift apart.
+AS_AUTHORITY = ISSUER.split("://", 1)[-1].rstrip("/")
 KEY_PATH = os.environ.get("UMA_AS_SIGNING_KEY", "/keys/uma-as-ed25519.pem")
 # The owner authenticates with her OIDC token (Keycloak); the AS validates
 # it against the realm's published keys. No static owner credential exists.
@@ -1420,6 +1423,150 @@ def operator_published_key(client_id: str, directory: str,
         return False
 
 
+
+# --- resource server establishment ---------------------------------------
+#
+# FedAuthz starts from a resource server that already holds a PAT and says
+# nothing about how it came to. Where one operator runs both sides that gap is
+# closed by configuration, and a seeded client secret is a fair model of it.
+# It stops being closable that way as soon as the authority is the owner's:
+# she is not going to paste a secret into her brokerage's console, and the
+# brokerage is not going to hold one secret per customer.
+#
+# So the resource server authenticates as its origin. It signs with a key it
+# publishes at that origin, in the RFC 9728 document it already has to serve,
+# and this server fetches that document itself. Nothing is provisioned ahead
+# of time and no secret is ever transmitted. What is being trusted is control
+# of the origin — which is what the address in her challenge pointed at
+# anyway, so the check adds no new party to trust.
+
+_RS_META_TTL = float(os.environ.get("UMA_AS_RS_META_TTL", "300"))
+_RS_META_CACHE: dict[str, tuple[float, dict]] = {}
+
+
+def resource_server_metadata(resource_uri: str) -> dict:
+    """The RFC 9728 document the named resource publishes about itself.
+
+    Three things have to hold, and each closes a way of registering as
+    somebody else:
+
+    * the document claims *this* `resource` — so a host cannot publish
+      metadata about a resource it does not serve;
+    * its `jwks_uri` is same-origin — so the keys come from the party being
+      identified rather than one it points at;
+    * it names *this* authorization server — so a resource server cannot
+      register with an authority it does not send its own callers to.
+
+    Unlike the operator key directory, an unreachable document here is a
+    refusal rather than a shrug. That check attests a claim already made by
+    other means; this one *is* the authentication, and a credential that
+    cannot be fetched has not been presented.
+    """
+    import httpx
+    from urllib.parse import urlparse
+
+    cached = _RS_META_CACHE.get(resource_uri)
+    if cached and now() - cached[0] < _RS_META_TTL:
+        return cached[1]
+
+    p = urlparse(resource_uri)
+    if p.scheme != "https" or not p.netloc:
+        return {}
+    origin = f"{p.scheme}://{p.netloc}"
+    url = (f"{origin}/.well-known/oauth-protected-resource"
+           f"{p.path.rstrip('/')}")
+    try:
+        r = httpx.get(url, timeout=5.0, follow_redirects=False,
+                      verify=AGENT_ISSUER_CA or True)
+        r.raise_for_status()
+        doc = r.json()
+    except Exception as exc:                                       # noqa: BLE001
+        event("resource_server.metadata_unreachable", resource_uri=resource_uri,
+              url=url, reason=str(exc)[:120])
+        return {}
+
+    reasons = []
+    if doc.get("resource") != resource_uri:
+        reasons.append(f"claims resource {doc.get('resource')!r}")
+    jwks_uri = doc.get("jwks_uri") or ""
+    if not jwks_uri or not same_origin(jwks_uri, resource_uri):
+        reasons.append(f"jwks_uri {jwks_uri!r} is not same-origin")
+    if ISSUER not in (doc.get("authorization_servers") or []):
+        reasons.append("does not name this authorization server")
+    if reasons:
+        event("resource_server.metadata_rejected", resource_uri=resource_uri,
+              reasons=reasons)
+        return {}
+
+    if len(_RS_META_CACHE) >= 256:
+        _RS_META_CACHE.pop(next(iter(_RS_META_CACHE)), None)
+    _RS_META_CACHE[resource_uri] = (now(), doc)
+    return doc
+
+
+def resource_server_keys(resource_uri: str) -> list:
+    """The public keys the named resource publishes, as JWKs. Empty on any
+    failure, which the callers all read as "not authenticated"."""
+    import httpx
+
+    doc = resource_server_metadata(resource_uri)
+    if not doc:
+        return []
+    try:
+        r = httpx.get(doc["jwks_uri"], timeout=5.0, follow_redirects=False,
+                      verify=AGENT_ISSUER_CA or True)
+        r.raise_for_status()
+        return r.json().get("keys") or []
+    except Exception as exc:                                       # noqa: BLE001
+        event("resource_server.jwks_unreachable", resource_uri=resource_uri,
+              reason=str(exc)[:120])
+        return []
+
+
+def verify_resource_server_signature(request: Request, body: bytes,
+                                     resource_uri: str) -> bool:
+    """Did the origin behind `resource_uri` sign this request?
+
+    Every key that origin publishes is tried, because key rotation overlaps:
+    a resource server that has just published a new one may still be signing
+    with the old for the length of a deploy. Trying all of them accepts any
+    key the origin currently vouches for and no others, which is the same
+    answer a kid lookup gives without failing on a stale cache.
+    """
+    from uma4a_http_sig import VerifyError
+    from uma4a_http_sig import verify as verify_sig
+
+    sig_input = request.headers.get("signature-input")
+    sig = request.headers.get("signature")
+    if not sig_input or not sig:
+        return False
+    path = request.url.path
+    if request.url.query:
+        path = f"{path}?{request.url.query}"
+    for jwk in resource_server_keys(resource_uri):
+        try:
+            key = OKPAlgorithm.from_jwk(json.dumps(jwk))
+        except Exception:                                          # noqa: BLE001
+            continue                       # a JWKS may hold types we do not
+        try:                               # profile; those are simply not it
+            verify_sig(
+                method=request.method,
+                authority=AS_AUTHORITY,
+                path=path,
+                authorization=request.headers.get("authorization", ""),
+                signature_input=sig_input,
+                signature=sig,
+                public_key=key,
+                body=body if body else None,
+                require_digest=bool(body),
+                digest_header=request.headers.get("content-digest"),
+            )
+            return True
+        except VerifyError:
+            continue
+    return False
+
+
 _CIMD_CACHE: dict[str, dict] = {}
 
 
@@ -1639,17 +1786,23 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
 
 
 @app.post("/token")
-async def token(
-    grant_type: str = Form(...),
-    ticket: str = Form(None),
-    claim_token: str = Form(None),
-    claim_token_format: str = Form(None),
-    decline: str = Form(None),
-    client_id: str = Form(None),
-    client_secret: str = Form(None),
-    scope: str = Form(None),
-    owner: str = Form(None),
-) -> JSONResponse:
+async def token(request: Request) -> JSONResponse:
+    # Read before parsing. A resource server with no shared secret
+    # authenticates by signing this request, and the signature covers a
+    # digest of the body — so the exact bytes have to be kept. Declaring the
+    # fields as FastAPI form parameters would drain the stream before the
+    # handler ran, which is why they are pulled out by hand here.
+    body = await request.body()
+    form = await request.form()
+    grant_type = form.get("grant_type") or ""
+    ticket = form.get("ticket")
+    claim_token = form.get("claim_token")
+    claim_token_format = form.get("claim_token_format")
+    decline = form.get("decline")
+    client_id = form.get("client_id")
+    client_secret = form.get("client_secret")
+    scope = form.get("scope")
+    owner = form.get("owner")
     # PAT issuance: a resource server the owner has authorized exchanges its
     # client credentials for a uma_protection-scoped token (FedAuthz's PAT).
     if grant_type == "client_credentials":
@@ -1661,8 +1814,29 @@ async def token(
             return JSONResponse({"error": "invalid_client"}, status_code=401)
         await st(pat_owner).seed()
         rs = await st(pat_owner).resource_server(client_id or "")
-        if rs is None or not secrets.compare_digest(client_secret or "", rs["secret"]):
+        if rs is None:
             return JSONResponse({"error": "invalid_client"}, status_code=401)
+        # Two ways to be this resource server, and which one applies is a
+        # property of the record rather than of the request — so a client
+        # that registered by signature cannot fall back to guessing a secret,
+        # and one holding a secret cannot be impersonated by anyone who can
+        # publish a key. The empty-secret case is branched on explicitly:
+        # compare_digest("", "") is true, and a record with no secret must
+        # never be openable by sending none.
+        if rs.get("secret"):
+            if not secrets.compare_digest(client_secret or "", rs["secret"]):
+                return JSONResponse({"error": "invalid_client"}, status_code=401)
+        elif not verify_resource_server_signature(
+                request, body, rs.get("resource_uri") or ""):
+            return JSONResponse({"error": "invalid_client"}, status_code=401)
+        if rs["status"] == "pending":
+            # Registered, not yet hers. The distinct code is what tells the
+            # resource server to wait rather than to register again.
+            return JSONResponse(
+                {"error": "authorization_pending",
+                 "error_description": "the owner has not yet authorized this "
+                                      "resource server"},
+                status_code=403)
         if rs["status"] != "active":
             return JSONResponse(
                 {"error": "access_denied",
@@ -2036,6 +2210,126 @@ async def owner_resource_servers(request: Request) -> list:
         {"client_id": cid, **{k: v for k, v in rs.items() if k != "secret"}}
         for cid, rs in (await st(owner).resource_servers()).items()
     ]
+
+
+@app.post("/rs/register")
+async def rs_register(request: Request) -> JSONResponse:
+    """A resource server introduces itself to an owner's authority.
+
+    It arrives holding nothing this server issued. What it presents is a
+    signature over the request, made with a key published at the origin of
+    the resource it claims to serve — so the credential is the origin, and
+    verifying it is a fetch this server performs rather than a claim it is
+    handed.
+
+    Success is 202, not 200. A verified signature establishes *who is asking*
+    and nothing else; the answer is hers, and until she gives it the record
+    sits in her resource-server registry marked pending and opens no door. A
+    resource server she has revoked may ask again — and lands in the same
+    pending state, because a second request is not a reversal of her first
+    decision.
+    """
+    body = await request.body()
+    try:
+        req = json.loads(body or b"{}")
+    except ValueError:
+        return JSONResponse({"error": "invalid_request"}, status_code=400)
+
+    owner = (req.get("owner") or DEFAULT_OWNER).strip()
+    if not serves(owner):
+        return JSONResponse(
+            {"error": "invalid_request",
+             "error_description": "this authorization server serves a different owner"},
+            status_code=403)
+    resource_uri = (req.get("resource_uri") or "").strip()
+    if not verify_resource_server_signature(request, body, resource_uri):
+        event("resource_server.registration_refused", owner=owner,
+              resource_uri=resource_uri,
+              reason="no signature from a key published at that origin")
+        return JSONResponse(
+            {"error": "invalid_client",
+             "error_description":
+                 "register by signing with a key published at the origin of "
+                 "the resource you claim to serve"},
+            status_code=401)
+
+    client_id = _origin_of(resource_uri)
+    await ensure_owner(owner)
+    existing = await st(owner).resource_server(client_id)
+    if existing and existing.get("status") == "active":
+        # Already hers. Saying so beats re-pending a working relationship
+        # every time the resource server restarts.
+        return JSONResponse({"client_id": client_id, "status": "active"})
+
+    await st(owner).put_resource_server(client_id, {
+        "secret": "",
+        "name": html.escape(str(req.get("name") or client_id))[:120],
+        "status": "pending",
+        "consented": None,
+        "last_pat_issued": (existing or {}).get("last_pat_issued"),
+        "resource_uri": resource_uri,
+        "registered": utcstamp(),
+        # How it will authenticate from here on. Recorded because the two are
+        # not interchangeable: a seeded relationship holds a shared secret,
+        # and this one holds nothing at all.
+        "auth": "origin_signature",
+    })
+    event("resource_server.registered", owner=owner, client_id=client_id,
+          resource_uri=resource_uri, status="pending",
+          previously=(existing or {}).get("status"))
+    # Only on a change of state. A resource server she has withdrawn will keep
+    # asking for as long as traffic keeps arriving for her, and each of those
+    # is the same question she has already been asked.
+    if (existing or {}).get("status") != "pending":
+        await owner_notify(owner, {"type": "resource_server_pending",
+                                   "client_id": client_id,
+                                   "resource_uri": resource_uri})
+    return JSONResponse(
+        {"client_id": client_id, "status": "pending",
+         "error": "authorization_pending",
+         "error_description": "the owner has been asked"},
+        status_code=202)
+
+
+def _origin_of(url: str) -> str:
+    from urllib.parse import urlparse
+
+    p = urlparse(url)
+    return f"{p.scheme}://{p.netloc}"
+
+
+@app.post("/owner/resource-servers/decision")
+async def owner_resource_server_decision(request: Request) -> dict:
+    """Her answer about a resource server, in the same shape as her answer
+    about an agent's first contact — because it is the same kind of question.
+
+    The client_id is in the body rather than the path. It is an https URL for
+    anything that registered itself, and a URL inside a path survives neither
+    percent-decoding nor a proxy that normalises `//`.
+    """
+    owner = await require_owner(request)
+    body = await request.json()
+    client_id = (body.get("client_id") or "").strip()
+    decision = body.get("decision")
+    if decision == "approved":
+        if not await st(owner).approve_resource_server(client_id, utcstamp()):
+            raise HTTPException(
+                status_code=404,
+                detail="no pending registration for that resource server")
+        status = "active"
+    elif decision == "revoked":
+        if not await st(owner).revoke_resource_server(client_id):
+            raise HTTPException(status_code=404, detail="unknown resource server")
+        status = "revoked"
+    else:
+        raise HTTPException(status_code=400,
+                            detail="decision must be approved or revoked")
+    event(f"resource_server.{decision}", client_id=client_id)
+    await ledger_add(owner, "approved" if status == "active" else "revoked",
+                     "-", {"resource_server": client_id})
+    await owner_notify(owner, {"type": "resource_server_decided",
+                               "client_id": client_id, "status": status})
+    return {"client_id": client_id, "status": status}
 
 
 @app.post("/owner/resource-servers/{client_id}/revoke")

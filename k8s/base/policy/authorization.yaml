@@ -113,6 +113,12 @@ spec:
         - operation:
             paths:
               - /token
+              # How a resource server nobody provisioned this authority
+              # against introduces itself. Public in the same sense /token
+              # is: reaching it proves nothing and grants nothing — the
+              # signature is checked against the origin's own published key,
+              # and what it earns is a place in her registry marked pending.
+              - /rs/register
               - /perm
               - /introspect
               - /consume
@@ -124,8 +130,22 @@ spec:
               - /health
               - /health/*
 ---
-# Alice's own surface. Only her portal may ask her authorization server what
-# is pending, change her tiers, or read her ledger.
+# Her own surface: what is pending, her tiers, her ledger, her registries.
+#
+# Two callers, and the second is not a relaxation of the first. Her portal
+# runs in her namespace and reaches the Service directly. She also reaches it
+# from outside the cluster — a browser, a phone, whatever she runs as her own
+# AI — and all of that arrives at the edge, because that is where anything
+# not already inside arrives from. Naming only the portal here would not have
+# made the owner API portal-only; it would have made an authority unusable by
+# the person it belongs to unless someone deploys a portal in front of it,
+# which is precisely the assumption a personal authorization server breaks.
+#
+# What actually authenticates her is not the hop. `require_owner` takes an
+# OIDC token from her realm or an RFC 9421 signature from her device key, and
+# returns the owner that credential proved — never one the request named. An
+# attacker at the edge with no credential of hers reaches a 401, and one
+# holding Carol's reaches Carol's data on Carol's server and nothing here.
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -142,26 +162,10 @@ spec:
         - source:
             principals:
               - cluster.local/ns/alice/sa/alice-portal
+              - cluster.local/ns/uma-edge/sa/edge
       to:
         - operation:
             paths: ["/owner", "/owner/*"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: keycloak-callers
-  namespace: alice
-spec:
-  selector:
-    matchLabels: { app: keycloak }
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals:
-              - cluster.local/ns/uma-edge/sa/edge          # Alice's browser
-              - cluster.local/ns/alice/sa/alice-portal     # the OIDC exchange
-              - cluster.local/ns/alice/sa/uma-as           # her realm's JWKS
 ---
 # Alice's own operator directory. Public by design — a key directory exists to
 # be fetched by parties who have never met the agent, which is the RqP != RO
@@ -225,6 +229,124 @@ spec:
     - from:
         - source:
             principals: ["cluster.local/ns/alice/sa/uma-as-db"]
+---
+# ═══ carol ═══════════════════════════════════════════════════════════════
+#
+# The same four rules as alice, over a different authority. They are written
+# out rather than templated because that is what the manifests are for: an
+# owner is a namespace with an authorization server in it, and adding one is
+# copying this block and changing a word. Nothing here refers to alice and
+# nothing in alice refers to here.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny
+  namespace: carol
+spec:
+  {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: uma-as-grant-surface
+  namespace: carol
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: uma-as
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+              - cluster.local/ns/meridian/sa/uma-pep
+      to:
+        - operation:
+            paths:
+              - /token
+              - /rs/register
+              - /perm
+              - /introspect
+              - /consume
+              - /jwks
+              - /audit/access
+              - /terms
+              - /terms/*
+              - /.well-known/*
+              - /health
+              - /health/*
+---
+# Carol's own surface. No portal is deployed in front of it, so the edge is
+# the only way she arrives — see the note on Alice's rule for why that is the
+# credential's job rather than the network's.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: uma-as-owner-api
+  namespace: carol
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: uma-as
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+      to:
+        - operation:
+            paths: ["/owner", "/owner/*"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-waypoint
+  namespace: carol
+spec:
+  selector:
+    matchLabels: { istio.io/use-waypoint: waypoint }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/carol/sa/waypoint"]
+---
+# ═══ idp ═════════════════════════════════════════════════════════════════
+#
+# The identity provider answers both owners and neither runs it. The rule
+# names who may reach it rather than who may be minted by it: that boundary
+# is the realm, and it is enforced inside Keycloak — a token from `alice` does
+# not authenticate Carol, and each authority checks the issuer of what it is
+# handed against its own realm.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny
+  namespace: idp
+spec:
+  {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: keycloak-callers
+  namespace: idp
+spec:
+  selector:
+    matchLabels: { app: keycloak }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge          # an owner's browser
+              - cluster.local/ns/alice/sa/alice-portal     # the OIDC exchange
+              - cluster.local/ns/alice/sa/uma-as           # her realm's JWKS
+              - cluster.local/ns/carol/sa/uma-as           # and hers
 ---
 # ═══ meridian ════════════════════════════════════════════════════════════
 apiVersion: security.istio.io/v1
@@ -296,6 +418,25 @@ spec:
             principals:
               - cluster.local/ns/meridian/sa/meridian
               - cluster.local/ns/alice/sa/alice-portal
+---
+# The same, for Carol's instance. Written out rather than widened to select
+# both, because a selector matching every vault in the namespace would let
+# whoever may reach one reach all of them — and the reason there are two
+# instances instead of one multi-tenant process is precisely that.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: carol-vault-callers
+  namespace: meridian
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: carol-vault }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/meridian
 ---
 # The agent-facing gateway. Reachable from the edge — which is how Bob's
 # agent arrives, and the only way it can.

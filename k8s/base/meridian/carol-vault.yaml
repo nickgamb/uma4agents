@@ -1,0 +1,38 @@
+# Carol's vault. Another customer's account at the same firm.
+#
+# A separate instance holding her positions, not a row in Alice's — the same
+# image and the same stock MCP server with no authorization code in it, told
+# which fixtures are hers and nothing else. Two owners of one resource server
+# means two protected resources behind one enforcement point, not one process
+# that has learned to tell people apart.
+#
+# What is different from Alice's is invisible here and lives one namespace
+# over: Carol's authority never heard of this firm, so the enforcement point
+# in front of this instance holds no secret for it and had to introduce
+# itself. See docs/MULTI-OWNER.md.
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: carol-vault
+  namespace: meridian
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 9020
+    path: /mcp
+  deployment:
+    image: localhost:5001/u4a/alice-vault-mcp:dev
+    imagePullPolicy: Always
+    port: 9020
+    replicas: 1
+    env:
+      ENFORCEMENT_MODE: gateway
+      # Whose account this instance holds. The tool ids it publishes are
+      # namespaced by it, which is what keeps `carol-vault/get_positions`
+      # from ever resolving against Alice's policy.
+      UMA_VAULT_OWNER: carol
+      UMA_VAULT_FIXTURES: /app/fixtures-carol.json
+    resources:
+      requests: { cpu: 50m, memory: 96Mi }
+      limits: { memory: 256Mi }

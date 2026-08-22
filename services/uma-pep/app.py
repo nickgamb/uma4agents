@@ -41,6 +41,8 @@ AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
 # obligation, done as OAuth rather than a shared string.
 RS_CLIENT_ID = os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
 RS_CLIENT_SECRET = os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret")
+# What an owner sees in her registry when this gateway introduces itself.
+RS_DISPLAY_NAME = os.environ.get("UMA_PEP_RS_NAME", "Meridian Wealth API gateway")
 REALM = os.environ.get("UMA_REALM", "alice-vault")
 # Registration is declarative: this RS only *publishes* — public structure in
 # the RFC 9728 document, owner-bound instances behind the protected
@@ -93,11 +95,15 @@ EXTRA_OWNERS = [o for o in os.environ.get("UMA_EXTRA_OWNERS", "").split(",") if 
 # no such thing, because the choice of authority is the owner's and she may
 # not have chosen the operator's. So it is a map, defaulting to the operator's
 # AS for anyone who has not named one.
-#
-# The entries here are still provisioned out of band, which is the honest
-# limit of this step: it demonstrates one resource server serving two
-# authorities, not a resource server meeting an authority it has never seen.
 OWNER_AUTHORITIES = json.loads(os.environ.get("UMA_OWNER_AUTHORITIES", "{}"))
+
+# The shared secrets this resource server was provisioned with, per owner.
+# An authority stood up alongside this gateway is in here; an authority that
+# is the owner's own is not, and cannot be — nobody was there to configure
+# both ends. Those are introduced at runtime instead: see Enforcer.establish.
+RS_SECRETS = json.loads(os.environ.get("UMA_PEP_RS_SECRETS", "null") or "null")
+if RS_SECRETS is None:
+    RS_SECRETS = {OWNER: RS_CLIENT_SECRET}
 
 
 def authority_for(owner: str) -> tuple[str, str]:
@@ -188,12 +194,22 @@ def _enforcer_for(owner: str) -> Enforcer:
     server either."""
     leaf = f"mcp/{owner}"
     as_public, as_internal = authority_for(owner)
+    secret = RS_SECRETS.get(owner, "")
     return Enforcer(
         owner=owner,
         as_internal=as_internal,
         as_public=as_public,
-        client_id=RS_CLIENT_ID,
-        client_secret=RS_CLIENT_SECRET,
+        # Which identity this resource server has here follows from whether
+        # anyone provisioned the pair. With a secret it is the name it was
+        # given; without one it is its own origin, which is the only thing
+        # about itself an authority can check without being told anything
+        # first.
+        client_id=RS_CLIENT_ID if secret else PUBLIC_BASE,
+        client_secret=secret,
+        signing_key=None if secret else PEP_KEY,
+        key_id=PEP_KID,
+        resource_uri=f"{PUBLIC_BASE}/{leaf}",
+        rs_name=RS_DISPLAY_NAME,
         realm=REALM,
         tools=tools_for(owner),
         single_use_tools=SINGLE_USE_TOOLS,

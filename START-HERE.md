@@ -270,6 +270,39 @@ Then a rule she writes, naming no agent:
 The trade tier stops asking her about her own agent, and goes on asking about
 Bob's. Being hers buys less friction, never more access.
 
+## 9b. Someone else's account, on an authority you never configured
+
+Everything so far has been Alice. Meridian holds Carol's account too, and
+Carol's authorization server is not one anybody at Meridian was ever
+configured against — it is hers, one small process in her own namespace.
+
+```bash
+make k8s-multi-owner-check
+make k8s-establishment-check
+```
+
+The first runs the same four beats against both owners and asserts that
+neither authority learns anything about the other's decision: different
+authority, different signing key, different realm, different holdings,
+different record. The same agent with the same key does both, and the only
+thing that told it where to go was each owner's challenge.
+
+The second is the part with nothing behind it. There is no secret in Carol's
+namespace for the firm and no secret in the firm's for her, because there was
+no moment at which anyone could have put one in either. So the gateway
+introduces itself: it signs a registration with the key it publishes at
+`gateway.uma.lab`, her authority fetches that key from the origin it is being
+asked to trust, and the registration sits in her registry as **pending** until
+she answers. Watch the four refusals — an origin that does not publish the key
+that signed, a claim to a resource whose metadata names another, a signature
+old enough to have been captured, and a verified registration before she has
+said yes. Then watch her withdraw it and see that asking again only puts the
+question back in front of her.
+
+Why it matters: this is the difference between a firm running one
+authorization server over all its customers and each customer having one.
+[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md).
+
 ## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other
@@ -341,6 +374,8 @@ answer *that same request*. Not a fresh one.
   and the adapter that makes that possible
 - **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her authority can verify
   about an agent, and why none of it can ever buy access
+- **[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** — many owners of one resource
+  server, and how one of them brings an authority nobody provisioned
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where

@@ -46,6 +46,22 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: waypoint
+  namespace: carol
+  # Carol's authority is protected by the same path-scoped rules as Alice's,
+  # so it needs the same L7 hop to evaluate them at.
+  labels:
+    istio.io/waypoint-for: all
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
   namespace: meridian
   labels:
     istio.io/waypoint-for: all

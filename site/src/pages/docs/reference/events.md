@@ -88,6 +88,17 @@ shows a fragment. Correlate by family, not by process.
 | `access.allowed` | A call reaches the resource |
 | `access.denied` | A call is refused |
 
+### A resource server meeting an authority
+
+| Event | Emitted when |
+|---|---|
+| `resource_server.registered` | One introduces itself. Carries the status it landed in, and the one it was in before |
+| `resource_server.approved` | The owner lets it use her Protection API |
+| `resource_server.revoked` | She withdraws it |
+| `resource_server.registration_refused` | The signature was not from a key that origin publishes |
+| `resource_server.metadata_rejected` | The document resolved and did not check out — it claimed another resource, named another authority, or pointed its keys elsewhere. The reasons are in the event |
+| `resource_server.metadata_unreachable` | It could not be fetched, which here is a refusal rather than a shrug: the document *is* the credential |
+
 ## The ledger, as a projection
 
 The owner's ledger is not a separate record. It is this stream, grouped by

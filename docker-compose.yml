@@ -124,9 +124,13 @@ services:
     environment:
       UMA_AS_OWNER: carol
       UMA_AS_ISSUER: https://carol-as.uma.lab
-      UMA_AS_RS_RESOURCE_URI: https://gateway.uma.lab/mcp
-      UMA_AS_RS_CLIENT_ID: meridian-gateway
-      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      # No resource server is seeded here, and there is nothing to seed one
+      # from: this authority is Carol's, and whoever stood it up was never
+      # in a position to configure her brokerage's gateway to match. So the
+      # gateway introduces itself instead, and she decides. Alice's server
+      # keeps the seeded pair, which is the other true case — an authority
+      # provisioned alongside the resource server it protects.
+      UMA_AS_SEED_RS: "0"
       UMA_AS_OWNER_AUTH: oidc
       # Hers, not the operator's. An authorization server that accepts the
       # operator's tokens for its owner is only partly the owner's: whoever
@@ -155,6 +159,13 @@ services:
       UMA_AS_INTERNAL: http://uma-as:9000
       UMA_AS_RS_CLIENT_ID: meridian-gateway
       UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      # Only Alice's authority was provisioned with this gateway. For every
+      # other owner there is no secret to hold, so the gateway registers by
+      # signing with the key it publishes at its own origin, and waits for
+      # her. Adding an owner here means adding a secret to somebody's server;
+      # leaving her out of it means she decides for herself.
+      UMA_PEP_RS_SECRETS: >-
+        {"alice": "${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}"}
       UMA_REALM: alice-vault
       # Meridian holds more than one person's account. Alice is served at
       # /mcp; every owner named here gets /mcp/<owner>, with its own tool
@@ -204,6 +215,13 @@ services:
       UMA_AS_INTERNAL: http://uma-as:9000
       UMA_AS_RS_CLIENT_ID: meridian-gateway
       UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      # Only Alice's authority was provisioned with this gateway. For every
+      # other owner there is no secret to hold, so the gateway registers by
+      # signing with the key it publishes at its own origin, and waits for
+      # her. Adding an owner here means adding a secret to somebody's server;
+      # leaving her out of it means she decides for herself.
+      UMA_PEP_RS_SECRETS: >-
+        {"alice": "${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}"}
       UMA_REALM: alice-vault
       # Meridian holds more than one person's account. Alice is served at
       # /mcp; every owner named here gets /mcp/<owner>, with its own tool
@@ -219,6 +237,15 @@ services:
          "carol": {"public": "https://carol-as.uma.lab",
                    "internal": "http://carol-as:9000"}}
       UMA_EXPECTED_AUTHORITY: gateway.uma.lab
+    volumes:
+      # The origin's signing key, shared with the gateway process. It
+      # identifies gateway.uma.lab, not a container: both enforcement modes
+      # publish it at the same /jwks, and it is what an authority fetches to
+      # decide whether this resource server is who it says it is.
+      - uma-pep-keys:/keys
+    depends_on:
+      uma-pep:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
       interval: 3s
@@ -244,6 +271,13 @@ services:
       UMA_AS_INTERNAL: http://uma-as:9000
       UMA_AS_RS_CLIENT_ID: meridian-gateway
       UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}
+      # Only Alice's authority was provisioned with this gateway. For every
+      # other owner there is no secret to hold, so the gateway registers by
+      # signing with the key it publishes at its own origin, and waits for
+      # her. Adding an owner here means adding a secret to somebody's server;
+      # leaving her out of it means she decides for herself.
+      UMA_PEP_RS_SECRETS: >-
+        {"alice": "${UMA_AS_RS_CLIENT_SECRET:-gateway-dev-secret}"}
       UMA_REALM: alice-vault
       # Meridian holds more than one person's account. Alice is served at
       # /mcp; every owner named here gets /mcp/<owner>, with its own tool
@@ -259,6 +293,15 @@ services:
          "carol": {"public": "https://carol-as.uma.lab",
                    "internal": "http://carol-as:9000"}}
       UMA_EXPECTED_AUTHORITY: gateway.uma.lab
+    volumes:
+      # The origin's signing key, shared with the gateway process. It
+      # identifies gateway.uma.lab, not a container: both enforcement modes
+      # publish it at the same /jwks, and it is what an authority fetches to
+      # decide whether this resource server is who it says it is.
+      - uma-pep-keys:/keys
+    depends_on:
+      uma-pep:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
       interval: 3s
@@ -428,6 +471,22 @@ services:
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
     volumes:
       - ./clients/demo-driver/first_party_check.py:/driver/first_party_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  establishment-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /driver/establishment_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./clients/demo-driver/establishment_check.py:/driver/establishment_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys

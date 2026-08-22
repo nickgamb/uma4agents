@@ -16,6 +16,8 @@ kubectl -n "$NS" create configmap demo-driver \
   --from-file=intent_check.py="$ROOT/clients/demo-driver/intent_check.py" \
   --from-file=adapter_check.py="$ROOT/clients/demo-driver/adapter_check.py" \
   --from-file=kagent_ask.py="$ROOT/clients/demo-driver/kagent_ask.py" \
+  --from-file=multi_owner_check.py="$ROOT/clients/demo-driver/multi_owner_check.py" \
+  --from-file=establishment_check.py="$ROOT/clients/demo-driver/establishment_check.py" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
 kubectl -n "$NS" create configmap agent-shim \

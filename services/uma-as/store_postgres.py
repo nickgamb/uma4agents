@@ -423,6 +423,25 @@ class PostgresOwnerStore:
             client_id, self._o)
         return json.loads(row["rs"]) if row else None
 
+    async def put_resource_server(self, client_id: str, rs: dict) -> None:
+        await self._pool.execute(
+            "INSERT INTO resource_servers (owner, client_id, rs) "
+            "VALUES ($3, $1, $2) "
+            "ON CONFLICT (owner, client_id) DO UPDATE SET rs = EXCLUDED.rs",
+            client_id, json.dumps(rs), self._o)
+
+    async def approve_resource_server(self, client_id: str, when: str) -> bool:
+        # The status test is inside the statement, so two portals approving at
+        # once produce one approval and one honest "nothing to do".
+        row = await self._pool.fetchrow(
+            "UPDATE resource_servers SET rs = jsonb_set("
+            "  jsonb_set(rs, '{status}', '\"active\"'),"
+            "  '{consented}', to_jsonb($3::text)) "
+            "WHERE client_id = $1 AND owner = $2 "
+            "  AND rs->>'status' = 'pending' RETURNING client_id",
+            client_id, self._o, when)
+        return row is not None
+
     async def touch_pat(self, client_id: str, when: str) -> None:
         await self._pool.execute(
             "UPDATE resource_servers "

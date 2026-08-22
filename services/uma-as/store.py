@@ -235,6 +235,15 @@ class OwnerStore(Protocol):
 
     async def resource_server(self, client_id: str) -> dict | None: ...
 
+    async def put_resource_server(self, client_id: str, rs: dict) -> None:
+        """Record a resource server. Used by registration, which arrives
+        before the owner has said yes — so the record exists with
+        ``status: "pending"`` and grants nothing until she changes it."""
+
+    async def approve_resource_server(self, client_id: str, when: str) -> bool:
+        """Her yes. Returns False if there was nothing pending to approve, so
+        a second tap is told so rather than silently re-approving."""
+
     async def touch_pat(self, client_id: str, when: str) -> None: ...
 
     async def revoke_resource_server(self, client_id: str) -> bool: ...
@@ -326,9 +335,14 @@ def default_resource_servers(owner: str = "alice") -> dict[str, dict]:
     """Resource servers this owner has authorized to use her Protection API.
 
     The PAT is an OAuth token this AS issues to these clients
-    (client_credentials, scope uma_protection); the day-0 consent for her
-    brokerage's gateway is seeded — the RS-side onboarding handshake is a
-    finding, not a feature here.
+    (client_credentials, scope uma_protection). One relationship is seeded
+    here with a shared secret, which models the day-0 case: an authority the
+    brokerage stood up alongside its own gateway, provisioned together.
+
+    ``UMA_AS_SEED_RS=0`` seeds none, which is the other case — an authority
+    that is the owner's, standing somewhere the brokerage has never been
+    configured with. Nothing there can be provisioned in advance, so the
+    resource server has to introduce itself; see ``/rs/register``.
 
     Seeded into the store rather than held in a module dict because
     ``status`` is a live security control: ``require_pat`` reads it on every
@@ -336,6 +350,8 @@ def default_resource_servers(owner: str = "alice") -> dict[str, dict]:
     that only reached the replica that served the request would leave the
     others honouring a PAT Alice had just withdrawn.
     """
+    if os.environ.get("UMA_AS_SEED_RS", "1") in ("0", "false", "no"):
+        return {}
     return {
         os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway"): {
             "secret": os.environ.get("UMA_AS_RS_CLIENT_SECRET",
