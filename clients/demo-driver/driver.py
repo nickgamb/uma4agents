@@ -291,7 +291,7 @@ def main() -> int:
         if not _alice or _alice["expires"] < __import__("time").time() + 15:
             r = client.post(
                 f"{args.oidc_issuer}/protocol/openid-connect/token",
-                data={"grant_type": "password", "client_id": "alice-portal",
+                data={"grant_type": "password", "client_id": "meridian-portal",
                       "username": args.alice_username,
                       "password": args.alice_password},
             )

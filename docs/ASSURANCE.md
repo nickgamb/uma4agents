@@ -45,6 +45,15 @@ server fetches it and looks for the RFC 7638 thumbprint of the key that signed
 the contract. The operator published this agent's key — a claim by the operator,
 about a key the agent cannot add itself, checked by the party relying on it.
 
+Which means the directory has to be a document the operator actually
+publishes. In the replicated deployment it is provisioned — the operator is
+handed a JWKS to serve and refuses to accept keys from callers — because a
+directory filled in at runtime lives in one process's memory, and the moment
+there are two of them an agent registers with one and the authority asks the
+other. The symptom is this level silently dropping to 1 for an agent that did
+everything right. See the note at the top of
+`k8s/base/sterling-vance/agent-operator.yaml`.
+
 Two constraints keep it honest, both in `operator_published_key`:
 
 - the directory must be **same-origin with the `client_id`**, or an agent points

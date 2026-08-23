@@ -292,6 +292,7 @@ CURL = curl -sk --cacert ./certs/rootCA.pem \
 	--resolve keycloak.uma.lab:443:127.0.0.1 \
 	--resolve gateway.uma.lab:443:127.0.0.1 \
 	--resolve portal.uma.lab:443:127.0.0.1 \
+	--resolve carol-portal.uma.lab:443:127.0.0.1 \
 	--resolve grafana.uma.lab:443:127.0.0.1 \
 	--resolve ps.uma.lab:443:127.0.0.1 \
 	--resolve agent.uma.lab:443:127.0.0.1
@@ -330,6 +331,9 @@ smoke-test:
 		&& echo "  ext_authz body passthrough: OK" || echo "  ext_authz body passthrough: FAIL"
 	@echo "==> Alice's portal..."
 	@$(CURL) https://portal.uma.lab/health | grep -q ok && echo "  portal: OK" || echo "  portal: FAIL"
+	@echo "==> and the other owner's, which is the same image..."
+	@$(CURL) https://carol-portal.uma.lab/health | grep -q ok \
+		&& echo "  carol portal: OK" || echo "  carol portal: FAIL"
 	@echo "==> Agent operator: CIMD document (self-referential client_id)..."
 	@$(CURL) https://agent.uma.lab/agent.json | grep -q '"client_id": *"https://agent.uma.lab/agent.json"' \
 		&& echo "  agent CIMD: OK" || echo "  agent CIMD: FAIL"

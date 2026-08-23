@@ -75,7 +75,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def hdrs(c: httpx.Client) -> dict:
     r = c.post(f"{KEYCLOAK}/realms/{OWNER}/protocol/openid-connect/token",
-               data={"grant_type": "password", "client_id": "alice-portal",
+               data={"grant_type": "password", "client_id": "meridian-portal",
                      "username": OWNER, "password": PASSWORD}, timeout=15.0)
     r.raise_for_status()
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
@@ -157,27 +157,39 @@ def main() -> int:
               f"authority ==", flush=True)
 
         # --- who may even ask -------------------------------------------
+        # Four registrations that must not work, described by what is wrong
+        # with each rather than by which check caught it. From out here they
+        # are one status code: this side holds no key any origin publishes, so
+        # every one of these fails on the signature as well as on the thing it
+        # is named for, and only the authorization server's own event log
+        # separates the reasons. Each cause is isolated where it can be —
+        # the freshness window in `make sig-test`, the metadata rules in the
+        # AS's `resource_server.metadata_rejected` events.
         r = register(c, key=stranger, resource_uri=RESOURCE)
-        check("a key that origin does not publish is not that origin",
+        check("signed by a key that origin does not publish: refused",
               r.status_code == 401 and error_of(r) == "invalid_client",
               f"{r.status_code} {r.text[:120]}")
 
         r = register(c, key=stranger, resource_uri=f"{AS}/mcp/{OWNER}")
-        check("nor is an origin that publishes no metadata at all",
+        check("claiming a resource at an origin that publishes none: refused",
               r.status_code == 401, f"{r.status_code} {r.text[:120]}")
 
         r = register(c, key=stranger, resource_uri=f"{RS}/mcp/nobody")
-        check("nor is a resource whose own metadata names another",
+        check("claiming a resource whose metadata names another: refused",
               r.status_code == 401, f"{r.status_code} {r.text[:120]}")
 
         r = register(c, key=stranger, resource_uri=RESOURCE, age_s=600)
-        check("and a signature old enough to have been captured is refused",
+        check("signed long enough ago to have been captured: refused",
               r.status_code == 401, f"{r.status_code} {r.text[:120]}")
 
         before = registry(c)
+        # Named, not counted. Two of the attempts above claim a resource at
+        # the gateway's own origin, so they share a client_id with the real
+        # relationship and "nothing new is pending" cannot tell them apart
+        # from a run that left it pending. The third names an origin nothing
+        # legitimate registers under, and its absence is unambiguous.
         check("none of that put anything in her registry",
-              all(v.get("status") != "pending" for v in before.values()),
-              f"{ {k: v['status'] for k, v in before.items()} }")
+              AS not in before, f"{sorted(before)}")
 
         # --- the gateway's own registration, which she has already seen ---
         # It registered itself the first time anything asked for Carol's
@@ -258,7 +270,8 @@ def main() -> int:
     print("\nPASS: a resource server and an authority that were never")
     print("      configured against each other established a relationship,")
     print("      on nothing but a key published at an origin and Carol's")
-    print("      answer — and she ended it and restored it from her portal.")
+    print("      answer — and she ended it and let it back in, over the same")
+    print("      owner API her portal calls.")
     return 0
 
 

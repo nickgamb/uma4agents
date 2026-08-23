@@ -17,6 +17,39 @@
 -- each expressed as a single statement rather than a read followed by a
 -- write. Those two statements are the reason this file exists.
 
+-- Upgrading a database that predates multi-owner. This runs first, and has to.
+--
+-- The owner column is additive and backfills to the owner a single-owner
+-- deployment served. It is at the top of the file because everything below
+-- names the column: an index over `(owner, ...)`, and a foreign key from
+-- tickets into `negotiations(owner, family)`. Any of those reached before the
+-- column exists fails on that statement, and the connect-retry loop in
+-- store_postgres.py then reports a perfectly reachable database as
+-- unreachable, thirty times, naming the wrong cause.
+--
+-- `IF EXISTS` is what lets it run first: on a fresh database none of these
+-- tables exist yet and every statement is a no-op, and the CREATE TABLEs
+-- below then build the current shape directly.
+--
+-- What this does *not* do is rebuild the composite primary keys. Rebuilding a
+-- primary key is not something to do from a file every replica executes at
+-- startup, so a database that needs the new keys is recreated instead. That
+-- is a real limitation rather than a hidden one:
+-- PostgresStore._assert_owner_keys checks for it at startup and refuses with
+-- an error that says so, because the alternative is an upsert failing later
+-- with a 42P10 that names an ON CONFLICT clause and no cause.
+ALTER TABLE IF EXISTS negotiations     ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS tickets          ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS rpts             ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS connections      ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS resource_servers ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS blocked_operators ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS owned_operators  ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS ledger           ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS terms_docs       ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS tiers            ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+ALTER TABLE IF EXISTS owner_events     ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
+
 CREATE TABLE IF NOT EXISTS negotiations (
     owner    text NOT NULL,
     family   text NOT NULL,
@@ -156,21 +189,3 @@ CREATE TABLE IF NOT EXISTS owner_events (
     payload jsonb NOT NULL
 );
 CREATE INDEX IF NOT EXISTS owner_events_ts ON owner_events (owner, ts);
-
--- Upgrading a database that predates multi-owner: the column is additive and
--- backfills to the owner the single-owner deployment served. The composite
--- primary keys above are not retrofitted, because changing a primary key is
--- not an idempotent statement and every replica applies this file at startup.
--- A database that needs the new keys is recreated, which is what `make
--- k8s-down && make k8s-up` does and what the lab assumes.
-ALTER TABLE negotiations     ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE tickets          ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE rpts             ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE connections      ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE resource_servers ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE blocked_operators ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE owned_operators  ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE ledger           ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE terms_docs       ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE tiers            ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';
-ALTER TABLE owner_events     ADD COLUMN IF NOT EXISTS owner text NOT NULL DEFAULT 'alice';

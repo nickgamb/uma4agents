@@ -8,8 +8,27 @@
 # access, because the connection is keyed by the agent's key or its verified
 # issuer.
 #
-# Two replicas, which is only correct because the service was changed to stop
-# holding state: it serves keys it was given rather than keys it collected.
+# Two replicas, which is only correct because this deployment provisions the
+# key directory instead of letting agents fill it in at runtime.
+#
+# The distinction is not cosmetic and it was found by a failing check. A
+# directory filled in by POST /register lives in one process's memory: with
+# two replicas the registration lands on one, the authorization server's
+# fetch is load-balanced to the other, the key is missing, and an agent that
+# did everything right scores accountability 1 instead of 2 — about half the
+# time, silently. Both replicas end up publishing the same `kid` with
+# different key material.
+#
+# So the operator is handed a published JWKS (AGENT_OPERATOR_KEYS_FILE) and
+# serves only that: read-only, identical on every replica, and unable to
+# drift. The server refuses POST /register outright once that file is set,
+# which is what makes running several of these correct rather than lucky.
+# The way to make a service horizontally scalable is to stop it holding
+# state, not to replicate the state.
+#
+# The agent holds the private half of the same key, from the same Secret, so
+# what it signs with is genuinely what its operator published — which is the
+# real relationship rather than an agent asserting itself into a directory.
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -50,6 +69,10 @@ spec:
           env:
             - name: AGENT_OPERATOR_ORIGIN
               value: https://agent.uma.lab
+            - name: AGENT_OPERATOR_KEYS_FILE
+              value: /published/agent-jwks.json
+          volumeMounts:
+            - { name: published, mountPath: /published, readOnly: true }
           startupProbe:
             httpGet: { path: /health, port: 9030 }
             periodSeconds: 2
@@ -65,3 +88,11 @@ spec:
             runAsUser: 65532
             allowPrivilegeEscalation: false
             capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: published
+          secret:
+            secretName: agent-published-key
+            # The public document only. The operator serves a directory; it
+            # has no use for the private half and is not given it.
+            items:
+              - { key: agent-jwks.json, path: agent-jwks.json }

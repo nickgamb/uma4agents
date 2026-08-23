@@ -1,0 +1,99 @@
+# Alice's portal: her brokerage UI, and the surface she approves from.
+#
+# One replica, on purpose, and this is the deliberate counter-example to the
+# rest of the stack. The portal holds Alice's live OIDC tokens in a process
+# dict keyed by an opaque session id; at two replicas her session lands on
+# one and her next request on the other, and she is randomly logged out.
+#
+# It could be fixed the same way the authorization server was — move the
+# sessions to Postgres — and it is not, because that would drag a database
+# dependency into a single-user UI whose two-second restart blip is not a
+# service objective. High availability is not free and not always worth
+# buying. Saying which is which is the useful part.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: portal
+  namespace: alice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal
+  namespace: alice
+spec:
+  selector: { app: portal }
+  ports:
+    - { name: http, port: 9010, targetPort: 9010 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal
+  namespace: alice
+spec:
+  replicas: 1
+  # Recreate rather than RollingUpdate: with in-process sessions, two
+  # portals briefly coexisting is the same bug as two permanently.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: portal }
+  template:
+    metadata:
+      labels: { app: portal }
+    spec:
+      serviceAccountName: portal
+      containers:
+        - name: portal
+          image: localhost:5001/u4a/portal:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9010 }
+          env:
+            - name: UMA_PORTAL_OWNER
+              value: alice
+            - name: UMA_AS_INTERNAL
+              value: http://uma-as.alice.svc.cluster.local:9000
+            - name: PORTAL_AUTH
+              value: oidc
+            - name: OIDC_ISSUER
+              value: https://keycloak.uma.lab/realms/alice
+            - name: OIDC_CLIENT_ID
+              value: meridian-portal
+            - name: PORTAL_SESSION_SECRET
+              valueFrom:
+                secretKeyRef: { name: portal-config, key: session-secret }
+            - name: VAULT_MCP_URL
+              # Alice reads and trades her own vault directly — she owns it.
+              # Other people's agents reach the same vault only through the
+              # gateway, after negotiating a grant. That asymmetry is the
+              # whole design, and here it is two different URLs.
+              value: http://alice-vault.meridian.svc.cluster.local:9020/mcp
+            - name: PORTAL_PUBLIC_URL
+              value: https://portal.uma.lab
+            - name: SSL_CERT_FILE
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: ca, mountPath: /certs, readOnly: true }
+          startupProbe:
+            httpGet: { path: /health, port: 9010 }
+            periodSeconds: 2
+            failureThreshold: 45
+          readinessProbe:
+            httpGet: { path: /health, port: 9010 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 9010 }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }

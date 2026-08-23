@@ -37,7 +37,7 @@ def alice_token(client: httpx.Client) -> str:
     """The simulated Alice logs in for real: direct-access grant at her IdP."""
     r = client.post(
         f"{OIDC_ISSUER}/protocol/openid-connect/token",
-        data={"grant_type": "password", "client_id": "alice-portal",
+        data={"grant_type": "password", "client_id": "meridian-portal",
               "username": ALICE_LOGIN[0], "password": ALICE_LOGIN[1]},
     )
     r.raise_for_status()

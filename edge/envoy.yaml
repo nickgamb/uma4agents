@@ -47,6 +47,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: alice_portal }
+                    - name: carol_portal
+                      domains: ["carol-portal.uma.lab", "carol-portal.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: carol_portal }
                     - name: grafana
                       domains: ["grafana.uma.lab", "grafana.uma.lab:*"]
                       routes:
@@ -121,6 +126,14 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: alice-portal, port_value: 9010 } }
+    - name: carol_portal
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: carol_portal
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: carol-portal, port_value: 9010 } }
     - name: grafana
       type: STRICT_DNS
       load_assignment:

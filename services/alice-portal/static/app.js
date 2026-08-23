@@ -5,8 +5,8 @@ const el = (h) => { const t = document.createElement("template"); t.innerHTML = 
    These views are built by concatenation and assigned through innerHTML, and
    most of what they render is authored by the requesting side: the reason an
    agent gives, the operator name in a metadata document it named, the summary
-   the resource returned. Alice's surface is the one place in this system that
-   has to be trustworthy, so nothing reaches it as markup. */
+   the resource returned. The owner's surface is the one place in this system
+   that has to be trustworthy, so nothing reaches it as markup. */
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -215,9 +215,9 @@ route("trade", async (view) => {
         <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border-soft)">
           <h3 style="color:var(--text-dim);font-size:13px;margin:0 0 12px">This is the surface agents negotiate for</h3>
           <p style="color:var(--text-faint);font-size:13px;line-height:1.6;margin:0">
-            When Alice trades here, it's her own account — instant. When
+            When you trade here, it's your own account — instant. When
             <b style="color:var(--text-dim)">an advisor's agent</b> proposes the same
-            order, it must carry Alice's signed terms and — for execution — her
+            order, it must carry your signed terms and — for execution — your
             explicit per-trade approval. Same operation, governed differently by
             <a href="#/settings/security/agent-authorization">Agent&nbsp;Authorization</a>.</p>
         </div>
@@ -430,21 +430,34 @@ async function renderResources(target) {
     <div class="section-head"><h2>Resource servers</h2></div>
     <div class="muted" style="font-size:12.5px;margin-bottom:10px">Services you have authorized to use
       your authorization server's protection API (they hold a PAT issued in your name). Revoking one cuts
-      off its registrations, tickets, and token checks immediately.</div>
+      off its registrations, tickets, and token checks immediately. A service marked <b>pending</b> has
+      introduced itself and proved which origin it is, and can do nothing at all until you approve it.</div>
     <table><thead><tr><th>Service</th><th>Consent</th><th>Last PAT issued</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${servers.map(s => `<tr>
       <td><div class="tick"><div class="badge2">🛡️</div>
-        <div><div class="nm">${s.name}</div><div class="cell-sub mono">${s.client_id}</div></div></div></td>
-      <td class="prose">${s.consented}</td>
+        <div><div class="nm">${esc(s.name)}</div><div class="cell-sub mono">${esc(s.client_id)}</div></div></div></td>
+      <td class="prose">${esc(s.consented ?? (s.status === "pending"
+        ? `asked you ${s.registered || "just now"}` : "—"))}</td>
       <td class="nowrap">${s.last_pat_issued
-        ? `${s.last_pat_issued.slice(0, 10)}<div class="cell-sub mono">${s.last_pat_issued.slice(11, 19)} UTC</div>`
+        ? `${esc(s.last_pat_issued.slice(0, 10))}<div class="cell-sub mono">${esc(s.last_pat_issued.slice(11, 19))} UTC</div>`
         : "—"}</td>
-      <td class="r"><span class="chip ${s.status === "active" ? "pos" : "neg"}">${s.status}</span></td>
-      <td class="r">${s.status === "active" ? `<button class="btn danger sm" onclick="revokeRs('${s.client_id}')">Revoke</button>` : ""}</td>
+      <td class="r"><span class="chip ${s.status === "active" ? "pos" : s.status === "pending" ? "warn" : "neg"}">${esc(s.status)}</span></td>
+      <td class="r">${s.status === "pending"
+        ? `<button class="btn sm" data-rs-approve="${esc(s.client_id)}">Approve</button>
+           <button class="btn danger sm" data-rs-revoke="${esc(s.client_id)}">Deny</button>`
+        : s.status === "active"
+        ? `<button class="btn danger sm" data-rs-revoke="${esc(s.client_id)}">Revoke</button>`
+        : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
+  /* Bound after each render rather than inline in the markup, for the reason
+     given on decideRs. */
+  const wireRs = (root) => root.querySelectorAll("[data-rs-approve],[data-rs-revoke]")
+    .forEach(b => b.addEventListener("click", () => decideRs(
+      b.dataset.rsApprove ?? b.dataset.rsRevoke,
+      b.dataset.rsApprove ? "approved" : "revoked")));
   if (!resources.length) { target.innerHTML = serverCard + `<div class="empty">No resources are registered with your
     authorization server yet. When your brokerage's gateway registers the surfaces it protects, they
-    appear here — this is what your policy tiers attach to.</div>`; return; }
+    appear here — this is what your policy tiers attach to.</div>`; wireRs(target); return; }
   target.innerHTML = serverCard + `<div class="card pad-lg">
     <div class="section-head"><h2>Protected resources</h2></div>
     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Everything your authorization server
@@ -462,11 +475,21 @@ async function renderResources(target) {
         : `<span class="chip neg">no tier — unreachable</span>`}</td>
       <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>
     </tr>`).join("")}</tbody></table></div>`;
+  wireRs(target);
 }
 
-window.revokeRs = async (clientId) => {
-  const res = await api(`/api/agent/resource-servers/${clientId}/revoke`, { method: "POST" });
-  toast("Resource server revoked", `${res.client_id} can no longer use your protection API`, "warn");
+/* Bound by data attribute rather than an inline onclick: a client_id is an
+   origin the registering side chose, and building a line of JavaScript out of
+   it is the one way this table could be made to run someone else's code. */
+const decideRs = async (clientId, decision) => {
+  const res = await api("/api/agent/resource-servers/decision", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ client_id: clientId, decision }) });
+  if (decision === "approved") {
+    toast("Resource server approved", `${esc(res.client_id)} may now use your protection API`);
+  } else {
+    toast("Resource server revoked", `${esc(res.client_id)} can no longer use your protection API`, "warn");
+  }
   renderResources($("#aaBody"));
 };
 
@@ -843,7 +866,9 @@ function connectEvents() {
 /* ---- Boot --------------------------------------------------------------- */
 (async () => {
   const me = await api("/api/me");
-  const name = me.name || "Alice";
+  // Whoever signed in. One image serves any owner, so a name baked in here
+  // renders somebody else's on every instance but the first.
+  const name = me.name || me.owner || "Account";
   $("#whoName").textContent = name;
   $("#avatar").textContent = name[0].toUpperCase();
   if (!location.hash) location.hash = "#/dashboard";

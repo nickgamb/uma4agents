@@ -22,15 +22,15 @@
   ],
   "clients": [
     {
-      "clientId": "alice-portal",
+      "clientId": "meridian-portal",
       "name": "Alice's Portal",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": true,
       "standardFlowEnabled": true,
       "redirectUris": [
-        "https://portal.uma.lab/*",
-        "http://localhost:9010/*"
+        "https://carol-portal.uma.lab/*",
+        "http://localhost:9011/*"
       ],
       "webOrigins": [
         "+"

@@ -49,7 +49,7 @@ data:
     # agents is a stranger, so every one of them pends.
     def owner_token():
         r = client.post(f"{OIDC}/protocol/openid-connect/token",
-                        data={"grant_type": "password", "client_id": "alice-portal",
+                        data={"grant_type": "password", "client_id": "meridian-portal",
                               "username": os.environ.get("ALICE_USER", "alice"),
                               "password": os.environ.get("ALICE_PASS", "alice-demo")})
         r.raise_for_status()

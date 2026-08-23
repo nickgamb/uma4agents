@@ -20,8 +20,9 @@ somewhere on the web that speaks for it, and neither works without one:
 
 A real operator publishes keys it already holds, and that is the shape here:
 AGENT_OPERATOR_KEYS_FILE names a JWKS this process reads at startup and only
-serves. POST /register remains as an additive lab path, because the lab's
-agent keys are generated per run and something has to publish them.
+serves. POST /register remains as a lab path for the single-process stack,
+whose agent keys are generated per run — and is refused outright once a
+published file is configured, so the two modes cannot be mixed.
 
 The distinction matters more than it looks. A directory held only in memory
 and filled in by whoever happened to call is a directory that empties on
@@ -111,23 +112,39 @@ async def signatures_directory() -> JSONResponse:
 
 
 @app.post("/register")
-async def register(request: Request) -> dict:
+async def register(request: Request) -> JSONResponse:
     """Lab-only: an agent publishes the key it is about to sign with.
 
-    Real operators publish keys they already hold (AGENT_OPERATOR_KEYS_FILE);
-    this exists because the lab's agent keys are generated per run. It is
+    Real operators publish keys they already hold, which is what
+    AGENT_OPERATOR_KEYS_FILE is. This exists because the toy stack generates
+    its agent keys per run and something has to publish them. It is
     deliberately unauthenticated and local-only — nothing downstream trusts
     this directory for authorization, only for discovery.
 
-    Additive to the published set, and the only state this process holds that
-    its file does not. Running more than one replica means a runtime
-    registration lands on one of them; the published keys are on all of them.
+    **Refused once the operator is seeded from a file**, and that is the
+    interesting line rather than a safety rail. This endpoint writes to one
+    process's memory. With a single process that is merely untidy; with more
+    than one it is wrong in a way nothing reports — the registration lands on
+    one replica, a resource server asks another, the key is missing, and an
+    agent that did everything right drops an assurance level about half the
+    time. Refusing here is what makes `replicas: 2` a true statement instead
+    of an aspiration: a seeded directory is read-only, identical everywhere,
+    and cannot drift.
     """
+    if KEYS_FILE:
+        return JSONResponse(
+            {"registered": False,
+             "error": "this operator publishes keys it already holds",
+             "detail": ("AGENT_OPERATOR_KEYS_FILE is set, so the directory is "
+                        "read-only and identical across replicas. Provision "
+                        "the key into that document instead.")},
+            status_code=409)
     body = await request.json()
     jwk = body.get("jwk") or {}
     keyid = body.get("keyid") or jwk.get("kid")
     if not keyid or not jwk:
-        return {"registered": False, "error": "keyid and jwk required"}
+        return JSONResponse({"registered": False,
+                             "error": "keyid and jwk required"}, status_code=400)
     KEYS[keyid] = {**jwk, "kid": keyid}
     print(json.dumps({"event": "agent_key.published", "keyid": keyid}), flush=True)
-    return {"registered": True, "keyid": keyid, "keys": len(KEYS)}
+    return JSONResponse({"registered": True, "keyid": keyid, "keys": len(KEYS)})

@@ -22,7 +22,7 @@
   ],
   "clients": [
     {
-      "clientId": "alice-portal",
+      "clientId": "meridian-portal",
       "name": "Alice's Portal",
       "enabled": true,
       "publicClient": true,

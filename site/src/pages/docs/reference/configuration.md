@@ -26,13 +26,18 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_OWNER_ISSUER` | `https://keycloak.uma.lab/realms/alice` | The issuer the owner's tokens must claim |
 | `UMA_AS_OWNER_METADATA_URL` | `{OWNER_ISSUER}/.well-known/openid-configuration` | Where to fetch her identity provider's metadata |
 | `UMA_AS_OWNER` | `alice` | The one owner this authority serves. Set it and every request naming anybody else is refused at the door rather than served and filtered. Leave it unset for a deployment holding many, where `UMA_AS_DEFAULT_OWNER` names the one an unqualified request means |
+| `UMA_AS_DEFAULT_OWNER` | `alice` | On a server holding many owners, the one an unqualified request means. Ignored where `UMA_AS_OWNER` is set, which is its own answer |
+| `UMA_AS_OWNER_KEY_OWNER` | the default owner | Which owner the enrolled device key speaks for. A signature proves a holder, not a name, so on a server holding many owners the binding has to be configured rather than inferred |
+| `UMA_AS_RS_META_TTL` | `300` | Seconds a resource server's RFC 9728 document is cached after it checked out |
+| `UMA_AS_RS_MISS_TTL` | `30` | Seconds a resource that did **not** check out is remembered as refused. Bounds how much outbound fetching an unauthenticated caller can cause — the opposite policy to `UMA_AS_DIRECTORY_TTL` above, and the reasoning is in [many owners](/docs/overview/multi-owner/) |
+| `UMA_AS_RS_MAX_BYTES` | `65536` | How much of a document fetched from a caller-named origin is read before it is refused |
 | `UMA_AS_SEED_RS` | `1` | Whether to seed a resource server this authority was provisioned alongside. `0` seeds none, which is the case where the authority is the owner's and nobody could have configured both ends — the resource server introduces itself instead |
 | `UMA_AS_PEND_BUDGET` | `5` | How many requests from agents with no standing, and nobody checkable behind them, may wait for her at once. `0` makes her authority introduce-yourself-first |
 | `UMA_AS_PEND_BUDGET_ATTRIBUTED` | `40` | The same cap for agents whose named operator published their key. A separate lane, so a flood of the cheap kind cannot fill it |
 | `UMA_AS_MAX_REASON` | `512` | How much the requesting side may write about its own errand. Small on purpose: a sentence for a person to read in an approval, not a document |
 | `UMA_AS_TRAJECTORY_WINDOW` | `7d` | How far back a rule about an agent's recent behaviour looks. One window for all of them, so a rule reads *recently* and the deployment says how long that is |
 | `UMA_AS_DIRECTORY_TTL` | `300` | Seconds an operator key directory is cached **for a hit only**. A miss is always re-fetched, because a stale hit keeps attesting a key the operator has disowned while a stale miss merely fails to recognise one just published |
-| `UMA_AS_OWNER_CLIENTS` | `alice-portal` | Comma-separated audiences accepted on owner tokens |
+| `UMA_AS_OWNER_CLIENTS` | `meridian-portal` | Comma-separated audiences accepted on owner tokens |
 | `UMA_AS_PENDING_TTL` | `3600` | How long a held ask-me ticket stays valid, in seconds |
 | `UMA_AS_STORE` | `memory` | `memory` or `postgres` |
 | `UMA_AS_DATABASE_URL` | — | Required when the store is `postgres` |

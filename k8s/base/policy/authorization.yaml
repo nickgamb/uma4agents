@@ -161,7 +161,7 @@ spec:
     - from:
         - source:
             principals:
-              - cluster.local/ns/alice/sa/alice-portal
+              - cluster.local/ns/alice/sa/portal
               - cluster.local/ns/uma-edge/sa/edge
       to:
         - operation:
@@ -192,11 +192,11 @@ spec:
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: alice-portal-callers
+  name: portal-callers
   namespace: alice
 spec:
   selector:
-    matchLabels: { app: alice-portal }
+    matchLabels: { app: portal }
   action: ALLOW
   rules:
     - from:
@@ -296,10 +296,25 @@ spec:
     - from:
         - source:
             principals:
+              - cluster.local/ns/carol/sa/portal
               - cluster.local/ns/uma-edge/sa/edge
       to:
         - operation:
             paths: ["/owner", "/owner/*"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: portal-callers
+  namespace: carol
+spec:
+  selector:
+    matchLabels: { app: portal }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/uma-edge/sa/edge"]
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
@@ -344,7 +359,7 @@ spec:
         - source:
             principals:
               - cluster.local/ns/uma-edge/sa/edge          # an owner's browser
-              - cluster.local/ns/alice/sa/alice-portal     # the OIDC exchange
+              - cluster.local/ns/alice/sa/portal     # the OIDC exchange
               - cluster.local/ns/alice/sa/uma-as           # her realm's JWKS
               - cluster.local/ns/carol/sa/uma-as           # and hers
 ---
@@ -417,7 +432,7 @@ spec:
         - source:
             principals:
               - cluster.local/ns/meridian/sa/meridian
-              - cluster.local/ns/alice/sa/alice-portal
+              - cluster.local/ns/alice/sa/portal
 ---
 # The same, for Carol's instance. Written out rather than widened to select
 # both, because a selector matching every vault in the namespace would let
@@ -437,6 +452,7 @@ spec:
         - source:
             principals:
               - cluster.local/ns/meridian/sa/meridian
+              - cluster.local/ns/carol/sa/portal
 ---
 # The agent-facing gateway. Reachable from the edge — which is how Bob's
 # agent arrives, and the only way it can.

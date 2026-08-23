@@ -1,0 +1,12 @@
+# Carol's side, configured.
+#
+# Her own copy, not a reference to Alice's. These are two different people:
+# a Secret shared between their namespaces would model them as one party, and
+# would mean whoever can read one session key can forge the other's.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: portal-config
+  namespace: carol
+stringData:
+  session-secret: dev-session-secret

@@ -82,7 +82,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 def hdrs(c: httpx.Client, owner: str) -> dict:
     o = OWNERS[owner]
     r = c.post(f"{KEYCLOAK}/realms/{o['realm']}/protocol/openid-connect/token",
-               data={"grant_type": "password", "client_id": "alice-portal",
+               data={"grant_type": "password", "client_id": "meridian-portal",
                      "username": owner, "password": o["password"]},
                timeout=15.0)
     r.raise_for_status()
@@ -206,7 +206,7 @@ def main() -> int:
                 c.post(f"{KEYCLOAK}/realms/{OWNERS[owner]['realm']}"
                        "/protocol/openid-connect/token",
                        data={"grant_type": "password",
-                             "client_id": "alice-portal", "username": x,
+                             "client_id": "meridian-portal", "username": x,
                              "password": OWNERS[x]["password"]},
                        timeout=15.0).status_code
                 for x in others)

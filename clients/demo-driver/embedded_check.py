@@ -64,7 +64,7 @@ def rpc(client: httpx.Client, method: str, params: dict, headers=None) -> dict:
 
 def owner_token(client: httpx.Client) -> str:
     r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                    data={"grant_type": "password", "client_id": "alice-portal",
+                    data={"grant_type": "password", "client_id": "meridian-portal",
                           "username": "alice", "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
                     timeout=10.0)
     r.raise_for_status()

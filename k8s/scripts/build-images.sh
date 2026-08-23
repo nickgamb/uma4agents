@@ -24,7 +24,7 @@ build uma-as           services/uma-as/Dockerfile        .
 build paios            kwaai/Dockerfile                  .
 build uma-pep          services/uma-pep/Dockerfile       .
 build alice-vault-mcp  mcp/alice-vault/Dockerfile        .
-build alice-portal     services/alice-portal/Dockerfile  ./services/alice-portal
+build portal           services/alice-portal/Dockerfile  ./services/alice-portal
 build agent-operator   clients/agent-operator/Dockerfile ./clients/agent-operator
 
 if [ -d aauth/upstream/aauth-person-server/.git ]; then

@@ -72,7 +72,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def owner_token(client: httpx.Client) -> str:
     r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                    data={"grant_type": "password", "client_id": "alice-portal",
+                    data={"grant_type": "password", "client_id": "meridian-portal",
                           "username": "alice",
                           "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
                     timeout=15.0)
@@ -89,6 +89,30 @@ def pending(client: httpx.Client) -> list:
                       timeout=15.0).json()
 
 
+def forget_agents(client: httpx.Client) -> int:
+    """Revoke every standing connection, so each run starts having met nobody.
+
+    Needed once the requesting side's keys are provisioned rather than
+    generated per run. A stable key is the realistic case — an operator issues
+    its agents keys and they keep them — but it also means an agent that
+    negotiated yesterday still has standing today, and half of what is
+    asserted below is about what happens on a *first* contact.
+
+    Revoking is the owner action that restores that, and it is the same one
+    the check exercises later: she withdraws an agent, and the next thing it
+    asks pends like a stranger's. Nothing here reaches past the owner API.
+    """
+    hdrs, n = owner_hdrs(client), 0
+    for conn in client.get(f"{AS_PUBLIC}/owner/connections", headers=hdrs,
+                           timeout=15.0).json():
+        if conn.get("status") == "active":
+            client.post(
+                f"{AS_PUBLIC}/owner/connections/{conn['handle']}/revoke",
+                headers=hdrs, timeout=15.0)
+            n += 1
+    return n
+
+
 def decide_all(client: httpx.Client, decision: str) -> int:
     hdrs, n = owner_hdrs(client), 0
     for p in pending(client):
@@ -96,6 +120,35 @@ def decide_all(client: httpx.Client, decision: str) -> int:
                     json={"decision": decision}, headers=hdrs, timeout=15.0)
         n += 1
     return n
+
+
+# Where this operator's agent keys come from. Two shapes, and which one
+# applies is a property of the deployment rather than of the protocol.
+#
+#   provisioned  the operator was handed a published directory and serves only
+#                that, so the agent is given the private half of a key already
+#                in it. This is the replicated shape and the honest one: an
+#                operator publishes keys it issued.
+#   self-published  the single-process stack generates a key per run and the
+#                agent registers it. Convenient, and impossible to run behind
+#                more than one replica — the operator refuses it outright once
+#                it has a document of its own.
+PUBLISHED_KEYS = os.environ.get("UMA4A_PUBLISHED_KEYS")
+
+
+def operator_agent(client: httpx.Client, name: str) -> AgentKeys:
+    """An agent whose key its operator's directory actually carries."""
+    directory = f"{OPERATOR}/.well-known/http-message-signatures-directory"
+    provisioned = f"{PUBLISHED_KEYS}/{name}-ed25519.pem" if PUBLISHED_KEYS else None
+    if provisioned and os.path.exists(provisioned):
+        keys = AgentKeys.load_or_create(provisioned)
+        keys.client_id = f"{OPERATOR}/agent.json"
+        keys.signature_agent = directory
+        return keys
+    keys = AgentKeys.load_or_create(f"{KEYS}/assurance-{name}-{RUN}.pem")
+    keys.client_id = f"{OPERATOR}/agent.json"
+    keys.signature_agent = keys.publish(client, OPERATOR)
+    return keys
 
 
 def negotiate(client: httpx.Client, keys: AgentKeys, tool: str,
@@ -155,6 +208,7 @@ def main() -> int:
     ca = CA if os.path.exists(CA) else True
     with httpx.Client(verify=ca, timeout=30.0) as client:
         decide_all(client, "denied")          # start from an empty queue
+        forget_agents(client)                 # ...and having met nobody
 
         # An agent with a named operator, and one with nobody behind it.
         # Same code, same key type, same terms — the only difference is
@@ -191,10 +245,17 @@ def main() -> int:
         # Same operator, same CIMD. The difference is that this one's signing
         # key is in the operator's own key directory, which Alice's authority
         # fetches and checks for itself.
-        attested = AgentKeys.load_or_create(f"{KEYS}/assurance-attested-{RUN}.pem")
-        attested.client_id = f"{OPERATOR}/agent.json"
-        attested.signature_agent = attested.publish(client, OPERATOR)
-        check("the operator's key directory was reachable",
+        #
+        # Two ways for it to get there, and which one applies is a property of
+        # the deployment. Where the operator was provisioned with a published
+        # directory — the replicated shape, and the real one — the agent is
+        # given the private half of a key that directory already holds, and
+        # publishes nothing. Where it was not, the single-process stack lets
+        # the agent register the key it just generated. The second cannot be
+        # made to work behind more than one replica, which is why the operator
+        # refuses it as soon as it has a document of its own.
+        attested = operator_agent(client, "attested")
+        check("the operator's key directory carries this agent's key",
               attested.signature_agent is not None)
         # Read what her authority established, from the dialog she would see.
         approving.set()
@@ -253,9 +314,7 @@ def main() -> int:
         # Bob's agent is a stranger too the first time, so a flood used to shut
         # the door on the relationship he still had to form.
         print("\n== And a newcomer that can be named still gets in ==")
-        newcomer = AgentKeys.load_or_create(f"{KEYS}/assurance-newcomer-{RUN}.pem")
-        newcomer.client_id = f"{OPERATOR}/agent.json"
-        newcomer.signature_agent = newcomer.publish(client, OPERATOR)
+        newcomer = operator_agent(client, "newcomer")
         n_ok, _, n_why = negotiate(client, newcomer, "get_positions", max_wait_s=2)
         check("a first contact she could name is not refused for budget",
               "not accepting new agent requests" not in (n_why or ""),

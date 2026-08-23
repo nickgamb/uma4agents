@@ -41,6 +41,14 @@ you about this agent — and it is a thing the agent cannot do on its own behalf
 Her authority fetches that directory itself and looks for the key that signed
 the contract in front of it.
 
+Which puts a requirement on the operator, not on her: the directory has to be
+a document it actually publishes. Serving one that agents fill in at runtime
+puts the answer in a single process's memory, so the moment the operator runs
+more than one, an agent registers with the first and her authority asks the
+second. The failure is quiet — an agent that did everything right scores one
+level lower, sometimes — and the fix is that a published directory is
+provisioned and read-only.
+
 ## It starts at nothing
 
 Every check starts at zero and is raised only by one that **ran and passed** in

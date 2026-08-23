@@ -40,7 +40,7 @@ def say(msg: str) -> None:
 def owner_token(c: httpx.Client) -> str:
     return c.post(
         f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-        data={"grant_type": "password", "client_id": "alice-portal",
+        data={"grant_type": "password", "client_id": "meridian-portal",
               "username": "alice", "password": "alice-demo"},
     ).json()["access_token"]
 
@@ -80,7 +80,7 @@ def simulate_alice(seconds: float) -> threading.Event:
                 try:
                     tok = c.post(
                         f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                        data={"grant_type": "password", "client_id": "alice-portal",
+                        data={"grant_type": "password", "client_id": "meridian-portal",
                               "username": "alice", "password": "alice-demo"},
                     ).json()["access_token"]
                     h = {"Authorization": f"Bearer {tok}"}

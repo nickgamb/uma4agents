@@ -100,6 +100,9 @@ k8s-apply:
 			--from-file=keygen.py=$(K8S)/scripts/keygen.py \
 			--dry-run=client -o yaml | kubectl apply -f - >/dev/null; \
 	done
+	@kubectl -n sterling-vance create configmap agent-keys-script \
+		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
+		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
 		--from-file=carol-realm.json=keycloak/carol-realm.json \
@@ -126,7 +129,8 @@ k8s-wait:
 	@kubectl -n alice rollout status deploy/uma-as --timeout=300s >/dev/null
 	@kubectl -n idp rollout status deploy/keycloak --timeout=300s >/dev/null
 	@kubectl -n carol rollout status deploy/uma-as --timeout=300s >/dev/null
-	@kubectl -n alice rollout status deploy/alice-portal --timeout=300s >/dev/null
+	@kubectl -n carol rollout status deploy/portal --timeout=300s >/dev/null
+	@kubectl -n alice rollout status deploy/portal --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/uma-pep --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/alice-vault --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/carol-vault --timeout=300s >/dev/null
@@ -295,11 +299,11 @@ k8s-chaos:
 ## k8s-audit: print Alice's ledger from the deployed lab
 .PHONY: k8s-audit
 k8s-audit:
-	@kubectl -n alice exec deploy/alice-portal -- python3 -c "\
+	@kubectl -n alice exec deploy/portal -- python3 -c "\
 import json,os,urllib.request,urllib.parse;\
 tok=json.load(urllib.request.urlopen(urllib.request.Request(\
 'https://keycloak.uma.lab/realms/alice/protocol/openid-connect/token',\
-data=urllib.parse.urlencode({'grant_type':'password','client_id':'alice-portal',\
+data=urllib.parse.urlencode({'grant_type':'password','client_id':'meridian-portal',\
 'username':'alice','password':'alice-demo'}).encode()),\
 cafile='/certs/rootCA.pem'))['access_token'];\
 r=urllib.request.urlopen(urllib.request.Request(\

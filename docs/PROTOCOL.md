@@ -599,6 +599,24 @@ here is enforced somewhere in the code and most are covered by a test; the
 tests that prove refusals rather than permissions are `make k8s-policy-test`
 and `make store-test`.
 
+**An endpoint that authenticates by dereferencing an origin will dereference
+what it is told to.** `/rs/register` carries no credential this server issued
+— the signature checked against the origin's own published document *is* the
+credential — so any caller can cause an outbound fetch to a host they named.
+The bounds in this implementation are a response-size cap, no redirects,
+`https` only, and a short memory of resources that did not check out so a
+flood of registrations is not a flood of fetches. The bound this
+implementation deliberately does not apply is an address blocklist: a resource
+server legitimately sits on a private range whenever it is deployed near its
+owner's authority, so refusing those would break the honest case and not the
+dishonest one. Naming the hosts the authority may reach is an egress policy,
+and it belongs to the deployment.
+
+**Registration reaches an owner; it must not create one.** The signature
+proves control of an origin, which says nothing about whether the owner named
+alongside it exists. A server that seeds an owner on demand turns an
+unauthenticated endpoint into unbounded state.
+
 **Single-use must be indivisible.** Both the permission ticket and the
 operation-bound RPT are spent exactly once. A check-then-act implementation is
 correct in one process and wrong the moment there are two — two callers read

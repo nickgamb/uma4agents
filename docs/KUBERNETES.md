@@ -241,7 +241,7 @@ make kind-down                  # delete everything
 |---|---|---|
 | `uma-edge` | kgateway, hickory-dns | the public on-ramp |
 | `alice` | `uma-as` ×3, CNPG ×3, her portal | a resource owner |
-| `carol` | `uma-as` ×1 | another, at a person's scale |
+| `carol` | `uma-as` ×1, her portal | another, at a person's scale |
 | `idp` | keycloak | an identity provider, neither owner's |
 | `meridian` | agentgateway, `uma-pep` ×2, two vaults | the resource server |
 | `sterling-vance` | agent-operator ×2, the agent | the requesting party |
@@ -258,9 +258,12 @@ the assets and enforces the policy, and can never read it.
 
 `alice` versus `carol` is the one that makes it more than an argument about
 two companies. They are two of the same kind, not a primary and an exception:
-each namespace holds an authorization server, a signing key, a device key and
-a record, neither refers to the other, and one resource server serves both
-without either being the default. The identity provider sits outside both for
+each namespace holds an authorization server, a signing key, a device key, a
+record and a portal, neither refers to the other, and one resource server
+serves both without either being the default. Carol signs in at
+`carol-portal.uma.lab` to the same Meridian UI Alice uses — the same image
+with her authority, her realm and her vault in it, because being an owner
+here is configuration rather than another implementation. The identity provider sits outside both for
 the same reason — an authority that is hers cannot depend on a login service
 the other owner could operate.
 
@@ -296,6 +299,22 @@ than three minted per pod. This is what
 [`services/uma-as/store.py`](../services/uma-as/store.py) was written for,
 and why rec 9 in [FINDINGS.md](../FINDINGS.md) exists: single-use has to mean
 *indivisible*, not merely once per process.
+
+**The key directory is provisioned, not collected.** Sterling & Vance's
+operator runs two replicas, and that is only correct because
+`AGENT_OPERATOR_KEYS_FILE` hands it a published JWKS to serve: the directory
+is read-only, identical on every replica, and the server refuses
+`POST /register` outright once it has one. The agent is given the private half
+of the same key, so what it signs with is genuinely what its operator
+published.
+
+The alternative is what this deployment used to do, and it is worth naming
+because it fails quietly. A directory filled in at runtime lives in one
+process's memory: the registration lands on one replica, the authorization
+server's fetch reaches the other, and an agent that did everything right
+scores accountability 1 instead of 2 — roughly half the time, with both
+replicas serving the same key id over different key material. `make
+k8s-assurance-check` is what caught it.
 
 **Two owners, and one of them brought her own authority.** `make
 k8s-multi-owner-check` runs the four beats against both and asserts that

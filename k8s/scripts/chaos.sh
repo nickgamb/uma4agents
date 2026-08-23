@@ -121,13 +121,13 @@ step "And she can still answer it"
 #
 # Her portal is the only workload the mesh permits to call the owner API, so
 # the decision is made from there — which is where her tap would come from.
-decided=$(kubectl -n alice exec -i deploy/alice-portal -- python3 - <<'PYEOF' 2>/dev/null | tr -d '[:space:]'
+decided=$(kubectl -n alice exec -i deploy/portal -- python3 - <<'PYEOF' 2>/dev/null | tr -d '[:space:]'
 import json, urllib.parse, urllib.request
 
 token = json.load(urllib.request.urlopen(urllib.request.Request(
     "https://keycloak.uma.lab/realms/alice/protocol/openid-connect/token",
     data=urllib.parse.urlencode({
-        "grant_type": "password", "client_id": "alice-portal",
+        "grant_type": "password", "client_id": "meridian-portal",
         "username": "alice", "password": "alice-demo"}).encode()),
     cafile="/certs/rootCA.pem"))["access_token"]
 

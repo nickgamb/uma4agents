@@ -52,6 +52,7 @@ authority.](multi-owner.svg)
 | Her record | Her ledger, her connections, her operator blocks, her pending queue and the budget that bounds it. |
 | Her resource-server registry | Which servers may use her Protection API, and the status she can flip. |
 | Her instance of the resource | A separate vault holding her positions, not a row in Alice's. |
+| Her portal | The same Meridian UI, pointed at her authority, her realm and her vault. One image; four values differ. |
 
 And what is shared, because it belongs to the firm rather than to either of
 them: the resource server process, the enforcement point in front of it, the
@@ -77,9 +78,10 @@ here — an `OwnerStore` *is* the surface a personal authorization server needs.
 The small deployment is not a special mode; it is one of these with nothing
 else in the process.
 
-`make store-test` runs the same 154 assertions against both backends,
-including a partition suite that walks every accessor and asserts that two
-owners' rows never meet.
+`make store-test` runs the same assertions against both backends, including a
+partition suite that walks every accessor and asserts that two owners' rows
+never meet — and that one owner approving a resource server does not approve
+it for anybody else.
 
 How many owners live in one process is a packaging choice the grant loop
 cannot observe. The compose stack runs one owner per process; the cluster runs
@@ -151,19 +153,53 @@ than counting against the agent, because an operator's outage is not evidence.
 Here the document *is* the credential, and a credential that cannot be fetched
 has not been presented. Unreachable is refused.
 
+### What it costs to expose
+
+`/rs/register` takes no credential — that is the whole point of it — so
+anybody can make this server fetch a URL they chose. That is inherent: origin
+authentication means dereferencing the origin, and a check that only ran for
+callers already known would not help the caller who is not.
+
+What bounds it here: the document is read up to a cap rather than into memory
+(`UMA_AS_RS_MAX_BYTES`), redirects are not followed, only `https` is fetched,
+and a resource that did not check out is remembered as refused for a short
+window (`UMA_AS_RS_MISS_TTL`) so a flood of bad registrations does not become
+a flood of outbound requests.
+
+What is *not* bounded, and should be by whoever deploys this: the set of hosts
+this server will dial. The obvious control — refuse addresses on private
+ranges — is wrong here rather than merely unimplemented, because the resource
+server is on a private range in every deployment where the two are near each
+other, including this lab. An egress policy naming what the authority may
+reach is the right layer for it, and it is a deployment decision rather than a
+protocol one.
+
 ### What registration does not buy
 
 A verified signature settles who is asking. Whether they may is hers, and
-`make establishment-check` is mostly about the ways of not getting an answer:
+`make establishment-check` is mostly about the ways of not getting an answer.
+All of the refusals below are one status code from outside — the check holds
+no key any origin publishes, so each of its attempts fails on the signature as
+well as on the thing it is testing, and only the authority's event log
+separates them. Each cause is isolated where it can be, which for the
+freshness window is `make sig-test`:
 
 | | |
 |---|---|
 | an origin that does not publish the key that signed | 401 `invalid_client` |
 | a claim to a resource whose own metadata names another | 401 |
 | a resource_uri at an origin publishing no metadata at all | 401 |
-| a signature old enough to have been captured and replayed | 401 — the profile's freshness window is 60 seconds |
+| a signature old enough to have been captured and replayed | 401 — the profile's freshness window is 60 seconds, covered on its own by `make sig-test` |
 | a verified registration, before she has answered | 403 `authorization_pending`, and the call it was for stops with the same code rather than a generic failure |
 | after she withdraws it | the next call stops; asking again puts it back in front of her as pending, and cannot restore itself |
+
+Where "she" acts, the surface is her authority's owner API — `GET
+/owner/resource-servers` and `POST /owner/resource-servers/decision`. Each owner's
+portal renders that registry and offers Approve on a pending row;
+`establishment_check.py` calls the same two endpoints directly, which is what
+the portal does for her. Which surface an owner uses is hers to choose, and the
+authority cannot tell the difference — it authenticates her credential, not
+her client.
 
 That last row is the one worth reading twice. A withdrawn resource server may
 register again — it is the same shape as an agent she has blocked asking a
@@ -233,12 +269,15 @@ it is two functions.
 There is no third kind of thing to add. An owner is:
 
 1. a realm in the identity provider (`keycloak/<name>-realm.json`);
+0. — and a portal instance, if she wants the same UI the others use;
 2. an authorization server with `UMA_AS_OWNER=<name>` and her own issuer,
    signing key and hostname;
 3. a route publishing that hostname;
 4. an instance of the resource holding her account;
 5. one entry in `UMA_EXTRA_OWNERS` and one in `UMA_OWNER_AUTHORITIES` on the
-   resource server.
+   resource server;
+6. a portal instance pointed at the four of those, if she wants the same UI
+   everyone else uses.
 
 In the cluster that is a copy of `k8s/base/carol/` and the policy block that
 matches it, and nothing in Alice's namespace changes. The checks are written
@@ -255,6 +294,10 @@ over a table of owners rather than over two names, so a third is a row.
   That is the honest cost of the in-process store, and it is why the checks
   drive establishment rather than assuming it. A person running one for real
   would give it a disk.
+- **An owner is never created by a registration.** A resource server naming
+  an owner that does not exist is refused; owners come from a person setting
+  one up. On a server holding one owner `UMA_AS_OWNER` settles it before
+  anything else runs.
 - **Registration is per (owner, resource server).** One resource server
   serving two owners registers twice and holds two PATs. There is deliberately
   no cross-owner registration: it would be a single credential whose

@@ -15,7 +15,10 @@ FILENAME = sys.argv[2]      # key within the secret, and the mounted filename
 # authorization server, which is the whole point of it being a key she
 # holds rather than a credential she is issued.
 PUBNAME = sys.argv[3] if len(sys.argv) > 3 else None
-NS = os.environ.get("POD_NAMESPACE", "alice")
+# From the pod, never defaulted. A default is right in one namespace and
+# silently writes another party's Secret in the rest, which is the kind of
+# mistake that looks like it worked.
+NS = os.environ["POD_NAMESPACE"]
 
 SA = "/var/run/secrets/kubernetes.io/serviceaccount"
 with open(f"{SA}/token") as f:
@@ -54,7 +57,6 @@ if PUBNAME:
         serialization.Encoding.PEM,
         serialization.PublicFormat.SubjectPublicKeyInfo)
     data[PUBNAME] = base64.b64encode(pub).decode()
-
 call("POST", f"/api/v1/namespaces/{NS}/secrets", {
     "apiVersion": "v1", "kind": "Secret", "metadata": {"name": NAME},
     "data": data,

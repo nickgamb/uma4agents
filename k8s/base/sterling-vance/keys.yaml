@@ -1,0 +1,95 @@
+# The requesting side's keys.
+#
+# One keypair, two destinations, and that split is the point: the operator
+# publishes the public half as its key directory, and the agent signs with
+# the private half. An authorization server that has never met this agent can
+# then fetch the directory and find the very key that signed — which is the
+# whole of accountability level 2, and it only holds because the two halves
+# came from one generation rather than from an agent registering itself.
+#
+# The script is k8s/scripts/keygen.py, loaded here as a ConfigMap by
+# Makefile.k8s. It creates the Secret only if absent, so re-applying the lab
+# never rotates a key underneath a running pod.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keygen
+  namespace: sterling-vance
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keygen
+  namespace: sterling-vance
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    # get to check, create to make. Deliberately no update or delete: this
+    # job must never be able to replace a key that already exists.
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keygen
+  namespace: sterling-vance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keygen
+subjects:
+  - kind: ServiceAccount
+    name: keygen
+    namespace: sterling-vance
+# The keygen ConfigMap is not here. It is one script, in
+# k8s/scripts/keygen.py, loaded into each namespace that needs it by
+# Makefile.k8s — three copies of the same forty lines in three manifests is
+# how one of them quietly stops matching the others.
+---
+# The agent's signing key, generated once. Its public half becomes the
+# operator's published Web Bot Auth directory; its private half is mounted
+# into the check that has to sign with a key that directory actually holds.
+#
+# This is the relationship the real world has — an operator publishes keys it
+# issued to its own agents — and it is what lets the operator run more than
+# one replica. See the note at the top of agent-operator.yaml.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agent-keygen
+  namespace: sterling-vance
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: { app: keygen }
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: keygen
+      containers:
+        - name: keygen
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          # Two agents, because the checks need two that the operator can
+          # vouch for and they must not be the same agent — a returning key
+          # already has standing, and "a newcomer she can name" would not be
+          # a newcomer.
+          command: ["python3", "/script/agent-keys.py", "agent-published-key",
+                    "attested", "newcomer"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          volumeMounts:
+            - { name: script, mountPath: /script, readOnly: true }
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 192Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: script
+          configMap: { name: agent-keys-script }

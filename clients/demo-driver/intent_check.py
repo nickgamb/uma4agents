@@ -91,7 +91,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def owner_hdrs(client: httpx.Client) -> dict:
     r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                    data={"grant_type": "password", "client_id": "alice-portal",
+                    data={"grant_type": "password", "client_id": "meridian-portal",
                           "username": "alice",
                           "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
                     timeout=15.0)

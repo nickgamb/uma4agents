@@ -73,13 +73,27 @@ data:
         alias = json.load(get(
             "https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp"))
         named = {o: d.get("authorization_servers", [None])[0] for o, d in docs.items()}
+        # Each document names the resource it was fetched for — RFC 9728 §3.3,
+        # which the client half enforces by refusing anything else. The alias
+        # is the primary owner's resource under a second name, so it claims
+        # /mcp and still points at her authority.
         ok = (all(d.get("resource") == f"https://gateway.uma.lab/mcp/{o}"
                   and "signed_metadata" in d for o, d in docs.items())
               and named["alice"] == "https://alice-as.uma.lab"
               and named["carol"] == "https://carol-as.uma.lab"
-              and alias.get("resource") == docs["alice"]["resource"])
+              and alias.get("resource") == "https://gateway.uma.lab/mcp"
+              and alias.get("authorization_servers") == [named["alice"]])
         return ok, f"named {named}, alias {alias.get('resource')}"
     check("each owner's resource publishes signed RFC 9728 metadata naming her own AS", prm)
+
+    def unknown_owner():
+        try:
+            get("https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/nobody")
+            return False, "an owner this resource server does not serve got a document"
+        except urllib.error.HTTPError as exc:
+            return exc.code == 404, f"status {exc.code}"
+    check("and an owner it does not serve gets nothing, not the default one",
+          unknown_owner)
     check("the same layer in AAuth vocabulary",
           lambda: (get("https://gateway.uma.lab/.well-known/aauth-resource.json").status == 200, ""))
 

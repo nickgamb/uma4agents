@@ -36,6 +36,12 @@ spec:
               value: "1"
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            # The private halves of the keys this operator publishes.
+            # Present only in the replicated shape, where the directory is a
+            # provisioned document and registering a key at runtime is
+            # refused; the compose stack has neither and generates its own.
+            - name: UMA4A_PUBLISHED_KEYS
+              value: /published
             # Must match UMA_AS_PEND_BUDGET on the uma-as Deployment, where it
             # is set explicitly for exactly this reason: a check counting to a
             # number the server does not enforce fails for the wrong cause.
@@ -45,6 +51,7 @@ spec:
             - { name: driver, mountPath: /driver/assurance_check.py, subPath: assurance_check.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }
             - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: published, mountPath: /published, readOnly: true }
             - { name: keys, mountPath: /driver/keys }
           workingDir: /driver
           resources:
@@ -57,5 +64,11 @@ spec:
           configMap: { name: demo-lib }
         - name: ca
           configMap: { name: uma-lab-ca-bundle }
+        - name: published
+          secret:
+            secretName: agent-published-key
+            items:
+              - { key: attested-ed25519.pem, path: attested-ed25519.pem }
+              - { key: newcomer-ed25519.pem, path: newcomer-ed25519.pem }
         - name: keys
           emptyDir: {}

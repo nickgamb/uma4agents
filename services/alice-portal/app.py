@@ -52,7 +52,11 @@ OIDC_METADATA_URL = os.environ.get(
 # browser cannot return to, and the authorization server rejects it as
 # unregistered.
 PORTAL_PUBLIC_URL = os.environ.get("PORTAL_PUBLIC_URL", "").rstrip("/")
-OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "alice-portal")
+OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "meridian-portal")
+# Whose portal this instance is. One per owner: the authority, the identity
+# provider and the vault below are all hers, and nothing else here differs
+# between one owner's instance and another's.
+OWNER = os.environ.get("UMA_PORTAL_OWNER", "alice")
 SESSION_SECRET = os.environ.get("PORTAL_SESSION_SECRET", "dev-session-secret")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
@@ -122,7 +126,7 @@ async def owner_headers(request: Request) -> dict:
 
 def current_user(request: Request) -> str | None:
     if AUTH_MODE != "oidc":
-        return "alice"
+        return OWNER
     # A signed cookie can outlive the server-side token store (portal
     # restart): a session without live tokens is not a login.
     if request.session.get("sid") not in TOKENS:
@@ -160,7 +164,11 @@ async def login(request: Request):
 async def auth_callback(request: Request):
     token = await oauth.keycloak.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
-    request.session["user"] = userinfo.get("name") or userinfo.get("preferred_username", "Alice")
+    # Whoever signed in, never a name this process assumed. One image serves
+    # any owner; the only thing that says which is the token that came back.
+    request.session["user"] = (userinfo.get("name")
+                               or userinfo.get("preferred_username")
+                               or OWNER)
     _store_tokens(request, token)
     return RedirectResponse(url="/")
 
@@ -182,10 +190,11 @@ async def me(request: Request):
     user = current_user(request)
     if user is None:
         return JSONResponse({"authenticated": False}, status_code=401)
-    return {"authenticated": True, "name": user, "auth": AUTH_MODE}
+    return {"authenticated": True, "name": user, "owner": OWNER,
+            "auth": AUTH_MODE}
 
 
-# --- Brokerage data (Alice's own vault, direct) ------------------------------
+# --- Brokerage data (this owner's own vault, direct) -------------------------
 
 
 def _enrich(positions: list[dict]) -> dict:
@@ -276,12 +285,23 @@ async def agent_resource_servers(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
-@app.post("/api/agent/resource-servers/{client_id}/revoke")
-async def agent_revoke_resource_server(client_id: str, request: Request):
+@app.post("/api/agent/resource-servers/decision")
+async def agent_decide_resource_server(request: Request):
+    """Her answer about a resource server: approve one that introduced
+    itself, or withdraw one she had allowed.
+
+    The client_id travels in the body rather than the path. A resource server
+    that registered itself is identified by its origin — an https URL — and a
+    URL inside a path segment survives neither percent-decoding nor a proxy
+    that normalises `//`.
+    """
     if require_login(request):
         return JSONResponse({"error": "auth"}, status_code=401)
+    body = await request.json()
     async with httpx.AsyncClient() as c:
-        r = await c.post(f"{UMA_AS}/owner/resource-servers/{client_id}/revoke",
+        r = await c.post(f"{UMA_AS}/owner/resource-servers/decision",
+                         json={"client_id": body.get("client_id"),
+                               "decision": body.get("decision")},
                          headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 

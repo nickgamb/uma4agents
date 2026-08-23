@@ -107,7 +107,7 @@ def split_ticket(ticket: str | None) -> tuple[str | None, str]:
     except Exception:                                          # noqa: BLE001
         return None, ticket or ""
 OWNER_AUDIENCES = set(
-    os.environ.get("UMA_AS_OWNER_CLIENTS", "alice-portal").split(","))
+    os.environ.get("UMA_AS_OWNER_CLIENTS", "meridian-portal").split(","))
 
 # How the owner proves she is the owner, to her own authorization server.
 #
@@ -1442,6 +1442,48 @@ def operator_published_key(client_id: str, directory: str,
 
 _RS_META_TTL = float(os.environ.get("UMA_AS_RS_META_TTL", "300"))
 _RS_META_CACHE: dict[str, tuple[float, dict]] = {}
+# How long a resource that did not check out stays refused without being
+# re-fetched, and how big a document may be.
+#
+# This endpoint takes no credential — that is the point of it — so anyone can
+# make this server fetch a URL they chose. Two bounds on what that is worth:
+# a failure is remembered briefly, so a flood of bad registrations does not
+# become a flood of outbound requests, and a response is read up to a cap
+# rather than into memory.
+#
+# Deliberately the opposite of the operator key directory, which caches only
+# hits. There, a stale miss would fail to recognise a key an operator just
+# published, in the common case where an agent enrols and immediately
+# negotiates — a real cost for no gain, since that check is an attestation.
+# Here the fetch *is* the authentication and a registration is retried by a
+# resource server rather than awaited by a person, so a few seconds of
+# remembered "no" costs nothing and is the only thing bounding the amplifier.
+_RS_MISS_TTL = float(os.environ.get("UMA_AS_RS_MISS_TTL", "30"))
+_RS_MAX_BYTES = int(os.environ.get("UMA_AS_RS_MAX_BYTES", "65536"))
+_RS_MISS_CACHE: dict[str, float] = {}
+
+
+def _fetch_json(url: str, what: str) -> dict | None:
+    """GET a document this server was told to fetch, bounded. None on any
+    failure, which every caller reads as "not authenticated"."""
+    import httpx
+
+    try:
+        with httpx.Client(timeout=5.0, follow_redirects=False,
+                          verify=AGENT_ISSUER_CA or True) as c:
+            with c.stream("GET", url) as r:
+                r.raise_for_status()
+                size = 0
+                chunks = []
+                for chunk in r.iter_bytes():
+                    size += len(chunk)
+                    if size > _RS_MAX_BYTES:
+                        raise ValueError(f"over {_RS_MAX_BYTES} bytes")
+                    chunks.append(chunk)
+        return json.loads(b"".join(chunks))
+    except Exception as exc:                                       # noqa: BLE001
+        event(f"resource_server.{what}", url=url, reason=str(exc)[:120])
+        return None
 
 
 def resource_server_metadata(resource_uri: str) -> dict:
@@ -1462,28 +1504,30 @@ def resource_server_metadata(resource_uri: str) -> dict:
     other means; this one *is* the authentication, and a credential that
     cannot be fetched has not been presented.
     """
-    import httpx
     from urllib.parse import urlparse
 
     cached = _RS_META_CACHE.get(resource_uri)
     if cached and now() - cached[0] < _RS_META_TTL:
         return cached[1]
+    missed = _RS_MISS_CACHE.get(resource_uri)
+    if missed is not None and now() - missed < _RS_MISS_TTL:
+        return {}
+
+    def refuse() -> dict:
+        if len(_RS_MISS_CACHE) >= 1024:
+            _RS_MISS_CACHE.pop(next(iter(_RS_MISS_CACHE)), None)
+        _RS_MISS_CACHE[resource_uri] = now()
+        return {}
 
     p = urlparse(resource_uri)
     if p.scheme != "https" or not p.netloc:
-        return {}
+        return refuse()
     origin = f"{p.scheme}://{p.netloc}"
     url = (f"{origin}/.well-known/oauth-protected-resource"
            f"{p.path.rstrip('/')}")
-    try:
-        r = httpx.get(url, timeout=5.0, follow_redirects=False,
-                      verify=AGENT_ISSUER_CA or True)
-        r.raise_for_status()
-        doc = r.json()
-    except Exception as exc:                                       # noqa: BLE001
-        event("resource_server.metadata_unreachable", resource_uri=resource_uri,
-              url=url, reason=str(exc)[:120])
-        return {}
+    doc = _fetch_json(url, "metadata_unreachable")
+    if not isinstance(doc, dict):
+        return refuse()
 
     reasons = []
     if doc.get("resource") != resource_uri:
@@ -1496,7 +1540,7 @@ def resource_server_metadata(resource_uri: str) -> dict:
     if reasons:
         event("resource_server.metadata_rejected", resource_uri=resource_uri,
               reasons=reasons)
-        return {}
+        return refuse()
 
     if len(_RS_META_CACHE) >= 256:
         _RS_META_CACHE.pop(next(iter(_RS_META_CACHE)), None)
@@ -1507,25 +1551,24 @@ def resource_server_metadata(resource_uri: str) -> dict:
 def resource_server_keys(resource_uri: str) -> list:
     """The public keys the named resource publishes, as JWKs. Empty on any
     failure, which the callers all read as "not authenticated"."""
-    import httpx
-
     doc = resource_server_metadata(resource_uri)
     if not doc:
         return []
-    try:
-        r = httpx.get(doc["jwks_uri"], timeout=5.0, follow_redirects=False,
-                      verify=AGENT_ISSUER_CA or True)
-        r.raise_for_status()
-        return r.json().get("keys") or []
-    except Exception as exc:                                       # noqa: BLE001
-        event("resource_server.jwks_unreachable", resource_uri=resource_uri,
-              reason=str(exc)[:120])
+    keys = _fetch_json(doc["jwks_uri"], "jwks_unreachable")
+    if not isinstance(keys, dict):
         return []
+    found = keys.get("keys")
+    return found if isinstance(found, list) else []
 
 
-def verify_resource_server_signature(request: Request, body: bytes,
-                                     resource_uri: str) -> bool:
+async def verify_resource_server_signature(request: Request, body: bytes,
+                                           resource_uri: str) -> bool:
     """Did the origin behind `resource_uri` sign this request?
+
+    Off the event loop, because deciding it means dereferencing a host named
+    by the caller. This runs on the PAT path, which every resource server
+    takes on every refresh; a five-second timeout awaited inline would let one
+    slow origin stall every other request this worker is serving.
 
     Every key that origin publishes is tried, because key rotation overlaps:
     a resource server that has just published a new one may still be signing
@@ -1543,7 +1586,8 @@ def verify_resource_server_signature(request: Request, body: bytes,
     path = request.url.path
     if request.url.query:
         path = f"{path}?{request.url.query}"
-    for jwk in resource_server_keys(resource_uri):
+    keys = await asyncio.to_thread(resource_server_keys, resource_uri)
+    for jwk in keys:
         try:
             key = OKPAlgorithm.from_jwk(json.dumps(jwk))
         except Exception:                                          # noqa: BLE001
@@ -1826,7 +1870,7 @@ async def token(request: Request) -> JSONResponse:
         if rs.get("secret"):
             if not secrets.compare_digest(client_secret or "", rs["secret"]):
                 return JSONResponse({"error": "invalid_client"}, status_code=401)
-        elif not verify_resource_server_signature(
+        elif not await verify_resource_server_signature(
                 request, body, rs.get("resource_uri") or ""):
             return JSONResponse({"error": "invalid_client"}, status_code=401)
         if rs["status"] == "pending":
@@ -2241,8 +2285,19 @@ async def rs_register(request: Request) -> JSONResponse:
             {"error": "invalid_request",
              "error_description": "this authorization server serves a different owner"},
             status_code=403)
+    # An owner exists because a person set one up. A resource server naming a
+    # string must not be able to bring one into being, complete with default
+    # policy and terms — on a single-owner server `serves` already settles it,
+    # but on one holding many this is the check that does. Before the fetch
+    # below, so an unknown owner costs no outbound request either.
+    if SERVED_OWNER is None and owner not in await STORE.owners():
+        return JSONResponse(
+            {"error": "invalid_request",
+             "error_description": "no such owner at this authorization server"},
+            status_code=403)
+
     resource_uri = (req.get("resource_uri") or "").strip()
-    if not verify_resource_server_signature(request, body, resource_uri):
+    if not await verify_resource_server_signature(request, body, resource_uri):
         event("resource_server.registration_refused", owner=owner,
               resource_uri=resource_uri,
               reason="no signature from a key published at that origin")
@@ -2263,7 +2318,12 @@ async def rs_register(request: Request) -> JSONResponse:
 
     await st(owner).put_resource_server(client_id, {
         "secret": "",
-        "name": html.escape(str(req.get("name") or client_id))[:120],
+        # Stored raw and capped. This is the one field on the record the
+        # registering side authors, so it is the one a surface rendering it
+        # has to escape — see the portal's `esc`. Escaping it here would put
+        # markup in the store, double-escape wherever that is done properly,
+        # and let the cap cut an entity in half.
+        "name": str(req.get("name") or client_id)[:120],
         "status": "pending",
         "consented": None,
         "last_pat_issued": (existing or {}).get("last_pat_issued"),

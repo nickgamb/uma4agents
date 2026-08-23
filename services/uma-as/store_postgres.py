@@ -37,6 +37,12 @@ import store
 EVENT_RETENTION_SECONDS = 3600
 
 
+class SchemaTooOld(Exception):
+    """A database whose keys predate multi-owner. Never retried: waiting
+    changes nothing, and the retry loop exists for a database that is coming
+    back, not for one that is the wrong shape."""
+
+
 class PostgresStore:
     """The pool, the schema, and the one LISTEN connection. Holds no owner's
     state — ``owner()`` gives you that."""
@@ -58,6 +64,42 @@ class PostgresStore:
         return [r["owner"] for r in rows]
 
     # --- lifecycle ---------------------------------------------------------
+
+    # The tables an owner-scoped upsert names. Kept beside the check rather
+    # than derived, so adding a table to schema.sql without deciding whether
+    # it is owner-scoped shows up here as a question rather than as silence.
+    _OWNER_KEYED = ("negotiations", "tickets", "rpts", "connections",
+                    "resource_servers", "blocked_operators", "owned_operators",
+                    "terms_docs", "tiers")
+
+    async def _assert_owner_keys(self, conn) -> None:
+        """Refuse to run against a database whose keys predate multi-owner.
+
+        schema.sql deliberately does not retrofit the composite primary keys —
+        that is a decision recorded there, and a database needing them is
+        recreated. What it cannot do is leave the discovery of that to chance:
+        the additive column migration succeeds, so such a database *looks*
+        upgraded and then fails on the first upsert with `42P10`, an error
+        that names an ON CONFLICT clause and nothing an operator can act on.
+
+        Better here, at startup, once, saying what to do about it.
+        """
+        stale = [t for t in self._OWNER_KEYED if not await conn.fetchval(
+            "SELECT EXISTS (SELECT 1 FROM pg_index i"
+            "  JOIN pg_class c ON c.oid = i.indrelid"
+            "  JOIN pg_attribute a ON a.attrelid = c.oid"
+            "                     AND a.attnum = ANY (i.indkey)"
+            " WHERE i.indisprimary AND c.relname = $1 AND a.attname = 'owner')",
+            t)]
+        if stale:
+            raise SchemaTooOld(
+                "this database predates multi-owner: "
+                f"{', '.join(stale)} still key on a single owner's rows. "
+                "The owner column backfills but the primary keys are not "
+                "retrofitted (see the note at the end of schema.sql), so "
+                "every upsert would fail. Recreate the database — under "
+                "compose `make down && make up`, in the cluster by deleting "
+                "the CloudNativePG Cluster and re-applying.")
 
     async def start(self) -> None:
         """Connect, create the schema if absent, seed, and start listening.
@@ -86,8 +128,17 @@ class PostgresStore:
                     # Every replica runs this; CREATE ... IF NOT EXISTS makes
                     # the losers no-ops rather than errors.
                     await conn.execute(schema)
+                    await self._assert_owner_keys(conn)
                 await self._start_listener()
                 return
+            except SchemaTooOld:
+                # Not a transient failure. Retrying it thirty times would bury
+                # the one message that says what to do under a minute of
+                # connect-retry noise and then report the wrong cause.
+                if self._pool is not None:
+                    await self._pool.close()
+                    self._pool = None
+                raise
             except Exception as exc:            # noqa: BLE001 — any of them
                 last = exc
                 if self._pool is not None:

@@ -29,6 +29,7 @@ import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 from uma4a_http_sig import VerifyError, verify
@@ -307,17 +308,26 @@ async def check(request: Request, rest: str = "") -> Response:
     return deny(d.status, body_out)
 
 
-def prm_document(owner: str = None) -> dict:
+def prm_document(owner: str = None, leaf: str = None) -> dict:
     """RFC 9728 Protected Resource Metadata — *structural* only. It says
     what shape the resource has (tools, scopes) and where authority lives
     (authorization_servers, the owner-resources query endpoint); it does
-    not say whose instances sit behind it. Publishing which resources Alice
-    owns at an unauthenticated well-known URI would be a privacy leak the
-    old push registration never had — owner-bound ids live behind
-    /owner-resources ("protected webfinger" for Alice's stuff)."""
+    not say whose instances sit behind it. Publishing which resources an
+    owner has at an unauthenticated well-known URI would be a privacy leak
+    the old push registration never had — owner-bound ids live behind
+    /owner-resources ("protected webfinger" for her stuff).
+
+    `leaf` is the path this document is *served for*, and it is separate from
+    the owner on purpose. RFC 9728 §3.3 has the client refuse a document
+    whose `resource` is not the resource it is accessing, and `lib/
+    uma4a_grant.py` implements that refusal. So the alias at /mcp has to
+    claim /mcp — naming the owner's canonical path there would hand every
+    client at the alias a document it is required to reject, which is what
+    it did until `make shim-test` said so.
+    """
     owner = owner or OWNER
     tools = tools_for(owner)
-    leaf = f"mcp/{owner}"
+    leaf = leaf or f"mcp/{owner}"
     tail = f"/{owner}"
     enforcer = ENFORCERS.get(owner)
     scopes = sorted({s for _, (rid, ss) in tools.items() for s in ss})
@@ -341,14 +351,34 @@ def prm_document(owner: str = None) -> dict:
 
 
 @app.get("/.well-known/oauth-protected-resource/mcp/{owner}")
-async def protected_resource_metadata_for(owner: str) -> dict:
-    return await protected_resource_metadata(owner if owner in ALL_OWNERS else None)
+async def protected_resource_metadata_for(owner: str) -> Response:
+    """One owner's resource, at her own path.
+
+    An owner this resource server does not serve gets a 404 rather than the
+    primary owner's document. Answering for somebody who is not here would
+    publish a document claiming a resource nobody governs, and an agent that
+    followed it would negotiate with an authority that has never heard of the
+    resource it named.
+    """
+    if owner not in ALL_OWNERS:
+        return JSONResponse({"error": "no such resource"}, status_code=404)
+    return JSONResponse(_signed_prm(owner, f"mcp/{owner}"))
 
 
 @app.get("/.well-known/oauth-protected-resource")
 @app.get("/.well-known/oauth-protected-resource/mcp")
-async def protected_resource_metadata(owner: str = None) -> dict:
-    doc = prm_document(owner)
+async def protected_resource_metadata() -> dict:
+    """The alias, for a client configured against the bare /mcp path.
+
+    Self-references /mcp, because that is the resource being accessed. It is
+    the primary owner's resource reached by a second name, not an ownerless
+    one: the authority it names is hers.
+    """
+    return _signed_prm(OWNER, "mcp")
+
+
+def _signed_prm(owner: str, leaf: str) -> dict:
+    doc = prm_document(owner, leaf)
     # RFC 9728 signed_metadata: the same claims as a JWT under the
     # resource's key (jwks_uri above), so a relayed or cached copy of this
     # document stays attributable to the resource that published it.

@@ -83,6 +83,40 @@ must_fail("an expired signature is rejected",
           lambda: verify(**A, signature_input=h3["Signature-Input"],
                          signature=h3["Signature"], public_key=pub))
 
+# The freshness window, on its own. Distinct from `expires` above: that is a
+# lifetime the *signer* set, and this is the ceiling the verifier imposes on
+# how old a signature it will accept whatever the signer asked for. It is the
+# only thing standing between a captured request and a replay of it, so it is
+# worth a case where nothing else about the request is wrong — a valid key, a
+# valid body, and the clock as the sole reason.
+import time as _time                                             # noqa: E402
+import uma4a_http_sig as _hs                                     # noqa: E402
+
+
+def _signed_at(offset_s):
+    real = _hs.time
+    _hs.time = type("clock", (), {"time": staticmethod(lambda: real.time() + offset_s)})
+    try:
+        return sign(**A, key=k, keyid="agent-1")
+    finally:
+        _hs.time = real
+
+
+ok("a signature made just now verifies",
+   lambda: verify(**A, public_key=pub,
+                  **{"signature_input": _signed_at(-5)["Signature-Input"],
+                     "signature": _signed_at(-5)["Signature"]}))
+
+_stale = _signed_at(-3600)
+must_fail("a signature older than the freshness window is rejected",
+          lambda: verify(**A, signature_input=_stale["Signature-Input"],
+                         signature=_stale["Signature"], public_key=pub))
+
+_future = _signed_at(3600)
+must_fail("and one dated far in the future is too",
+          lambda: verify(**A, signature_input=_future["Signature-Input"],
+                         signature=_future["Signature"], public_key=pub))
+
 must_fail("a tampered body-bound header is rejected",
           lambda: verify(method="POST", authority="gateway.uma.lab", path="/mcp",
                          authorization="PoP DIFFERENT",
