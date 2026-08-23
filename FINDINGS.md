@@ -745,6 +745,74 @@ Implemented at `POST /rs/register` with `clients/demo-driver/establishment_check
 covering the refusals; extension register entry 13 in
 [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
+**22. Enumerate what carries the owner — and make the resource identifier one
+of them.** UMA 2.0 never says which artifacts are owner-scoped, because with
+one authorization server per protected resource the owner is implicit in the
+deployment and nothing has to carry her. The moment a resource server holds
+two people's accounts, every artifact that crosses a boundary needs an answer,
+and the specification currently supplies none. Building it produced this list,
+and each entry is somewhere a missing owner is a cross-owner read:
+
+- the permission ticket, so it resolves only at the authority that minted it;
+- the token, so a grant for one owner cannot be spent against another;
+- the resource identifier and the ids beneath it, so a tool id from one
+  namespace never resolves against another owner's policy;
+- the terms document identifier, so a version history is hers;
+- the protected-resource metadata document itself.
+
+The last one is the trap, and it is an interoperability trap rather than a
+local one. Once the resource is `…/mcp/<owner>`, a deployment will still want
+a bare path for clients configured before owners existed. RFC 9728 §3.3 has
+the client refuse a document whose `resource` is not the resource it is
+accessing — so the alias must name *itself*, not the owner's canonical path.
+Serving one canonical answer at both is the intuitive choice and it is wrong:
+it hands every client at the alias a document it is required to reject. It
+cost us a working adapter and a working fixture, and it failed in a way that
+looked like the authorization server was down.
+
+A profile should say plainly: **one resource identifier per owner, every
+document self-referential, and aliases are resources too.**
+
+**23. Distribution has exactly two fixed points, and they are small.** The
+question that follows any owner-scaling claim is whether an authorization
+server can be pushed outward — to a person's own hardware, to an edge
+isolate, to a million of them. The useful answer is not "yes" or "no" but
+which parts resist, and the experiment gives a short list:
+
+| | |
+|---|---|
+| policy evaluation | pure. Inputs to a verdict, no writes. Runs anywhere, including per request. |
+| terms documents, keys, discovery | static artifacts. Cacheable and replicable without coordination. |
+| an ask-me decision | human latency. Already wherever she is; the pend outlives the request. |
+| **burning a permission ticket, burning a grant** | **indivisible.** Each is spent exactly once, in one step that either happens or does not. |
+
+Only the last row has to hold still, and only because single-use has to mean
+indivisible rather than merely once — recommendation 9, and the reason this
+build races thirty-two callers at each of those two functions on both storage
+backends.
+
+That is a better answer than a scaling number, because it is the shape of the
+constraint rather than a measurement of one deployment. It also says what a
+personal deployment costs: the two functions serialize *somewhere*, and if
+that somewhere is one small process holding its own state, then the process
+must be one — this build marks the single-replica authority `Recreate` for
+exactly that reason, since two of her would be two authorities behind one
+name.
+
+**24. An authorization server the owner names is a conformance property, not
+a deployment style.** Nothing in UMA 2.0 prevents a resource server from
+naming the same authorization server for every owner it serves, and a
+deployment that does is conformant, multi-tenant, and has quietly lost the
+property the cross-principal topology exists for: the authority is the
+operator's again, and "her policy" is a row in the operator's table.
+
+The distinction is testable from outside and costs one sentence to specify:
+**the authority named in the challenge is the owner's choice, and two owners
+of one resource server may name two different ones.** Everything else follows
+— per-owner metadata, per-owner protection tokens, and the establishment
+problem in recommendation 21, which only exists because the answer is allowed
+to be an authority the resource server has never met.
+
 ---
 
 ## Binding notes (AAuth)

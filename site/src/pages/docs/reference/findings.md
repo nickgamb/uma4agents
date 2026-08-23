@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-one recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-four recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -56,7 +56,7 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The twenty-one recommendations
+## The twenty-four recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -281,6 +281,46 @@ a fact only that person holds, so she still tells the resource server where hers
 is. What goes away is the part that had to be arranged between two companies —
 the part that made a personal authorization server impossible. See
 [many owners, one resource server](/docs/overview/multi-owner/).
+
+**22. Enumerate what carries the owner — and make the resource identifier one
+of them.** With one authorization server per protected resource the owner is
+implicit in the deployment and nothing has to carry her. The moment a resource
+server holds two people's accounts, every artifact crossing a boundary needs
+an answer: the permission ticket, the token, the resource identifier and the
+ids beneath it, the terms document identifier, and the metadata document
+itself. Each is somewhere a missing owner becomes a cross-owner read.
+
+The last is an interoperability trap rather than a local one. Once the
+resource is `…/mcp/<owner>`, a deployment still wants a bare path for clients
+configured before owners existed — and RFC 9728 §3.3 has the client refuse a
+document whose `resource` is not the resource it is accessing. So an alias
+must name *itself*. Serving one canonical answer at both is the intuitive
+choice and it hands every client at the alias a document it is required to
+reject. One resource identifier per owner, every document self-referential,
+and aliases are resources too.
+
+**23. Distribution has exactly two fixed points, and they are small.** Asked
+whether an authority can be pushed outward — to a person's hardware, to an
+edge isolate — the useful answer is which parts resist. Policy evaluation is
+pure and runs anywhere. Terms, keys and discovery are static artifacts. An
+ask-me decision is already wherever she is. What has to hold still is burning
+a permission ticket and burning a grant, because each is spent exactly once in
+a step that either happens or does not.
+
+That is a better answer than a scaling number: it is the shape of the
+constraint rather than a measurement of one deployment. It also prices a
+personal deployment — those two functions serialize somewhere, and where that
+somewhere is a single process holding its own state, the process must be one.
+
+**24. An authorization server the owner names is a conformance property, not a
+deployment style.** Nothing in UMA 2.0 stops a resource server naming the same
+authority for every owner it serves. Such a deployment is conformant,
+multi-tenant, and has lost the property the cross-principal topology exists
+for. One sentence fixes it: the authority named in the challenge is the
+owner's choice, and two owners of one resource server may name two different
+ones. Everything else follows — including the establishment problem in
+recommendation 21, which exists only because the answer is allowed to be an
+authority the resource server has never met.
 
 ## Parking lot
 
