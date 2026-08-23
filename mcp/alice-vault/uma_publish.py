@@ -34,7 +34,12 @@ log = logging.getLogger("alice-vault.publish")
 
 AS_PUBLIC = os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab")
 AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
-OWNER = os.environ.get("UMA_OWNER", "alice")
+# Whose vault this is. UMA_VAULT_OWNER is what the server itself is told —
+# it namespaces the tool ids and picks the fixtures — so it wins here too;
+# a document published under one owner's path while the tools underneath it
+# belong to another would be a resource claiming to be somebody else's.
+OWNER = (os.environ.get("UMA_VAULT_OWNER")
+         or os.environ.get("UMA_OWNER", "alice"))
 AUTHORITY = os.environ.get("UMA_EXPECTED_AUTHORITY", "gateway.uma.lab")
 # Configuration, not a constant: a resource reachable over plain http — a
 # personal deployment with no certificate authority anywhere near it —
@@ -94,6 +99,23 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]]) -> None:
     @mcp.custom_route("/.well-known/oauth-protected-resource/mcp", methods=["GET"])
     async def prm(request: Request) -> JSONResponse:
         doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools)
+        return JSONResponse(sign_metadata(doc, key(), KID))
+
+    @mcp.custom_route("/.well-known/oauth-protected-resource/mcp/{owner}",
+                      methods=["GET"])
+    async def prm_for_owner(request: Request) -> JSONResponse:
+        """The same resource under the owner's own path.
+
+        A resource server fronted by an enforcement point publishes one
+        document per owner; this one holds a single owner and is reachable
+        both ways. The authorization server dereferences whichever identifier
+        it was configured with, so both have to answer — and each has to name
+        itself, or the client is required to reject it.
+        """
+        who = request.path_params["owner"]
+        if who != OWNER:
+            return JSONResponse({"error": "no such resource"}, status_code=404)
+        doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools, leaf=f"mcp/{who}")
         return JSONResponse(sign_metadata(doc, key(), KID))
 
     @mcp.custom_route("/.well-known/aauth-resource.json", methods=["GET"])

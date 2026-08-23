@@ -28,7 +28,8 @@ import time
 
 
 def prm_document(public_base: str, as_public: str,
-                 tools: dict[str, tuple[str, list[str]]]) -> dict:
+                 tools: dict[str, tuple[str, list[str]]],
+                 leaf: str = "mcp") -> dict:
     """RFC 9728 Protected Resource Metadata — *structural* only.
 
     It says what shape the resource has and where authority lives. It does not
@@ -36,10 +37,15 @@ def prm_document(public_base: str, as_public: str,
     person owns at an unauthenticated well-known URI would be a privacy leak
     the older push registration never had. Owner-bound ids live behind the
     protected listing below.
+
+    `leaf` is the path this document is served for. RFC 9728 §3.3 has the
+    client refuse a document whose `resource` is not the resource it is
+    accessing, so a resource reachable at both /mcp and /mcp/<owner> has to
+    answer each with its own identifier rather than one canonical answer.
     """
     scopes = sorted({s for _, (rid, ss) in tools.items() for s in ss})
     return {
-        "resource": f"{public_base}/mcp",
+        "resource": f"{public_base}/{leaf}",
         "authorization_servers": [as_public],
         "jwks_uri": f"{public_base}/jwks",
         "scopes_supported": scopes,

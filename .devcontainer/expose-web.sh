@@ -62,7 +62,7 @@ log "Pointing Keycloak and the portal at the forwarded origins"
 # would advertise the github.dev address for the token endpoint too, and the
 # portal cannot follow it: that address is authenticated at GitHub's edge and
 # served with a public certificate, while this pod trusts only the lab CA.
-kubectl -n alice set env deploy/keycloak \
+kubectl -n idp set env deploy/keycloak \
   "KC_HOSTNAME=${KEYCLOAK_URL}" \
   "KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true" >/dev/null
 
@@ -72,9 +72,9 @@ kubectl -n alice set env deploy/keycloak \
 # portal builds its redirect URI from the incoming request, which through a
 # forwarded port says localhost:9010 — a host the browser cannot return to,
 # and one the realm has no reason to have registered.
-kubectl -n alice set env deploy/alice-portal \
+kubectl -n alice set env deploy/portal \
   "OIDC_ISSUER=${KEYCLOAK_URL}/realms/alice" \
-  "OIDC_METADATA_URL=http://keycloak.alice.svc.cluster.local:8080/realms/alice/.well-known/openid-configuration" \
+  "OIDC_METADATA_URL=http://keycloak.idp.svc.cluster.local:8080/realms/alice/.well-known/openid-configuration" \
   "PORTAL_PUBLIC_URL=${PORTAL_URL}" \
   >/dev/null
 
@@ -83,11 +83,11 @@ kubectl -n alice set env deploy/alice-portal \
 # realm's keys over the cluster network.
 kubectl -n alice set env deploy/uma-as \
   "UMA_AS_OWNER_ISSUER=${KEYCLOAK_URL}/realms/alice" \
-  "UMA_AS_OWNER_METADATA_URL=http://keycloak.alice.svc.cluster.local:8080/realms/alice/.well-known/openid-configuration" \
+  "UMA_AS_OWNER_METADATA_URL=http://keycloak.idp.svc.cluster.local:8080/realms/alice/.well-known/openid-configuration" \
   >/dev/null
 
-kubectl -n alice rollout status deploy/keycloak --timeout=180s
-kubectl -n alice rollout status deploy/alice-portal --timeout=180s
+kubectl -n idp rollout status deploy/keycloak --timeout=180s
+kubectl -n alice rollout status deploy/portal --timeout=180s
 kubectl -n alice rollout status deploy/uma-as --timeout=240s
 
 # --- 2. let the realm redirect back to the forwarded portal -----------------
@@ -98,17 +98,17 @@ log "Allowing the portal's forwarded origin as a redirect target"
 # Read from the deployment rather than assuming: this is a documented demo
 # credential set as a plain env value, not a Secret, and guessing a Secret
 # name here would fail silently into a fallback that only looked correct.
-KC_ADMIN_PASS="$(kubectl -n alice get deploy/keycloak -o jsonpath=\
+KC_ADMIN_PASS="$(kubectl -n idp get deploy/keycloak -o jsonpath=\
 '{.spec.template.spec.containers[0].env[?(@.name=="KC_BOOTSTRAP_ADMIN_PASSWORD")].value}')"
 KC_ADMIN_USER="$(kubectl -n alice get deploy/keycloak -o jsonpath=\
 '{.spec.template.spec.containers[0].env[?(@.name=="KC_BOOTSTRAP_ADMIN_USERNAME")].value}')"
 
-kubectl -n alice exec deploy/keycloak -- sh -c "
+kubectl -n idp exec deploy/keycloak -- sh -c "
   /opt/keycloak/bin/kcadm.sh config credentials \
     --server http://localhost:8080 --realm master \
     --user '${KC_ADMIN_USER}' --password '${KC_ADMIN_PASS}' >/dev/null &&
   CID=\$(/opt/keycloak/bin/kcadm.sh get clients -r alice \
-    -q clientId=alice-portal --fields id --format csv --noquotes | tail -n1) &&
+    -q clientId=meridian-portal --fields id --format csv --noquotes | tail -n1) &&
   /opt/keycloak/bin/kcadm.sh update clients/\$CID -r alice \
     -s 'redirectUris=[\"${PORTAL_URL}/*\",\"https://portal.uma.lab/*\"]' \
     -s 'webOrigins=[\"${PORTAL_URL}\",\"https://portal.uma.lab\"]'
@@ -122,19 +122,21 @@ kubectl -n alice exec deploy/keycloak -- sh -c "
 # PORTS tab would still list the port while nothing answered behind it, which
 # is the failure this whole script exists to avoid.
 forward() {
-  local svc="$1" port="$2"
+  # Namespaced, because the identity provider is not in an owner's namespace
+  # — it is neither owner's, and both resolve it.
+  local ns="$1" svc="$2" port="$3"
   setsid bash -c "
     while true; do
-      kubectl -n alice port-forward --address 127.0.0.1 svc/$svc $port:$port
+      kubectl -n $ns port-forward --address 127.0.0.1 svc/$svc $port:$port
       sleep 2
     done" >"/tmp/pf-$svc.log" 2>&1 < /dev/null &
 }
 
 log "Forwarding 9010 and 8080"
-pkill -f 'kubectl.*port-forward.*(alice-portal|keycloak)' 2>/dev/null || true
-pkill -f 'port-forward.*svc/(alice-portal|keycloak)' 2>/dev/null || true
-forward alice-portal 9010
-forward keycloak 8080
+pkill -f 'kubectl.*port-forward.*(svc/portal|svc/keycloak)' 2>/dev/null || true
+pkill -f 'port-forward.*svc/(portal|keycloak)' 2>/dev/null || true
+forward alice portal 9010
+forward idp keycloak 8080
 
 # Confirm rather than assume — a listed port with nothing behind it is the
 # exact thing that made this look broken before.
@@ -145,7 +147,7 @@ for _ in $(seq 1 20); do
   fi
 done
 if ! (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -q ':9010'; then
-  warn "Port 9010 never came up — see /tmp/pf-alice-portal.log"
+  warn "Port 9010 never came up — see /tmp/pf-portal.log"
 fi
 
 log "Open ${PORTAL_URL} and sign in as alice / alice-demo"

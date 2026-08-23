@@ -278,7 +278,7 @@ audit:
 	ctx = ssl.create_default_context(cafile='/certs/rootCA.pem'); \
 	tok = json.load(urllib.request.urlopen(urllib.request.Request( \
 		'https://keycloak.uma.lab/realms/alice/protocol/openid-connect/token', \
-		data=urllib.parse.urlencode({'grant_type': 'password', 'client_id': 'alice-portal', \
+		data=urllib.parse.urlencode({'grant_type': 'password', 'client_id': 'meridian-portal', \
 			'username': 'alice', 'password': 'alice-demo'}).encode()), context=ctx))['access_token']; \
 	req = urllib.request.Request('http://localhost:9000/owner/ledger', \
 		headers={'Authorization': 'Bearer ' + tok}); \

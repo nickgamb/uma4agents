@@ -76,7 +76,7 @@ def rpc(client: httpx.Client, params: dict, headers=None) -> httpx.Response:
 def portal_still_works(client: httpx.Client) -> bool:
     """Her browser credential, unchanged and still sufficient on its own."""
     r = client.post(f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-                    data={"grant_type": "password", "client_id": "alice-portal",
+                    data={"grant_type": "password", "client_id": "meridian-portal",
                           "username": "alice",
                           "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
                     timeout=15.0)
@@ -192,7 +192,7 @@ def main() -> int:
         # appear is an approval nobody can reconstruct afterwards.
         tok = client.post(
             f"{KEYCLOAK}/realms/alice/protocol/openid-connect/token",
-            data={"grant_type": "password", "client_id": "alice-portal",
+            data={"grant_type": "password", "client_id": "meridian-portal",
                   "username": "alice",
                   "password": os.environ.get("ALICE_PASSWORD", "alice-demo")},
             timeout=15.0).json()["access_token"]
