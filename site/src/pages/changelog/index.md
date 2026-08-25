@@ -22,6 +22,16 @@ release within that month. One entry per release.
 
 ## August 25 2026
 
+### v2026.08.23
+
+#### New
+
+- **Docs:** a changelog at `/changelog/`, back to the first release. In `⌘K` search as one row per release, in `llms.txt`, in the sitemap, published as `/changelog.md`, and readable over MCP with a new `listChangelog` tool.
+
+#### Bug fixes
+
+- **Docs:** contents links stopped working after the first click on every doc, post and changelog page. Heading ids were set on the live DOM and lost on the next re-render; they are part of the rendered HTML now.
+
 ### v2026.08.22
 
 #### Enhancements
