@@ -308,6 +308,28 @@ def main() -> int:                                            # noqa: C901
         check("a grant nobody's authority signed is refused",
               r.status_code in (401, 403), f"{r.status_code} {r.text[:160]}")
 
+        # And the subtler forgery: every verdict genuine, but the electorate
+        # rewritten. A tally that shipped one real verdict beside a mandate
+        # saying one is enough would pass any check that counted against the
+        # copy inside the token — so the enforcement point counts against the
+        # mandate the tally *publishes*, which is the one the holders saw.
+        lowered = dict(claims)
+        lowered["joint"] = {**joint,
+                            "mandate": {**(joint.get("mandate") or {}),
+                                        "holders": [h for h in
+                                                    (joint.get("mandate") or {}).get("holders") or []
+                                                    if h["owner"] == "alice"],
+                                        "rule": {"kind": "all", "threshold": 1}},
+                            "verdicts": [joint["verdicts"][0]]}
+        cooked = jwt.encode(lowered, forger, algorithm="EdDSA",
+                            headers={"typ": "aa-auth+jwt"})
+        r = mcp_call(c, f"{GATEWAY}/joint/{BOTH}", "tools/call",
+                     {"name": "get_positions", "arguments": {}}, META,
+                     headers=signed_headers("POST", "gateway.uma.lab",
+                                            f"/mcp/joint/{BOTH}", cooked, hers))
+        check("nor one that rewrites who was entitled to be counted",
+              r.status_code in (401, 403), f"{r.status_code} {r.text[:160]}")
+
         print("\n-- 6. one refusal is enough, and nobody waits for the rest --")
         other = AgentKeys(keyid="joint-2")
         rpt2, why2 = negotiate(c, BOTH, other,

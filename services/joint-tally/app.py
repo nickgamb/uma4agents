@@ -66,6 +66,8 @@ RS_SECRET = os.environ.get("TALLY_RS_SECRET", "tally-rs-dev-secret")
 CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 POLL_INTERVAL = int(os.environ.get("TALLY_POLL_INTERVAL", "2"))
 TICKET_TTL_S = float(os.environ.get("TALLY_TICKET_TTL_S", "300"))
+# How long a question this service signs to a holder stays answerable.
+REQUEST_TTL_S = int(os.environ.get("TALLY_REQUEST_TTL_S", "120"))
 # A minimum the holders may not vote themselves below. Configuration here
 # stands in for whatever supplies it in the world — an account agreement, or
 # a regulator — and its presence is the point: a quorum a group sets for
@@ -213,7 +215,16 @@ async def mandate(account: str) -> dict:
 
 
 def signed_request(claims: dict) -> str:
-    return jwt.encode({**claims, "iss": ISSUER, "iat": int(now())},
+    """One question to one holder's authority, signed and short-lived.
+
+    The expiry is the point of the second claim. Without it a captured
+    request is good forever: replayed weeks later it would put a decided
+    question back in front of an owner, under a policy she has since edited.
+    Nothing here is a privilege to steal, and a question that can be re-asked
+    indefinitely is still a way to bother somebody.
+    """
+    return jwt.encode({**claims, "iss": ISSUER, "iat": int(now()),
+                       "exp": int(now()) + REQUEST_TTL_S},
                       SIGNING_KEY, algorithm="EdDSA",
                       headers={"typ": "u4a-tally-req+jwt", "kid": KID})
 

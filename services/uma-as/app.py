@@ -2676,9 +2676,14 @@ def tally_claims(jws: str, issuer: str) -> dict:
     for fresh in (False, True):
         for jwk_dict in issuer_keys(issuer, fresh=fresh):
             try:
+                # `exp` is enforced by being present — a tally signs its
+                # questions short-lived so a captured one cannot be replayed
+                # at an owner weeks later, under a policy she has since
+                # changed.
                 return jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                   algorithms=["EdDSA"], issuer=issuer,
-                                  options={"verify_aud": False})
+                                  options={"verify_aud": False,
+                                           "require": ["exp", "iss"]})
             except jwt.InvalidTokenError:
                 continue
     raise HTTPException(status_code=401,
@@ -2694,11 +2699,14 @@ async def tally_request(request: Request) -> tuple[str, dict, dict]:
     issuer to decide where to look is safe; reading it to decide anything
     else is not.
     """
-    body = await request.json()
-    token = body.get("request") or ""
+    # Unauthenticated by construction — anyone can post here and the
+    # signature is what settles it — so malformed input has to be a refusal
+    # rather than a traceback.
     try:
+        body = await request.json()
+        token = (body or {}).get("request") or ""
         unverified = jwt.decode(token, options={"verify_signature": False})
-    except jwt.InvalidTokenError:
+    except (ValueError, jwt.InvalidTokenError):
         raise HTTPException(status_code=400, detail="that is not a tally request")
     owner = unverified.get("owner") or ""
     account = unverified.get("account") or ""
@@ -2793,14 +2801,14 @@ async def joint_verdict(request: Request) -> dict:
     # audience is the tally, because the tally is who the agent negotiated
     # with — and this is the point at which a tally that folded dishonestly
     # is caught, because what comes out is compared against her terms below.
+    agreement = claims.get("agreement") or ""
     try:
         contract, signer_jwk, identity = contract_identity(
-            claims.get("agreement") or "", record["tally"])
+            agreement, record["tally"])
     except Exception as exc:                                    # noqa: BLE001
         return refuse(f"the agreement did not verify: {exc}")
     if s256(base64.urlsafe_b64decode(
-            claims["agreement"] + "=" * (-len(claims["agreement"]) % 4))) \
-            != claims.get("contract"):
+            agreement + "=" * (-len(agreement) % 4))) != claims.get("contract"):
         return refuse("the agreement does not match the digest it was sent under")
 
     if problems := joint.verdict_problems(contract, tier, resource_id):

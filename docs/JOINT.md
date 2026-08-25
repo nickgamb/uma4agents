@@ -81,6 +81,15 @@ joint: {
 The last field is the tally's own claim. The enforcement point ignores it and
 recomputes, which is why the field is safe to carry at all.
 
+**And it recomputes against the mandate the tally *publishes*, never the copy
+in the grant.** That distinction is the whole difference between a check and a
+formality. Counting against the embedded copy would leave the electorate in
+the gift of the party being checked: a tally could ship one genuine verdict
+beside a mandate saying one is enough, every signature would verify, and the
+arithmetic would agree with it. The published document is the one the holders
+saw and can check for themselves, so it is the one the count runs on — and a
+mandate that cannot be read is a refusal rather than a fallback.
+
 **It cannot weaken anybody's terms.** It folds every holder's terms into the
 one document an agent signs — see below — and each holder's authority
 independently compares what was signed against what she published, refusing on
@@ -233,6 +242,9 @@ side to know about joint ownership would not be adoptable.
 - **The party that counts must not be the party that is trusted.** Carry the
   verdicts in the grant and let the enforcement point re-derive the result.
   The cost is a larger token.
+- **Re-derive against the published electorate, not the one in the token.**
+  Otherwise the party being checked supplies the standard it is checked
+  against, and one honest verdict beside a rewritten threshold passes.
 - **The electorate is not the coordinator's to edit.** A mandate is published
   by the resource server and agreed to by the holders; a tally that could add
   a holder or lower a threshold would be deciding who gets a say.

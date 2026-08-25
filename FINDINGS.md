@@ -931,10 +931,15 @@ which is one owner's authority signing its answer to one negotiation; and a
 **tally**, which folds the owners' terms into the single document the agent
 signs and collects the verdicts. The grant it issues carries the verdicts, and
 the enforcement point verifies each against the keys that owner's authority
-publishes and re-runs the count from the mandate. A tally that fabricates a
-verdict, replays an old one, or reports a threshold it never reached is
-refused at the door. It costs a larger token and it buys the only property
-that matters.
+publishes and re-runs the count. A tally that fabricates a verdict, replays an
+old one, or reports a threshold it never reached is refused at the door. It
+costs a larger token and it buys the only property that matters.
+
+One detail decides whether that is a check or a formality: the count has to
+run against the mandate the tally **publishes**, not the copy inside the
+grant. Otherwise the party being checked supplies the standard it is checked
+against, and a single genuine verdict beside a rewritten threshold passes with
+every signature verifying.
 
 Four things are worth specifying alongside it:
 

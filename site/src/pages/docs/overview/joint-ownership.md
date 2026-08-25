@@ -67,9 +67,14 @@ What is left is a fold and a comparison.
 **It cannot manufacture a yes.** It holds no key that any relying party
 accepts as a verdict. The grant it issues carries the owners' signed verdicts
 inside it, and the enforcement point verifies each against the keys *that
-owner's authority* publishes, then re-runs the count from the mandate. A tally
-that forged a verdict, replayed an old one, or reported a threshold it never
-reached is refused at the door.
+owner's authority* publishes, then re-runs the count. A tally that forged a
+verdict, replayed an old one, or reported a threshold it never reached is
+refused at the door.
+
+The count runs against the mandate the tally **publishes**, never the copy
+inside the grant. Otherwise the party being checked supplies the standard it
+is checked against — one genuine verdict beside a mandate saying one is
+enough would pass, with every signature verifying.
 
 **It cannot weaken anybody's terms.** It folds every owner's terms into the
 one document an agent signs, and each owner's authority independently compares

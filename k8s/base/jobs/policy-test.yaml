@@ -8,6 +8,17 @@
 # Run it after `make k8s-demo-all` and both halves have been shown: the grant
 # works, and it works only along the one path it is allowed to.
 ---
+# The identity these refusals are asserted from. Declared here as well as in
+# smoke-test.yaml, which is where it used to live alone: applying the same
+# ServiceAccount twice is idempotent, and a job that cannot run unless a
+# different job ran first is a job that fails on a fresh cluster with an
+# error naming neither of them.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: smoke
+  namespace: sterling-vance
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:

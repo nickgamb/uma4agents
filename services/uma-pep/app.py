@@ -33,7 +33,8 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 from uma4a_http_sig import VerifyError, verify
-from uma4a_pep import AuthzFacts, Enforcer, parse_mcp, s256
+from uma4a_pep import (MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp,
+                       s256)
 
 AS_PUBLIC = os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab")
 AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
@@ -366,7 +367,6 @@ def _shared_enforcer_for(owner: str) -> Enforcer:
 
 
 _MANDATES: dict[str, tuple[float, dict]] = {}
-MANDATE_TTL_S = float(os.environ.get("UMA_PEP_MANDATE_TTL_S", "30"))
 
 
 async def mandate_of(account: str) -> dict | None:
