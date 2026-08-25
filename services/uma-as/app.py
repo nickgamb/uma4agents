@@ -3466,13 +3466,19 @@ async def owner_resources(request: Request) -> list:
     # other two go on serving her a portal that is missing half of what she
     # can reach. Carol's single process never noticed; Alice's three did.
     #
-    # So while she is enrolled, this listing re-reads what the resource
-    # server publishes, at most once every `RESOURCE_REFRESH_S`. It is the
-    # same repair `/perm` performs on an unknown id, on a clock instead of on
-    # a miss — because a role that *widened* has no missing id to trigger it,
-    # only a set that is quietly short.
-    if envelope.get("grants") and (
-            _LAST_PULL.get(owner, 0) < time.time() - RESOURCE_REFRESH_S):
+    # So this listing re-reads what the resource server publishes. It is the
+    # same repair `/perm` performs on an unknown id, with a second trigger:
+    # `/perm` has a miss to react to, and the interesting cases here do not.
+    # Two triggers, because one of them is always the wrong one on its own.
+    # A resource that has just been shared with her has a grant matching
+    # nothing in the registry, and she should not have to wait out a clock to
+    # see it. A role that widened, or a membership that ended, leaves a set
+    # that is merely short or merely long — nothing is missing to notice — so
+    # those need the clock.
+    granted = envelope.get("grants") or []
+    absent = any(not any(org.claims_match(rid, [g]) for rid in RESOURCES)
+                 for g in granted)
+    if absent or _LAST_PULL.get(owner, 0) < time.time() - RESOURCE_REFRESH_S:
         _LAST_PULL[owner] = time.time()
         for client_id, rs in (await st(owner).resource_servers()).items():
             try:

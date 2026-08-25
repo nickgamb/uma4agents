@@ -128,6 +128,11 @@ def attested(c: httpx.Client, operator: str, name: str) -> AgentKeys:
         keys.signature_agent = directory
         return keys
     keys = AgentKeys()
+    # A key id of its own. The operator's runtime directory is keyed by it,
+    # and every AgentKeys starts life with the same default — so two agents
+    # of one operator registering in the same run overwrite each other, and
+    # the first one silently loses the attestation it had.
+    keys.keyid = f"{name}-{RUN}"
     keys.client_id = f"{operator}/agent.json"
     keys.signature_agent = keys.publish(c, operator)
     return keys
@@ -402,9 +407,9 @@ def main() -> int:                                            # noqa: C901
         rpt_hers, why_hers = negotiate(c, "alice", hers, "shared")
         check("and an agent she operates herself is granted it",
               rpt_hers is not None, f"{why_hers}")
+        book = spend(c, "alice", hers, "shared", rpt_hers) if rpt_hers else []
         check("and reads the firm's book, not her own portfolio",
-              spend(c, "alice", hers, "shared", rpt_hers)
-              == ["NWCF", "NWEQ", "TLT", "VNQ"] if rpt_hers else False)
+              book == ["NWCF", "NWEQ", "TLT", "VNQ"], f"{book}")
         rpt_own, why_own = negotiate(c, "alice", his, "own")
         check("while the same third-party agent still reaches her own accounts",
               rpt_own is not None, f"{why_own}")
@@ -494,7 +499,7 @@ def main() -> int:                                            # noqa: C901
         known = {x["handle"] for x in
                  c.get(f"{alice['as']}/owner/connections", headers=hdrs(c, "alice"),
                        timeout=15.0).json()}
-        fresh = attested(c, HER_OPERATOR, "alice")
+        fresh = attested(c, HER_OPERATOR, "alice-second")
         rpt, why = negotiate(c, "alice", fresh, "shared", answer="org")
         check("an administrator can answer a request waiting on her",
               rpt is not None, f"{why}")
