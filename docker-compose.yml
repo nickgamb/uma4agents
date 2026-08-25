@@ -40,6 +40,8 @@ services:
           - ps.uma.lab
           - agent.uma.lab
           - alice-agent.uma.lab
+          - northwind-org.uma.lab
+          - org-console.uma.lab
 
   keycloak:
     init: true
@@ -99,6 +101,15 @@ services:
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
+      # Where an enrolment code is redeemed, if the owner chooses to join an
+      # organization. Naming one here is not enrolment and grants nothing:
+      # until she enters a code, every line of the organization layer is
+      # inert and this server behaves exactly as it did before it existed.
+      UMA_AS_ORG_ISSUER: https://northwind-org.uma.lab
+      # How the organization reaches this server to deliver a notice. Its
+      # view of her authority, which is the address an agent is challenged
+      # with here and need not be in general.
+      UMA_AS_ORG_CALLBACK: https://alice-as.uma.lab
     volumes:
       - uma-as-keys:/keys
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
@@ -141,6 +152,13 @@ services:
       UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
       UMA_AS_PEND_BUDGET_ATTRIBUTED: ${UMA_AS_PEND_BUDGET_ATTRIBUTED:-40}
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
+      # The same organization Alice's authority can enrol with, and the same
+      # two variables. Membership is per owner and self-initiated: Carol
+      # joins or does not, independently of Alice, from her own portal, and
+      # the charter's patterns reach `carol-vault/...` exactly as they reach
+      # `alice-vault/...`. Nothing about this layer is one person's.
+      UMA_AS_ORG_ISSUER: https://northwind-org.uma.lab
+      UMA_AS_ORG_CALLBACK: https://carol-as.uma.lab
     volumes:
       - carol-as-keys:/keys
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
@@ -181,6 +199,20 @@ services:
                    "internal": "http://uma-as:9000"},
          "carol": {"public": "https://carol-as.uma.lab",
                    "internal": "http://carol-as:9000"}}
+      # The organization above these owners, configured on the firm's side
+      # rather than discovered from an owner's authority — which is the whole
+      # value of it. An owner may name any authorization server she likes;
+      # the resource still belongs to the organization, so the check that its
+      # ceiling was applied has to come from somewhere she does not control.
+      # This is also how a break-glass grant, signed by the organization and
+      # never seen by her authority, is recognised here.
+      UMA_PEP_ORG_ISSUER: https://northwind-org.uma.lab
+      UMA_PEP_ORG_INTERNAL: http://org-authority:9040
+      UMA_PEP_ORG_TOKEN: ${ORG_RS_TOKEN:-org-rs-dev-token}
+      # How long this gateway may act on a cached answer about who is a
+      # member. The window is somebody's access to the firm's book after the
+      # firm withdrew it, so it is short and it is configuration.
+      UMA_PEP_MEMBERSHIP_TTL_S: ${UMA_PEP_MEMBERSHIP_TTL_S:-10}
     volumes:
       - uma-pep-keys:/keys
     depends_on:
@@ -320,6 +352,27 @@ services:
   # Bob's agent operator's public web presence: the CIMD document Alice's AS
   # resolves for her approval dialog, and the Web Bot Auth key directory a
   # resource can consult before any relationship exists.
+  # The organization's book. The same vault image again, with the firm's
+  # holdings in it rather than a person's — one resource server, and this is
+  # the instance that belongs to Northwind rather than to any member.
+  #
+  # Reached at /mcp/shared/<member>: one resource, administered by whichever
+  # member is named, under her own authorization server and her own terms.
+  northwind-vault-mcp:
+    init: true
+    build:
+      context: .
+      dockerfile: mcp/alice-vault/Dockerfile
+    environment:
+      UMA_VAULT_OWNER: northwind
+      UMA_VAULT_FIXTURES: /app/fixtures-northwind.json
+      ENFORCEMENT_MODE: gateway
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   agent-operator:
     init: true
     build: ./clients/agent-operator
@@ -397,6 +450,90 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9010/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  # The organization's policy engine.
+  #
+  # A real one, and the choice is the argument rather than a shortcut. The
+  # site's own comparison page says an engine slots in as the evaluation core
+  # of an authorization server and that the two compose; this is that claim
+  # standing up. Note *which* layer it evaluates: the organization's, where
+  # the operator genuinely is the deciding party and a compliance team wants
+  # a real policy language. The member's layer stays a small legible document
+  # she can read without one.
+  opa:
+    init: true
+    image: openpolicyagent/opa:1.4.2
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "--log-level=error"]
+    healthcheck:
+      test: ["CMD", "/opa", "version"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  # Northwind Capital's authority — the layer above a member.
+  #
+  # Its own party, deliberately, rather than a table inside anyone's
+  # authorization server. Alice's authority holds a ceiling and asks this for
+  # decisions; this holds the charter and never sees her policy. Neither can
+  # read the other's, which is the arrangement the whole thing is about.
+  org-authority:
+    init: true
+    build:
+      context: .
+      dockerfile: services/org-authority/Dockerfile
+    environment:
+      ORG_ISSUER: https://northwind-org.uma.lab
+      ORG_ID: northwind
+      ORG_NAME: Northwind Capital
+      OPA_URL: http://opa:8181
+      ORG_ADMIN_ISSUER: https://keycloak.uma.lab/realms/northwind
+      ORG_ADMIN_CLIENTS: meridian-org-console
+      # The static credential is for the acceptance container, which has no
+      # browser to log in with. An administrator uses the realm above.
+      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
+      ORG_RS_TOKEN: ${ORG_RS_TOKEN:-org-rs-dev-token}
+      ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
+    volumes:
+      - org-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+    depends_on:
+      opa:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9040/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  # The administrator's surface, hosted by Meridian for its institutional
+  # clients. The same chassis as the client portal and the same rule: it
+  # holds no policy, decides nothing, and exists so the administrator's token
+  # never reaches a browser.
+  org-console:
+    init: true
+    build: ./services/org-console
+    environment:
+      ORG_AUTHORITY_INTERNAL: http://org-authority:9040
+      CONSOLE_AUTH: ${PORTAL_AUTH:-oidc}
+      OIDC_ISSUER: https://keycloak.uma.lab/realms/northwind
+      OIDC_CLIENT_ID: meridian-org-console
+      CONSOLE_PUBLIC_URL: https://org-console.uma.lab
+      CONSOLE_SESSION_SECRET: ${PORTAL_SESSION_SECRET:-dev-session-secret}
+      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
+      SSL_CERT_FILE: /certs/rootCA.pem
+    volumes:
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      org-authority:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9050/health')\""]
       interval: 3s
       timeout: 5s
       retries: 10
@@ -544,6 +681,29 @@ services:
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
     volumes:
       - ./clients/demo-driver/multi_owner_check.py:/driver/multi_owner_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  # The organization layer, end to end across five processes: two members'
+  # authorities, the organization's, its engine, and the enforcement point.
+  org-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/org_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
+      ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
+      UMA4A_AGENT_OPERATOR: https://agent.uma.lab
+      UMA4A_ALICE_OPERATOR: https://alice-agent.uma.lab
+      UMA_PEP_MEMBERSHIP_TTL_S: ${UMA_PEP_MEMBERSHIP_TTL_S:-10}
+    volumes:
+      - ./clients/demo-driver/org_check.py:/driver/org_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys
@@ -715,6 +875,7 @@ services:
 
 volumes:
   carol-as-keys:
+  org-keys:
   paios-data:
   uma-as-keys:
   uma-pep-keys:

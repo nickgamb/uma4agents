@@ -149,6 +149,16 @@ multi-owner-check:
 establishment-check:
 	docker compose --profile test run --rm establishment-check
 
+## org-check: an organization above the owner — two members, one charter,
+## one override. Proves what can only be seen across processes: that anyone
+## may join (by code or by invitation), that the ceiling is written into the
+## terms an agent signs, that a member cannot exceed it and the organization
+## cannot read past it, that both layers must allow, and that the one thing
+## which reaches past a member's refusal cannot do it quietly.
+.PHONY: org-check
+org-check:
+	@docker compose --profile test run --rm org-check
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:
@@ -380,6 +390,14 @@ sig-test:
 rules-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		python lib/test_policy.py
+
+## org-test: the organization's ceiling — what it may do to a member's terms,
+## and what it may never touch. Unit tests over the algebra and the charter
+## validator; needs nothing running.
+.PHONY: org-test
+org-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		python lib/test_org.py
 
 ## store-test: prove single-use really is single-use, on both storage backends
 # The authorization server's state has two implementations — in-process for

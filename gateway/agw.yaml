@@ -40,6 +40,50 @@ binds:
                   pathPrefix: /owner-resources
             backends:
               - host: "uma-pep:9002"
+          # The organization's book, shared with its members.
+          #
+          # One resource, many administrators: /mcp/shared/alice and
+          # /mcp/shared/carol reach the same process, and the only thing the
+          # member segment decides is whose authorization server governs the
+          # request. That is shared ownership — the resource belongs to
+          # Northwind, and each member administers access to it under her own
+          # authority and her own terms.
+          - name: northwind-vault-mcp
+            matches:
+              - path:
+                  pathPrefix: /mcp/shared
+            policies:
+              cors:
+                allowOrigins: ["*"]
+                allowHeaders: [mcp-protocol-version, content-type,
+                               cache-control, mcp-session-id, authorization]
+                exposeHeaders: ["Mcp-Session-Id", "WWW-Authenticate"]
+              extAuthz:
+                host: "uma-pep:9002"
+                includeRequestBody:
+                  maxRequestBytes: 16384
+                includeRequestHeaders:
+                  - x-envoy-auth-partial-body
+                  - authorization
+                  - signature
+                  - signature-input
+                  - host
+                  - content-type
+                  - mcp-method
+                  - mcp-name
+                  - mcp-protocol-version
+                  - origin
+                  - signature-agent
+                  - traceparent
+                protocol:
+                  http:
+                    path: '"/check" + request.path'
+            backends:
+              - mcp:
+                  targets:
+                    - name: northwind-vault
+                      mcp:
+                        host: http://northwind-vault-mcp:9020/mcp
           # One route per owner, most specific first. Her holdings are a
           # different process at a different address, not a filtered view of
           # a shared one.

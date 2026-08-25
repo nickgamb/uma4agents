@@ -26,6 +26,8 @@ build uma-pep          services/uma-pep/Dockerfile       .
 build alice-vault-mcp  mcp/alice-vault/Dockerfile        .
 build portal           services/alice-portal/Dockerfile  ./services/alice-portal
 build agent-operator   clients/agent-operator/Dockerfile ./clients/agent-operator
+build org-authority    services/org-authority/Dockerfile .
+build org-console      services/org-console/Dockerfile   ./services/org-console
 
 if [ -d aauth/upstream/aauth-person-server/.git ]; then
   build person-server  aauth/person-server.Dockerfile    ./aauth

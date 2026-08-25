@@ -52,6 +52,16 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: carol_portal }
+                    - name: org_authority
+                      domains: ["northwind-org.uma.lab", "northwind-org.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: org_authority }
+                    - name: org_console
+                      domains: ["org-console.uma.lab", "org-console.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: org_console }
                     - name: grafana
                       domains: ["grafana.uma.lab", "grafana.uma.lab:*"]
                       routes:
@@ -134,6 +144,22 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: carol-portal, port_value: 9010 } }
+    - name: org_authority
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: org_authority
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: org-authority, port_value: 9040 } }
+    - name: org_console
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: org_console
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: org-console, port_value: 9050 } }
     - name: grafana
       type: STRICT_DNS
       load_assignment:

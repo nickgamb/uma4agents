@@ -18,7 +18,13 @@
 #               is served only to Alice's authorization server. Same shape,
 #               same reason.
 #
-# The other four namespaces get none. Every waypoint is a pod and an extra
+#   northwind — /admin/* belongs to the console alone, while /member/* and
+#               /decision must be reachable by members' authorities and
+#               /membership/* by the enforcement point. One port at L4, and
+#               permitting a member's authority to reach it would permit her
+#               to rewrite the charter she is governed by.
+#
+# The remaining namespaces get none. Every waypoint is a pod and an extra
 # hop, and "which workload may talk to which" is a question ztunnel already
 # answers there.
 ---
@@ -63,6 +69,20 @@ kind: Gateway
 metadata:
   name: waypoint
   namespace: meridian
+  labels:
+    istio.io/waypoint-for: all
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: northwind
   labels:
     istio.io/waypoint-for: all
 spec:

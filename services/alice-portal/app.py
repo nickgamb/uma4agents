@@ -380,6 +380,64 @@ async def agent_update_policy(tier_id: str, request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/api/agent/organization")
+async def agent_organization(request: Request):
+    if require_login(request):
+        return JSONResponse({"enrolled": False}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/organization",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/organization/preview")
+async def agent_organization_preview(request: Request):
+    """What an enrolment code would commit her to, before it does.
+
+    Proxied like everything else here — the browser never holds her token —
+    and separate from the join below on purpose. Two calls, because the
+    answer to the first is the thing she is being asked to consent to.
+    """
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    body = await request.json()
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/organization/preview", json=body,
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/organization")
+async def agent_join_organization(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    body = await request.json()
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/organization", json=body,
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/organization/decline")
+async def agent_decline_invitation(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/organization/decline",
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.delete("/api/agent/organization")
+async def agent_leave_organization(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.delete(f"{UMA_AS}/owner/organization",
+                           headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/api/agent/connections")
 async def agent_connections(request: Request):
     if require_login(request):

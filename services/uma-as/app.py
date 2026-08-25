@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import assurance
+import org
 import policy
 import store
 
@@ -76,6 +77,18 @@ DEFAULT_OWNER = SERVED_OWNER or os.environ.get("UMA_AS_DEFAULT_OWNER", "alice")
 # Which owner the configured device key belongs to. See
 # require_owner_signature: the signature proves a holder, this says whose.
 OWNER_KEY_OWNER = os.environ.get("UMA_AS_OWNER_KEY_OWNER", DEFAULT_OWNER)
+
+# Where an enrolment code is redeemed.
+#
+# One organization, named by configuration, because an enrolment code is the
+# only thing the owner is asked for and a code says nothing about who issued
+# it. A deployment with many organizations needs a directory to resolve that
+# — a real question, and not one this lab pretends to have answered. What is
+# demonstrated here is the layer, not its discovery.
+ORG_ISSUER = os.environ.get("UMA_AS_ORG_ISSUER", "")
+# The address the organization posts notices back to. Its own view of this
+# server, which is not necessarily the issuer an agent is challenged with.
+ORG_CALLBACK = os.environ.get("UMA_AS_ORG_CALLBACK", ISSUER)
 
 
 def st(owner: str):
@@ -391,6 +404,15 @@ async def publish_terms(owner: str, tier_id: str, tier: dict) -> str:
     Idempotent per template_id (a version's content never changes)."""
     template_id = tier["terms"]["template_id"]
     if await st(owner).terms_doc(template_id) is None:
+        # Whether a layer above the owner is in force over these resources,
+        # stated in the document itself. An agent reads this before it has a
+        # token and before it signs anything, which is the only moment at
+        # which "these terms are not hers alone" is information it can act
+        # on. Leaving it out would make the ceiling invisible to the one
+        # party whose agreement is being asked for.
+        record = await st(owner).organization()
+        envelope = (record or {}).get("envelope") or {}
+        governed = bool(envelope) and org.governs(tier, envelope)
         await st(owner).publish_terms({
             "template_id": template_id,
             "terms_uri": terms_uri(template_id),
@@ -398,6 +420,13 @@ async def publish_terms(owner: str, tier_id: str, tier: dict) -> str:
             "name": tier["name"],
             "tier": tier_id,
             **{k: v for k, v in tier["terms"].items() if k != "template_id"},
+            **({"organization": {
+                "name": envelope.get("name"),
+                "id": envelope.get("org"),
+                "issuer": envelope.get("issuer"),
+                "charter_version": envelope.get("charter_version"),
+                "requires": envelope.get("summary") or [],
+            }} if governed else {}),
             "published_at": utcstamp(),
         })
         event("terms.published", template_id=template_id, tier=tier_id)
@@ -899,7 +928,18 @@ def pull_registrations(client_id: str, rs: dict) -> int:
         listing.raise_for_status()
         body = listing.json()
 
-    count = 0
+    # The listing replaces what this resource server publishes for this
+    # owner rather than merging into it.
+    #
+    # Merging was wrong in a way that only showed up once resources could be
+    # *withdrawn*. A resource server that stops publishing something — an
+    # organization that stopped sharing its book with this member, an account
+    # that was closed — had no way to say so: the id stayed in this registry
+    # for the life of the process, and a stale tier over it went on issuing
+    # tickets for a resource nobody was serving. Declarative registration
+    # means the published document is the truth, and that has to include the
+    # absences.
+    seen, count = set(), 0
     for res in body.get("resources", []):
         RESOURCES[res["_id"]] = {
             "resource_scopes": res["resource_scopes"],
@@ -909,10 +949,17 @@ def pull_registrations(client_id: str, rs: dict) -> int:
             "description": None,
             "registered_via": "pull",
             "owner": body.get("owner"),
+            "source": client_id,
         }
+        seen.add(res["_id"])
         count += 1
+    withdrawn = [rid for rid, d in RESOURCES.items()
+                 if d.get("source") == client_id
+                 and d.get("owner") == body.get("owner") and rid not in seen]
+    for rid in withdrawn:
+        RESOURCES.pop(rid, None)
     event("resources.pulled", client_id=client_id, owner=body.get("owner"),
-          count=count, endpoint=endpoint)
+          count=count, withdrawn=withdrawn or None, endpoint=endpoint)
     return count
 
 
@@ -1039,6 +1086,19 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
         return {"active": False, "error": err}
 
     owner = claims.get("owner") or DEFAULT_OWNER
+    # A withdrawal that left live grants working would be a withdrawal in
+    # name only — the charter's ceiling caps them at an hour, and an hour is
+    # a long time to be reading a book you have been shut out of. Checked on
+    # every introspection, which the enforcement point performs on every
+    # call, so it takes effect at once and needs no token machinery of its
+    # own.
+    if rec.get("handle") and await org_blocks_agent(owner, rec["handle"]):
+        org_claims, _ = await org_scope(owner)
+        if any(org.claims_match(p.get("resource_id") or "", org_claims)
+               for p in claims.get("permissions") or []):
+            event("rpt.introspected", corr=rec["family"],
+                  result="organization_revoked")
+            return {"active": False, "error": "organization_revoked"}
     if rec.get("handle"):
         await st(owner).touch_connection(rec["handle"], utcstamp())
     # Consumption is no longer done here by default: the PEP has not yet
@@ -1120,6 +1180,627 @@ async def audit_access(request: Request) -> dict:
     }, handle=(grant or {}).get("handle"))
     event("access.allowed", corr=body.get("family"), tool=body.get("tool"))
     return {"recorded": True}
+
+
+# --- The organization above her, if she has joined one -----------------------
+#
+# Everything in this section is inert for an owner who is nobody's member,
+# which is the default and the case the rest of this service was written
+# for. What it adds is the arrangement the person-scale demo cannot express:
+# a firm holds the account, Alice administers its sharing, and the firm's
+# policy is above hers rather than beside it.
+#
+# Three places the organization is felt, and they are deliberately different
+# mechanisms:
+#
+#   1. **Her terms are clamped** to the ceiling, on enrolment and whenever
+#      the charter changes, so what the organization requires is written into
+#      the document agents dereference and sign rather than applied
+#      invisibly at the door.
+#   2. **Its decision is asked for** on each request over a resource it
+#      claims, and folded into hers. Either layer may refuse; neither can
+#      widen the other.
+#   3. **Break-glass arrives as a notice.** Those grants never pass through
+#      here — the organization signs them itself — so what this service does
+#      with one is put it in her ledger and on her screen the moment it is
+#      opened, before any data has moved.
+
+_ORG: dict[str, org.OrgClient] = {}
+_ORG_JWKS: dict[str, tuple[float, list]] = {}
+
+
+async def org_record(owner: str) -> dict | None:
+    return await st(owner).organization()
+
+
+async def org_client(owner: str) -> org.OrgClient | None:
+    """This owner's organization, envelope refreshed if it is due.
+
+    Returns None when she is nobody's member — including when she has just
+    stopped being one, which this is where the server finds out about if the
+    organization's notice never arrived.
+    """
+    client = _ORG.get(owner)
+    if client is None:
+        record = await org_record(owner)
+        if record is None:
+            return None
+        client = _ORG[owner] = org.OrgClient(
+            record["issuer"], record["token"], record["envelope"])
+    if not client.stale():
+        return client
+
+    envelope, error = await client.refresh()
+    if error == "membership_ended":
+        await end_membership(owner, "your organization ended this membership")
+        return None
+    if error:
+        event("org.unreachable", owner=owner, error=error,
+              usable=not client.unusable())
+        return client
+    record = await org_record(owner) or {}
+    known = (record.get("envelope") or {}).get("charter_version")
+    record["envelope"] = envelope
+    await st(owner).set_organization(record)
+    if envelope.get("charter_version") != known:
+        # The organization edited its charter. Her terms are re-clamped to
+        # the new ceiling here rather than at the next request, because the
+        # terms document is what an agent reads *before* it asks, and a
+        # document that is briefly out of date is one an agent can sign.
+        event("org.charter_changed", owner=owner, was=known,
+              now=envelope.get("charter_version"))
+        await clamp_to_envelope(owner, envelope, force=True)
+        await resync_shared(owner, envelope)
+    return client
+
+
+async def clamp_to_envelope(owner: str, envelope: dict,
+                            force: bool = False) -> list[dict]:
+    """Narrow every governed tier to the ceiling, and say what moved.
+
+    `force` republishes governed tiers whose terms already fit. That is not
+    busywork: a tier under an organization discloses the organization in its
+    terms document, so enrolment and a charter change both alter what the
+    document says even when no field of hers had to move. The version bump is
+    what makes that disclosure reach an agent instead of sitting in a
+    document nobody re-reads.
+    """
+    changed: list[dict] = []
+    for tier_id, tier in (await st(owner).tiers()).items():
+        patch, changes = org.patch_for(tier, envelope)
+        if patch is None:
+            if not (force and org.governs(tier, envelope)):
+                continue
+            patch = {}
+        updated = await st(owner).update_tier(tier_id, patch)
+        await publish_terms(owner, tier_id, updated)
+        if changes:
+            event("org.clamped", owner=owner, tier=tier_id,
+                  fields=[c["field"] for c in changes])
+            await ledger_add(owner, "org_clamped", "-", {
+                "tier": tier_id,
+                "organization": envelope.get("name"),
+                "charter_version": envelope.get("charter_version"),
+                "changes": [c["text"] for c in changes],
+            })
+        changed += [{"tier": tier_id, **c} for c in changes]
+
+    client = _ORG.get(owner)
+    if client is not None:
+        await client.report(org.compliance(
+            await st(owner).tiers(), envelope, list(RESOURCES),
+            clamped_fields=[c["field"] for c in changed]))
+    return changed
+
+
+async def resync_shared(owner: str, envelope: dict | None,
+                        claims: list | None = None) -> None:
+    """Re-read what this owner's resource server publishes, and drop what the
+    organization no longer shares with her.
+
+    Membership is what makes a shared resource exist at her authority. The
+    gateway publishes it to her only while she holds a role that grants it,
+    so a pull is enough to *add* one — but a pull merges rather than
+    replaces, so something withdrawn has to be removed here.
+
+    Both directions matter and only one of them is obvious. Adding is the
+    reason she joined. Removing is the reason leaving is safe: her tier over
+    the firm's book survives, and governs nothing, so an agent presenting an
+    old grant gets an unregistered resource rather than her terms.
+    """
+    for client_id, rs in (await st(owner).resource_servers()).items():
+        try:
+            await asyncio.to_thread(pull_registrations, client_id, rs)
+        except Exception as exc:                                # noqa: BLE001
+            event("resources.pull_retry", client_id=client_id,
+                  error=str(exc)[:200])
+    claims = claims if claims is not None else (envelope or {}).get("claims") or []
+    grants = (envelope or {}).get("grants") or []
+    for rid in [r for r in list(RESOURCES) if org.claims_match(r, claims)]:
+        if not org.claims_match(rid, grants):
+            RESOURCES.pop(rid, None)
+            event("resources.unshared", owner=owner, resource_id=rid)
+
+
+async def end_membership(owner: str, why: str) -> None:
+    """Stop being governed, from either side's initiative.
+
+    Her tiers are left exactly as they are. They were narrowed while she was
+    a member and they stay narrowed — an envelope is a ceiling, and taking a
+    ceiling away does not raise what is underneath it. Anything she wants
+    back she can widen herself, deliberately, one tier at a time, which is
+    the only way access should ever grow.
+    """
+    record = await org_record(owner)
+    claims = ((record or {}).get("envelope") or {}).get("claims") or []
+    _ORG.pop(owner, None)
+    if not await st(owner).clear_organization():
+        return
+    # Her rights over the organization's resources end with the membership
+    # that granted them. Her *terms* are untouched — see the note below —
+    # but the resources those terms were written over stop being hers to
+    # administer, which is the honest meaning of shared ownership ending.
+    await resync_shared(owner, None, claims)
+    event("org.membership_ended", owner=owner, why=why)
+    await ledger_add(owner, "org_left", "-", {"why": why})
+    await owner_notify(owner, {"type": "organization", "state": "ended",
+                               "why": why})
+
+
+async def org_envelope(owner: str) -> dict | None:
+    client = await org_client(owner)
+    return client.envelope if client else None
+
+
+async def organization_blocks(owner: str, resource_id: str) -> str | None:
+    """Why a request over this resource cannot proceed, or None.
+
+    The one case: the organization's ceiling could not be re-read for longer
+    than this server is willing to act on a stale copy of it. A ceiling
+    nobody can read is not a ceiling, and the direction to fail in is
+    obvious — the resource belongs to the organization.
+    """
+    client = await org_client(owner)
+    if client is None:
+        return None
+    if not org.claims_match(resource_id, client.envelope.get("claims") or []):
+        return None
+    if client.unusable():
+        return (f"{client.envelope.get('name')}'s policy could not be read, "
+                f"and access to its resources does not proceed without it")
+    # Claimed by the organization, but not shared with *her*. Refused before
+    # her terms are ever dictated, because there is nothing for her to offer:
+    # these are somebody else's resources and her role does not include them.
+    #
+    # The distinction between this and an ordinary refusal is worth keeping.
+    # "Your organization has not shared this with you" is a fact about the
+    # relationship the member can act on — by asking an administrator — and
+    # it is not a judgement about the agent at all.
+    if not org.claims_match(resource_id, client.envelope.get("grants") or []):
+        role = client.envelope.get("role_name") or client.envelope.get("role")
+        return (f"{client.envelope.get('name')} has not shared this resource "
+                f"with you" + (f" — your role here is {role}" if role else
+                               ", and you hold no role there"))
+    return None
+
+
+async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
+    """The organization's answer about this request, or {} if it has none.
+
+    Its `allow` means "no objection", never "grant" — her tiers are what
+    permit, and nothing returned here is capable of making a request easier
+    than her own policy already makes it. The only two things this can do are
+    put the request in front of her, and stop it.
+    """
+    client = await org_client(rec["owner"])
+    if client is None:
+        return {}
+    contract = rec.get("contract") or {}
+    verdict = await client.decide({
+        "resource_id": rec["resource_id"],
+        "scopes": list(rec.get("resource_scopes") or []),
+        "tier": rec.get("tier"),
+        "expires_in": contract.get("expires_in", 0),
+        "purpose": contract.get("purpose"),
+        "reason": contract.get("reason"),
+        "mission": contract.get("mission"),
+        "operation": contract.get("operation"),
+        "assurance": facts["assurance"],
+        "standing": facts["standing"],
+    })
+    if not verdict.get("governed"):
+        return {}
+    return {**verdict, "organization": client.envelope.get("name"),
+            "org": client.envelope.get("org")}
+
+
+# --- Notices from the organization -------------------------------------------
+
+
+def org_issuer_keys(issuer: str) -> list:
+    cached = _ORG_JWKS.get(issuer)
+    if cached and cached[0] > now():
+        return cached[1]
+    import httpx
+
+    with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
+        jwks = client.get(f"{issuer.rstrip('/')}/jwks")
+        jwks.raise_for_status()
+    keys = jwks.json()["keys"]
+    _ORG_JWKS[issuer] = (now() + 300, keys)
+    return keys
+
+
+@app.post("/org/notice")
+async def org_notice(request: Request) -> dict:
+    """Something the organization wants this owner told.
+
+    Verified against the organization's published keys rather than a shared
+    secret or a network position, because the interesting forgery is an agent
+    posting a break-glass notice to make an owner believe her firm took data
+    it never touched — or, worse, to train her to expect notices that mean
+    nothing. Only the organization she enrolled with can sign one.
+    """
+    body = await request.json()
+    unverified = jwt.decode(body.get("notice") or "",
+                            options={"verify_signature": False})
+    owner = unverified.get("sub") or ""
+    if not serves(owner):
+        raise HTTPException(status_code=404, detail="not an owner here")
+    record = await org_record(owner)
+    if record is None:
+        raise HTTPException(status_code=403, detail="not enrolled")
+    issuer = record["issuer"]
+    claims = None
+    for jwk_dict in org_issuer_keys(issuer):
+        try:
+            claims = jwt.decode(body["notice"],
+                                OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                algorithms=["EdDSA"], issuer=issuer,
+                                options={"verify_aud": False})
+            break
+        except jwt.InvalidTokenError:
+            continue
+    if claims is None or claims.get("sub") != owner:
+        raise HTTPException(status_code=401,
+                            detail="that notice is not signed by this owner's "
+                                   "organization")
+
+    kind = claims.get("kind")
+    event("org.notice", owner=owner, kind=kind)
+    if kind == "membership_ended":
+        await end_membership(owner, "your organization ended this membership")
+        return {"received": kind}
+    if kind == "role_changed":
+        # What she may reach has changed. Re-read the envelope — which now
+        # carries a different set of grants — and let the resources follow.
+        client = _ORG.get(owner)
+        if client is not None:
+            client.fetched = 0.0
+        envelope = await org_envelope(owner)
+        await resync_shared(owner, envelope)
+        await ledger_add(owner, "org_role", "-", {
+            "organization": (record.get("envelope") or {}).get("name"),
+            "role": claims.get("role"), "by": claims.get("by")})
+        await owner_notify(owner, {"type": "organization", "state": "role",
+                                   "role": claims.get("role"),
+                                   "by": claims.get("by")})
+        return {"received": kind, "role": claims.get("role")}
+    if kind == "charter_changed":
+        client = _ORG.get(owner)
+        if client is not None:
+            client.fetched = 0.0           # force the next read to be fresh
+        envelope = await org_envelope(owner)
+        return {"received": kind,
+                "charter_version": (envelope or {}).get("charter_version")}
+
+    # The break-glass family. All three are records first and notifications
+    # second: a toast she was not at her desk for is not a record, and the
+    # ledger is what she will read afterwards.
+    if kind in ("break_glass_opened", "break_glass", "break_glass_used"):
+        await ledger_add(owner, "break_glass", claims.get("jti") or "-", {
+            "stage": kind,
+            "organization": (record.get("envelope") or {}).get("name"),
+            "resource_id": claims.get("resource_id"),
+            "resources": claims.get("resources"),
+            "reason": claims.get("reason"),
+            "authorised_by": claims.get("authorised_by") or claims.get("by"),
+            "tool": claims.get("tool"),
+            "summary": claims.get("summary"),
+            "expires_in": claims.get("expires_in") or claims.get("window_s"),
+            "charter_version": claims.get("charter_version"),
+        })
+        await owner_notify(owner, {"type": "break_glass", "stage": kind,
+                                   "resource_id": claims.get("resource_id"),
+                                   "reason": claims.get("reason"),
+                                   "by": claims.get("authorised_by")
+                                         or claims.get("by")})
+        return {"received": kind}
+    return {"received": kind or "unknown"}
+
+
+# --- Delegated administration ------------------------------------------------
+#
+# The other half of "the organization owns the data", and the half the
+# ceiling cannot express. A firm whose accounts these are does not only want
+# a bound on what its people may permit; it wants to be able to answer for
+# what is connected to them. PP2PI calls this quadrant co-administration —
+# two administrators over one subject's resources — and it has always been
+# the arrangement that had a name and no mechanism.
+#
+# What an administrator can do here is exactly what she can do, with one
+# asymmetry that runs through everything else in this profile:
+#
+#   * **restrictions are unrestricted.** Revoke an agent, block an operator,
+#     deny a pending request — any of it, any time. The worst outcome of an
+#     administrator being wrong about a restriction is friction;
+#   * **permissions are bounded by the charter.** An approval is only
+#     available over a resource the organization actually claims. An
+#     administrator approving an agent's access to a member's *own* accounts
+#     would not be co-administration, it would be an account takeover with a
+#     policy document attached.
+#
+# And every act of his is attributed. Her ledger says who did it, and her
+# portal says so on the screen. A record that let one party's decision appear
+# as another's is worse than no record: it is a record that will be believed.
+#
+# The credential is a short-lived token the organization signs with the key
+# it publishes, naming the member and the administrator. Not a password, not
+# a session, and not anything her identity provider issued — the
+# administrator is a different party from her, and nothing here should be
+# capable of impersonating her to her own authority.
+
+ORG_ADMIN_TYP = "u4a-org-admin+jwt"
+
+
+async def org_scope(owner: str) -> tuple[list, dict]:
+    """(what the organization claims, the tiers of hers that govern any of it).
+
+    Everything an administrator may see or touch is filtered through this.
+    The organization holds the firm's book and shares it with her; it does
+    not hold her brokerage account, and no amount of co-administration turns
+    one into the other.
+    """
+    envelope = await org_envelope(owner) or {}
+    claims = envelope.get("claims") or []
+    tiers = {tid: t for tid, t in (await st(owner).tiers()).items()
+             if org.governs(t, envelope)} if claims else {}
+    return claims, tiers
+
+
+def _org_blocked(record: dict | None) -> dict:
+    blocked = (record or {}).get("blocked") or {}
+    return {"handles": list(blocked.get("handles") or []),
+            "operators": list(blocked.get("operators") or [])}
+
+
+async def org_blocks_agent(owner: str, handle: str,
+                           identity: dict | None = None) -> bool:
+    """Whether the organization has shut this agent out of *its* resources.
+
+    Kept in the membership record rather than beside her own revocations,
+    and that is the whole design of it. Her revocations are hers and outlive
+    anything; these are the organization's, they apply only to the
+    organization's resources, and they vanish when the membership does.
+    An administrator can stop an agent reaching the firm's book and cannot,
+    by any path, touch that agent's standing with her.
+    """
+    blocked = _org_blocked(await org_record(owner))
+    if handle in blocked["handles"]:
+        return True
+    origin = operator_origin(identity or {})
+    return bool(origin and origin in blocked["operators"])
+
+
+async def org_block(owner: str, *, handle: str = None, operator: str = None,
+                    remove: bool = False) -> dict:
+    record = await org_record(owner)
+    if record is None:
+        raise HTTPException(status_code=403, detail="not enrolled")
+    blocked = _org_blocked(record)
+    key, value = ("handles", handle) if handle else ("operators", operator)
+    if remove:
+        blocked[key] = [x for x in blocked[key] if x != value]
+    elif value not in blocked[key]:
+        blocked[key].append(value)
+    record["blocked"] = blocked
+    await st(owner).set_organization(record)
+    return blocked
+
+
+async def require_org_admin(request: Request, owner: str) -> dict:
+    """The administrator acting on this owner, or a refusal.
+
+    Three things have to hold and each rules out a different attack: the
+    token is signed by the organization *this owner enrolled with* (not any
+    organization), it names her (not a member of the same organization
+    reaching sideways), and it is fresh (not one kept from a membership that
+    has since ended).
+    """
+    if not serves(owner):
+        raise HTTPException(status_code=404, detail="not an owner here")
+    record = await org_record(owner)
+    if record is None:
+        raise HTTPException(
+            status_code=403,
+            detail="this owner does not administer these resources for anyone")
+    token = _bearer(request)
+    if jwt.get_unverified_header(token).get("typ") != ORG_ADMIN_TYP:
+        raise HTTPException(status_code=401,
+                            detail=f"an administration token has typ {ORG_ADMIN_TYP}")
+    issuer = record["issuer"]
+    claims = None
+    for jwk_dict in org_issuer_keys(issuer):
+        try:
+            claims = jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                algorithms=["EdDSA"], issuer=issuer,
+                                options={"verify_aud": False})
+            break
+        except jwt.InvalidTokenError:
+            continue
+    if claims is None or claims.get("sub") != owner:
+        raise HTTPException(
+            status_code=401,
+            detail="that token is not signed by this owner's organization for "
+                   "this owner")
+    return {"org": claims.get("org"), "name": claims.get("org_name"),
+            "admin": claims.get("admin") or "an administrator"}
+
+
+@app.get("/org/admin/{owner}/pending")
+async def org_admin_pending(owner: str, request: Request) -> list:
+    """What is waiting on her *about the organization's resources*.
+
+    Not her queue. An agent asking to read her own brokerage account is
+    nothing to do with her employer, does not appear here, and cannot be
+    denied from here — which is the difference between an organization that
+    shares resources with her and one that has taken over her account.
+    """
+    await require_org_admin(request, owner)
+    claims, _ = await org_scope(owner)
+    return [p for p in await pending_view(owner)
+            if org.claims_match(p.get("resource_id") or "", claims)]
+
+
+@app.post("/org/admin/{owner}/pending/{family}/decision")
+async def org_admin_decision(owner: str, family: str, request: Request) -> dict:
+    actor = await require_org_admin(request, owner)
+    claims, _ = await org_scope(owner)
+    pended = await st(owner).negotiation(family)
+    if not org.claims_match((pended or {}).get("resource_id") or "", claims):
+        # Both directions refused, not just approval. An administrator who
+        # could deny a request about her own accounts could interfere with
+        # her arrangements at will, and "it was only a refusal" is no comfort
+        # when the agent being refused is her accountant's.
+        raise HTTPException(
+            status_code=403,
+            detail="that request is about a resource your organization does "
+                   "not share with this member, and is none of its business")
+    return await decide_pending(owner, family, (await request.json()).get("decision"),
+                                actor)
+
+
+async def org_related_connections(owner: str) -> list:
+    """Her agents that have anything to do with the organization.
+
+    An agent is the organization's business when it has been granted at, or
+    approved at, a tier of hers that governs one of the organization's
+    resources — or is asking for one right now. Everything else is an
+    arrangement between her and somebody's agent about her own accounts, and
+    an administrator has no more business seeing it than her bank does.
+    """
+    claims, tiers = await org_scope(owner)
+    if not claims:
+        return []
+    governed = set(tiers)
+    pending_handles = {
+        rec.get("handle") for rec in await st(owner).pending_negotiations()
+        if org.claims_match(rec.get("resource_id") or "", claims)}
+    out = []
+    for conn in await st(owner).connections():
+        touched = (set(conn.get("tiers_granted") or []) |
+                   set(conn.get("tiers_approved") or [])) & governed
+        if touched or conn["handle"] in pending_handles:
+            out.append({**conn, "org_tiers": sorted(touched)})
+    return out
+
+
+@app.get("/org/admin/{owner}/connections")
+async def org_admin_connections(owner: str, request: Request) -> list:
+    await require_org_admin(request, owner)
+    return await org_related_connections(owner)
+
+
+@app.post("/org/admin/{owner}/connections/{handle}/revoke")
+async def org_admin_revoke(owner: str, handle: str, request: Request) -> dict:
+    """Shut an agent out of the organization's resources.
+
+    Not a revocation of the connection. Her relationship with this agent is
+    hers — it may be reading her own portfolio for her every morning — and an
+    organization that could end it would be reaching well past the resources
+    it shares. So what this does is narrower and exact: the agent stops being
+    able to reach anything the charter claims, immediately, and everything
+    else about its standing with her is untouched.
+    """
+    actor = await require_org_admin(request, owner)
+    if not any(c["handle"] == handle for c in await org_related_connections(owner)):
+        raise HTTPException(
+            status_code=404,
+            detail="that agent has no dealings with your organization's "
+                   "resources")
+    await org_block(owner, handle=handle)
+    event("org.agent_blocked", owner=owner, handle=handle,
+          by=actor.get("admin"))
+    await ledger_add(owner, "org_acted", "-", {
+        "what": "shut an agent out of the organization's resources",
+        "note": "its access to your own accounts is unchanged",
+        "by": actor}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": "org-revoked", "by": actor})
+    return {"handle": handle, "status": "blocked-for-organization"}
+
+
+@app.post("/org/admin/{owner}/connections/{handle}/restore")
+async def org_admin_restore(owner: str, handle: str, request: Request) -> dict:
+    actor = await require_org_admin(request, owner)
+    await org_block(owner, handle=handle, remove=True)
+    await ledger_add(owner, "org_acted", "-", {
+        "what": "let an agent reach the organization's resources again",
+        "by": actor}, handle=handle)
+    return {"handle": handle, "status": "allowed"}
+
+
+@app.get("/org/admin/{owner}/operators")
+async def org_admin_operators(owner: str, request: Request) -> list:
+    """The operators behind the agents that touch the organization's
+    resources, and nobody else's."""
+    await require_org_admin(request, owner)
+    conns = await org_related_connections(owner)
+    origins = {o for o in (operator_origin(c.get("identity") or {})
+                           for c in conns) if o}
+    blocked = _org_blocked(await org_record(owner))["operators"]
+    rows = [o for o in await operators_view(owner)
+            if o["origin"] in origins or o["origin"] in blocked]
+    return [{**o, "blocked_for_organization": o["origin"] in blocked}
+            for o in rows]
+
+
+@app.post("/org/admin/{owner}/operators/{action}")
+async def org_admin_operator_action(owner: str, action: str,
+                                    request: Request) -> dict:
+    actor = await require_org_admin(request, owner)
+    origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
+    if action not in ("block", "unblock"):
+        raise HTTPException(status_code=404, detail="unknown action")
+    await org_block(owner, operator=origin, remove=(action == "unblock"))
+    event("org.operator_blocked", owner=owner, operator=origin,
+          action=action, by=actor.get("admin"))
+    await ledger_add(owner, "org_acted", "-", {
+        "what": ("shut out every agent of an operator, for the organization's "
+                 "resources" if action == "block"
+                 else "let an operator's agents reach the organization's "
+                      "resources again"),
+        "operator": origin, "by": actor})
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": f"org-{action}", "by": actor})
+    return {"origin": origin, "blocked_for_organization": action == "block"}
+
+
+@app.get("/org/admin/{owner}/ledger")
+async def org_admin_ledger(owner: str, request: Request) -> list:
+    """The organization's part of her record.
+
+    The same entries she reads, narrowed to what concerns the organization:
+    its own resources, its own acts, and the moments the membership itself
+    changed. Her negotiations about her own accounts are not in here.
+    """
+    await require_org_admin(request, owner)
+    claims, tiers = await org_scope(owner)
+    org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
+                 "org_role", "org_acted", "break_glass"}
+    handle = request.query_params.get("handle") or None
+    return [e for e in await st(owner).ledger(handle)
+            if e.get("kind") in org_kinds or e.get("tier") in tiers]
 
 
 # --- Grant API (agent-facing, UMA 2.0 Grant shape) ---------------------------
@@ -1925,6 +2606,20 @@ async def token(request: Request) -> JSONResponse:
     if rec["state"] == "awaiting-owner":
         return await pending_poll(rec)
 
+    # Before her policy is read at all. If an organization claims this
+    # resource and its ceiling cannot be established, nothing proceeds — the
+    # resource is the organization's, and a request that slipped through
+    # while its authority was unreachable is exactly the access the charter
+    # exists to prevent. This call is also where a charter that moved gets
+    # applied, so the tier read on the next line is already inside it.
+    if blocked := await organization_blocks(rec["owner"], rec["resource_id"]):
+        event("policy.evaluated", corr=family, result="org-unreadable")
+        await ledger_add(rec["owner"], "org_refused", family,
+                         {"because": [blocked]})
+        await close_negotiation(rec)
+        return JSONResponse({"error": "request_denied",
+                             "error_description": blocked}, status_code=403)
+
     tier_id, tier = policy.tier_for_resource(await st(rec["owner"]).tiers(),
                                              rec["resource_id"])
     if tier_id is None:
@@ -2010,6 +2705,27 @@ async def token(request: Request) -> JSONResponse:
              "error_description": f"the owner does not accept agents from {origin}"},
             status_code=403)
 
+    # The organization has shut this agent out of *its* resources. Checked
+    # here, beside her own operator block, and scoped the way that one is
+    # not: it bites only on the resources the charter claims, so an agent an
+    # administrator turned away from the firm's book goes on reading her own
+    # portfolio for her exactly as before.
+    if await org_blocks_agent(rec["owner"], handle, contract["_identity"]):
+        claims, _ = await org_scope(rec["owner"])
+        if org.claims_match(rec["resource_id"], claims):
+            event("policy.evaluated", corr=family, result="org-blocked",
+                  tier=rec["tier"])
+            await ledger_add(rec["owner"], "org_refused", family, {
+                "tier": rec["tier"],
+                "because": ["your organization has shut this agent out of its "
+                            "resources"]}, handle=handle)
+            await close_negotiation(rec)
+            return JSONResponse(
+                {"error": "request_denied",
+                 "error_description": "the resource owner's organization has "
+                                      "withdrawn this agent's access to its "
+                                      "resources"}, status_code=403)
+
     axes = assurance.assess(contract["_identity"])
     facts = {
         "assurance": axes,
@@ -2024,6 +2740,34 @@ async def token(request: Request) -> JSONResponse:
     }
     requirement, reasons = policy.evaluate(tier, facts)
     event("assurance.assessed", corr=family, **axes)
+
+    # Both layers must allow, and either may refuse. That is the whole
+    # composition rule, and the code is the sentence: the organization's
+    # answer can raise the requirement or end the negotiation, and there is
+    # no branch in which it lowers one.
+    verdict = await organization_verdict(rec, tier, facts)
+    rec["org"] = verdict or None
+    if verdict.get("effect") == policy.REFUSE:
+        event("policy.evaluated", corr=family, result="org-refused",
+              tier=rec["tier"], org=verdict.get("org"))
+        await ledger_add(rec["owner"], "org_refused", family, {
+            "tier": rec["tier"],
+            "organization": verdict.get("organization"),
+            "charter_version": verdict.get("charter_version"),
+            "because": verdict.get("because") or [],
+        }, handle=handle)
+        await close_negotiation(rec)
+        return JSONResponse(
+            {"error": "request_denied",
+             "error_description": "; ".join(verdict.get("because") or [
+                 "the resource owner's organization refused this request"])},
+            status_code=403)
+    if verdict.get("effect") == policy.ASK and requirement == policy.AUTO:
+        # She is asked because her employer requires it, and the dialog says
+        # so in the organization's own words rather than folding them in
+        # among her rules — she should be able to tell which of the two
+        # layers is the reason she is being interrupted.
+        requirement = policy.ASK
 
     if requirement == policy.REFUSE:
         event("policy.evaluated", corr=family, result="refused", tier=rec["tier"],
@@ -2101,6 +2845,7 @@ async def token(request: Request) -> JSONResponse:
                 "assurance": axes,
                 "assurance_notes": assurance.describe(axes, contract["_identity"]),
                 "because": reasons,
+                "organization": rec.get("org") or None,
             }
         )
         event("owner.notified", corr=family, kind=kind)
@@ -2198,6 +2943,17 @@ async def pending_poll(rec: dict) -> JSONResponse:
 @app.get("/owner/pending")
 async def owner_pending(request: Request) -> list:
     owner = await require_owner(request)
+    return await pending_view(owner)
+
+
+async def pending_view(owner: str) -> list:
+    """Everything waiting on a decision, for whoever is entitled to make it.
+
+    Read by the owner's portal, and by an administrator of the organization
+    she administers these resources for. The same list either way: an
+    administrator who saw a different set of pending requests from the person
+    they are co-administering with would be looking at a different system.
+    """
     return [
         {
             "family": rec["family"],
@@ -2214,6 +2970,11 @@ async def owner_pending(request: Request) -> list:
             "assurance": rec.get("assurance", {}),
             "assurance_notes": rec.get("assurance_notes", []),
             "because": rec.get("because", []),
+            "organization": rec.get("org") or None,
+            # Which resource, so an administrator can see at a glance whether
+            # this is one his organization governs — and so the surface can
+            # say why he may not approve one that is not.
+            "resource_id": rec.get("resource_id"),
         }
         for rec in await st(owner).pending_negotiations()
     ]
@@ -2223,14 +2984,29 @@ async def owner_pending(request: Request) -> list:
 async def owner_decision(family: str, request: Request) -> dict:
     owner = await require_owner(request)
     body = await request.json()
-    decision = body.get("decision")
+    return await decide_pending(owner, family, body.get("decision"), actor=None)
+
+
+async def decide_pending(owner: str, family: str, decision: str,
+                         actor: dict | None) -> dict:
+    """One pending request, answered. By her, or by an administrator of the
+    organization she administers these resources for.
+
+    `actor` is None when it is her own tap, and names the organization and
+    the person when it is not. It changes nothing about what happens and
+    everything about what is written down: a decision she did not make must
+    never appear in her record as one she did.
+    """
     if decision not in ("approved", "denied"):
         raise HTTPException(status_code=400, detail="decision must be approved|denied")
     # The store's guard, not a read-then-write here: a double tap, or two
-    # portals open on the same request, must produce one decision.
+    # portals open on the same request, must produce one decision. It is also
+    # what makes co-administration safe: she and an administrator answering
+    # the same request at the same moment produce one answer, not two.
     if not await st(owner).decide(family, decision):
         raise HTTPException(status_code=404, detail="no pending negotiation for that family")
-    event("owner.decision", corr=family, decision=decision)
+    event("owner.decision", corr=family, decision=decision,
+          by=(actor or {}).get("admin") or owner)
     # Read after the decision, not before: `decide` is the guard, and doing the
     # lookup first would invite someone to move the guard behind it. The
     # negotiation survives its own decision — `close_negotiation` runs when the
@@ -2239,10 +3015,13 @@ async def owner_decision(family: str, request: Request) -> dict:
     # Record both outcomes: "what did I decide" is an audit question, and a
     # denial is as much a decision as an approval.
     await ledger_add(owner, "approved" if decision == "approved" else "denied", family,
-                     {"decision": decision, "tier": (pended or {}).get("tier")},
+                     {"decision": decision, "tier": (pended or {}).get("tier"),
+                      **({"by": actor} if actor else {})},
                      handle=(pended or {}).get("handle"))
-    await owner_notify(owner, {"type": "decided", "family": family, "decision": decision})
-    return {"family": family, "decision": decision}
+    await owner_notify(owner, {"type": "decided", "family": family,
+                               "decision": decision,
+                               "by": actor})
+    return {"family": family, "decision": decision, "by": actor}
 
 
 @app.get("/owner/resource-servers")
@@ -2411,6 +3190,10 @@ async def owner_operators(request: Request) -> list:
     to agents she has already decided about.
     """
     owner = await require_owner(request)
+    return await operators_view(owner)
+
+
+async def operators_view(owner: str) -> list:
     blocked = await st(owner).blocked_operators()
     owned = await st(owner).owned_operators()
     seen: dict[str, dict] = {}
@@ -2507,6 +3290,11 @@ async def owner_block_operator(request: Request) -> dict:
     """
     owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
+    return await block_operator_for(owner, origin, actor=None)
+
+
+async def block_operator_for(owner: str, origin: str,
+                             actor: dict | None) -> dict:
     if not origin.startswith("https://"):
         raise HTTPException(status_code=400,
                             detail="an operator is named by its https origin")
@@ -2521,11 +3309,13 @@ async def owner_block_operator(request: Request) -> dict:
         if killed is not None:
             revoked, tokens = revoked + 1, tokens + killed
     event("operator.blocked", operator=origin, connections_revoked=revoked,
-          rpts_deactivated=tokens)
+          rpts_deactivated=tokens, by=(actor or {}).get("admin") or owner)
     await ledger_add(owner, "revoked", "-", {"operator": origin,
                                       "connections_revoked": revoked,
-                                      "rpts_deactivated": tokens})
-    await owner_notify(owner, {"type": "decided", "family": "-", "decision": "revoked"})
+                                      "rpts_deactivated": tokens,
+                                      **({"by": actor} if actor else {})})
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": "revoked", "by": actor})
     return {"origin": origin, "connections_revoked": revoked,
             "rpts_deactivated": tokens}
 
@@ -2537,9 +3327,25 @@ async def owner_unblock_operator(request: Request) -> dict:
     negotiate rather than the access that was withdrawn."""
     owner = await require_owner(request)
     origin = ((await request.json()).get("origin") or "").strip().rstrip("/")
+    return await unblock_operator_for(owner, origin, actor=None)
+
+
+async def unblock_operator_for(owner: str, origin: str,
+                               actor: dict | None) -> dict:
     if not await st(owner).unblock_operator(origin):
         raise HTTPException(status_code=404, detail="that operator is not blocked")
-    event("operator.unblocked", operator=origin)
+    event("operator.unblocked", operator=origin,
+          by=(actor or {}).get("admin") or owner)
+    if actor:
+        # Unblocking is the one operator action that widens — it restores the
+        # right to negotiate — so unlike a block it is written down even when
+        # she does it herself would be noise, but never when somebody else
+        # does it on her behalf.
+        await ledger_add(owner, "org_acted", "-", {
+            "what": "allowed an operator to ask again", "operator": origin,
+            "by": actor})
+        await owner_notify(owner, {"type": "decided", "family": "-",
+                                   "decision": "unblocked", "by": actor})
     return {"origin": origin, "blocked": False}
 
 
@@ -2550,9 +3356,15 @@ async def owner_resources(request: Request) -> list:
     surface Alice attaches policy to before any agent has ever called."""
     owner = await require_owner(request)
     tiers = await st(owner).tiers()
+    envelope = await org_envelope(owner) or {}
     out = []
     for rid, desc in RESOURCES.items():
         tier_id, tier = policy.tier_for_resource(tiers, rid)
+        # Whose resource this is. Hers unless an organization claims it, in
+        # which case she administers it rather than owning it — and her
+        # portal should say so, because the two are not the same thing and
+        # the difference decides what happens when she leaves.
+        shared = org.claims_match(rid, envelope.get("claims") or [])
         out.append({
             "_id": rid,
             "name": desc.get("name") or rid,
@@ -2562,6 +3374,9 @@ async def owner_resources(request: Request) -> list:
             "tier_name": tier["name"] if tier else None,
             "ask_me": tier["ask_me"] if tier else None,
             "registered_via": desc.get("registered_via", "push"),
+            **({"shared_by": envelope.get("name"),
+                "granted": org.claims_match(rid, envelope.get("grants") or []),
+                "delegation": envelope.get("delegation")} if shared else {}),
         })
     return sorted(out, key=lambda r: r["_id"])
 
@@ -2601,6 +3416,15 @@ async def owner_create_policy(request: Request) -> dict:
         tier = policy.new_tier(tier_id, spec, await st(owner).tiers(), set(RESOURCES))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    # Terms she is writing for the first time are refused rather than
+    # silently narrowed. The two directions are not symmetrical: an edit
+    # clamped underneath her is the organization changing something, and
+    # telling her about it afterwards is right; a *new* document quietly
+    # altered between asking for it and getting it is her being told she
+    # wrote something she did not.
+    if envelope := await org_envelope(owner):
+        if problems := org.would_exceed(spec, tier["resources"], envelope):
+            raise HTTPException(status_code=400, detail="; ".join(problems))
     try:
         created = await st(owner).create_tier(tier_id, tier)
     except KeyError:
@@ -2609,6 +3433,22 @@ async def owner_create_policy(request: Request) -> dict:
     event("policy.created", tier=tier_id, template_id=created["terms"]["template_id"],
           resources=created["resources"])
     await publish_terms(owner, tier_id, created)
+    # The rest of the ceiling, applied rather than refused.
+    #
+    # `would_exceed` above refuses the two fields where she asked for
+    # something wider than the organization allows — a longer expiry, a scope
+    # it does not permit — because those are her intent and she should be
+    # told. Mandatory prohibitions and always-ask are the other kind: she did
+    # not ask for anything, the charter is adding to what she wrote, and
+    # refusing a document over an addition would be pedantry.
+    if envelope := await org_envelope(owner):
+        patch, changes = org.patch_for(created, envelope)
+        if patch is not None:
+            created = await st(owner).update_tier(tier_id, patch)
+            await publish_terms(owner, tier_id, created)
+            event("org.clamped", owner=owner, tier=tier_id,
+                  fields=[c["field"] for c in changes])
+            created = {**created, "clamped": [c["text"] for c in changes]}
     return created
 
 
@@ -2648,7 +3488,240 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
     # Publish the new version immediately so its terms URI dereferences from
     # the moment it exists; earlier versions remain served (persistent record).
     await publish_terms(owner, tier_id, updated)
+    # Then the ceiling, if there is one. Clamping after rather than refusing
+    # before: she edited terms that already existed, and the honest outcome
+    # is the strictest reading of both documents plus a record saying which
+    # of her fields the organization moved.
+    if envelope := await org_envelope(owner):
+        patch, changes = org.patch_for(updated, envelope)
+        if patch is not None:
+            updated = await st(owner).update_tier(tier_id, patch)
+            await publish_terms(owner, tier_id, updated)
+            event("org.clamped", owner=owner, tier=tier_id,
+                  fields=[c["field"] for c in changes])
+            await ledger_add(owner, "org_clamped", "-", {
+                "tier": tier_id, "organization": envelope.get("name"),
+                "charter_version": envelope.get("charter_version"),
+                "changes": [c["text"] for c in changes]})
+            updated = {**updated, "clamped": [c["text"] for c in changes]}
     return updated
+
+
+@app.get("/owner/organization")
+async def owner_organization(request: Request) -> dict:
+    """Whether she administers these resources for anyone, and what that
+    means for each of her tiers.
+
+    Returned separately from `/owner/policies` on purpose. Her tiers are the
+    document she edits — in a form or as JSON in the code editor — and mixing
+    somebody else's ceiling into it would make her policy round-trip through
+    her own editor carrying fields she cannot change.
+    """
+    owner = await require_owner(request)
+    record = await org_record(owner)
+    client = await org_client(owner) if record else None
+    if client is None:
+        # Not a member. The interesting thing to say is whether anyone has
+        # asked her to be one — an invitation is a pending decision of hers,
+        # and a surface that only told her about it if she went looking for
+        # it would not be much of a notification.
+        return {"enrolled": False,
+                "enrolment_available": bool(ORG_ISSUER),
+                "issuer": ORG_ISSUER,
+                "invitation": await pending_invitation(owner)}
+    envelope = client.envelope
+    tiers = await st(owner).tiers()
+    return {
+        "enrolled": True,
+        "issuer": record["issuer"],
+        "joined": record.get("joined"),
+        "org": envelope.get("org"),
+        "name": envelope.get("name"),
+        "charter_version": envelope.get("charter_version"),
+        "summary": envelope.get("summary") or [],
+        "envelope": envelope,
+        # Honest about the state of her own copy. An owner looking at a
+        # ceiling should be able to see whether it is the current one.
+        "stale": client.stale(),
+        "unreadable": client.unusable(),
+        "last_read_error": client.failing,
+        "tiers": {tid: view for tid, tier in tiers.items()
+                  if (view := org.tier_view(tier, envelope))},
+        "governed_resources": sorted(
+            rid for rid in RESOURCES
+            if org.claims_match(rid, envelope.get("claims") or [])),
+    }
+
+
+async def pending_invitation(owner: str) -> dict | None:
+    """An invitation waiting for her, if there is one.
+
+    Failure is `None` with a note rather than an exception: this is read on
+    the way past on an ordinary page load, and an organization being down is
+    not a reason her own portal should fail to render.
+    """
+    if not ORG_ISSUER:
+        return None
+    try:
+        found = await org.invitation(ORG_ISSUER, owner)
+    except Exception as exc:                                    # noqa: BLE001
+        event("org.invitation_unreadable", owner=owner, error=str(exc))
+        return None
+    return found if found.get("invited") else None
+
+
+@app.post("/owner/organization/decline")
+async def owner_decline_invitation(request: Request) -> dict:
+    """No, thank you — and it is recorded as an answer rather than a silence.
+
+    Her record keeps it too. Being asked to put a layer above her own policy
+    is a thing that happened to her, and the fact that she said no is part of
+    the account of how her arrangements came to be what they are.
+    """
+    owner = await require_owner(request)
+    found = await pending_invitation(owner)
+    if found is None:
+        raise HTTPException(status_code=404, detail="nothing is waiting on you")
+    await org.decline(ORG_ISSUER, owner, found["code"])
+    event("org.invitation_declined", owner=owner, org=found.get("org"))
+    await ledger_add(owner, "org_declined", "-", {
+        "organization": found.get("name"), "by": found.get("by")})
+    return {"declined": found.get("name")}
+
+
+@app.post("/owner/organization/preview")
+async def owner_organization_preview(request: Request) -> dict:
+    """What an enrolment code would sign her up to, and what it would do to
+    the terms she has already written — before she joins, not after.
+
+    This endpoint is the whole ethical weight of the feature. Every part of
+    this system argues that agreeing to something you were never shown is
+    not agreement; a governance layer that took effect on a button press and
+    explained itself afterwards would be the same failure wearing a suit.
+    """
+    owner = await require_owner(request)
+    if not ORG_ISSUER:
+        raise HTTPException(status_code=404,
+                            detail="this authority is not configured with an "
+                                   "organization to enrol with")
+    body = await request.json()
+    try:
+        envelope = await org.preview(ORG_ISSUER, body.get("code") or "")
+    except Exception as exc:                                    # noqa: BLE001
+        raise HTTPException(status_code=400, detail=_org_error(exc))
+    # Dry run: what the clamp would do, computed but not applied.
+    would = []
+    for tier_id, tier in (await st(owner).tiers()).items():
+        _, changes = org.clamp(tier, envelope)
+        would += [{"tier": tier_id, "tier_name": tier["name"], **c}
+                  for c in changes]
+    return {"envelope": envelope, "summary": envelope.get("summary") or [],
+            # What joining would let them *do*, as distinct from what it
+            # requires of her. She has to agree to this before the join is
+            # accepted — see below.
+            "powers": envelope.get("powers") or {},
+            "changes": would,
+            "governed_resources": sorted(
+                rid for rid in RESOURCES
+                if org.claims_match(rid, envelope.get("claims") or []))}
+
+
+@app.post("/owner/organization")
+async def owner_join_organization(request: Request) -> dict:
+    owner = await require_owner(request)
+    if not ORG_ISSUER:
+        raise HTTPException(status_code=404,
+                            detail="this authority is not configured with an "
+                                   "organization to enrol with")
+    body = await request.json()
+    # Agreement, not acknowledgement.
+    #
+    # This is the one place in the system where somebody voluntarily gives
+    # another party standing authority over her own agents — to revoke them,
+    # to answer for her, and (where a charter says so) to reach her accounts
+    # without asking. Everything else here argues that consent to something
+    # you were never shown is not consent; a join that went through on a
+    # button press with the disclosure scrolled past would be that failure
+    # committed by the system making the argument.
+    #
+    # So her authority refuses a join that does not carry it, and records
+    # what she agreed to alongside the fact that she did. The refusal is not
+    # a formality: a portal that forgot to ask would fail here rather than
+    # enrol her quietly.
+    if not body.get("agreed"):
+        raise HTTPException(
+            status_code=400,
+            detail="joining an organization gives it standing authority over "
+                   "your agents. Read what it would be entitled to do, and "
+                   "agree to it explicitly, before this can go ahead.")
+    try:
+        joined = await org.join(ORG_ISSUER, body.get("code") or "", owner,
+                               ORG_CALLBACK)
+    except Exception as exc:                                    # noqa: BLE001
+        raise HTTPException(status_code=400, detail=_org_error(exc))
+    token = joined.pop("membership_token")
+    await st(owner).set_organization({"issuer": ORG_ISSUER, "token": token,
+                                      "envelope": joined,
+                                      "joined": utcstamp()})
+    _ORG[owner] = org.OrgClient(ORG_ISSUER, token, joined)
+    event("org.joined", owner=owner, org=joined.get("org"),
+          charter_version=joined.get("charter_version"))
+    # The record keeps what she agreed to, not merely that she agreed. A
+    # charter is versioned and this entry names the version, so "what was I
+    # told this would let them do" stays answerable after the organization
+    # has edited it a dozen times.
+    await ledger_add(owner, "org_joined", "-", {
+        "organization": joined.get("name"),
+        "charter_version": joined.get("charter_version"),
+        "requires": joined.get("summary") or [],
+        "agreed_to": [p["what"] for p in
+                      (joined.get("powers") or {}).get("can") or []]})
+    changes = await clamp_to_envelope(owner, joined, force=True)
+    # What she joined for. The organization's resources become things her
+    # authority protects — so they appear in her portal, she can write terms
+    # over them, and an agent can be told to negotiate for them.
+    await resync_shared(owner, joined)
+    await owner_notify(owner, {"type": "organization", "state": "joined",
+                               "name": joined.get("name")})
+    return {"joined": joined.get("org"), "name": joined.get("name"),
+            "charter_version": joined.get("charter_version"),
+            # What she actually got, which is the half of this she joined for.
+            "role": joined.get("role"), "role_name": joined.get("role_name"),
+            "grants": joined.get("grants") or [],
+            "delegation": joined.get("delegation"),
+            "summary": joined.get("summary") or [],
+            "changes": [{"tier": c["tier"], "text": c["text"]} for c in changes]}
+
+
+@app.delete("/owner/organization")
+async def owner_leave_organization(request: Request) -> dict:
+    owner = await require_owner(request)
+    client = await org_client(owner)
+    if client is None:
+        raise HTTPException(status_code=404, detail="you are not enrolled")
+    await client.leave()
+    await end_membership(owner, "you left this organization")
+    return {"left": True,
+            "note": "your terms keep the narrowing this organization "
+                    "required. Nothing was widened by leaving; anything you "
+                    "want back, you widen yourself."}
+
+
+def _org_error(exc: Exception) -> str:
+    """The organization's own words where there are any.
+
+    A 403 from the enrolment endpoint says the code is wrong, and that is
+    the sentence she needs. A connection error says her authority could not
+    reach it, which is a different problem with a different fix.
+    """
+    import httpx
+
+    if isinstance(exc, httpx.HTTPStatusError):
+        try:
+            return exc.response.json().get("detail") or exc.response.text
+        except Exception:                                       # noqa: BLE001
+            return exc.response.text
+    return f"the organization could not be reached: {exc}"
 
 
 @app.get("/owner/connections")
@@ -2660,6 +3733,11 @@ async def owner_connections(request: Request) -> list:
 @app.post("/owner/connections/{handle}/revoke")
 async def owner_revoke_connection(handle: str, request: Request) -> dict:
     owner = await require_owner(request)
+    return await revoke_connection_for(owner, handle, actor=None)
+
+
+async def revoke_connection_for(owner: str, handle: str,
+                                actor: dict | None) -> dict:
     # Deactivating the connection and burning the tokens issued under it is
     # one step, not two: a revocation that flipped the connection and then
     # failed would leave the agent holding exactly the authority Alice had
@@ -2667,9 +3745,13 @@ async def owner_revoke_connection(handle: str, request: Request) -> dict:
     killed = await st(owner).revoke_connection(handle)
     if killed is None:
         raise HTTPException(status_code=404, detail="unknown connection")
-    event("connection.revoked", handle=handle, rpts_deactivated=killed)
-    await ledger_add(owner, "revoked", "-", {"rpts_deactivated": killed}, handle=handle)
-    await owner_notify(owner, {"type": "decided", "family": "-", "decision": "revoked"})
+    event("connection.revoked", handle=handle, rpts_deactivated=killed,
+          by=(actor or {}).get("admin") or owner)
+    await ledger_add(owner, "revoked", "-",
+                     {"rpts_deactivated": killed,
+                      **({"by": actor} if actor else {})}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": "revoked", "by": actor})
     return {"handle": handle, "status": "revoked", "rpts_deactivated": killed}
 
 

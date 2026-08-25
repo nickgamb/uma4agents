@@ -106,6 +106,27 @@ spec:
                            "internal": "http://uma-as.alice.svc.cluster.local:9000"},
                  "carol": {"public": "https://carol-as.uma.lab",
                            "internal": "http://uma-as.carol.svc.cluster.local:9000"}}
+            # The organization above these owners, configured on the firm's
+            # side rather than discovered from an owner's authority — which
+            # is the whole value of it. An owner may name any authorization
+            # server she likes; the resources at /mcp/shared still belong to
+            # Northwind, so the check that its ceiling was applied has to
+            # come from somewhere she does not control. This is also how a
+            # break-glass grant, signed by Northwind and never seen by her
+            # authority, is recognised here.
+            - name: UMA_PEP_ORG_ISSUER
+              value: https://northwind-org.uma.lab
+            - name: UMA_PEP_ORG_INTERNAL
+              value: http://org-authority.northwind.svc.cluster.local:9040
+            - name: UMA_PEP_ORG_TOKEN
+              valueFrom:
+                secretKeyRef: { name: meridian-config, key: org-rs-token }
+            # How long this gateway may act on a cached answer about who is
+            # a member. The window is somebody's access to the firm's book
+            # after the firm withdrew it, so it is short and it is
+            # configuration.
+            - name: UMA_PEP_MEMBERSHIP_TTL_S
+              value: "10"
             # The authority the RFC 9421 signature base is rebuilt from.
             # Deliberately configuration and never the request: the Host
             # header does not survive the ext_authz hop (it arrives as this

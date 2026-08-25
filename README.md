@@ -45,6 +45,12 @@ four different identity regimes with `make flow-check`.
 resource server holding two people's accounts, each governed by an
 authorization server of her own — including one the firm was never configured
 against, which had to introduce itself.
+**[docs/ORG.md](docs/ORG.md)** is what happens when the stuff is not hers: a
+firm that owns a book, shares parts of it with the people who work on it, and
+sets policy over it that none of them can waive — while each of them still
+administers access under her own authority and her own terms. It is where a
+charter can say *whose agent* may act, which is a sentence about parties
+rather than permissions.
 **[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md)** puts her side inside a
 personal AI, and **[docs/FIXTURE.md](docs/FIXTURE.md)** is the minimal
 fixture the protocol is tested on with nothing underneath it.
@@ -223,10 +229,12 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make sig-test` | Unit-test the RFC 9421 profile |
 | `make store-test` | Race 32 callers at each single-use artifact, on both storage backends |
 | `make multi-owner-check` | Two owners of one resource server, each with her own authority, keys, identity provider and record |
+| `make org-check` | Shared ownership: a firm's book, shared with two members, administered by each under her own terms and capped by a charter neither wrote |
+| `make org-test` | The ceiling algebra and the charter validator, with nothing running |
 | `make establishment-check` | A resource server and an authority nobody configured against each other, introducing themselves — and the ways of not getting in |
 | `make kind-up` / `make kind-down` | The whole Kubernetes lab, from nothing / delete it |
 | `make k8s-smoke-test`, `k8s-policy-test` | Verify the deployed lab; prove the trust boundary denies |
-| `make k8s-multi-owner-check`, `k8s-establishment-check` | The same two, where each owner is a namespace with no path to the other |
+| `make k8s-multi-owner-check`, `k8s-establishment-check`, `k8s-org-check` | The same three, where each party is a namespace with no path to the others |
 | `make k8s-demo-all`, `k8s-load`, `k8s-chaos` | Walk Alice's day; 24 agents at once; break it mid-grant |
 | `make reset` | Rewind demo state |
 | `make trust-ca` | Trust the local CA in your system store |

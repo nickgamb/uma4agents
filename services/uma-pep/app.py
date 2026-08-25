@@ -106,6 +106,30 @@ RS_SECRETS = json.loads(os.environ.get("UMA_PEP_RS_SECRETS", "null") or "null")
 if RS_SECRETS is None:
     RS_SECRETS = {OWNER: RS_CLIENT_SECRET}
 
+# The organization above the owners this gateway fronts, when the firm
+# running it knows of one.
+#
+# Configured on this side rather than discovered from an owner's authority,
+# and that is the entire point of it being here. An owner may name any
+# authorization server she likes; the resource still belongs to the
+# organization, so the check that the organization's ceiling was applied has
+# to come from somewhere she does not control. Unset, none of this exists and
+# the enforcement point behaves exactly as it did.
+ORG_ISSUER = os.environ.get("UMA_PEP_ORG_ISSUER", "")
+ORG_INTERNAL = os.environ.get("UMA_PEP_ORG_INTERNAL", "") or ORG_ISSUER
+ORG_TOKEN = os.environ.get("UMA_PEP_ORG_TOKEN", "")
+# The organization's own resources, and the path its members reach them by.
+#
+# `/mcp/shared/<member>` is one resource with many administrators: the same
+# process, the same resource ids, and a different authorization server
+# depending on which member is named. That is the whole of shared ownership
+# on this side — the resource belongs to the organization, and each member
+# administers access to it under her own authority.
+SHARED_PREFIX = os.environ.get("UMA_PEP_SHARED_PREFIX", "mcp/shared")
+SHARED_NAMESPACE = os.environ.get("UMA_PEP_SHARED_NAMESPACE", "northwind-vault")
+SHARED_RS_NAME = os.environ.get("UMA_PEP_SHARED_RS_NAME",
+                                "Meridian Wealth shared-book gateway")
+
 
 def authority_for(owner: str) -> tuple[str, str]:
     """(public, internal) for the authority that governs this owner."""
@@ -124,11 +148,39 @@ def tools_for(owner: str) -> dict:
             for tool, (rid, ss) in TOOLS.items()}
 
 
-def owner_for_path(path: str) -> str:
-    """Which owner a request is about. On an unauthenticated tool call the
-    path is the only thing that can say, which is why every owner has one."""
+def shared_tools(grants) -> dict:
+    """The organization's tool surface, narrowed to what this member's role
+    grants her.
+
+    Narrowed here rather than only refused later, because this table is what
+    the published listing is built from — and a listing that advertised the
+    firm's trade endpoint to an analyst would have her write terms over
+    something she was never given.
+    """
+    from uma4a_org import claims_match
+
+    return {tool: (f"{SHARED_NAMESPACE}/{tool}", ss)
+            for tool, (_, ss) in TOOLS.items()
+            if claims_match(f"{SHARED_NAMESPACE}/{tool}", grants)}
+
+
+def route_of(path: str) -> tuple[str, bool]:
+    """(owner, is-shared) for a request path.
+
+    On an unauthenticated tool call the path is the only thing that can say
+    whose authority governs, which is why every owner has one — and why a
+    resource shared with several people has one per person rather than one
+    for the resource.
+    """
     tail = path.rstrip("/").rsplit("/mcp", 1)[-1].strip("/")
-    return tail if tail in ALL_OWNERS else OWNER
+    leaf = SHARED_PREFIX.rsplit("/", 1)[-1]
+    if tail.startswith(f"{leaf}/"):
+        return tail.split("/", 1)[1], True
+    return (tail if tail in ALL_OWNERS else OWNER), False
+
+
+def owner_for_path(path: str) -> str:
+    return route_of(path)[0]
 SINGLE_USE_TOOLS = {"execute_trade"}
 # Deny by default. An allow-list of open methods silently admits every method
 # a future protocol revision invents — 2026-07-28 alone added tasks/*,
@@ -220,6 +272,9 @@ def _enforcer_for(owner: str) -> Enforcer:
         allowed_origins=ALLOWED_ORIGINS,
         resource_metadata_url=(
             f"{PUBLIC_BASE}/.well-known/oauth-protected-resource/{leaf}"),
+        org_issuer=ORG_ISSUER,
+        org_internal=ORG_INTERNAL,
+        org_token=ORG_TOKEN,
         event=event,
     )
 
@@ -227,6 +282,76 @@ def _enforcer_for(owner: str) -> Enforcer:
 # The enforcement core, shared with the in-process extension.
 ENFORCERS = {o: _enforcer_for(o) for o in [OWNER, *EXTRA_OWNERS]}
 ENFORCER = ENFORCERS[OWNER]
+
+# One per member the organization has shared its book with. Built on demand
+# rather than at startup, because membership is not a deployment fact: someone
+# joins from her own portal at eleven o'clock and this has to be able to
+# enforce for her at one minute past.
+SHARED: dict[str, Enforcer] = {}
+
+
+def _shared_enforcer_for(owner: str) -> Enforcer:
+    as_public, as_internal = authority_for(owner)
+    leaf = f"{SHARED_PREFIX}/{owner}"
+    base = ENFORCERS.get(owner) or ENFORCER
+    return Enforcer(
+        owner=owner,
+        as_internal=as_internal,
+        as_public=as_public,
+        # The same client of her authority as the surface protecting her own
+        # vault, deliberately. It is the same gateway, holding the same PAT,
+        # under the same relationship she already authorized — a second
+        # registration would ask her to consent again to a party she has
+        # already consented to, and (since a resource server is identified by
+        # its origin) the two records would be the same record fighting over
+        # one resource URI.
+        #
+        # What she can withdraw separately is the *membership*, which is the
+        # thing that actually granted anything.
+        client_id=base.client_id,
+        client_secret=base.client_secret,
+        signing_key=base.signing_key,
+        key_id=PEP_KID,
+        resource_uri=f"{PUBLIC_BASE}/{leaf}",
+        rs_name=SHARED_RS_NAME,
+        realm=REALM,
+        # Filled in from her membership before every use: what she may reach
+        # follows from the role the organization gave her, and that changes
+        # without anything here restarting.
+        tools={},
+        single_use_tools=SINGLE_USE_TOOLS,
+        protected_methods=PROTECTED_METHODS,
+        open_methods=OPEN_METHODS,
+        expected_authority=EXPECTED_AUTHORITY,
+        allowed_origins=ALLOWED_ORIGINS,
+        resource_metadata_url=(
+            f"{PUBLIC_BASE}/.well-known/oauth-protected-resource/{leaf}"),
+        org_issuer=ORG_ISSUER,
+        org_internal=ORG_INTERNAL,
+        org_token=ORG_TOKEN,
+        event=event,
+    )
+
+
+async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
+    """The enforcer for the organization's book as administered by `owner`,
+    or None if the organization has not shared it with her.
+
+    The tool surface is re-derived from her membership on every use. That is
+    the mechanism by which an administrator changing her role in the console
+    changes what this gateway will serve her a minute later, with nothing
+    deployed and nothing restarted.
+    """
+    if not ORG_ISSUER:
+        return None
+    enforcer = SHARED.get(owner)
+    if enforcer is None:
+        enforcer = SHARED[owner] = _shared_enforcer_for(owner)
+    doc = await enforcer.membership(fresh=fresh)
+    if not doc.get("member"):
+        return None
+    enforcer.tools = shared_tools(doc.get("grants") or [])
+    return enforcer
 
 
 @app.on_event("startup")
@@ -290,7 +415,21 @@ async def check(request: Request, rest: str = "") -> Response:
         signature_agent=h.get("signature-agent"),
         traceparent=h.get("traceparent"),
     )
-    enforcer = ENFORCERS.get(owner_for_path(original_path), ENFORCER)
+    owner, is_shared = route_of(original_path)
+    if is_shared:
+        enforcer = await shared_enforcer(owner)
+        if enforcer is None:
+            # Not a member, or the organization stopped sharing. Not a
+            # challenge: there is no authority to negotiate with about a
+            # resource nobody has shared, and sending an agent to one would
+            # have it argue with a server that has never heard of this.
+            event("access.denied", reason="not-shared", owner=owner,
+                  path=original_path)
+            return deny(403, {"error": "not_shared",
+                              "error_description": "this resource is not "
+                              "shared with that member"})
+    else:
+        enforcer = ENFORCERS.get(owner, ENFORCER)
     d = await enforcer.authorize(facts)
 
     if d.outcome == "allow":
@@ -308,7 +447,8 @@ async def check(request: Request, rest: str = "") -> Response:
     return deny(d.status, body_out)
 
 
-def prm_document(owner: str = None, leaf: str = None) -> dict:
+def prm_document(owner: str = None, leaf: str = None, enforcer=None,
+                 tools: dict = None, owner_resources_tail: str = None) -> dict:
     """RFC 9728 Protected Resource Metadata — *structural* only. It says
     what shape the resource has (tools, scopes) and where authority lives
     (authorization_servers, the owner-resources query endpoint); it does
@@ -326,10 +466,10 @@ def prm_document(owner: str = None, leaf: str = None) -> dict:
     it did until `make shim-test` said so.
     """
     owner = owner or OWNER
-    tools = tools_for(owner)
+    tools = tools if tools is not None else tools_for(owner)
     leaf = leaf or f"mcp/{owner}"
-    tail = f"/{owner}"
-    enforcer = ENFORCERS.get(owner)
+    tail = owner_resources_tail or f"/{owner}"
+    enforcer = enforcer or ENFORCERS.get(owner)
     scopes = sorted({s for _, (rid, ss) in tools.items() for s in ss})
     return {
         "resource": f"{PUBLIC_BASE}/{leaf}",
@@ -348,6 +488,30 @@ def prm_document(owner: str = None, leaf: str = None) -> dict:
         ],
         "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources{tail}",
     }
+
+
+@app.get("/.well-known/oauth-protected-resource/mcp/shared/{owner}")
+async def shared_resource_metadata(owner: str) -> Response:
+    """The organization's book, as a resource administered by one member.
+
+    Its `authorization_servers` names *her* authority, which is the whole
+    point: the resource is Northwind's, and the party who decides whether an
+    agent may touch it on her behalf is her. A second member reaches the same
+    process at her own path and that document names a different authority.
+
+    404 when the organization has not shared it with her — publishing a
+    document for a resource nobody has been given would send an agent to
+    negotiate with an authority that has never heard of it.
+    """
+    enforcer = await shared_enforcer(owner, fresh=True)
+    if enforcer is None:
+        return JSONResponse({"error": "no such resource"}, status_code=404)
+    # One listing, the owner's. These resources are hers to administer even
+    # though they are not hers to own, and her authority reads everything it
+    # protects for her from one place.
+    doc = prm_document(owner, f"{SHARED_PREFIX}/{owner}", enforcer=enforcer,
+                       tools=enforcer.tools)
+    return JSONResponse(_sign_prm(doc))
 
 
 @app.get("/.well-known/oauth-protected-resource/mcp/{owner}")
@@ -375,6 +539,15 @@ async def protected_resource_metadata() -> dict:
     one: the authority it names is hers.
     """
     return _signed_prm(OWNER, "mcp")
+
+
+def _sign_prm(doc: dict) -> dict:
+    doc["signed_metadata"] = jwt.encode(
+        {**doc, "iss": doc["resource"], "iat": int(time.time())},
+        PEP_KEY, algorithm="EdDSA",
+        headers={"typ": "oauth-protected-resource+jwt", "kid": PEP_KID},
+    )
+    return doc
 
 
 def _signed_prm(owner: str, leaf: str) -> dict:
@@ -461,6 +634,31 @@ async def as_verification_keys(owner: str = None) -> list:
     return entry["keys"]
 
 
+async def _require_as_signature(request: Request, who: str,
+                                path: str) -> Response | None:
+    """RFC 9421 over @method/@authority/@path, against the owner's AS keys.
+
+    The same mechanics the agent uses for proof-of-possession, pointed the
+    other way: this listing is served only to a caller that proves possession
+    of her authorization server's signing key.
+    """
+    last_error = "no signature"
+    for jwk_dict in await as_verification_keys(who):
+        try:
+            verify(method=request.method, authority=EXPECTED_AUTHORITY,
+                   path=path, authorization="",
+                   signature_input=request.headers.get("signature-input", ""),
+                   signature=request.headers.get("signature", ""),
+                   public_key=OKPAlgorithm.from_jwk(json.dumps(jwk_dict)))
+            return None
+        except VerifyError as exc:
+            last_error = str(exc)
+    event("owner_resources.denied", reason=last_error, owner=who)
+    return deny(401, {"error": "invalid_signature",
+                      "error_description": "this listing is served only to "
+                      f"the owner's authorization server: {last_error}"})
+
+
 @app.get("/owner-resources/{owner}")
 async def owner_resources_for(owner: str, request: Request) -> Response:
     return await owner_resources(request, owner if owner in ALL_OWNERS else None)
@@ -476,40 +674,33 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
     trust was established at onboarding: this gateway holds a PAT from
     exactly that AS."""
     who = owner or OWNER
-    path = f"/owner-resources/{who}"
-    verified = False
-    last_error = "no signature"
-    for jwk_dict in await as_verification_keys(who):
-        try:
-            pub = OKPAlgorithm.from_jwk(json.dumps(jwk_dict))
-            verify(
-                method=request.method,
-                authority=EXPECTED_AUTHORITY,
-                path=path,
-                authorization="",
-                signature_input=request.headers.get("signature-input", ""),
-                signature=request.headers.get("signature", ""),
-                public_key=pub,
-            )
-            verified = True
-            break
-        except VerifyError as exc:
-            last_error = str(exc)
-    if not verified:
-        event("owner_resources.denied", reason=last_error)
-        return deny(401, {"error": "invalid_signature",
-                          "error_description": "this listing is served only to "
-                          f"the owner's authorization server: {last_error}"})
-    tools = tools_for(who)
+    if (denial := await _require_as_signature(request, who,
+                                              f"/owner-resources/{who}")):
+        return denial
+    tools = dict(tools_for(who))
+    # Everything this owner administers, hers and shared alike, in one
+    # listing. An organization's resource appears here only while she holds a
+    # role that grants it — which is what makes membership the thing that
+    # brings it into existence at her authority, and leaving the thing that
+    # removes it.
+    shared = await shared_enforcer(who, fresh=True)
+    shared_ids = set()
+    if shared is not None:
+        for tool, (rid, ss) in shared.tools.items():
+            tools[f"shared:{tool}"] = (rid, ss)
+            shared_ids.add(rid)
     leaf = f"mcp/{who}"
-    event("owner_resources.served", owner=who, count=len(tools))
+    event("owner_resources.served", owner=who, count=len(tools),
+          shared=len(shared_ids))
     return Response(
         content=json.dumps({
             "owner": who,
             "resource": f"{PUBLIC_BASE}/{leaf}",
             "resources": [
-                {"_id": rid, "tool": tool, "resource_scopes": ss,
-                 "name": f"{who.title()}'s vault: {tool}", "type": "mcp-tool"}
+                {"_id": rid, "tool": tool.split(":", 1)[-1],
+                 "resource_scopes": ss, "type": "mcp-tool",
+                 "name": (f"Shared: {tool.split(':', 1)[-1]}" if rid in shared_ids
+                          else f"{who.title()}'s vault: {tool}")}
                 for tool, (rid, ss) in tools.items()
             ],
         }),

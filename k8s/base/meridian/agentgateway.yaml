@@ -66,6 +66,22 @@ spec:
           protocol: StreamableHTTP
           path: /mcp
 ---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: northwind-vault
+  namespace: meridian
+spec:
+  mcp:
+    sessionRouting: Stateful
+    targets:
+      - name: northwind-vault
+        static:
+          host: northwind-vault.meridian.svc.cluster.local
+          port: 9020
+          protocol: StreamableHTTP
+          path: /mcp
+---
 # The protected surface: the MCP endpoint itself, plus the discovery
 # documents the PEP serves. Discovery is deliberately unauthenticated — the
 # public metadata says what shape the door is, and the permission ticket says
@@ -109,6 +125,32 @@ spec:
         - group: agentgateway.dev
           kind: AgentgatewayBackend
           name: carol-vault
+---
+# The organization's book, shared with its members.
+#
+# One backend, reached at a path per member. More specific than /mcp/carol
+# and /mcp, so Gateway API resolves it first — and, as with Carol's route,
+# neither of the others has to know this exists.
+#
+# What the member segment decides is not *which resource*: it is the same
+# book either way. It decides whose authorization server the enforcement
+# point will ask, and therefore whose terms an agent has to accept. That is
+# shared ownership in one line of routing.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: northwind-vault-mcp
+  namespace: meridian
+spec:
+  parentRefs:
+    - name: meridian
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /mcp/shared }
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: northwind-vault
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

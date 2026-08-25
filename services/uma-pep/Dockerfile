@@ -3,6 +3,7 @@ FROM python:3.12-slim
 RUN pip install --no-cache-dir fastapi uvicorn httpx 'pyjwt[crypto]'
 WORKDIR /app
 COPY lib/uma4a_http_sig.py .
+COPY lib/uma4a_org.py .
 COPY lib/uma4a_pep.py .
 COPY services/uma-pep/app.py .
 EXPOSE 9002

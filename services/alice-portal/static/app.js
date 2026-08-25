@@ -293,6 +293,7 @@ async function agentAuthView(body) {
       <button data-t="connections">Connected agents</button>
       <button data-t="resources">Protected resources</button>
       <button data-t="terms">My Terms</button>
+      <button data-t="organization">Organization <span id="orgDot"></span></button>
       <button data-t="ledger">Activity ledger</button>
     </div>
     <div id="aaBody"></div>`;
@@ -300,11 +301,21 @@ async function agentAuthView(body) {
     b.classList.toggle("active", b.dataset.t === agentTab);
     b.onclick = () => { agentTab = b.dataset.t; agentAuthView(body); };
   });
+  /* Read once per view render so the invitation banner is present on every
+     tab, not only the one it is about. Cheap, and failure is silent — an
+     organization being unreachable must not stop her own portal rendering. */
+  const orgNow = await orgState(true).catch(() => null);
+  if (orgNow && orgNow.invitation) {
+    body.querySelector(".subtabs").insertAdjacentHTML("beforebegin",
+      invitationBanner(orgNow));
+    const dot = $("#orgDot"); if (dot) dot.classList.add("on");
+  }
   const target = $("#aaBody");
   if (agentTab === "approvals") return renderApprovals(target);
   if (agentTab === "connections") return renderConnections(target);
   if (agentTab === "resources") return renderResources(target);
   if (agentTab === "terms") return renderTerms(target);
+  if (agentTab === "organization") return renderOrganization(target);
   if (agentTab === "ledger") return renderLedger(target);
 }
 
@@ -340,6 +351,12 @@ async function renderApprovals(target) {
         ${p.assurance_notes.map(n => `<div class="note">${esc(n)}</div>`).join("")}</span></div>` : ""}
       ${(p.because || []).length ? `<div class="kv"><span class="k">Why you</span><span>
         ${p.because.map(b => `<span class="chip warn">${esc(condLabel(b))}</span>`).join(" ")}</span></div>` : ""}
+      ${p.organization && (p.organization.because || []).length ? `<div class="kv">
+        <span class="k">${esc(p.organization.organization || "Your organization")}</span><span>
+        ${p.organization.because.map(b => `<div class="note warn">${esc(b)}</div>`).join("")}
+        <div class="muted" style="font-size:12px;margin-top:4px">Your organization requires you to be
+        asked here. Approving satisfies its rule and yours; it cannot make this request wider than your
+        own terms allow.</div></span></div>` : ""}
       <div class="kv"><span class="k">Prohibited</span><span>${(p.prohibited || []).map(x =>
         (p.enforced || {})[x]
           ? `<span class="chip prohibit enforced" title="Refused at the door by ${esc((p.enforced || {})[x])}">${esc(x)} ✓</span>`
@@ -460,15 +477,19 @@ async function renderResources(target) {
     appear here — this is what your policy tiers attach to.</div>`; wireRs(target); return; }
   target.innerHTML = serverCard + `<div class="card pad-lg">
     <div class="section-head"><h2>Protected resources</h2></div>
-    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Everything your authorization server
-      is protecting, as registered by your brokerage's gateway. Each resource is governed by one of your
-      policy tiers — edit the terms under <b>My Terms</b>.</div>
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px;max-width:74ch">Everything your
+      authorization server is protecting. Most of it is yours. Anything marked <b>shared</b> belongs
+      to an organization you administer for — it is here because they shared it with you, it leaves
+      when they stop, and their policy sits above your terms over it. Either way, the terms an agent
+      must accept are yours to write, under <b>My Terms</b>.</div>
     <table>
-    <thead><tr><th>Resource</th><th>Source</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
+    <thead><tr><th>Resource</th><th>Whose</th><th>Scopes</th><th>Governing tier</th><th class="r">On request</th></tr></thead>
     <tbody>${resources.map(r => `<tr>
-      <td><div class="tick"><div class="badge2">🗄️</div>
-        <div><div class="nm">${r.name}</div><div class="cell-sub mono">${r._id}</div></div></div></td>
-      <td>${r.registered_via === "pull" ? `<span class="chip">published · pulled</span>` : `<span class="chip">pushed</span>`}</td>
+      <td><div class="tick"><div class="badge2">${r.shared_by ? "🤝" : "🗄️"}</div>
+        <div><div class="nm">${esc(r.name)}</div><div class="cell-sub mono">${esc(r._id)}</div></div></div></td>
+      <td>${r.shared_by
+        ? `<span class="chip warn">shared by ${esc(r.shared_by)}</span>`
+        : `<span class="chip">yours</span>`}</td>
       <td>${(r.resource_scopes || []).map(s => `<span class="chip">${s}</span>`).join(" ")}</td>
       <td class="nowrap">${r.tier_name
         ? `${r.tier_name}<div class="cell-sub mono">${r.tier}</div>`
@@ -520,6 +541,12 @@ async function renderTerms(target) {
   if (!VOCAB) VOCAB = await api("/api/agent/policy-vocabulary");
   const tiers = await api("/api/agent/policies");
   if (policyMode === "code") return renderTermsCode(target, tiers);
+  // The ceiling above her terms, where there is one. Read alongside her
+  // tiers rather than mixed into them: her policy is the document she edits
+  // and round-trips through the code editor, and somebody else's constraints
+  // inside it would be fields she cannot change coming back as fields she
+  // just saved.
+  const org = await orgState();
   // Resources her authority protects that no tier governs yet. A new tier can
   // only be written over these: two tiers over one resource would make which
   // terms apply depend on storage order.
@@ -528,6 +555,7 @@ async function renderTerms(target) {
   const termsUri = (t) => `https://alice-as.uma.lab/terms/${t.terms.template_id}`;
   target.innerHTML = Object.entries(tiers).map(([id, t]) => `
     <div class="card pad-lg" style="margin-bottom:14px">
+      ${orgBand(org, id)}
       <div class="section-head"><h2>${t.name}</h2>
         <span class="muted mono">${t.resources.join(", ") || "no resources yet"}</span>
         <button class="btn ghost sm" style="margin-left:auto"
@@ -554,6 +582,27 @@ async function renderTerms(target) {
       <button class="btn ghost sm" onclick="policyMode='code';renderTerms(document.getElementById('aaBody'))">
         ⌗ Advanced — edit policy as code</button></div>`;
 }
+/* What the layer above her requires of one tier, stated above her own
+   controls rather than folded into them. She should always be able to tell
+   which of the two policies a constraint came from — and, when her stored
+   terms are briefly outside a ceiling that has just moved, that a narrowing
+   is on its way. */
+function orgBand(org, tierId) {
+  const v = (org && org.enrolled && (org.tiers || {})[tierId]) || null;
+  if (!v) return "";
+  const bits = [`<span class="who">${esc(v.name)}</span>`,
+    `<span class="chip">at most ${esc(v.max_expires_in)}s</span>`];
+  if (v.always_ask) bits.push(`<span class="chip warn">you are asked every time</span>`);
+  (v.require_prohibited || []).forEach(x =>
+    bits.push(`<span class="chip prohibit">${esc(x)}</span>`));
+  const pending = (v.pending || []).length
+    ? `<div class="muted" style="flex-basis:100%;color:var(--warn)">Its charter moved — these terms are
+       about to be narrowed: ${v.pending.map(esc).join("; ")}</div>` : "";
+  return `<div class="orgband">${bits.join(" ")}
+    <span class="muted" style="flex-basis:100%">Your terms below apply underneath this. You can be
+    stricter than your organization; you cannot be looser.</span>${pending}</div>`;
+}
+
 function newTierForm(free) {
   return `
     <div class="card pad-lg" style="margin-bottom:14px;border-style:dashed">
@@ -757,6 +806,312 @@ function renderTermsCode(target, tiers) {
   });
 }
 
+/* ---- Organization -------------------------------------------------------
+
+   The layer above her, when there is one. Everything here is about a single
+   asymmetry and the surface exists to make it legible: an organization sets
+   a ceiling on what she may permit over the resources it claims, and it can
+   reach past her refusal on the ones its charter names for break-glass —
+   but it can never see what she wrote underneath the ceiling, and it can
+   never quietly take anything.
+
+   She is shown what she is agreeing to *before* she agrees. The preview is
+   the point of the two-step: consenting to a policy nobody read is the
+   failure this whole system argues against, and a governance layer that
+   explained itself after the button press would be that failure in a suit. */
+
+let ORG = null;   // cached for the Terms tab, refreshed on every org render
+
+async function orgState(force) {
+  if (ORG === null || force) ORG = await api("/api/agent/organization").catch(() => ({ enrolled: false }));
+  return ORG;
+}
+
+async function renderOrganization(target) {
+  const org = await orgState(true);
+  if (!org.enrolled) return renderJoinOrganization(target, org);
+
+  const govern = (org.governed_resources || []);
+  const staleness = org.unreadable
+    ? `<span class="chip neg">its policy cannot be read right now</span>`
+    : org.stale ? `<span class="chip warn">re-reading</span>` : "";
+  const env = org.envelope || {};
+  const DELEG = {
+    none: ["No agent may act on them", "You can reach them yourself. Nothing you delegate does."],
+    "first-party-only": ["Only agents you operate yourself",
+      "An agent whose operator you claimed, and whose key that operator published. Somebody else's agent cannot be granted these, whatever your own terms say."],
+    "any-agent": ["Any agent your terms allow",
+      "Including agents other people operate. Your terms decide what they may do; this charter caps it."],
+  }[env.delegation || "none"];
+  target.innerHTML = `
+    <div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>${esc(org.name)}</h2>
+        <span class="chip">charter v${esc(org.charter_version)}</span>
+        ${env.role_name ? `<span class="chip pos">${esc(env.role_name)}</span>` : ""}${staleness}
+        <button class="btn ghost sm" style="margin-left:auto" onclick="leaveOrganization()">Leave</button></div>
+      <div class="muted" style="font-size:12.5px;max-width:70ch">Joined
+        ${esc((org.joined || "").replace("T", " ").replace("Z", ""))}. These are
+        <b>their</b> resources, shared with you — you administer access to them under your own
+        terms, and their policy sits above yours over them. Your own accounts are outside all
+        of this.</div>
+      <div class="lbl" style="margin-top:18px">What they share with you</div>
+      <div>${govern.length ? govern.map(r => `<span class="chip mono">${esc(r)}</span>`).join(" ")
+        : `<span class="muted" style="font-size:12.5px">Nothing yet — your role here grants no access.</span>`}</div>
+      <div class="lbl" style="margin-top:18px">Who may act on them for you</div>
+      <div><span class="chip ${env.delegation === "any-agent" ? "" : "warn"}">${esc(DELEG[0])}</span>
+        <div class="muted" style="font-size:12.5px;margin-top:6px;max-width:70ch">${esc(DELEG[1])}</div></div>
+      <div class="lbl" style="margin-top:18px">What they require</div>
+      ${(org.summary || []).map(line => `<div class="note">${esc(line)}</div>`).join("")}
+    </div>
+    ${orgPowersCard(org)}
+    ${orgTierTable(org)}
+    <div class="card pad-lg">
+      <div class="section-head"><h2>Leaving</h2></div>
+      <div class="muted" style="font-size:12.5px;max-width:70ch">You can leave at any time. Your terms
+        keep every narrowing this organization required — leaving withdraws a ceiling, it does not raise
+        what is underneath one. Anything you want back, you widen yourself, deliberately, tier by tier.</div>
+    </div>`;
+}
+
+/* What she agreed to, still on screen after she agreed to it. A disclosure
+   that only exists at the moment of consent is a disclosure designed to be
+   forgotten. */
+function orgPowersCard(org) {
+  const p = (org.envelope || {}).powers || {};
+  if (!p.can) return "";
+  const row = (x, kind) => `<div class="power ${kind}">
+    <div class="glyph">${kind === "can" ? "!" : "✓"}</div>
+    <div><div class="what">${esc(x.what)}</div>
+      <div class="detail">${esc(x.detail)}</div></div></div>`;
+  return `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>What they can and cannot do</h2></div>
+    <div class="lbl">They can</div>
+    ${(p.can || []).map(x => row(x, "can")).join("")}
+    <div class="lbl" style="margin-top:18px">They cannot</div>
+    ${(p.cannot || []).map(x => row(x, "cannot")).join("")}</div>`;
+}
+
+function orgTierTable(org) {
+  const rows = Object.entries(org.tiers || {});
+  if (!rows.length) return "";
+  return `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>What it does to your terms</h2></div>
+    <table><thead><tr><th>Your tier</th><th>Ceiling on access</th><th>Always forbids</th><th class="r">Asks you</th></tr></thead>
+    <tbody>${rows.map(([id, v]) => `<tr>
+      <td class="mono">${esc(id)}${(v.pending || []).length
+        ? `<div class="cell-sub warn">about to be narrowed: ${v.pending.map(esc).join("; ")}</div>` : ""}</td>
+      <td>${esc(v.max_expires_in)}s</td>
+      <td>${(v.require_prohibited || []).map(x => `<span class="chip prohibit">${esc(x)}</span>`).join(" ") || "—"}</td>
+      <td class="r">${v.always_ask ? `<span class="chip warn">every time</span>` : `<span class="chip">your rules</span>`}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+/* Somebody has asked her to join. Rendered above every tab of this view
+   rather than only inside the Organization one: it is a decision waiting on
+   her, and a notification she has to go looking for is not a notification.
+
+   Deliberately kept out of the agent-approval queue next to it, though. That
+   queue is "an agent wants something from you, now"; this is "an
+   organization would like to sit above your policy", which is a different
+   kind of question and should not learn to look like the other one. */
+function invitationBanner(org) {
+  const inv = org && org.invitation;
+  if (!inv) return "";
+  return `<div class="card pad-lg" style="margin-bottom:18px;border-color:var(--warn)">
+    <div class="section-head"><h2>${esc(inv.name)} has invited you</h2>
+      <span class="chip warn">waiting on you</span></div>
+    <div class="muted" style="font-size:12.5px;max-width:70ch">Invited by
+      ${esc(inv.by)} on ${esc((inv.created || "").replace("T", " ").replace("Z", ""))}.
+      ${inv.note ? `<br><span class="claimed">${esc(inv.note)}</span>` : ""}
+      <br><br>Accepting puts their policy above your own terms over the resources they
+      govern. Nothing has changed yet — you will be shown exactly what it would mean,
+      and what it would do to the terms you have already written, before you decide.</div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn sm" onclick="reviewInvitation()">See what it would mean</button>
+      <button class="btn ghost sm" onclick="declineInvitation()">Decline</button>
+    </div>
+  </div>`;
+}
+
+window.reviewInvitation = async () => {
+  agentTab = "organization";
+  await agentAuthView($("#settingsBody") || document.body);
+  const box = $("#orgCode");
+  if (box && ORG && ORG.invitation) { box.value = ORG.invitation.code; previewOrganization(); }
+};
+
+window.declineInvitation = async () => {
+  try {
+    const r = await api("/api/agent/organization/decline", { method: "POST" });
+    toast("Declined", `${r.declined} was told. Nothing of yours changed.`);
+  } catch (e) { toast("Not declined", e.message, "warn"); return; }
+  ORG = null;
+  agentAuthView($("#settingsBody") || document.body);
+};
+
+function renderJoinOrganization(target, org) {
+  if (org.invitation) {
+    target.innerHTML = `
+      <div class="card pad-lg">
+        <div class="section-head"><h2>${esc(org.invitation.name)} has invited you</h2></div>
+        <div class="muted" style="font-size:12.5px;max-width:70ch">Their invitation is addressed to
+          you and is good once. Reviewing it changes nothing.</div>
+        <input type="hidden" id="orgCode" value="${esc(org.invitation.code)}">
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn sm" onclick="previewOrganization()">See what it would mean</button>
+          <button class="btn ghost sm" onclick="declineInvitation()">Decline</button></div>
+        <div id="orgPreview"></div>
+      </div>
+      <div class="card pad-lg" style="margin-top:14px;border-style:dashed">
+        <div class="section-head"><h2>Or join with a code</h2></div>
+        <label class="fld" style="max-width:320px"><div class="lbl">Enrolment code</div>
+          <input type="text" id="orgCodeManual" placeholder="e.g. NW-7K2F-QX" autocomplete="off"></label>
+        <button class="btn ghost sm" onclick="document.getElementById('orgCode').value=document.getElementById('orgCodeManual').value.trim();previewOrganization()">See what this would mean</button>
+      </div>`;
+    return;
+  }
+  if (!org.enrolment_available) {
+    target.innerHTML = `<div class="empty">Your authorization server is not configured with an
+      organization to enrol with. This is where you would join one — if you administer accounts on
+      behalf of an employer, its policy would sit above your own terms here.</div>`;
+    return;
+  }
+  target.innerHTML = `
+    <div class="card pad-lg">
+      <div class="section-head"><h2>Join an organization</h2></div>
+      <div class="muted" style="font-size:12.5px;max-width:70ch">If you administer these accounts for
+        an employer, they can put policy above yours: a ceiling on what you may permit over the
+        resources they own. You will be shown exactly what that means — and exactly what it would
+        change about the terms you have already written — before anything happens.</div>
+      <label class="fld" style="max-width:320px"><div class="lbl">Enrolment code</div>
+        <input type="text" id="orgCode" placeholder="e.g. NW-7K2F-QX" autocomplete="off"></label>
+      <button class="btn sm" onclick="previewOrganization()">See what this would mean</button>
+      <div id="orgPreview"></div>
+    </div>`;
+}
+
+window.previewOrganization = async () => {
+  const code = $("#orgCode").value.trim();
+  const box = $("#orgPreview");
+  box.innerHTML = `<div class="muted" style="margin-top:14px">Asking…</div>`;
+  let p;
+  try {
+    p = await api("/api/agent/organization/preview", { method: "POST",
+      headers: { "content-type": "application/json" }, body: JSON.stringify({ code }) });
+  } catch (e) { box.innerHTML = `<div class="note warn" style="margin-top:14px">${esc(e.message)}</div>`; return; }
+  const changes = p.changes || [];
+  box.innerHTML = `
+    <div class="card" style="margin-top:18px;background:var(--surface-2)">
+      <div class="section-head"><h2>${esc(p.envelope.name)}</h2>
+        <span class="chip">charter v${esc(p.envelope.charter_version)}</span></div>
+      <div class="lbl" style="margin-top:10px">It would share with you</div>
+      <div>${((p.envelope || {}).grants || []).map(r => `<span class="chip mono">${esc(r)}</span>`).join(" ") || "—"}
+        ${(p.envelope || {}).role_name ? `<span class="chip pos">as ${esc(p.envelope.role_name)}</span>` : ""}</div>
+      <div class="lbl" style="margin-top:16px">It would require</div>
+      ${(p.summary || []).map(l => `<div class="note">${esc(l)}</div>`).join("")}
+      <div class="lbl" style="margin-top:16px">It would change these terms of yours, now</div>
+      ${changes.length
+        ? changes.map(c => `<div class="note warn"><b>${esc(c.tier_name || c.tier)}</b> — ${esc(c.text)}</div>`).join("")
+        : `<div class="note">Nothing. Everything you have written already sits inside this ceiling.</div>`}
+      <div class="muted" style="font-size:12.5px;margin-top:14px">Changes to your terms are not reversed
+        by leaving later.</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn primary sm" onclick="consentSheet()">Continue</button>
+        <button class="btn ghost sm" onclick="document.getElementById('orgPreview').innerHTML=''">Not now</button>
+      </div>
+    </div>`;
+  PREVIEW = p;
+};
+
+let PREVIEW = null;
+
+/* What she is actually agreeing to.
+
+   The card above says what the organization *requires* — its ceiling, and
+   what it would do to terms she has already written. This says what joining
+   lets it *do*: revoke her agents, answer requests on her behalf, and, where
+   the charter says so, reach her accounts without asking her at all.
+
+   It is a separate step, it is modal, and the button stays disabled until
+   she has ticked the box, because those are three different ways of saying
+   the same thing — this is not a formality. Her authorization server refuses
+   a join that does not carry the agreement, so a surface that skipped this
+   would fail rather than quietly enrol her. */
+window.consentSheet = () => {
+  const p = PREVIEW;
+  if (!p) return;
+  const powers = p.powers || {};
+  const row = (x, kind) => `<div class="power ${kind}">
+    <div class="glyph">${kind === "can" ? "!" : "✓"}</div>
+    <div><div class="what">${esc(x.what)}</div>
+      <div class="detail">${esc(x.detail)}</div></div></div>`;
+  const sheet = el(`<div class="sheet-back" id="consentBack">
+    <div class="sheet">
+      <header>
+        <h2>What ${esc(p.envelope.name)} would be entitled to do</h2>
+        <div class="muted" style="font-size:12.5px">Charter v${esc(p.envelope.charter_version)}.
+          Read this before you agree — it is standing authority over your agents, not a setting.</div>
+      </header>
+      <div class="body">
+        ${(powers.gets || []).length ? `<div class="lbl">You would get</div>
+          ${powers.gets.map(x => `<div class="power gets">
+            <div class="glyph">+</div>
+            <div><div class="what">${esc(x.what)}</div>
+              <div class="detail">${esc(x.detail)}</div></div></div>`).join("")}` : ""}
+        <div class="lbl" style="margin-top:20px">They would be able to</div>
+        ${(powers.can || []).map(x => row(x, "can")).join("")}
+        <div class="lbl" style="margin-top:20px">They would still not be able to</div>
+        ${(powers.cannot || []).map(x => row(x, "cannot")).join("")}
+        ${(p.changes || []).length ? `<div class="lbl" style="margin-top:20px">And these terms of
+          yours change the moment you agree</div>
+          ${p.changes.map(c => `<div class="note warn"><b>${esc(c.tier_name || c.tier)}</b> — ${esc(c.text)}</div>`).join("")}
+          <div class="muted" style="font-size:12.5px;margin-top:8px">Leaving later does not put them back.</div>` : ""}
+      </div>
+      <footer>
+        <label class="agree"><input type="checkbox" id="agreeBox">
+          I understand what ${esc(p.envelope.name)} would be able to do, and I agree to it</label>
+        <div style="margin-left:auto;display:flex;gap:10px">
+          <button class="btn ghost sm" onclick="closeConsent()">Cancel</button>
+          <button class="btn primary sm" id="agreeBtn" disabled>Join ${esc(p.envelope.name)}</button>
+        </div>
+      </footer>
+    </div></div>`);
+  document.body.appendChild(sheet);
+  $("#agreeBox").onchange = (e) => { $("#agreeBtn").disabled = !e.target.checked; };
+  $("#agreeBtn").onclick = () => joinOrganization();
+};
+
+window.closeConsent = () => { $("#consentBack")?.remove(); };
+
+window.joinOrganization = async () => {
+  const code = $("#orgCode").value.trim();
+  // `agreed` is not decoration. Her authorization server refuses a join
+  // without it, and records what she agreed to alongside the fact that she
+  // did — so the answer to "what was I told this would let them do" survives
+  // the organization editing its charter afterwards.
+  const agreed = !!$("#agreeBox")?.checked;
+  try {
+    const res = await api("/api/agent/organization", { method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code, agreed }) });
+    closeConsent();
+    toast("Joined " + res.name, (res.changes || []).length
+      ? `${res.changes.length} of your terms were narrowed to its ceiling`
+      : "Your terms already sat inside its ceiling");
+  } catch (e) { closeConsent(); toast("Not joined", e.message, "warn"); return; }
+  ORG = null;
+  renderOrganization($("#aaBody"));
+};
+
+window.leaveOrganization = async () => {
+  try {
+    const res = await api("/api/agent/organization", { method: "DELETE" });
+    toast("Left the organization", res.note, "warn");
+  } catch (e) { toast("Not left", e.message, "warn"); return; }
+  ORG = null;
+  renderOrganization($("#aaBody"));
+};
+
 /* The record, or one agent's part of it.
 
    `promised` and `touched` under one negotiation are the two ends of the same
@@ -765,6 +1120,12 @@ function renderTermsCode(target, tiers) {
 const LEDGER_KINDS = {
   promised: "", touched: "pos", approved: "warn", denied: "neg",
   refused: "neg", relaxed: "warn", connected: "", revoked: "neg",
+  // The organization above her. `break_glass` is the only kind in this
+  // record that describes something she did not decide and could not have
+  // stopped, which is exactly why it is in her record and marked.
+  org_joined: "", org_left: "", org_clamped: "warn", org_refused: "neg",
+  org_declined: "", org_acted: "warn",
+  break_glass: "neg",
 };
 
 function ledgerDetail(e) {
@@ -789,12 +1150,35 @@ function ledgerDetail(e) {
       return `${esc(e.purpose)}<br><span style="font-size:12px">${chips}</span>${op}${reason}${mission}${terms}<br><span class="thumb">${esc(e.contract)}</span>`;
     }
     case "touched":   return `<span class="mono">${esc(e.tool)}</span> ${esc(e.summary || "")}`;
-    case "approved":  return "you personally approved this";
-    case "denied":    return "you denied this request";
+    case "approved":  return e.by ? "approved at your organization, not by you"
+                                  : "you personally approved this";
+    case "denied":    return e.by ? "denied at your organization, not by you"
+                                  : "you denied this request";
+    case "org_acted": return `${esc(e.what)}${e.operator ? ` · ${esc(e.operator)}` : ""}`;
     case "refused":   return `${e.because ? esc(e.because.join(", ")) : "the requesting side declined your terms"}${
       e.terms_uri ? ` · <a class="thumb" href="${encodeURI(e.terms_uri)}" target="_blank" rel="noopener">${esc(e.terms_uri.split("/terms/")[1] || e.terms_uri)}</a>` : ""}`;
     case "relaxed":   return `a rule you wrote granted without asking · ${esc((e.because || []).join(", "))}`;
     case "connected": return `agent connected · <span class="thumb">${esc(e.handle)}</span>`;
+    case "org_joined":  return `you joined <b>${esc(e.organization)}</b> (charter v${esc(e.charter_version)})
+      and agreed to what it may do${(e.agreed_to || []).length
+        ? `:<br>${e.agreed_to.map(x => `<span class="chip warn">${esc(x)}</span>`).join(" ")}` : ""}`;
+    case "org_left":    return `${esc(e.why || "you left the organization")} — your terms keep what it narrowed`;
+    case "org_declined": return `you declined an invitation from <b>${esc(e.organization)}</b>${
+      e.by ? ` (sent by ${esc(e.by)})` : ""} — nothing of yours changed`;
+    case "org_clamped": return `<b>${esc(e.organization)}</b> narrowed <span class="mono">${esc(e.tier)}</span>:
+      ${(e.changes || []).map(esc).join("; ")}`;
+    case "org_refused": return `<b>${esc(e.organization || "your organization")}</b> refused this request ·
+      ${(e.because || []).map(esc).join("; ")}`;
+    case "break_glass": {
+      const stage = { break_glass_opened: "opened a break-glass window",
+                      break_glass: "took a break-glass grant",
+                      break_glass_used: "used a break-glass grant" }[e.stage] || e.stage;
+      const what = e.tool ? `<span class="mono">${esc(e.tool)}</span> ` : "";
+      const on = e.resource_id ? `on <span class="mono">${esc(e.resource_id)}</span> ` : "";
+      return `<b>${esc(e.organization || "your organization")}</b> ${esc(stage)} ${what}${on}
+        ${e.reason ? `<br><span class="claimed">${esc(e.reason)}</span>` : ""}
+        ${e.authorised_by ? `<br><span class="thumb">authorised by ${esc(e.authorised_by)}</span>` : ""}`;
+    }
     case "revoked":   return e.operator
       ? `operator ${esc(e.operator)} blocked · ${e.connections_revoked} connection(s), ${e.rpts_deactivated} grant(s)`
       : `access revoked · ${e.rpts_deactivated} grant(s) killed`;
@@ -802,12 +1186,25 @@ function ledgerDetail(e) {
   }
 }
 
+/* Who did it, when it was not her.
+
+   The column exists for one reason: an organization she administers these
+   accounts for can act on her agents, and a record in which somebody else's
+   decision appeared as hers would be worse than no record — it is a record
+   that would be believed. Blank means her. */
+function ledgerActor(e) {
+  if (!e.by) return `<span class="muted">you</span>`;
+  return `<span class="chip warn" title="An administrator at your organization did this">
+    ${esc(e.by.admin)} · ${esc(e.by.name || e.by.org)}</span>`;
+}
+
 function ledgerTable(entries) {
   return `<div class="card pad-lg"><table>
-    <thead><tr><th>Time</th><th>Event</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
+    <thead><tr><th>Time</th><th>Event</th><th>Who</th><th>Details</th><th class="r">Negotiation</th></tr></thead>
     <tbody>${entries.slice().reverse().map((e) => `<tr>
       <td class="thumb">${esc((e.ts || "").replace("T", " ").replace("Z", ""))}</td>
       <td><span class="chip ${LEDGER_KINDS[e.kind] || ""}">${esc(e.kind)}</span></td>
+      <td>${ledgerActor(e)}</td>
       <td>${ledgerDetail(e)}</td>
       <td class="r thumb">${esc(e.family)}</td>
     </tr>`).join("")}</tbody></table></div>`;
@@ -856,7 +1253,35 @@ function connectEvents() {
     pollBadge();
     if (location.hash.includes("agent-authorization") && agentTab === "approvals") renderApprovals($("#aaBody"));
   });
-  es.addEventListener("decided", () => {
+  /* The organization reaching past her. Loud on purpose and not dismissible
+     into the background: she cannot stop this, so the least the surface can
+     do is make sure she knows the moment it happens rather than the next
+     time she opens the ledger. */
+  es.addEventListener("break_glass", (e) => {
+    const d = JSON.parse(e.data);
+    const stage = d.stage === "break_glass_opened" ? "opened a break-glass window"
+      : d.stage === "break_glass_used" ? "used break-glass access" : "took break-glass access";
+    toast("Your organization " + stage, [d.resource_id, d.reason].filter(Boolean).join(" — "), "warn");
+    const dot = $("#orgDot"); if (dot) dot.classList.add("on");
+    if (location.hash.includes("agent-authorization") && agentTab === "ledger") renderLedger($("#aaBody"));
+  });
+  es.addEventListener("organization", (e) => {
+    const d = JSON.parse(e.data);
+    ORG = null;
+    if (d.state === "ended") toast("Organization membership ended", d.why || "", "warn");
+    if (location.hash.includes("agent-authorization")) agentAuthView($("#settingsBody") || document.body);
+  });
+  es.addEventListener("decided", (e) => {
+    /* Someone else may have been the one who decided. She finds out as it
+       happens rather than the next time she reads the ledger — an
+       administrator acting on her agents is a thing she should never learn
+       about late. */
+    let d = {};
+    try { d = JSON.parse(e.data); } catch (err) {}
+    if (d.by) {
+      toast(`${d.by.admin} acted on your agents`,
+        `${d.by.name || d.by.org} · ${d.decision}`, "warn");
+    }
     pollBadge();
     if (location.hash.includes("agent-authorization")) agentAuthView($("#settingsBody") || document.body);
   });

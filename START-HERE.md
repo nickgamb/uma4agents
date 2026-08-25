@@ -303,6 +303,43 @@ Why it matters: this is the difference between a firm running one
 authorization server over all its customers and each customer having one.
 [docs/MULTI-OWNER.md](docs/MULTI-OWNER.md).
 
+## 9c. When the stuff is not hers
+
+Everything so far has been about resources somebody owns outright. Meridian
+also holds a book belonging to **Northwind Capital**, a firm whose staff Alice
+and Carol are — and the firm shares parts of that book with them under a role.
+
+```bash
+make org-check
+```
+
+Sixty-three assertions across six processes. The two beats to watch for:
+
+**Joining grants something.** Alice enrols with a code, Carol accepts an
+invitation addressed to her, and the firm's book appears in each of their
+authorization servers as resources they administer. Not resources they own —
+their portals mark them *shared by Northwind Capital* — and each of them writes
+the terms an agent must accept, capped by a charter neither of them wrote.
+Leaving takes the access back and leaves every narrowing in place.
+
+**Whose agent it is decides the answer.** Under the analyst role's
+`first-party-only`, an agent Alice operates reads the firm's book and Bob's
+agent is refused — same terms, same key strength, same stated reason, same
+resource. Then an administrator moves her to a role that permits any agent,
+and Bob's gets in a few seconds later with nothing restarted. That sentence —
+*whose* agent, on behalf of *which* person — is one an authorization system
+built around a single party has nowhere to put.
+
+Watch what the organization cannot do, too. It sees the agents that touch its
+book and not the ones that touch her brokerage account; it can shut one out of
+the book without touching that agent's standing with her; and every act of its
+administrator is written into *her* record under his name. The console is at
+`https://org-console.uma.lab` (sign in as `dana` / `dana-demo`), and her side
+of it is under **Agent Access → Organization** in her own portal.
+
+Why it matters: UMA has had a name for her role since 2015 — resource rights
+administrator — and no mechanism for it. [docs/ORG.md](docs/ORG.md).
+
 ## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other
@@ -374,6 +411,8 @@ answer *that same request*. Not a fresh one.
   and the adapter that makes that possible
 - **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her authority can verify
   about an agent, and why none of it can ever buy access
+- **[docs/ORG.md](docs/ORG.md)** — shared ownership: a firm's resources,
+  administered by its people under their own authorities
 - **[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** — many owners of one resource
   server, and how one of them brings an authority nobody provisioned
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with

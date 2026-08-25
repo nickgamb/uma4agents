@@ -108,6 +108,21 @@ either way. See [put the authority on her device](/docs/guides/personal-authorit
 | `GET /owner/ledger` | The activity ledger |
 | `GET /owner/events` | Server-sent event stream for portal notification |
 
+### The organization above her, if she has joined one
+
+Only present where an organization owns resources shared with this owner —
+see [shared ownership](/docs/overview/shared-ownership/).
+
+| Endpoint | Answers |
+|---|---|
+| `GET /owner/organization` | Whether she administers resources for anyone, what it shares with her, what its ceiling does to each of her tiers, and any invitation waiting on her |
+| `POST /owner/organization/preview` | What a code would commit her to, and exactly what it would change about terms she has already written. Nothing happens |
+| `POST /owner/organization` | Join. Refused without an explicit `agreed`, because joining hands another party standing authority over her agents |
+| `POST /owner/organization/decline` | Refuse an invitation, recorded as an answer rather than a silence |
+| `DELETE /owner/organization` | Leave. Takes back the access; leaves every narrowing in place |
+| `POST /org/notice` | A signed notice from her organization — the charter moved, her role changed, the glass was broken. Verified against the keys that organization publishes, never a shared secret |
+| `GET`/`POST /org/admin/{owner}/…` | An administrator acting on the agents that touch **the organization's** resources: `pending`, `connections`, `operators`, `ledger`. Scoped by the charter's claims before anything is answered, and everything written into her record under his name |
+
 ### Health
 
 | Endpoint | Purpose |
@@ -150,6 +165,25 @@ a relayed copy stays attributable.
 `access_mode` (`four-party` for this topology) and `r3_vocabularies`, an
 operation list content-addressed by a digest. Both public documents point at the
 same `owner_resources_endpoint`; only the encoding differs.
+
+## The organization's authority
+
+A party of its own, not a table inside anyone's authorization server.
+
+| Endpoint | Answers |
+|---|---|
+| `GET /.well-known/u4a-organization` | Discovery: issuer, JWKS, where to enrol, where decisions come from |
+| `GET /jwks` | Its signing keys. Members verify notices against these; enforcement points verify the grants it signs itself |
+| `POST /member/preview` | The charter in sentences, before anybody has joined |
+| `POST /member/join` | Enrol, by shared code or by an invitation addressed to one person. Returns a membership token her authority holds |
+| `GET /member/envelope` | The ceiling, and what her role shares with her. Polled, not pushed — a push that failed would be silent on both sides |
+| `POST /decision` | The organization's answer about one request: `allow`, `ask` or `refuse`, and never anything that widens |
+| `POST /member/compliance` | Her authority reporting that the ceiling was applied and which of its fields bit. Never what her terms say |
+| `GET /member/invitation` | Whether this organization has asked for a named person |
+| `GET /membership/{owner}` | For an enforcement point: whether this owner is governed here, what is shared with her, and the ceiling to check grants against |
+| `POST /break-glass` | An agent redeeming a window, signing with the key the grant will bind to |
+| `POST /introspect`, `/consume` | RFC 7662 over the grants this service signed, shaped exactly like a member authority's answers |
+| `/admin/…` | The console's backend: charter versions, members and their roles, invitations, break-glass windows, activity |
 
 ## The requesting party's operator
 

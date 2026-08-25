@@ -1,0 +1,38 @@
+# Northwind's book, held at Meridian.
+#
+# The same vault image a third time, with the firm's holdings in it rather
+# than a person's. This is the instance that belongs to an *organization*
+# rather than to any member, and it is what makes the shared-ownership case
+# a deployment rather than a diagram: one resource server, three owners of
+# record, and one of them is a company.
+#
+# It is reached at /mcp/shared/<member> — the same process for everyone, and
+# the member segment decides whose authorization server governs the request.
+# Alice's terms apply at /mcp/shared/alice, Carol's at /mcp/shared/carol,
+# and Northwind's charter sits above both.
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: northwind-vault
+  namespace: meridian
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 9020
+    path: /mcp
+  deployment:
+    image: localhost:5001/u4a/alice-vault-mcp:dev
+    imagePullPolicy: Always
+    port: 9020
+    replicas: 1
+    env:
+      ENFORCEMENT_MODE: gateway
+      # The tool ids it publishes are namespaced by this, which is what the
+      # organization's charter claims and what keeps `northwind-vault/...`
+      # from ever resolving against a member's own policy.
+      UMA_VAULT_OWNER: northwind
+      UMA_VAULT_FIXTURES: /app/fixtures-northwind.json
+    resources:
+      requests: { cpu: 50m, memory: 96Mi }
+      limits: { memory: 256Mi }

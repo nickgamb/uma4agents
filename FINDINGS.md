@@ -27,6 +27,7 @@ available on request.
 | One AS per protected resource (implicit) | **Transform** | A resource server holds many people's accounts and each of them may name a different authorization server. Every owner-scoped artifact has to carry its owner — the ticket, the RPT, the resource id, the terms template, and the RFC 9728 document itself. Two owners run here over one resource server, one of them on an authority the resource server was never configured against |
 | Resource registration model | **Transform** | Durable resources → *tool/capability surfaces*; and registration itself becomes method-agnostic — classic push RReg, or declarative pull from RFC 9728 metadata plus a protected owner-resources listing (rec 5; both run in this POC) |
 | Interactive claims gathering (browser redirect) | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
+| Resource rights administration (RO ≠ the person at the console) | **Transform** | Named since 2015, never mechanised. Three of PP2PI's four co-administration states are deployments of the existing party model; the fourth — one resource owned by an organization, administered by several people under *their own* authorities — needs the authority selected per (resource, administrator) and one new field in the organization's policy: whose agent may act. See rec 25 |
 | Trust-elevation levels, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first POC; revival conditions noted |
 
 The POC also surfaced four capabilities the agent era demands. They split
@@ -46,6 +47,7 @@ carries the parts, but the agent-era *use* deserves normative naming:
 |---|---|---|
 | Per-operation, single-use grants | Built | "Approve this trade" must not become "may trade"; the RPT carries an operation hash and is consumed on use. Classic UMA scopes authorize *classes* of action, not one action. |
 | Owner's agent / app as the consent surface | Built (portal) | The 2010 out-of-band-consent wireframes, with an interlocutor that finally exists |
+| Delegation by party (`none` / `first-party-only` / `any-agent`) | Built | The organization can say *whose* agent may act on a resource it shares, which is a statement about parties rather than permissions. Nothing in UMA 2.0, OAuth or any policy engine has a place for it, and it only becomes expressible once the owner's authority can distinguish an agent she activated from one somebody else runs |
 
 ---
 
@@ -812,6 +814,71 @@ of one resource server may name two different ones.** Everything else follows
 — per-owner metadata, per-owner protection tokens, and the establishment
 problem in recommendation 21, which only exists because the answer is allowed
 to be an authority the resource server has never met.
+
+**25. Resource rights administration needs a mechanism, and the missing field
+is `delegation`.** UMA has named the role since 2015 — a *resource rights
+administrator* administers access to resources she does not necessarily own —
+and PP2PI's healthcare analysis lays out the four states of co-administration
+without a mechanism for any of them. The agent era makes the gap urgent rather
+than academic: the moment a resource is shared with someone, "may her agent
+touch it" is a question about **parties**, and there is nowhere in UMA 2.0 to
+express it.
+
+What the POC found is that three of the four states already work with what UMA
+has, and the fourth needs one new field.
+
+*Administration by proxy* and *co-administration* are deployments, not
+protocol: an owner-of-record whose authority is administered by somebody else
+is exactly the existing party model with a different person at the console.
+What is genuinely absent is the shape where **the resource stays the
+organization's and the administration is distributed to several people, each
+under her own authorization server**. One resource, several administrators,
+several authorities — and the enforcement point has to know which one to ask.
+That resolves cleanly and needs no new primitive: the authority is selected
+per (resource, administrator), which is recommendation 24 read once more with
+the pair rather than the owner as the key. In the POC it is a path segment.
+
+The new field is on the organization's side. A charter that shares a resource
+with a member has to say **whose agent may act on it for her**:
+
+    none | first-party-only | any-agent
+
+Not what may be accessed — *whose agent* is doing the accessing on behalf of
+which person. No authorization system built around a single party has anywhere
+to put that sentence, and every organization sharing data with staff who run
+agents will want it within a year. It is expressible only because the owner's
+authority already distinguishes an agent she activated from one somebody else
+operates (recommendation 12's first-party fact), and it is safe to rest a rule
+on because the requesting side cannot assert it.
+
+Two properties are worth specifying alongside it, because both are easy to get
+wrong in ways that are invisible afterwards:
+
+- **A layer above the owner may only narrow, and the narrowing belongs in the
+  terms.** The obvious implementation applies an organization's ceiling at
+  grant time and leaves the owner's policy alone. It is less code and it is
+  wrong: the terms document is what the requesting side dereferences, reads
+  and signs, so a document stating what the owner wrote while the grant
+  reflects what the organization allows is a document that lies to both of
+  them. Clamp on write and the ceiling is *in* what the agent agreed to.
+- **The upper layer's reach stops at its own resources — including what it can
+  see.** An organization that can enumerate every agent connected to a member
+  has replaced her layer rather than sat above it. The scoping has to be the
+  owner authority's, applied before it answers, and it has to cover the
+  read surfaces as much as the write ones: her pending queue, her connections,
+  her operators and her record. Revocation likewise: shutting an agent out of
+  the organization's resources must not touch its standing with her.
+
+And one honest note for the spec: an override *does* have to exist — the
+organization owns the data — but it cannot be a flag on a decision the
+member's authority makes, because that authority may be hers to run. It has to
+be a grant the organization signs itself, verifiable at the enforcement point
+against keys the organization publishes, bounded by a clause the member was
+shown before she joined, and unable to be quiet: notified at the moment a
+human decides, and written into her record.
+
+Built and demonstrated: `make org-check` (63 assertions over six processes),
+`docs/ORG.md`.
 
 ---
 

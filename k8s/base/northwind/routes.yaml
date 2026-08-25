@@ -1,0 +1,32 @@
+# Northwind's front door, published by Northwind.
+#
+# Attaching a route to the shared Gateway is how a party publishes itself,
+# and no other namespace can publish these hostnames. The organization is a
+# party here in exactly the way Alice and Carol are — the fact that it has an
+# administrator rather than an owner changes nothing about the boundary.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: org-authority
+  namespace: northwind
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["northwind-org.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: org-authority, port: 9040 }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: org-console
+  namespace: northwind
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["org-console.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: org-console, port: 9050 }

@@ -321,6 +321,34 @@ class OwnerStore(Protocol):
         widening it, which is the only safe direction for a destructive edit.
         """
 
+    # --- the organization above her, if there is one -------------------------
+    #
+    # One record or none. A person administering resources for two
+    # organizations at once is a real arrangement and deliberately not this
+    # one: two ceilings over one terms document would have to be intersected,
+    # and an intersection nobody wrote is a policy nobody agreed to. The
+    # honest version of that feature is per-resource enrolment, and it is not
+    # here yet.
+
+    async def organization(self) -> dict | None:
+        """This owner's enrolment: the issuer, her membership token, and the
+        last envelope her authority read. ``None`` when she is nobody's
+        member, which is the default and stays the common case."""
+
+    async def set_organization(self, record: dict) -> None:
+        """Store or replace the enrolment."""
+
+    async def clear_organization(self) -> bool:
+        """Drop it. False if she was not enrolled.
+
+        Note what this does *not* do: nothing about her tiers. They were
+        narrowed to the organization's ceiling while she was a member and
+        they stay narrowed when she leaves. Withdrawing a ceiling is not the
+        same act as raising what is underneath it, and an unenrolment that
+        silently widened every grant she had made would be the most dangerous
+        button in this system.
+        """
+
     # --- fan-out to the owner's surface -------------------------------------
 
     async def notify(self, payload: dict) -> None:

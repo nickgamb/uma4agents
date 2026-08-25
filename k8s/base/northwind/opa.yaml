@@ -1,0 +1,61 @@
+# The organization's policy engine.
+#
+# A real one, and which layer it evaluates is the argument rather than an
+# implementation detail. An organization is the case a policy engine was
+# built for: the operator *is* the deciding party, there is a compliance
+# function, and the policy outlives whoever wrote it. The member's layer
+# stays a small legible document she can read without one.
+#
+# It sits in Northwind's namespace and nowhere else can reach it — see
+# ../policy/authorization.yaml. A member's authority asks the organization
+# for a decision; it never talks to the engine, and could not if it tried.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa
+  namespace: northwind
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+  namespace: northwind
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: opa }
+  ports:
+    - { name: http, port: 8181, targetPort: 8181 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: northwind
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: opa }
+  template:
+    metadata:
+      labels: { app: opa, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: opa
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:1.4.2
+          args: ["run", "--server", "--addr=0.0.0.0:8181", "--log-level=error"]
+          ports:
+            - { name: http, containerPort: 8181 }
+          readinessProbe:
+            httpGet: { path: /health, port: 8181 }
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }

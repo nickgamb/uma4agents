@@ -118,6 +118,48 @@ two agents sharing a keystore are one agent to the owner. Point
 `UMA4A_KEYSTORE` somewhere distinct per agent and each gets its own connection,
 its own terms agreements and its own grants.
 
+## The organization's authority
+
+Only present where an organization owns resources that are shared with
+members — see [shared ownership](/docs/overview/shared-ownership/). With none
+of it set, every line of that layer is inert.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ORG_ISSUER` | `https://northwind-org.uma.lab` | The organization's own origin. Members' authorities verify its notices, and enforcement points verify the grants it signs, against the keys published here |
+| `ORG_ID` / `ORG_NAME` | `northwind` / `Northwind Capital` | What members are shown |
+| `OPA_URL` | `http://opa:8181` | The policy engine. The charter's declarative conditions and the administrator's own Rego are both evaluated there |
+| `ORG_ADMIN_ISSUER` | `…/realms/northwind` | The realm administrators sign in to. Deliberately not a member's realm — an identity provider that minted both would collapse the two layers |
+| `ORG_ADMIN_CLIENTS` | `meridian-org-console` | Which client's tokens the admin API accepts |
+| `ORG_ADMIN_TOKEN` | unset | A static credential for acceptance jobs with no browser. Never set where an identity provider is configured |
+| `ORG_RS_TOKEN` | `org-rs-dev-token` | What an enforcement point presents to read membership and check the grants this service signs |
+| `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. Invitations carry their own, addressed to one person |
+| `ORG_OPA_GRACE_S` | `60` | How long a decision may be answered from cache when the engine cannot be reached. Past it the answer is a refusal — a charter is the organization's protection of its own data, and a request that slipped through while the engine was down is exactly what it exists to prevent |
+
+## A member's side of it
+
+Read by the owner's authorization server. Naming an organization is not
+enrolment and grants nothing: until she enters a code or accepts an
+invitation, none of it does anything.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `UMA_AS_ORG_ISSUER` | unset | Where an enrolment code is redeemed. One organization, because a code says nothing about who issued it; a deployment with many needs a directory, which the lab does not pretend to have |
+| `UMA_AS_ORG_CALLBACK` | the AS issuer | The address the organization posts notices back to — its view of this server, which need not be the issuer an agent is challenged with |
+| `UMA_AS_ORG_TTL_S` | `30` | How often the ceiling is re-read |
+| `UMA_AS_ORG_STALE_MAX_S` | `600` | How long a copy that could not be refreshed still stands. Past it, requests over the organization's resources are refused: a ceiling nobody can read is not a ceiling |
+
+## The enforcement point's side of it
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `UMA_PEP_ORG_ISSUER` | unset | The organization above the owners this gateway fronts. Configured here rather than discovered from an owner's authority — that is the point: an owner may name any authorization server she likes, so the check that the organization's ceiling was applied has to come from somewhere she does not control |
+| `UMA_PEP_ORG_INTERNAL` | the issuer | Where to reach it on the cluster network |
+| `UMA_PEP_ORG_TOKEN` | unset | What this gateway presents to it |
+| `UMA_PEP_MEMBERSHIP_TTL_S` | `10` | How long a cached answer about who is a member may be acted on. The window is somebody's access to the organization's resources *after* it was withdrawn, so it is short. Listings are always read fresh |
+| `UMA_PEP_SHARED_PREFIX` | `mcp/shared` | The path an organization's resources are reached at, one segment per member |
+| `UMA_PEP_SHARED_NAMESPACE` | `northwind-vault` | The resource-id namespace those resources publish under |
+
 ## The two settings people get wrong
 
 **Issuer versus metadata URL.** An issuer is an *identifier* — what a token

@@ -106,14 +106,17 @@ k8s-apply:
 	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
 		--from-file=carol-realm.json=keycloak/carol-realm.json \
+		--from-file=northwind-realm.json=keycloak/northwind-realm.json \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@kubectl apply -f $(K8S)/base/idp/ >/dev/null
 	@kubectl apply -f $(K8S)/base/alice/ >/dev/null
 	@kubectl apply -f $(K8S)/base/carol/ >/dev/null
+	@kubectl apply -f $(K8S)/base/northwind/ >/dev/null
 	@kubectl apply -f $(K8S)/base/meridian/ >/dev/null
 	@kubectl apply -f $(K8S)/base/sterling-vance/ >/dev/null
 	@kubectl apply -f $(K8S)/base/aauth/ >/dev/null
 	@kubectl apply -f $(K8S)/base/policy/waypoints.yaml >/dev/null
+	@kubectl -n northwind wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
 	@kubectl -n alice wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
 	@kubectl -n carol wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
 	@kubectl -n meridian wait --for=condition=Programmed gateway/waypoint --timeout=180s >/dev/null
@@ -131,6 +134,9 @@ k8s-wait:
 	@kubectl -n carol rollout status deploy/uma-as --timeout=300s >/dev/null
 	@kubectl -n carol rollout status deploy/portal --timeout=300s >/dev/null
 	@kubectl -n alice rollout status deploy/portal --timeout=300s >/dev/null
+	@kubectl -n northwind rollout status deploy/opa --timeout=300s >/dev/null
+	@kubectl -n northwind rollout status deploy/org-authority --timeout=300s >/dev/null
+	@kubectl -n northwind rollout status deploy/org-console --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/uma-pep --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/alice-vault --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/carol-vault --timeout=300s >/dev/null
@@ -205,6 +211,13 @@ k8s-first-party-check:
 .PHONY: k8s-multi-owner-check
 k8s-multi-owner-check:
 	$(call run_job,multi-owner-check,cat $(K8S)/base/jobs/multi-owner-check.yaml,420s)
+
+## k8s-org-check: shared ownership — an organization's resources, administered
+## by its members. The same 63 assertions the compose stack runs, against
+## three parties that are three namespaces with no path between them.
+.PHONY: k8s-org-check
+k8s-org-check:
+	$(call run_job,org-check,cat $(K8S)/base/jobs/org-check.yaml,900s)
 
 ## k8s-establishment-check: a resource server and an authority that were never
 ## configured against each other, introducing themselves — and the four ways

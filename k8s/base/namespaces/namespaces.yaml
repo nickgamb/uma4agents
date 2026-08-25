@@ -17,9 +17,12 @@
 # way any caller on the internet would — through the edge — and that is
 # enforced by identity rather than by hope.
 #
-# `alice` and `carol` are two of the same kind and there is no third kind to
-# add. An owner is a namespace holding an authorization server, a signing key
-# and a record; adding one is copying a directory and changing a name. What
+# `alice` and `carol` are two of the same kind, and `northwind` is the third:
+# an owner that is a company. It holds resources of its own, shares them with
+# members, and sets policy over them — while the members administer access
+# under authorities it does not run and cannot read. An owner is a namespace
+# holding an authority, a key and a record; adding one is copying a directory
+# and changing a name. What
 # they are deployed *on* differs — Alice's authority is replicated over a
 # synchronous Postgres cluster, Carol's is a single process holding its own
 # state — and that difference is invisible from outside, which is the claim
@@ -65,6 +68,25 @@ metadata:
   labels:
     istio.io/dataplane-mode: ambient
     pod-security.kubernetes.io/enforce: baseline
+    u4a.ai/party: resource-owner
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    u4a.ai/description: >-
+      Northwind Capital: the third kind of owner. Not a person — a company that owns resources, shares them with the people who work on them, and sets policy over them that none of those people can waive.
+  name: northwind
+  labels:
+    istio.io/dataplane-mode: ambient
+    pod-security.kubernetes.io/enforce: baseline
+    # A resource owner like the two above, and deliberately labelled the
+    # same. What differs is not the role it plays in the protocol — it owns
+    # resources and decides about them — but that the deciding is done by an
+    # administrator on the organization's behalf, and that what it owns is
+    # shared with members who administer access to it under their own
+    # authorities. UMA has always called that a resource rights
+    # administrator; this is the namespace where it becomes deployable.
     u4a.ai/party: resource-owner
 ---
 apiVersion: v1

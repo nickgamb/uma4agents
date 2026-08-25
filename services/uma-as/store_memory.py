@@ -45,6 +45,7 @@ class MemoryOwnerStore:
         self._terms: dict[str, dict] = {}
         self._tiers: dict[str, dict] = {}
         self._rs: dict[str, dict] = {}
+        self._organization: dict | None = None
         self._subscribers: list[asyncio.Queue] = []
 
     # --- lifecycle ---------------------------------------------------------
@@ -295,6 +296,19 @@ class MemoryOwnerStore:
         updated = policy.apply_patch(self._tiers[tier_id], patch)
         self._tiers[tier_id] = updated
         return copy.deepcopy(updated)
+
+    # --- the organization above her -------------------------------------------
+
+    async def organization(self) -> dict | None:
+        return copy.deepcopy(self._organization) if self._organization else None
+
+    async def set_organization(self, record: dict) -> None:
+        self._organization = copy.deepcopy(record)
+
+    async def clear_organization(self) -> bool:
+        had = self._organization is not None
+        self._organization = None
+        return had
 
     # --- fan-out ---------------------------------------------------------------
     #

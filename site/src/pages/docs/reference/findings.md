@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-four recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-five recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -32,7 +32,7 @@ the repository.
 | Interactive claims gathering | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Trust elevation, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first build |
 
-## Four capabilities the agent era demands
+## Five capabilities the agent era demands
 
 Two are named uses of machinery UMA already has.
 
@@ -48,7 +48,7 @@ revoke switch — which classic semantics never required. The handle's shape has
 to follow the identity level, because an identified agent's session keys rotate
 and a thumbprint-keyed connection forgets it every run. That bit the build.
 
-Two are genuinely new surface.
+Three are genuinely new surface.
 
 **Per-operation, single-use grants.** Approving one trade must not become
 authorizing trading. Classic scopes authorize classes of action.
@@ -56,7 +56,15 @@ authorizing trading. Classic scopes authorize classes of action.
 **The owner's own agent or app as the consent surface.** The 2010 out-of-band
 consent wireframes, with an interlocutor that finally exists.
 
-## The twenty-four recommendations
+**Delegation by party.** Where a resource is *shared* — an organization's book,
+administered by the people who work on it — the organization has to be able to
+say whose agent may act on it: nobody's, only ones the member operates
+herself, or anyone's. That is a statement about parties rather than
+permissions, and it has nowhere to live in UMA 2.0, in OAuth, or in a policy
+engine. It becomes expressible only because the owner's authority already
+knows which agents she activated.
+
+## The twenty-five recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -321,6 +329,40 @@ owner's choice, and two owners of one resource server may name two different
 ones. Everything else follows — including the establishment problem in
 recommendation 21, which exists only because the answer is allowed to be an
 authority the resource server has never met.
+
+**25. Resource rights administration needs a mechanism, and the missing field
+is `delegation`.** UMA has named the role since 2015 — a resource rights
+administrator administers access to resources she does not necessarily own —
+and PP2PI's healthcare analysis lays out the states of co-administration
+without a mechanism for any of them. The agent era makes that urgent: the
+moment a resource is shared with someone, "may her agent touch it" is a
+question about parties, and there is nowhere in UMA 2.0 to express it.
+
+Most of the shape needs no new primitive. An organization that owns a resource
+and distributes its administration to several people, each under her own
+authorization server, resolves by selecting the authority per (resource,
+administrator) — recommendation 24 read once more with the pair as the key.
+
+The new field is on the organization's side: a charter that shares a resource
+has to say **whose agent** may act on it for the member — `none`,
+`first-party-only`, or `any-agent`. Not what may be accessed; whose agent is
+doing the accessing on behalf of which person. It is expressible only because
+the owner's authority already distinguishes an agent she activated from one
+somebody else operates, and safe to rest a rule on because the requesting side
+cannot assert it.
+
+Two properties belong in the specification alongside it. A layer above the
+owner may only narrow, and the narrowing belongs **in the terms** — applying a
+ceiling at grant time while leaving her policy alone produces a terms document
+that lies to the agent signing it. And the upper layer's reach stops at its own
+resources *including what it can see*: an organization able to enumerate every
+agent connected to a member has replaced her layer rather than sat above it.
+
+An override does have to exist — the organization owns the data — but it
+cannot be a flag on a decision the member's authority makes, because that
+authority may be hers to run. It has to be a grant the organization signs
+itself, verifiable at the enforcement point, bounded by a clause she was shown
+before joining, and impossible to perform quietly.
 
 ## Parking lot
 

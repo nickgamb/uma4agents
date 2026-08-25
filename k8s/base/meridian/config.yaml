@@ -17,4 +17,9 @@ stringData:
   # origin instead — signing with the key it publishes at gateway.uma.lab
   # and waiting for her to say yes. Adding an owner here would mean somebody
   # putting a secret on her server on her behalf.
-  rs-secrets: '{"alice": "gateway-dev-secret"}' 
+  rs-secrets: '{"alice": "gateway-dev-secret"}'
+  # What this gateway presents to Northwind to read membership and to check
+  # the grants that organization signs itself. Provisioned on both sides,
+  # unlike a member's authority — the firm's own gateway and the firm's own
+  # organization service were stood up by the same people.
+  org-rs-token: org-rs-dev-token 

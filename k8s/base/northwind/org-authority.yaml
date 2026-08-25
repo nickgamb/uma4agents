@@ -1,0 +1,108 @@
+# Northwind Capital's authority — the layer above a member.
+#
+# The deployment shape says what kind of thing this is. One replica holding
+# its own state, like Carol's authority next door and for the same reason: an
+# organization here is a single small process, and `make k8s-reset` rewinds
+# it. What it is *not* is a tenant inside anybody's authorization server.
+#
+# The three things that cross its boundary, and nothing else does:
+#
+#   * the **envelope** goes out to a member's authority — a ceiling it clamps
+#     her terms to, so what the organization requires is visible in the
+#     document an agent signs rather than applied invisibly at the door;
+#   * a **decision** comes back, per request, from this service and the
+#     engine beside it. The charter's conditions and the admin's Rego stay on
+#     this side, exactly as a member's tiers stay on hers;
+#   * a **compliance report** goes the other way — that her terms are inside
+#     the envelope and which of its fields bit. Never what her terms say.
+#
+# And one thing goes around the member entirely: break-glass grants, which
+# this service signs with its own key. The enforcement point in meridian
+# verifies them against the JWKS published here. That is the only way "the
+# organization owns this data" is a technical fact rather than a request.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: org-authority
+  namespace: northwind
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: org-authority
+  namespace: northwind
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: org-authority }
+  ports:
+    - { name: http, port: 9040, targetPort: 9040 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: org-authority
+  namespace: northwind
+spec:
+  # One. Membership, charter versions and open break-glass windows are held
+  # in this process; two replicas would be two organizations answering behind
+  # one name, and a member enrolled at one would be a stranger at the other.
+  replicas: 1
+  selector:
+    matchLabels: { app: org-authority }
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels: { app: org-authority, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: org-authority
+      containers:
+        - name: org-authority
+          image: localhost:5001/u4a/org-authority:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9040 }
+          env:
+            - { name: ORG_ISSUER, value: "https://northwind-org.uma.lab" }
+            - { name: ORG_ID, value: "northwind" }
+            - { name: ORG_NAME, value: "Northwind Capital" }
+            - { name: OPA_URL, value: "http://opa.northwind.svc.cluster.local:8181" }
+            # The organization's administrators sign in to a realm of their
+            # own. Not a member's realm — an administrator is a different
+            # party from every member, and a deployment where one identity
+            # provider mints both has collapsed the two layers this service
+            # exists to keep apart.
+            - { name: ORG_ADMIN_ISSUER, value: "https://keycloak.uma.lab/realms/northwind" }
+            - { name: ORG_ADMIN_CLIENTS, value: "meridian-org-console" }
+            - name: ORG_ADMIN_TOKEN
+              valueFrom: { secretKeyRef: { name: org-config, key: admin-token } }
+            - name: ORG_RS_TOKEN
+              valueFrom: { secretKeyRef: { name: org-config, key: rs-token } }
+            - name: ORG_JOIN_CODE
+              valueFrom: { secretKeyRef: { name: org-config, key: join-code } }
+            - { name: UMA4A_CA_BUNDLE, value: /certs/ca.crt }
+          volumeMounts:
+            - { name: keys, mountPath: /keys }
+            - { name: ca, mountPath: /certs, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /health, port: 9040 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        # Its signing key, generated on first start into an emptyDir. The
+        # honest cost of the single-process shape: restarting the pod mints a
+        # new one, which is the same trade Carol's authority makes, and is why
+        # the checks re-establish rather than assume.
+        - { name: keys, emptyDir: {} }
+        - name: ca
+          secret:
+            secretName: uma-lab-ca
+            items: [{ key: ca.crt, path: ca.crt }]

@@ -177,6 +177,14 @@ CREATE TABLE IF NOT EXISTS tiers (
     PRIMARY KEY (owner, tier_id)
 );
 
+-- The organization she administers resources for, if any. One row per owner
+-- rather than a join table: see the note on OwnerStore.organization for why
+-- two at once is a different feature and not a wider column.
+CREATE TABLE IF NOT EXISTS organizations (
+    owner  text PRIMARY KEY,
+    record jsonb NOT NULL
+);
+
 -- The owner's event feed. Rows exist so NOTIFY can carry an id instead of a
 -- payload: Postgres caps NOTIFY payloads at 8000 bytes and a pending event
 -- carries the purpose, the prohibitions and the agent's identity. Every

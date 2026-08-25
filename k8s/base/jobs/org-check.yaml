@@ -1,0 +1,69 @@
+# Shared ownership, in the cluster — where the three parties are three
+# namespaces with no path between them rather than three containers on one
+# Docker network.
+#
+# Under compose the organization is a process beside the members'
+# authorities. Here it is a namespace of its own with a default-deny policy,
+# a waypoint, and a boundary written in terms of workload identities: the
+# admin API is reachable by the console alone, the engine by the organization
+# alone, and a member's authority can reach neither. What the check asserts
+# is the same either way, which is the point — the boundary is a property of
+# the protocol and the party structure, not of how far apart the processes
+# were put.
+#
+# It runs from sterling-vance, which is Bob's namespace and has no path into
+# any of the three. Everything it touches, it touches through the edge, the
+# way anything on the internet would.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: org-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: org-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: org-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/org_check.py
+          env:
+            - { name: PYTHONPATH, value: /driver/lib }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+            - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
+            - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
+            - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
+            - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
+            - { name: UMA4A_ALICE_OPERATOR, value: "https://alice-agent.uma.lab" }
+            # Read from the same value the gateway is configured with, so a
+            # wait here cannot drift into a flaky one.
+            - { name: UMA_PEP_MEMBERSHIP_TTL_S, value: "10" }
+          volumeMounts:
+            - { name: driver, mountPath: /driver/org_check.py, subPath: org_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

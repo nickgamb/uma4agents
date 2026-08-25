@@ -18,6 +18,7 @@ kubectl -n "$NS" create configmap demo-driver \
   --from-file=kagent_ask.py="$ROOT/clients/demo-driver/kagent_ask.py" \
   --from-file=multi_owner_check.py="$ROOT/clients/demo-driver/multi_owner_check.py" \
   --from-file=establishment_check.py="$ROOT/clients/demo-driver/establishment_check.py" \
+  --from-file=org_check.py="$ROOT/clients/demo-driver/org_check.py" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
 kubectl -n "$NS" create configmap agent-shim \
@@ -29,4 +30,5 @@ kubectl -n "$NS" create configmap demo-lib \
   --from-file=uma4a_http_sig.py="$ROOT/lib/uma4a_http_sig.py" \
   --from-file=uma4a_enroll.py="$ROOT/lib/uma4a_enroll.py" \
   --from-file=uma4a_pep.py="$ROOT/lib/uma4a_pep.py" \
+  --from-file=uma4a_org.py="$ROOT/lib/uma4a_org.py" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null

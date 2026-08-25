@@ -660,7 +660,13 @@ def apply_patch(tier: dict, patch: dict) -> dict:
         validate_rules(patch["rules"])       # raises rather than storing
         tier["rules"] = copy.deepcopy(patch["rules"])
     terms_patch = patch.get("terms", {})
-    for field in ("purpose", "expires_in", "prohibited"):
+    # `scope` is in this list and is not something her portal offers her: the
+    # scopes a tier covers follow from the resources it governs, so editing
+    # them by hand would only ever produce terms that describe access the
+    # resource cannot give. It is patchable because the layer above her can
+    # narrow it — an organization whose charter does not allow a scope makes
+    # her terms stop offering it, and the terms document has to say so.
+    for field in ("purpose", "expires_in", "prohibited", "scope"):
         if field in terms_patch:
             tier["terms"][field] = terms_patch[field]
     # Any owner edit produces a new template version so contracts are

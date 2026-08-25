@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meridian · Organization Console</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">M</div>
+      <div class="name">Meridian<span> Console</span></div>
+    </div>
+    <nav class="nav" id="mainnav">
+      <div class="nav-label">Organization</div>
+      <a data-route="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M6 21V8l6-5 6 5v13"/></svg>
+        Overview</a>
+      <a data-route="members">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Members <span class="badge hidden" id="memberCount">0</span></a>
+      <div class="nav-label">Policy</div>
+      <a data-route="charter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Charter</a>
+      <a data-route="breakglass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 22v-6M4.9 4.9l4.2 4.2M14.9 14.9l4.2 4.2M2 12h6M22 12h-6"/></svg>
+        Break glass</a>
+      <a data-route="activity">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        Activity</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="chip" style="justify-content:center" id="charterChip">charter —</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Overview</div>
+        <div class="crumbs" id="crumbs"></div>
+      </div>
+      <div class="right">
+        <div class="acct-pill"><span class="dot"></span> <span id="orgPill">Organization</span></div>
+        <div class="user-menu">
+          <div class="avatar" id="avatar" onclick="toggleMenu(event)"></div>
+          <div class="menu-pop" id="usermenu">
+            <div class="head"><div class="who" id="whoName"></div><div class="sub">Administrator</div></div>
+            <a href="/auth/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg> Sign out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="view"></div>
+  </div>
+</div>
+<div id="toasts"></div>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

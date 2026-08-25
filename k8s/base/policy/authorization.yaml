@@ -126,6 +126,17 @@ spec:
               - /audit/access
               - /terms
               - /terms/*
+              # The organization above this owner, arriving through the edge
+              # because that is the address it knows her authority by. Both
+              # are verified inside the process against the keys that
+              # organization publishes — reaching either proves nothing.
+              #
+              #   /org/notice     a signed notice: the charter moved, a role
+              #                   changed, the glass was broken.
+              #   /org/admin/*    an administrator acting on her agents, and
+              #                   only over resources the charter claims.
+              - /org/notice
+              - /org/admin/*
               - /.well-known/*
               - /health
               - /health/*
@@ -274,6 +285,17 @@ spec:
               - /audit/access
               - /terms
               - /terms/*
+              # The organization above this owner, arriving through the edge
+              # because that is the address it knows her authority by. Both
+              # are verified inside the process against the keys that
+              # organization publishes — reaching either proves nothing.
+              #
+              #   /org/notice     a signed notice: the charter moved, a role
+              #                   changed, the glass was broken.
+              #   /org/admin/*    an administrator acting on her agents, and
+              #                   only over resources the charter claims.
+              - /org/notice
+              - /org/admin/*
               - /.well-known/*
               - /health
               - /health/*
@@ -562,3 +584,142 @@ spec:
               - cluster.local/ns/kagent/sa/kagent
               - cluster.local/ns/kagent/sa/kagent-controller
               - cluster.local/ns/sterling-vance/sa/advisory-agent
+---
+# ────────────────────────────────────────────────────────────────────────
+# Northwind Capital: an owner that is a company.
+#
+# The same shape as Alice's namespace and the same reason for a waypoint —
+# the split that matters here is by path, and expressed at L4 it would be
+# one port. Permitting a member's authority to reach that port would permit
+# it to rewrite the charter it is governed by.
+#
+#   /admin/*      the console alone. Not a member's authority, not the
+#                 enforcement point, and not the edge — an administrator
+#                 reaches it through the console in front of it, which is
+#                 the only thing holding his token.
+#   /member/*     the members' authorities, arriving through the edge, each
+#                 carrying the membership token this service issued it.
+#   /decision     the same, once per request over a shared resource.
+#   /break-glass  an agent redeeming a window, signed with the key the grant
+#                 will bind to. Public in the sense /token is: reaching it
+#                 proves nothing.
+#   /membership/* the enforcement point, checking that a member's authority
+#   /introspect   applied the ceiling and validating grants this service
+#   /consume      signed itself. Meridian's gateway and nobody else.
+#
+# And the engine below it is reachable from this namespace only. An
+# organization's policy is no more readable by its members than a member's
+# policy is by it.
+# ────────────────────────────────────────────────────────────────────────
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny
+  namespace: northwind
+spec:
+  {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: org-authority-public
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: org-authority
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+      to:
+        - operation:
+            paths:
+              - /member/*
+              - /decision
+              - /break-glass
+              - /jwks
+              - /.well-known/*
+              - /health
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: org-authority-enforcement
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: org-authority
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/uma-pep
+      to:
+        - operation:
+            paths:
+              - /membership/*
+              - /introspect
+              - /consume
+              - /audit/access
+              - /jwks
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: org-authority-admin
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: org-authority
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/northwind/sa/org-console
+      to:
+        - operation:
+            paths: ["/admin", "/admin/*"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: org-console-edge
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: org-console
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: opa-organization-only
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: opa
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/northwind/sa/org-authority

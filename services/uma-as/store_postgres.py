@@ -615,6 +615,24 @@ class PostgresOwnerStore:
                     tier_id, json.dumps(updated), self._o)
                 return updated
 
+    # --- the organization above her -------------------------------------------
+
+    async def organization(self) -> dict | None:
+        row = await self._pool.fetchrow(
+            "SELECT record FROM organizations WHERE owner = $1", self._o)
+        return json.loads(row["record"]) if row else None
+
+    async def set_organization(self, record: dict) -> None:
+        await self._pool.execute(
+            "INSERT INTO organizations (owner, record) VALUES ($1, $2) "
+            "ON CONFLICT (owner) DO UPDATE SET record = EXCLUDED.record",
+            self._o, json.dumps(record))
+
+    async def clear_organization(self) -> bool:
+        row = await self._pool.fetchrow(
+            "DELETE FROM organizations WHERE owner = $1 RETURNING owner", self._o)
+        return row is not None
+
     # --- fan-out ---------------------------------------------------------------
 
     async def notify(self, payload: dict) -> None:

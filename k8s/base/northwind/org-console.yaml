@@ -1,0 +1,75 @@
+# The administrator's surface, hosted by Meridian for its institutional
+# clients — and running here, in Northwind's namespace, because it is a
+# client of Northwind's authority and holds nothing of its own.
+#
+# The same chassis as a member's portal and the same rule: it holds no
+# policy, decides nothing, and exists so that an administrator's token never
+# reaches a browser. Its limits are enforced by the member's authority, not
+# by this screen — a limit a console enforced would be a limit a console
+# could route around.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: org-console
+  namespace: northwind
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: org-console
+  namespace: northwind
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: org-console }
+  ports:
+    - { name: http, port: 9050, targetPort: 9050 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: org-console
+  namespace: northwind
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: org-console }
+  template:
+    metadata:
+      labels: { app: org-console, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: org-console
+      containers:
+        - name: org-console
+          image: localhost:5001/u4a/org-console:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9050 }
+          env:
+            - name: ORG_AUTHORITY_INTERNAL
+              value: "http://org-authority.northwind.svc.cluster.local:9040"
+            - { name: CONSOLE_AUTH, value: "oidc" }
+            - { name: OIDC_ISSUER, value: "https://keycloak.uma.lab/realms/northwind" }
+            - { name: OIDC_CLIENT_ID, value: "meridian-org-console" }
+            - { name: CONSOLE_PUBLIC_URL, value: "https://org-console.uma.lab" }
+            - name: CONSOLE_SESSION_SECRET
+              valueFrom: { secretKeyRef: { name: org-config, key: session-secret } }
+            - { name: SSL_CERT_FILE, value: /certs/ca.crt }
+          volumeMounts:
+            - { name: ca, mountPath: /certs, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /health, port: 9050 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: ca
+          secret:
+            secretName: uma-lab-ca
+            items: [{ key: ca.crt, path: ca.crt }]

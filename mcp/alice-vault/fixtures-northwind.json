@@ -1,0 +1,71 @@
+{
+  "as_of": "2026-07-06",
+  "positions": [
+    {
+      "symbol": "NWCF",
+      "name": "Northwind Core Fixed Income Fund",
+      "quantity": 412000,
+      "cost_basis": 41200000.0,
+      "market_value": 43304000.0
+    },
+    {
+      "symbol": "NWEQ",
+      "name": "Northwind Equity Opportunities Fund",
+      "quantity": 268500,
+      "cost_basis": 32220000.0,
+      "market_value": 37858500.0
+    },
+    {
+      "symbol": "TLT",
+      "name": "iShares 20+ Year Treasury Bond ETF",
+      "quantity": 96000,
+      "cost_basis": 8448000.0,
+      "market_value": 8256000.0
+    },
+    {
+      "symbol": "VNQ",
+      "name": "Vanguard Real Estate ETF",
+      "quantity": 54000,
+      "cost_basis": 4590000.0,
+      "market_value": 4914000.0
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2026-06-28",
+      "account": "firm-book",
+      "symbol": "NWEQ",
+      "side": "buy",
+      "quantity": 12000,
+      "price": 141.02,
+      "note": "model rebalance"
+    },
+    {
+      "date": "2026-06-14",
+      "account": "firm-book",
+      "symbol": "TLT",
+      "side": "sell",
+      "quantity": 8000,
+      "price": 86.1,
+      "note": "duration trim"
+    },
+    {
+      "date": "2026-05-30",
+      "account": "firm-book",
+      "symbol": "VNQ",
+      "side": "buy",
+      "quantity": 6000,
+      "price": 90.44,
+      "note": "sector add"
+    },
+    {
+      "date": "2026-05-02",
+      "account": "firm-book",
+      "symbol": "NWCF",
+      "side": "buy",
+      "quantity": 25000,
+      "price": 104.55,
+      "note": "cash deployment"
+    }
+  ]
+}

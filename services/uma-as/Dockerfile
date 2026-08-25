@@ -7,7 +7,9 @@ FROM python:3.12-slim
 RUN pip install --no-cache-dir fastapi uvicorn 'pyjwt[crypto]' python-multipart sse-starlette httpx asyncpg
 WORKDIR /app
 COPY lib/uma4a_http_sig.py .
+COPY lib/uma4a_org.py .
 COPY services/uma-as/app.py services/uma-as/policy.py ./
+COPY services/uma-as/org.py ./
 COPY services/uma-as/assurance.py ./
 COPY services/uma-as/store.py services/uma-as/store_memory.py ./
 COPY services/uma-as/store_postgres.py services/uma-as/schema.sql ./
