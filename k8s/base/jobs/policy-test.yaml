@@ -73,6 +73,22 @@ data:
     check("cannot read the owner-bound resource listing",
           lambda: denied("http://uma-pep.meridian.svc.cluster.local:9002/owner-resources"))
 
+    # The organization is the third party in this lab, and its boundary is
+    # the one that would be easiest to leave open: an administration API and
+    # a policy engine, both of which look like internal plumbing until
+    # somebody outside can reach them.
+    print("\n== and out of the organization's ==")
+    check("cannot reach the organization's administration API",
+          lambda: denied("http://org-authority.northwind.svc.cluster.local:9040/admin/org"))
+    check("cannot read which members it has",
+          lambda: denied("http://org-authority.northwind.svc.cluster.local:9040/admin/members"))
+    check("cannot reach its policy engine",
+          lambda: denied("http://opa.northwind.svc.cluster.local:8181/health"))
+    check("cannot ask it about a member's membership",
+          lambda: denied("http://org-authority.northwind.svc.cluster.local:9040/membership/alice"))
+    check("cannot reach the administrator's console",
+          lambda: denied("http://org-console.northwind.svc.cluster.local:9050/health"))
+
     print("\n== but the front door is open, and discovery is public ==")
     def allowed(url):
         r = urllib.request.urlopen(url, timeout=10, context=ctx)
