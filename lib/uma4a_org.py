@@ -89,6 +89,31 @@ def envelope_breach(permission: dict, envelope: dict, remaining_s: float) -> str
     return None
 
 
+def reaches(resource_id: str, envelope: dict) -> bool:
+    """Whether an organization may touch this resource, for this owner.
+
+    Its claims say what it owns. This says what it may reach *here*, which is
+    less by one rule: **a resource the owner holds jointly with somebody else
+    is outside every organization's reach**, whatever any charter claims.
+
+    Her co-owner never enrolled with that organization, was never shown its
+    charter, and cannot leave it — so she cannot enrol, on her own, something
+    that is half his. Without this an organization's administrator could see
+    and answer requests over a jointly held account, and its ceiling narrowed
+    the terms an agent was held to there. Both were reachable and both were
+    demonstrated.
+
+    The charter side is guarded too — a claim has to name a concrete
+    namespace — but that only stops the accident. This stops the deliberate
+    one, and it is the check the co-owner's safety actually rests on, because
+    it lives at the authority of the person being asked rather than in the
+    document of the party doing the asking.
+    """
+    if resource_id in (envelope.get("excluded") or ()):
+        return False
+    return claims_match(resource_id, envelope.get("claims") or [])
+
+
 def governs(tier: dict, envelope: dict) -> bool:
     """Whether the organization's charter reaches this tier at all.
 
@@ -98,8 +123,7 @@ def governs(tier: dict, envelope: dict) -> bool:
     the ceiling to the whole tier is the one that cannot leak. Her portal
     says so plainly rather than leaving her to work it out.
     """
-    claims = envelope.get("claims") or []
-    return any(claims_match(rid, claims) for rid in tier.get("resources") or [])
+    return any(reaches(rid, envelope) for rid in tier.get("resources") or [])
 
 
 def _duration(seconds) -> str:
@@ -213,7 +237,7 @@ def would_exceed(spec: dict, resources: list[str], envelope: dict) -> list[str]:
     there the alternative is refusing to store a policy the organization
     changed under her, which would be blaming her for someone else's edit.
     """
-    if not any(claims_match(rid, envelope.get("claims") or []) for rid in resources):
+    if not any(reaches(rid, envelope) for rid in resources):
         return []
     problems = []
     terms = spec.get("terms") or {}
@@ -263,7 +287,8 @@ def compliance(tiers: dict, envelope: dict, resources,
             outstanding |= {c["field"] for c in changes}
     return {
         "charter_version": envelope.get("charter_version"),
-        "resources_governed": sum(1 for rid in resources if claims_match(rid, claims)),
+        "resources_governed": sum(1 for rid in resources
+                                  if reaches(rid, envelope)),
         "tiers_governed": len(governed_tiers),
         "clamped_fields": sorted(set(clamped_fields or []) | outstanding),
         "within": within,

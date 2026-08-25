@@ -129,6 +129,33 @@ and the enforcement point re-checks it anyway.
 The general rule is worth stating: **claims work when the requesting party is
 the only one who has the fact, and fail when the fact might be adverse to it.**
 
+## No organization reaches it
+
+An owner can be two things at once: a member of an organization, and a
+co-owner of something with somebody else. Those are different relationships
+with different people, and the second is not the first's business.
+
+**A resource covered by a mandate is outside every organization's reach at
+her authority, whatever that organization's charter claims.** She cannot
+enrol, on her own, something that is half his — her co-owner never saw that
+charter, never agreed to it, and cannot leave it.
+
+A charter may only claim a namespace it names: `northwind-vault/*` is a
+claim, `*/get_positions` is refused. A wildcard where the namespace goes
+reads as "this kind of resource, wherever it lives", which is exactly the
+reach an organization must not have — it matches a member's own brokerage
+account and an account she holds with a stranger.
+
+That stops the accident. The deliberate case is refused at her authority
+instead, which is where a co-owner's safety has to live: an administrator
+cannot see a request waiting on her about the joint account, cannot answer
+one, and the organization's ceiling does not touch the terms she writes over
+it.
+
+One consequence is visible to her: terms over a jointly held resource cannot
+share a tier with anything else. They are half somebody else's, and a mixed
+tier would be the way round all of the above.
+
 ## Silence is not consent
 
 An owner who has written no terms over the resource quotes nothing and is left

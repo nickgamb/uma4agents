@@ -1095,8 +1095,8 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
     # call, so it takes effect at once and needs no token machinery of its
     # own.
     if rec.get("handle") and await org_blocks_agent(owner, rec["handle"]):
-        org_claims, _ = await org_scope(owner)
-        if any(org.claims_match(p.get("resource_id") or "", org_claims)
+        org_env, _ = await org_scope(owner)
+        if any(org.reaches(p.get("resource_id") or "", org_env)
                for p in claims.get("permissions") or []):
             event("rpt.introspected", corr=rec["family"],
                   result="organization_revoked")
@@ -1374,8 +1374,10 @@ async def resync_shared(owner: str, envelope: dict | None,
                   error=str(exc)[:200])
     claims = claims if claims is not None else (envelope or {}).get("claims") or []
     grants = (envelope or {}).get("grants") or []
+    excluded = await jointly_held(owner)
     stale = [r for r in list(RESOURCES)
-             if org.claims_match(r, claims) and not org.claims_match(r, grants)]
+             if r not in excluded and org.claims_match(r, claims)
+             and not org.claims_match(r, grants)]
     if not stale:
         return
     if SERVED_OWNER is None:
@@ -1420,9 +1422,26 @@ async def end_membership(owner: str, why: str) -> None:
                                "why": why})
 
 
+async def jointly_held(owner: str) -> set[str]:
+    """Every resource this owner holds jointly with somebody else."""
+    out: set[str] = set()
+    for record in (await st(owner).mandates()).values():
+        out |= set((record.get("mandate") or {}).get("resources") or [])
+    return out
+
+
 async def org_envelope(owner: str) -> dict | None:
+    """The organization's ceiling, with what it may not reach subtracted.
+
+    The subtraction is done here rather than at each of the six surfaces that
+    read a ceiling, because it is a property of *this owner's* situation and
+    not of the charter: an organization's claims are the same for every
+    member, and what any one of them holds jointly is not.
+    """
     client = await org_client(owner)
-    return client.envelope if client else None
+    if client is None:
+        return None
+    return {**client.envelope, "excluded": sorted(await jointly_held(owner))}
 
 
 async def organization_blocks(owner: str, resource_id: str) -> str | None:
@@ -1436,7 +1455,7 @@ async def organization_blocks(owner: str, resource_id: str) -> str | None:
     client = await org_client(owner)
     if client is None:
         return None
-    if not org.claims_match(resource_id, client.envelope.get("claims") or []):
+    if not org.reaches(resource_id, await org_envelope(owner) or {}):
         return None
     if client.unusable():
         return (f"{client.envelope.get('name')}'s policy could not be read, "
@@ -1477,7 +1496,7 @@ async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
     # give. Her own brokerage account stopped working because somebody else's
     # policy service was restarting. An organization's outage must be
     # survivable by everything it does not govern.
-    if not org.claims_match(rec["resource_id"], client.envelope.get("claims") or []):
+    if not org.reaches(rec["resource_id"], await org_envelope(rec["owner"]) or {}):
         return {}
     contract = rec.get("contract") or {}
     verdict = await client.decide({
@@ -1651,19 +1670,22 @@ async def org_notice(request: Request) -> dict:
 ORG_ADMIN_TYP = "u4a-org-admin+jwt"
 
 
-async def org_scope(owner: str) -> tuple[list, dict]:
-    """(what the organization claims, the tiers of hers that govern any of it).
+async def org_scope(owner: str) -> tuple[dict, dict]:
+    """(the ceiling that says what it may reach, the tiers of hers it governs).
 
     Everything an administrator may see or touch is filtered through this.
     The organization holds the firm's book and shares it with her; it does
-    not hold her brokerage account, and no amount of co-administration turns
-    one into the other.
+    not hold her brokerage account, nor an account she holds with somebody
+    else, and no amount of co-administration turns one into the other.
+
+    The envelope is returned rather than its claims because the reach is not
+    the claims — see `org.reaches`. Handing out a bare list of patterns is
+    what let a charter's wildcard walk into a jointly held account.
     """
     envelope = await org_envelope(owner) or {}
-    claims = envelope.get("claims") or []
     tiers = {tid: t for tid, t in (await st(owner).tiers()).items()
-             if org.governs(t, envelope)} if claims else {}
-    return claims, tiers
+             if org.governs(t, envelope)} if envelope.get("claims") else {}
+    return envelope, tiers
 
 
 def _org_blocked(record: dict | None) -> dict:
@@ -1759,17 +1781,17 @@ async def org_admin_pending(owner: str, request: Request) -> list:
     shares resources with her and one that has taken over her account.
     """
     await require_org_admin(request, owner)
-    claims, _ = await org_scope(owner)
+    envelope, _ = await org_scope(owner)
     return [p for p in await pending_view(owner)
-            if org.claims_match(p.get("resource_id") or "", claims)]
+            if org.reaches(p.get("resource_id") or "", envelope)]
 
 
 @app.post("/org/admin/{owner}/pending/{family}/decision")
 async def org_admin_decision(owner: str, family: str, request: Request) -> dict:
     actor = await require_org_admin(request, owner)
-    claims, _ = await org_scope(owner)
+    envelope, _ = await org_scope(owner)
     pended = await st(owner).negotiation(family)
-    if not org.claims_match((pended or {}).get("resource_id") or "", claims):
+    if not org.reaches((pended or {}).get("resource_id") or "", envelope):
         # Both directions refused, not just approval. An administrator who
         # could deny a request about her own accounts could interfere with
         # her arrangements at will, and "it was only a refusal" is no comfort
@@ -1791,13 +1813,13 @@ async def org_related_connections(owner: str) -> list:
     arrangement between her and somebody's agent about her own accounts, and
     an administrator has no more business seeing it than her bank does.
     """
-    claims, tiers = await org_scope(owner)
-    if not claims:
+    envelope, tiers = await org_scope(owner)
+    if not envelope.get("claims"):
         return []
     governed = set(tiers)
     pending_handles = {
         rec.get("handle") for rec in await st(owner).pending_negotiations()
-        if org.claims_match(rec.get("resource_id") or "", claims)}
+        if org.reaches(rec.get("resource_id") or "", envelope)}
     blocked = _org_blocked(await org_record(owner))
     out = []
     for conn in await st(owner).connections():
@@ -1909,7 +1931,7 @@ async def org_admin_ledger(owner: str, request: Request) -> list:
     changed. Her negotiations about her own accounts are not in here.
     """
     await require_org_admin(request, owner)
-    claims, tiers = await org_scope(owner)
+    _, tiers = await org_scope(owner)
     org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
                  "org_role", "org_acted", "break_glass"}
     handle = request.query_params.get("handle") or None
@@ -3101,8 +3123,8 @@ async def token(request: Request) -> JSONResponse:
     # administrator turned away from the firm's book goes on reading her own
     # portfolio for her exactly as before.
     if await org_blocks_agent(rec["owner"], handle, contract["_identity"]):
-        claims, _ = await org_scope(rec["owner"])
-        if org.claims_match(rec["resource_id"], claims):
+        envelope, _ = await org_scope(rec["owner"])
+        if org.reaches(rec["resource_id"], envelope):
             event("policy.evaluated", corr=family, result="org-blocked",
                   tier=rec["tier"])
             await ledger_add(rec["owner"], "org_refused", family, {
@@ -3794,7 +3816,7 @@ async def owner_resources(request: Request) -> list:
         # which case she administers it rather than owning it — and her
         # portal should say so, because the two are not the same thing and
         # the difference decides what happens when she leaves.
-        shared = org.claims_match(rid, envelope.get("claims") or [])
+        shared = org.reaches(rid, envelope)
         out.append({
             "_id": rid,
             "name": desc.get("name") or rid,
@@ -3843,7 +3865,8 @@ async def owner_create_policy(request: Request) -> dict:
     spec = await request.json()
     tier_id = (spec.get("id") or "").strip()
     try:
-        tier = policy.new_tier(tier_id, spec, await st(owner).tiers(), set(RESOURCES))
+        tier = policy.new_tier(tier_id, spec, await st(owner).tiers(),
+                               set(RESOURCES), await jointly_held(owner))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     # Terms she is writing for the first time are refused rather than
@@ -3905,6 +3928,19 @@ async def owner_delete_policy(tier_id: str, request: Request) -> dict:
 async def owner_update_policy(tier_id: str, request: Request) -> dict:
     owner = await require_owner(request)
     patch = await request.json()
+    # The same rule the create path applies, because an edit can reach the
+    # same shape: a tier that mixes a jointly held resource with anything
+    # else is the way round the boundary that keeps an organization out of
+    # what she holds with somebody else.
+    if "resources" in patch:
+        shared = await jointly_held(owner)
+        asked = set(patch.get("resources") or [])
+        if (mixed := shared & asked) and asked - shared:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{', '.join(sorted(mixed))} is held jointly, and terms "
+                       f"over it cannot share a tier with anything else. Give "
+                       f"it a tier of its own.")
     try:
         updated = await st(owner).update_tier(tier_id, patch)
     except KeyError:
@@ -3959,7 +3995,7 @@ async def owner_organization(request: Request) -> dict:
                 "enrolment_available": bool(ORG_ISSUER),
                 "issuer": ORG_ISSUER,
                 "invitation": await pending_invitation(owner)}
-    envelope = client.envelope
+    envelope = await org_envelope(owner) or client.envelope
     tiers = await st(owner).tiers()
     return {
         "enrolled": True,
@@ -3978,8 +4014,7 @@ async def owner_organization(request: Request) -> dict:
         "tiers": {tid: view for tid, tier in tiers.items()
                   if (view := org.tier_view(tier, envelope))},
         "governed_resources": sorted(
-            rid for rid in RESOURCES
-            if org.claims_match(rid, envelope.get("claims") or [])),
+            rid for rid in RESOURCES if org.reaches(rid, envelope)),
     }
 
 
@@ -4037,6 +4072,10 @@ async def owner_organization_preview(request: Request) -> dict:
     body = await request.json()
     try:
         envelope = await org.preview(ORG_ISSUER, body.get("code") or "")
+        # What it would reach *for her*, so the preview does not promise an
+        # organization more than joining would actually give it. She may
+        # already hold something jointly, and no charter reaches that.
+        envelope = {**envelope, "excluded": sorted(await jointly_held(owner))}
     except Exception as exc:                                    # noqa: BLE001
         raise HTTPException(status_code=400, detail=_org_error(exc))
     # Dry run: what the clamp would do, computed but not applied.
@@ -4052,8 +4091,7 @@ async def owner_organization_preview(request: Request) -> dict:
             "powers": envelope.get("powers") or {},
             "changes": would,
             "governed_resources": sorted(
-                rid for rid in RESOURCES
-                if org.claims_match(rid, envelope.get("claims") or []))}
+                rid for rid in RESOURCES if org.reaches(rid, envelope))}
 
 
 @app.post("/owner/organization")

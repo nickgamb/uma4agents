@@ -242,6 +242,28 @@ def validate(charter: dict) -> dict:
             "that claims nothing governs nothing, and a member joining it "
             "would be agreeing to a document with no subject")
     out["claims"] = [c.strip() for c in claims]
+    # A charter says what the organization owns. It may not say it with a
+    # wildcard in the first segment.
+    #
+    # `*/get_positions` is a well-formed pattern and it reads as "this kind of
+    # resource, wherever it lives" — which is precisely the reach an
+    # organization must not have. It matches `alice-vault/get_positions`, so a
+    # firm would be governing a member's own brokerage account; and it matches
+    # `meridian-joint/get_positions`, so it would be governing an account she
+    # holds with somebody who never enrolled here and cannot leave.
+    #
+    # Both of those were reachable, and demonstrated, before this check
+    # existed. A namespace is how "the organization's own resources" is said
+    # in this system, so a claim has to name one.
+    for pattern in out["claims"]:
+        head = pattern.split("/", 1)[0]
+        if "*" in head or "?" in head or not head:
+            raise ValueError(
+                f"claims must name the organization's own namespace — "
+                f"{pattern!r} has a wildcard where the namespace goes, and "
+                f"would reach resources belonging to members and to people "
+                f"who have never heard of this organization. Claim "
+                f"`{head or '<namespace>'}…` as a concrete namespace instead.")
 
     envelope = out.setdefault("envelope", {})
     if not isinstance(envelope, dict):

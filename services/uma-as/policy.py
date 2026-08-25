@@ -587,7 +587,7 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
 
 
 def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
-             registered: set[str]) -> dict:
+             registered: set[str], jointly_held: set[str] | None = None) -> dict:
     """Build a tier Alice is adding, or raise ValueError saying why not.
 
     Three checks, and the middle one is the one with teeth:
@@ -610,6 +610,23 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
         raise ValueError(f"there is already a tier called {tier_id!r}")
 
     resources = list(spec.get("resources") or [])
+    # A tier may not put a jointly held resource together with anything else.
+    #
+    # Two reasons, and the second is load-bearing. Terms over a resource she
+    # holds with somebody else are half his: one edit here would change what
+    # his agents are held to, in a document he cannot see. And a mixed tier
+    # is the way round the rule that no organization reaches a jointly held
+    # resource — an organization's ceiling applies to a whole tier once it
+    # reaches any resource in it, so mixing the firm's book with a joint
+    # account would clamp the joint account through the back door.
+    shared = set(jointly_held or ())
+    if (mixed := shared & set(resources)) and set(resources) - shared:
+        raise ValueError(
+            f"{', '.join(sorted(mixed))} is held jointly, and terms over it "
+            f"cannot share a tier with anything else — they are half somebody "
+            f"else's, and an edit here would change what his agents are held "
+            f"to as well. Give it a tier of its own.")
+
     governed = {r: tid for tid, t in existing.items() for r in t["resources"]}
     for rid in resources:
         if rid not in registered:
@@ -619,6 +636,7 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
                 f"{rid!r} is already governed by {governed[rid]!r} — a resource "
                 "belongs to one tier, or which terms apply would depend on the "
                 "order they happen to be stored in")
+
 
     terms = dict(spec.get("terms") or {})
     for field in ("purpose", "expires_in"):

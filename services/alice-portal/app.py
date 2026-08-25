@@ -428,6 +428,54 @@ async def agent_decline_invitation(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/api/agent/joint")
+async def agent_joint(request: Request):
+    """The accounts she holds jointly with somebody else."""
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/joint",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/joint/preview")
+async def agent_joint_preview(request: Request):
+    """What a mandate would commit her to, before it does.
+
+    Separate from the join below for the reason the organization's preview
+    is: the answer to this is the thing she is being asked to agree to, and
+    an endpoint that previewed and joined in one call would be asking her to
+    agree to something she had not been shown.
+    """
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/joint/preview", json=await request.json(),
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/joint")
+async def agent_join_mandate(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/joint", json=await request.json(),
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.delete("/api/agent/joint/{account}")
+async def agent_leave_mandate(account: str, request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.delete(f"{UMA_AS}/owner/joint/{account}",
+                           headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.delete("/api/agent/organization")
 async def agent_leave_organization(request: Request):
     if require_login(request):
