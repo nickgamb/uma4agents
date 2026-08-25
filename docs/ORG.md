@@ -29,9 +29,9 @@ between them: `make k8s-org-check`.
 
 ![Shared ownership in seven beats. One resource server holds three owners of record: Alice's account, Carol's account, and Northwind Capital's book. The firm shares its book with Alice under a role that grants two resources and sets delegation to first-party-only, so the book appears in her authorization server as something she administers rather than owns. She writes the terms an agent must accept and the charter's ceiling is clamped into that same document. Bob's agent asks for the book and is refused — not by her terms but by the organization's engine, because somebody else operates it. An agent she operates herself makes the identical request and is granted. Two columns then list what the organization can do — see and shut out the agents that touch its book, answer requests about its own resources, break the glass under a clause she was shown — against what it cannot: see the agents that touch her own accounts, read her policy, widen anything, or act as her. Leaving takes back the access and leaves every narrowing in place.](shared-ownership.gif)
 
-## Against PP2PI's four states
+## Against the four states of delegated control
 
-The healthcare analysis lays out delegation of control as four states — one
+That report lays out delegation of control as four states — one
 administrator or several, and a data subject who can or cannot manage her own
 resources. Three of them need no new protocol. Only one did, and naming which
 is the useful result:
@@ -308,6 +308,12 @@ the moment a human decided rather than at the moment something took.
 
 Membership is what granted the access, so leaving takes it back: the firm's
 book stops being hers to administer and disappears from her authority.
+
+A grant an agent was already holding stops working too, and not by expiring:
+the enforcement point re-derives what is shared with her from her membership,
+so a tool that is no longer hers to administer is no longer a tool it will
+serve. The same mechanism cuts off a role that was narrowed rather than
+removed — within `UMA_PEP_MEMBERSHIP_TTL_S`, and asserted in `org_check`.
 
 Her **terms keep every narrowing the charter required**. Leaving withdraws a
 ceiling; it does not raise what is underneath one. An unenrolment that

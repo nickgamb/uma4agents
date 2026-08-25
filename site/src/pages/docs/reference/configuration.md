@@ -134,6 +134,7 @@ of it set, every line of that layer is inert.
 | `ORG_ADMIN_TOKEN` | unset | A static credential for acceptance jobs with no browser. Never set where an identity provider is configured |
 | `ORG_RS_TOKEN` | `org-rs-dev-token` | What an enforcement point presents to read membership and check the grants this service signs |
 | `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. Invitations carry their own, addressed to one person |
+| `ORG_BREAK_GLASS_AUDIENCE` | `https://gateway.uma.lab` | Who an override is issued *for*. Configuration rather than a field on the request: an audience the caller chooses is one it can aim at another resource server that also trusts this organization |
 | `ORG_OPA_GRACE_S` | `60` | How long a decision may be answered from cache when the engine cannot be reached. Past it the answer is a refusal — a charter is the organization's protection of its own data, and a request that slipped through while the engine was down is exactly what it exists to prevent |
 
 ## A member's side of it
@@ -148,6 +149,7 @@ invitation, none of it does anything.
 | `UMA_AS_ORG_CALLBACK` | the AS issuer | The address the organization posts notices back to — its view of this server, which need not be the issuer an agent is challenged with |
 | `UMA_AS_ORG_TTL_S` | `30` | How often the ceiling is re-read |
 | `UMA_AS_ORG_STALE_MAX_S` | `600` | How long a copy that could not be refreshed still stands. Past it, requests over the organization's resources are refused: a ceiling nobody can read is not a ceiling |
+| `UMA_AS_ORG_TIMEOUT_S` | `5` | Per-request timeout when talking to the organization. A refusal, not a hang: her own resources are unaffected either way |
 
 ## The enforcement point's side of it
 

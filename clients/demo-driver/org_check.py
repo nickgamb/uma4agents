@@ -626,6 +626,11 @@ def main() -> int:                                            # noqa: C901
               f"{ {k: v['terms']['expires_in'] for k, v in own.items()} }")
 
         # --- 12. leaving takes back what joining gave --------------------
+        # A grant taken *before* she leaves, to be spent after. Access that
+        # outlived the sharing would make "leaving takes it back" a statement
+        # about new negotiations only.
+        live_rpt, why = negotiate(c, "alice", hers, "shared")
+        check("a grant is in hand before she leaves", live_rpt is not None, f"{why}")
         narrowed = {t["terms"]["template_id"].rsplit("/v", 1)[0]:
                     t["terms"]["expires_in"] for t in book_tiers["alice"]}
         r = c.request("DELETE", f"{alice['as']}/owner/organization",
@@ -650,6 +655,9 @@ def main() -> int:                                            # noqa: C901
         rpt, why = negotiate(c, "alice", hers, "shared")
         check("and an agent asking for the book now gets nowhere",
               rpt is None, f"{why}")
+        check("nor does a grant it was holding from before still work",
+              spend(c, "alice", hers, "shared", live_rpt) == [],
+              "access outlived the sharing that granted it")
         check("while another member's access is unaffected",
               c.get(f"{carol['as']}/owner/organization", headers=hdrs(c, "carol"),
                     timeout=15.0).json().get("enrolled") is True)

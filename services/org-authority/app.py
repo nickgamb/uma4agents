@@ -1313,6 +1313,11 @@ def admin_action_token(owner: str, admin: str) -> str:
 ADMIN_MEMBER_PATHS = ("pending", "connections", "operators", "ledger")
 
 
+# Declared *after* every specific `/admin/members/...` route above, because
+# FastAPI matches in declaration order and this one would otherwise swallow
+# them — `/admin/members/alice/role` would arrive here as an unknown
+# administration action and 404, with nothing to say why. Moving this block
+# up is the way to break role assignment silently.
 @app.api_route("/admin/members/{owner}/{path:path}", methods=["GET", "POST"])
 async def admin_member_proxy(owner: str, path: str, request: Request):
     """An administrator acting on one member's agent access.

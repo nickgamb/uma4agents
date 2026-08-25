@@ -28,6 +28,12 @@ may refuse.** Her policy is what permits — the organization's `allow` means
 only that it has no objection. Nothing the organization returns can make a
 request easier than her own tiers already make it.
 
+And one thing that is not policy at all: **what the organization shares with
+her.** The envelope carries the grants her role gives her, and the firm's
+resources appear in her registry because of them. That is the half she joined
+for, and it is why the ceiling is not simply an imposition — it arrives
+attached to something.
+
 The exception, and it is a real one rather than a hedge, is break-glass:
 grants the organization signs itself, which do not pass through here at all.
 What arrives here is the notice, and what this module does with it is put it
