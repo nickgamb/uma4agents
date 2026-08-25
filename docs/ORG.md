@@ -17,7 +17,7 @@ What neither has had is a mechanism. This is the mechanism.
 Run it:
 
 ```bash
-make org-check        # 63 assertions across six processes
+make org-check        # 71 assertions across six processes
 make org-test         # the ceiling algebra and the charter validator, no stack
 ```
 
@@ -248,10 +248,18 @@ touch anything of hers.
 
 The one direction that is a genuine override, and a separate code path because
 it does not go through her authority at all. The organization signs those
-grants with its own key; the enforcement point verifies them against the JWKS
-the organization publishes. That is the only shape in which "the organization
-owns this data" is a technical fact rather than a request — it works whether or
-not a member's authorization server chose to cooperate.
+grants with its own key, and the enforcement point checks them **with the
+organization** rather than with the member's authority: it recognises the
+issuer from the token, and introspects at `POST /introspect` there. That is
+the only shape in which "the organization owns this data" is a technical fact
+rather than a request — it works whether or not a member's authorization
+server chose to cooperate.
+
+The round trip is not incidental. An override is single-use, and the burn has
+to happen somewhere that can serialize it. A deployment that wanted to avoid
+the hop could verify locally instead — the grant is a JWS and the
+organization publishes its keys at `/jwks` — and would then need its own
+answer for single use.
 
 Three things bound it, all of them in the charter she read before she joined:
 
@@ -316,4 +324,4 @@ tier at a time.
 - `services/org-authority/charter.py` — the charter, and what may be said in it
 - `services/org-authority/org.rego` — the shipped module, and the delegation rule
 - `services/uma-as/org.py` — the clamp, and the party boundary from the member's side
-- `clients/demo-driver/org_check.py` — the 63 assertions
+- `clients/demo-driver/org_check.py` — the 71 assertions

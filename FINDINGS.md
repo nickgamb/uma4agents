@@ -872,12 +872,15 @@ wrong in ways that are invisible afterwards:
 And one honest note for the spec: an override *does* have to exist — the
 organization owns the data — but it cannot be a flag on a decision the
 member's authority makes, because that authority may be hers to run. It has to
-be a grant the organization signs itself, verifiable at the enforcement point
-against keys the organization publishes, bounded by a clause the member was
-shown before she joined, and unable to be quiet: notified at the moment a
-human decides, and written into her record.
+be a grant the organization signs itself, checked at the enforcement point
+*with the organization* rather than with the member's authority, bounded by a
+clause the member was shown before she joined, and unable to be quiet:
+notified at the moment a human decides, and written into her record. In the
+POC the check is introspection at the organization, which is also where the
+single-use burn serializes; the grant is a JWS over published keys, so local
+verification is available to a deployment willing to solve single use itself.
 
-Built and demonstrated: `make org-check` (63 assertions over six processes),
+Built and demonstrated: `make org-check` (71 assertions over six processes),
 `docs/ORG.md`.
 
 ---

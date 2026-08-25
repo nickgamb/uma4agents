@@ -18,8 +18,9 @@
 #
 # And one thing goes around the member entirely: break-glass grants, which
 # this service signs with its own key. The enforcement point in meridian
-# verifies them against the JWKS published here. That is the only way "the
-# organization owns this data" is a technical fact rather than a request.
+# recognises the issuer and introspects here rather than at the member's
+# authority — which is the only way "the organization owns this data" is a
+# technical fact rather than a request.
 ---
 apiVersion: v1
 kind: ServiceAccount

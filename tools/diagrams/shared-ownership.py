@@ -175,7 +175,7 @@ def frame(beat, title, kicker, stage, panels=""):
             + text(56, 696, "Every string above is a shape that is on the wire.",
                    12.5, FAINT)
             + text(W - 56, 696,
-                   "make org-check  ·  63 assertions across six processes",
+                   "make org-check  ·  71 assertions across six processes",
                    12.5, FAINT, anchor="end", family=MONO))
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
             f'viewBox="0 0 {W} {H}">{defs}'

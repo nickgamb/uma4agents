@@ -361,8 +361,9 @@ agent connected to a member has replaced her layer rather than sat above it.
 An override does have to exist — the organization owns the data — but it
 cannot be a flag on a decision the member's authority makes, because that
 authority may be hers to run. It has to be a grant the organization signs
-itself, verifiable at the enforcement point, bounded by a clause she was shown
-before joining, and impossible to perform quietly.
+itself, checked at the enforcement point with the organization rather than
+with her authority, bounded by a clause she was shown before joining, and
+impossible to perform quietly.
 
 ## Parking lot
 

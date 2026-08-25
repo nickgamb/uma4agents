@@ -178,7 +178,7 @@ def write_book_terms(c: httpx.Client, owner: str, expires: int) -> httpx.Respons
 
 def negotiate(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
               tool: str = "get_positions", reason: str | None = "Desk research",
-              answer: bool = True) -> tuple[str | None, str]:
+              answer: str | bool = True) -> tuple[str | None, str]:
     """The ordinary four beats, at one of this owner's two surfaces."""
     o = OWNERS[owner]
     url = f"{GATEWAY}{o[where]}"
@@ -189,13 +189,23 @@ def negotiate(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
     answered = {"v": False}
 
     def be_her(msg: str) -> None:
-        if "has been asked" in msg and not answered["v"] and answer:
-            answered["v"] = True
-            for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
-                           timeout=15.0).json():
-                c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
-                       json={"decision": "approved"}, headers=hdrs(c, owner),
-                       timeout=15.0)
+        """Answer the pending request — as her, or as an administrator at her
+        organization, which is the same tap and a different party."""
+        if "has been asked" not in msg or answered["v"] or not answer:
+            return
+        answered["v"] = True
+        if answer == "org":
+            for p in c.get(f"{ORG}/admin/members/{owner}/pending",
+                           headers=ADMIN, timeout=15.0).json():
+                c.post(f"{ORG}/admin/members/{owner}/pending/"
+                       f"{p['family']}/decision", json={"decision": "approved"},
+                       headers=ADMIN, timeout=15.0)
+            return
+        for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
+                       timeout=15.0).json():
+            c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
+                   json={"decision": "approved"}, headers=hdrs(c, owner),
+                   timeout=15.0)
 
     try:
         return run_grant(c, ch.as_uri, ch.ticket, keys, lambda t: True,
@@ -264,6 +274,9 @@ def main() -> int:                                            # noqa: C901
               r.status_code == 400 and "enrolment code" in r.text
               and "northwind-vault" not in r.text, f"{r.status_code} {r.text[:140]}")
 
+        for owner in OWNERS:            # her own surface, so the pull has run
+            poke(c, owner, "own")
+        time.sleep(1.5)
         own_before = {o: {r for r in resources(c, o) if not r.startswith(BOOK)}
                       for o in OWNERS}
         tiers_before = {o: c.get(f"{OWNERS[o]['as']}/owner/policies",
@@ -405,6 +418,41 @@ def main() -> int:                                            # noqa: C901
         c.post(f"{ORG}/admin/members/alice/connections/"
                f"{quote(book_handle, safe='')}/restore", headers=ADMIN, timeout=15.0)
 
+        # --- 7b. an administrator's approval is his, not hers -------------
+        #
+        # `standing.approved_at_tier` is one of the few facts allowed to
+        # *relax* one of her rules, because "she personally approved something
+        # here" is a decision of hers. If an administrator answering on her
+        # behalf produced that fact, one decision of his would loosen her
+        # policy for every request afterwards.
+        c.put(f"{alice['as']}/owner/policies/firmbook", json={"ask_me": True},
+              headers=hdrs(c, "alice"), timeout=15.0)
+        known = {x["handle"] for x in
+                 c.get(f"{alice['as']}/owner/connections", headers=hdrs(c, "alice"),
+                       timeout=15.0).json()}
+        fresh = attested(c, HER_OPERATOR)
+        rpt, why = negotiate(c, "alice", fresh, "shared", answer="org")
+        check("an administrator can answer a request waiting on her",
+              rpt is not None, f"{why}")
+        new_conns = [x for x in
+                     c.get(f"{alice['as']}/owner/connections",
+                           headers=hdrs(c, "alice"), timeout=15.0).json()
+                     if x["handle"] not in known]
+        check("the grant is recorded against that agent",
+              new_conns and "firmbook" in (new_conns[0].get("tiers_granted") or []),
+              f"{[x.get('tiers_granted') for x in new_conns]}")
+        check("and his approval is NOT recorded as one of hers",
+              new_conns and not (new_conns[0].get("tiers_approved") or []),
+              "an administrator's decision became evidence that she decided — "
+              "a fact that is allowed to relax her own rules")
+        entry = [e for e in c.get(f"{alice['as']}/owner/ledger",
+                                  headers=hdrs(c, "alice"), timeout=15.0).json()
+                 if e["kind"] == "approved"]
+        check("her record says which of them it was",
+              entry and (entry[-1].get("by") or {}).get("admin"), f"{entry[-1] if entry else None}")
+        c.put(f"{alice['as']}/owner/policies/firmbook", json={"ask_me": False},
+              headers=hdrs(c, "alice"), timeout=15.0)
+
         # --- 8. a role is a live thing ------------------------------------
         r = c.post(f"{ORG}/admin/members/alice/role", json={"role": "trader"},
                    headers=ADMIN, timeout=15.0)
@@ -479,6 +527,18 @@ def main() -> int:                                            # noqa: C901
         check("an agent redeems it by signing with the key it will be bound to",
               r.status_code == 200, f"{r.status_code} {r.text[:200]}")
         override = r.json().get("access_token", "")
+        claims = json.loads(
+            __import__("base64").urlsafe_b64decode(
+                override.split(".")[1] + "=" * (-len(override.split(".")[1]) % 4)))
+        check("its audience is the organization's, not the caller's",
+              claims["aud"] == "https://gateway.uma.lab", f"{claims.get('aud')}")
+        check("and its scopes are bounded by the charter",
+              claims["permissions"][0]["resource_scopes"] == ["positions:read"],
+              f"{claims['permissions'][0]}")
+        r = c.post(f"{ORG}/break-glass", content=body, timeout=15.0,
+                   headers={"content-type": "application/json", **sig})
+        check("the same signed request cannot be redeemed twice",
+              r.status_code == 409, f"{r.status_code} {r.text[:140]}")
         check("the override is honoured at the enforcement point",
               spend(c, "alice", bg, "shared", override) == ["NWCF", "NWEQ", "TLT", "VNQ"])
         check("and it is spent — an exception is for one act",
@@ -501,6 +561,20 @@ def main() -> int:                                            # noqa: C901
                    body=body)
         r = c.post(f"{ORG}/break-glass", content=body, timeout=15.0,
                    headers={"content-type": "application/json", **sig})
+        opened2 = c.post(f"{ORG}/admin/break-glass",
+                         json={"owner": "alice", "window_s": 60, "reason": "scope probe"},
+                         headers=ADMIN, timeout=15.0).json()
+        wide = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/get_positions",
+                           "scopes": ["everything:read"], "reason": "scope probe",
+                           "voucher": opened2.get("voucher"),
+                           "agent_jwk": bg.public_jwk()}).encode()
+        r = c.post(f"{ORG}/break-glass", content=wide, timeout=15.0,
+                   headers={"content-type": "application/json",
+                            **sign("POST", ORG_AUTHORITY, "/break-glass", "",
+                                   bg.key, bg.keyid, body=wide)})
+        check("an override cannot ask for a scope the charter never allows",
+              r.status_code == 403, f"{r.status_code} {r.text[:140]}")
+
         check("break-glass cannot reach a resource the charter did not name for it",
               r.status_code == 403, f"{r.status_code} {r.text[:140]}")
         r = c.post(f"{ORG}/break-glass",

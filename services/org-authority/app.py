@@ -89,6 +89,14 @@ ADMIN_TOKEN = os.environ.get("ORG_ADMIN_TOKEN") or None
 RS_TOKEN = os.environ.get("ORG_RS_TOKEN", "org-rs-dev-token")
 
 JOIN_CODE = os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX")
+# Who a break-glass grant is *for*. Configuration rather than a field on the
+# request, and the difference is not cosmetic: an audience the caller chooses
+# is an audience the caller can point at some other resource server that also
+# trusts this organization. The enforcement point fronting the resources this
+# charter claims is the only correct answer, and this service knows it without
+# being told.
+GLASS_AUDIENCE = os.environ.get("ORG_BREAK_GLASS_AUDIENCE",
+                                "https://gateway.uma.lab")
 
 # How long a decision may be answered from cache when OPA cannot be reached.
 # Zero would make the organization's engine a single point of failure for
@@ -428,6 +436,15 @@ async def discovery() -> dict:
 
 @app.on_event("startup")
 async def boot() -> None:
+    if ADMIN_TOKEN and ADMIN_ISSUER:
+        # Both configured. Correct for this lab — the acceptance job has no
+        # browser to log in with — and wrong anywhere else, because the static
+        # credential is a second way to be an administrator that no identity
+        # provider can see, revoke or attribute. Said out loud at startup
+        # rather than left in a comment somebody has to go looking for.
+        event("admin.static_credential_enabled", issuer=ADMIN_ISSUER,
+              note="a static admin token is accepted alongside the identity "
+                   "provider; do not do this outside a lab")
     # The engine first, and with patience: this service and OPA come up
     # together, and a charter published against an engine that is not yet
     # listening would be a charter in force with nothing evaluating it.
@@ -761,6 +778,16 @@ async def decision(request: Request) -> dict:
 
 VOUCHERS: dict[str, dict] = {}
 _DIRECTORY_CACHE: dict[str, tuple[float, list]] = {}
+# Signatures already spent, for as long as one could still be replayed.
+#
+# An RFC 9421 signature is valid for a window — sixty seconds here — and a
+# captured request presented twice inside it would otherwise mint a second
+# override. The voucher path is already protected, because redeeming one
+# consumes it; the operator path is not, and an override is the last place to
+# leave a replay open. Keyed on the signature and swept on use, so the table
+# is bounded by the window rather than by traffic.
+_SPENT_SIGNATURES: dict[str, float] = {}
+SIGNATURE_WINDOW_S = 60.0
 
 
 def _same_origin(a: str, b: str) -> bool:
@@ -895,6 +922,19 @@ async def break_glass(request: Request) -> JSONResponse:
         raise HTTPException(status_code=400,
                             detail="the charter requires a stated reason")
 
+    signature = request.headers.get("signature", "")
+    for spent, when in list(_SPENT_SIGNATURES.items()):
+        if when < now() - SIGNATURE_WINDOW_S:
+            _SPENT_SIGNATURES.pop(spent, None)
+    if signature in _SPENT_SIGNATURES:
+        event("break_glass.replay_refused")
+        raise HTTPException(
+            status_code=409,
+            detail="that request has already been redeemed. Sign a new one: "
+                   "an override is issued once per request, not once per "
+                   "signature that is still inside its window.")
+    _SPENT_SIGNATURES[signature] = now()
+
     thumb = _thumbprint(signer)
     authorised_by = None
     voucher = VOUCHERS.pop(req.get("voucher") or "", None)
@@ -914,14 +954,25 @@ async def break_glass(request: Request) -> JSONResponse:
 
     ttl = min(int(req.get("expires_in") or glass.get("max_expires_in") or 900),
               int(glass.get("max_expires_in") or 900))
+    # An override is an exception to a member's policy. It is not an exception
+    # to the charter she was shown: whatever the caller asked for, what comes
+    # back is bounded by what this organization says may ever be granted over
+    # its resources.
+    allowed = (current()["charter"].get("envelope") or {}).get("allowed_scopes")
+    asked = list(req.get("scopes") or [])
+    scopes = [x for x in asked if x in allowed] if allowed is not None else asked
+    if asked and not scopes:
+        raise HTTPException(
+            status_code=403,
+            detail=f"this charter does not allow {', '.join(asked)} over its "
+                   f"resources, under break-glass or otherwise")
     jti = f"bg_{uuid.uuid4().hex[:12]}"
     exp = int(now()) + ttl
-    scopes = list(req.get("scopes") or [])
     claims = {
         "iss": ISSUER,
         "sub": req.get("agent_sub") or "aauth:pseudonymous-agent",
         "owner": owner,
-        "aud": req.get("audience") or "https://gateway.uma.lab",
+        "aud": GLASS_AUDIENCE,
         "jti": jti,
         "exp": exp,
         "cnf": {"jwk": signer},

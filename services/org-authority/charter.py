@@ -54,18 +54,28 @@ DELEGATION = {"none", "first-party-only", "any-agent"}
 
 
 def _covered(pattern: str, claims) -> bool:
-    """Whether a grant pattern falls inside what the charter claims.
+    """Whether a grant pattern is inside what the charter claims.
 
-    Compared as strings after expanding the trivial case, because a general
-    "is pattern A subsumed by pattern B" is undecidable enough to be a bad
-    thing to hide in a validator. An exact match, or a claim whose wildcard
-    tail covers this pattern's segment, and nothing cleverer.
+    Deliberately not a general "is pattern A subsumed by pattern B". That is a
+    decision procedure, and a validator is the wrong place to hide one — the
+    failure mode is a charter that hands out access to a resource the
+    validator's cleverness talked itself into. Three syntactic cases and
+    nothing else:
+
+      * the same pattern is claimed;
+      * the pattern names one concrete resource, and a claim matches it;
+      * the pattern is `X/*`, and `X/*` is itself claimed.
+
+    Anything an administrator wants that these cannot express, he expresses by
+    claiming it explicitly. That is a worse day for him and a better one for
+    everybody whose resources are not his.
     """
-    if pattern in (claims or []):
+    claims = list(claims or [])
+    if pattern in claims:
         return True
-    return claims_match(pattern.replace("*", "\u0000"),
-                        [c for c in (claims or [])]) or any(
-        c.endswith("/*") and pattern.startswith(c[:-1]) for c in claims or [])
+    if "*" not in pattern:
+        return claims_match(pattern, claims)
+    return pattern.endswith("/*") and f"{pattern.rsplit('/', 1)[0]}/*" in claims
 
 
 # The charter an organization starts with, and the one the lab demonstrates.

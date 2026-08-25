@@ -1316,10 +1316,25 @@ async def resync_shared(owner: str, envelope: dict | None,
                   error=str(exc)[:200])
     claims = claims if claims is not None else (envelope or {}).get("claims") or []
     grants = (envelope or {}).get("grants") or []
-    for rid in [r for r in list(RESOURCES) if org.claims_match(r, claims)]:
-        if not org.claims_match(rid, grants):
-            RESOURCES.pop(rid, None)
-            event("resources.unshared", owner=owner, resource_id=rid)
+    stale = [r for r in list(RESOURCES)
+             if org.claims_match(r, claims) and not org.claims_match(r, grants)]
+    if not stale:
+        return
+    if SERVED_OWNER is None:
+        # This process holds more than one owner, and `RESOURCES` is its
+        # registry rather than hers: an organization's resource has the same
+        # id for every member it is shared with, so removing it here on one
+        # member's account would remove it from the others too. Left in place
+        # and said out loud. Nothing is granted by its presence — her policy
+        # is what grants, the organization's decision point is asked on every
+        # request over its resources, and the enforcement point refuses a
+        # member it is no longer sharing with.
+        event("resources.unshared_skipped", owner=owner, resources=stale,
+              why="this process serves more than one owner")
+        return
+    for rid in stale:
+        RESOURCES.pop(rid, None)
+        event("resources.unshared", owner=owner, resource_id=rid)
 
 
 async def end_membership(owner: str, why: str) -> None:
@@ -1442,8 +1457,14 @@ async def org_notice(request: Request) -> dict:
     nothing. Only the organization she enrolled with can sign one.
     """
     body = await request.json()
-    unverified = jwt.decode(body.get("notice") or "",
-                            options={"verify_signature": False})
+    try:
+        unverified = jwt.decode(body.get("notice") or "",
+                                options={"verify_signature": False})
+    except jwt.InvalidTokenError:
+        # Unauthenticated by construction — anyone can post here and the
+        # signature is what settles it — so malformed input has to be a
+        # refusal rather than a traceback.
+        raise HTTPException(status_code=400, detail="that is not a notice")
     owner = unverified.get("sub") or ""
     if not serves(owner):
         raise HTTPException(status_code=404, detail="not an owner here")
@@ -1625,7 +1646,11 @@ async def require_org_admin(request: Request, owner: str) -> dict:
             status_code=403,
             detail="this owner does not administer these resources for anyone")
     token = _bearer(request)
-    if jwt.get_unverified_header(token).get("typ") != ORG_ADMIN_TYP:
+    try:
+        typ = jwt.get_unverified_header(token).get("typ")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="that is not a token")
+    if typ != ORG_ADMIN_TYP:
         raise HTTPException(status_code=401,
                             detail=f"an administration token has typ {ORG_ADMIN_TYP}")
     issuer = record["issuer"]
@@ -2919,9 +2944,15 @@ async def pending_poll(rec: dict) -> JSONResponse:
         # negotiation carried the operation (it did — the contract binds it).
         if handle := rec.get("handle"):
             await st(rec["owner"]).note_tier_grant(handle, rec["tier"])
-            # She answered this one herself. That is the only kind of fact a
-            # relaxation is allowed to rest on.
-            await st(rec["owner"]).note_tier_approval(handle, rec["tier"])
+            # Only when she answered it herself. That is the only kind of fact
+            # a relaxation is allowed to rest on, and an administrator at her
+            # organization answering on her behalf is emphatically not it —
+            # see `decide_pending`.
+            if not rec.get("decided_by"):
+                await st(rec["owner"]).note_tier_approval(handle, rec["tier"])
+            else:
+                event("policy.evaluated", corr=family, result="decided-by-org",
+                      tier=rec["tier"], by=rec["decided_by"].get("admin"))
         granted = await issue_rpt(rec, rec["contract_hash"], rec["signer_jwk"],
                                   rec["contract"].get("operation"))
         await close_negotiation(rec)
@@ -3012,6 +3043,18 @@ async def decide_pending(owner: str, family: str, decision: str,
     # negotiation survives its own decision — `close_negotiation` runs when the
     # grant is issued — so the handle it was pending under is still there.
     pended = await st(owner).negotiation(family)
+    if pended is not None and actor:
+        # Who decided, on the record the grant loop will read back.
+        #
+        # This is not bookkeeping. `standing.approved_at_tier` is one of the
+        # few facts allowed to *relax* one of her rules, and it exists because
+        # "she personally approved something here" is a decision of hers. An
+        # administrator's approval must never become that fact: it would let
+        # somebody else's decision, taken once, loosen her policy for every
+        # request afterwards. So the actor is persisted here and read in
+        # `pending_poll`, which is the only place that records the approval.
+        pended["decided_by"] = actor
+        await st(owner).save_negotiation(pended)
     # Record both outcomes: "what did I decide" is an audit question, and a
     # denial is as much a decision as an approval.
     await ledger_add(owner, "approved" if decision == "approved" else "denied", family,

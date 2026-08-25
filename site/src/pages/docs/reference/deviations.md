@@ -195,6 +195,41 @@ claim: an agent that misstates its operator only refuses itself. It does not
 stop the same party returning anonymously, which is why the lanes matter more
 than the block.
 
+## 15. A layer above the resource owner
+
+**Baseline.** UMA 2.0 has one deciding party per resource. The
+*resource rights administrator* is named in the terminology and given no wire
+surface: nothing in the protocol expresses an owner-of-record whose
+administration is delegated, and nothing expresses a policy above the person
+who is deciding.
+
+**Here.** An organization is a party of its own, with:
+
+- a **charter** it publishes an envelope from, which a member's authorization
+  server clamps her tiers to on write — so the ceiling appears in the terms
+  document the requesting side dereferences and signs, rather than being
+  applied invisibly at the door;
+- a **decision endpoint** the member's authority calls once per request over a
+  resource the charter claims, returning `allow` / `ask` / `refuse` and
+  nothing that can widen;
+- **roles**, each carrying a `delegation` value — `none`,
+  `first-party-only`, `any-agent` — which says *whose agent* may act on the
+  shared resource rather than what may be accessed;
+- a **path per administrator** (`/mcp/shared/<member>`) so one resource can be
+  administered by several people, each under her own authorization server;
+- **grants the organization signs itself** for a disclosed break-glass clause,
+  recognised at the enforcement point by issuer and checked with the
+  organization rather than with the member's authority.
+
+**Why.** The moment a resource is *shared*, "may her agent touch it" is a
+question about parties, and there is nowhere in UMA 2.0 to put the answer. See
+[shared ownership](/docs/overview/shared-ownership/) and recommendation 25.
+
+**What is deliberately not extended.** The four beats are untouched. The
+challenge, the ticket, `need_info`, the agreement and the RPT are the same on
+a shared resource as on a personal one — a requesting agent cannot tell the
+difference, and does not need to.
+
 ## Security properties these depend on
 
 Each is enforced somewhere in the code, and the tests that prove refusals rather
@@ -217,6 +252,13 @@ than permissions are the policy suite and the store tests.
   deployment policy, and a real deployment must supply one.
 - **Liveness must not depend on a mutual dereference.**
 - **Revocation is atomic and immediate.**
+- **A layer above the owner may only narrow**, and its reach — including what
+  it can *see* — stops at the resources its charter claims. The scoping is the
+  owner authority's, applied before it answers, rather than the upper layer's
+  to respect.
+- **An administrator's decision is never recorded as the owner's.** The fact
+  "she personally approved something at this tier" is allowed to relax one of
+  her rules, so a decision taken on her behalf must not produce it.
 
 **Not addressed.** Signing-key rotation — the key is minted once and shared by
 all replicas, and while `jwks_uri` makes rotation possible, nothing here
