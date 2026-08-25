@@ -149,6 +149,7 @@ invitation, none of it does anything.
 | `UMA_AS_ORG_CALLBACK` | the AS issuer | The address the organization posts notices back to — its view of this server, which need not be the issuer an agent is challenged with |
 | `UMA_AS_ORG_TTL_S` | `30` | How often the ceiling is re-read |
 | `UMA_AS_ORG_STALE_MAX_S` | `600` | How long a copy that could not be refreshed still stands. Past it, requests over the organization's resources are refused: a ceiling nobody can read is not a ceiling |
+| `UMA_AS_RESOURCE_REFRESH_S` | `15` | How often her own resource listing re-reads what the resource server publishes, while she is enrolled. What an organization shares with her changes elsewhere, and on a replicated authority only one replica is notified — so the listing repairs itself on a clock rather than waiting for a miss |
 | `UMA_AS_ORG_TIMEOUT_S` | `5` | Per-request timeout when talking to the organization. A refusal, not a hang: her own resources are unaffected either way |
 
 ## The enforcement point's side of it

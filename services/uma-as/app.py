@@ -1207,6 +1207,11 @@ async def audit_access(request: Request) -> dict:
 
 _ORG: dict[str, org.OrgClient] = {}
 _ORG_JWKS: dict[str, tuple[float, list]] = {}
+# When this process last re-read what the resource server publishes for an
+# owner, so her own listing can repair a stale replica without turning every
+# page load into a pull. See `owner_resources`.
+_LAST_PULL: dict[str, float] = {}
+RESOURCE_REFRESH_S = float(os.environ.get("UMA_AS_RESOURCE_REFRESH_S", "15"))
 
 
 async def org_record(owner: str) -> dict | None:
@@ -3453,19 +3458,22 @@ async def owner_resources(request: Request) -> list:
     surface Alice attaches policy to before any agent has ever called."""
     owner = await require_owner(request)
     envelope = await org_envelope(owner) or {}
-    # An organization's resource arrives *after* this process started, so a
-    # replica that was already running when she enrolled has never pulled it.
-    # `RESOURCES` is a per-process cache of what the resource server
+    # What an organization shares with her changes without this process being
+    # told. `RESOURCES` is a per-process cache of what the resource server
     # publishes — deliberately, since it is re-pullable at any time — and the
-    # repair is the same one `/perm` performs on an unknown id: read what the
-    # resource server publishes now.
+    # events that change it happen elsewhere: an administrator sets a role at
+    # the organization, the organization notifies *one* replica, and the
+    # other two go on serving her a portal that is missing half of what she
+    # can reach. Carol's single process never noticed; Alice's three did.
     #
-    # It only bites on a replicated authority. Carol's is one process and
-    # never noticed; Alice's is three over Postgres, and two of them were
-    # showing her a portal with the firm's book missing from it.
-    missing = [g for g in (envelope.get("grants") or [])
-               if not any(org.claims_match(rid, [g]) for rid in RESOURCES)]
-    if missing:
+    # So while she is enrolled, this listing re-reads what the resource
+    # server publishes, at most once every `RESOURCE_REFRESH_S`. It is the
+    # same repair `/perm` performs on an unknown id, on a clock instead of on
+    # a miss — because a role that *widened* has no missing id to trigger it,
+    # only a set that is quietly short.
+    if envelope.get("grants") and (
+            _LAST_PULL.get(owner, 0) < time.time() - RESOURCE_REFRESH_S):
+        _LAST_PULL[owner] = time.time()
         for client_id, rs in (await st(owner).resource_servers()).items():
             try:
                 await asyncio.to_thread(pull_registrations, client_id, rs)

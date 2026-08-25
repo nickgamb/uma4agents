@@ -437,10 +437,19 @@ def main() -> int:                                            # noqa: C901
               f"{pending.text[:200]}")
         ledger = c.get(f"{ORG}/admin/members/alice/ledger", headers=ADMIN,
                        timeout=15.0).json()
+        # The invariant rather than a snapshot: every entry an administrator
+        # can see either concerns the membership itself, or carries a tier of
+        # hers that governs one of this organization's resources. Stated this
+        # way because her ledger outlives a run — it is in Postgres — and an
+        # assertion about *which* entries are there would be an assertion
+        # about history.
+        org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
+                     "org_role", "org_acted", "org_declined", "break_glass"}
+        leaked = [e for e in ledger if e.get("kind") not in org_kinds
+                  and e.get("tier") != "firmbook"]
         check("and so is its view of her record",
-              ledger and not any(e.get("tier") in ("tier1", "tier2", "tier3")
-                                 for e in ledger),
-              f"{[e.get('tier') for e in ledger][:8]}")
+              bool(ledger) and not leaked,
+              f"{[(e.get('kind'), e.get('tier')) for e in leaked][:6]}")
         roster = json.dumps(c.get(f"{ORG}/admin/members", headers=ADMIN,
                                   timeout=15.0).json())
         secrets_of = [t["terms"]["purpose"] for t in tiers_before["alice"].values()]
