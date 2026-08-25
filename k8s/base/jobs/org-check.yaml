@@ -49,6 +49,7 @@ spec:
             # Read from the same value the gateway is configured with, so a
             # wait here cannot drift into a flaky one.
             - { name: UMA_PEP_MEMBERSHIP_TTL_S, value: "10" }
+            - { name: UMA_AS_RESOURCE_REFRESH_S, value: "15" }
             # The private half of a key Bob's operator already publishes.
             # It provisions its directory and refuses a key registered at
             # runtime — which is what makes running two replicas of it

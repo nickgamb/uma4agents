@@ -74,6 +74,10 @@ RUN = uuid.uuid4().hex[:8]
 # Read from the same variable the gateway is configured with, so this cannot
 # drift into a flaky wait.
 TTL = float(os.environ.get("UMA_PEP_MEMBERSHIP_TTL_S", "10")) + 2
+# How long her authority may serve a resource listing without re-reading what
+# the resource server publishes. Read from the same variable the server is
+# configured with, so a wait here cannot drift into a flaky one.
+REFRESH = float(os.environ.get("UMA_AS_RESOURCE_REFRESH_S", "15")) + 2
 
 OWNERS = {
     "alice": {"as": os.environ.get("UMA4A_AS", "https://alice-as.uma.lab"),
@@ -706,7 +710,12 @@ def main() -> int:                                            # noqa: C901
                       headers=hdrs(c, "alice"), timeout=15.0)
         check("a member can leave from her own portal", r.status_code == 200,
               f"{r.text[:140]}")
-        time.sleep(1.0)
+        # Her authority repairs its registry on a clock as well as on a miss,
+        # and this is the case with no miss: nothing is absent, something is
+        # left over. Waiting it out is the honest cost of a per-process cache
+        # of a re-pullable document — and the enforcement point refuses the
+        # resource immediately either way, which is asserted below.
+        time.sleep(REFRESH)
         left = resources(c, "alice")
         check("the firm's book stops being hers to administer",
               not any(rid.startswith(BOOK) for rid in left), f"{sorted(left)}")

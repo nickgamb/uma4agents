@@ -702,6 +702,7 @@ services:
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
       UMA4A_ALICE_OPERATOR: https://alice-agent.uma.lab
       UMA_PEP_MEMBERSHIP_TTL_S: ${UMA_PEP_MEMBERSHIP_TTL_S:-10}
+      UMA_AS_RESOURCE_REFRESH_S: ${UMA_AS_RESOURCE_REFRESH_S:-15}
     volumes:
       - ./clients/demo-driver/org_check.py:/driver/org_check.py:ro
       - ./lib:/driver/lib:ro
