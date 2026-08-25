@@ -60,6 +60,18 @@ async function render() {
 }
 window.addEventListener("hashchange", render);
 
+async function orgHeader() {
+  /* Which organization this console administers, and which charter version is
+     in force. Filled here rather than per route: it is true of every page, and
+     a route that forgot to set it left the placeholder from the markup on
+     screen looking like a page that had not finished loading. */
+  try {
+    const org = await api("/api/org/org");
+    $("#orgPill").textContent = org.name;
+    $("#charterChip").textContent = `charter v${org.charter_version}`;
+  } catch (e) { /* the login redirect handles this */ }
+}
+
 function setTitle(title, crumbs) {
   $("#pageTitle").textContent = title;
   $("#crumbs").innerHTML = crumbs || "";
@@ -69,7 +81,6 @@ function setTitle(title, crumbs) {
 route("overview", async (view) => {
   setTitle("Overview", "");
   const [org, members] = await Promise.all([api("/api/org/org"), api("/api/org/members")]);
-  $("#orgPill").textContent = org.name;
   $("#charterChip").textContent = `charter v${org.charter_version}`;
   $("#memberCount").textContent = members.length;
   $("#memberCount").classList.toggle("hidden", !members.length);
@@ -111,6 +122,133 @@ window.rotateCode = async () => {
     const r = await api("/api/org/join-code/rotate", { method: "POST" });
     toast("Code rotated", `New code ${r.join_code} — existing members are unaffected`);
   } catch (e) { toast("Not rotated", e.message, "warn"); }
+  render();
+};
+
+/* ---- Groups -------------------------------------------------------------
+   The one screen in this console that hands something out. Everything else
+   here narrows — the ceiling, the conditions, revoking an agent — and a
+   member joined because of what is on this page.
+
+   A group is charter data, not engine data, and saving one publishes a
+   charter version. That is deliberate and it is the answer to "why isn't
+   this in the policy engine": who is in which group is *state*, and a
+   decision engine that stored state would be a database with a worse query
+   language. The engine reads the group and decides; this service remembers
+   it. Rules in the Rego tab can say "traders may not do this before the
+   market opens" precisely because the group arrives in `input.role`. */
+route("groups", async (view) => {
+  setTitle("Groups", "");
+  const [doc, org] = await Promise.all([
+    api("/api/org/roles"), api("/api/org/org")]);
+  const roles = doc.roles || {}, held = doc.members || {};
+  const ids = Object.keys(roles).sort();
+  $("#charterChip").textContent = `charter v${org.charter_version}`;
+  const claims = (org.claims || []).join(", ");
+  view.innerHTML = `
+    <div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>What a group is</h2><span class="chip">charter v${esc(org.charter_version)}</span></div>
+      <div class="muted" style="font-size:12.5px;max-width:78ch">A named set of this organization's
+        resources, plus whether a member may let an agent reach them at all. It is the reason somebody
+        joins: everything else in this charter is a ceiling on terms she was going to write anyway.
+        A group may only grant what the charter claims — <span class="mono">${esc(claims)}</span> —
+        which is what stops a group from being a route to somebody's personal accounts.
+        Editing one publishes a new charter version, because it changes the bargain every member was
+        shown.</div>
+    </div>
+    ${ids.length ? ids.map(id => groupCard(id, roles[id], held[id] || [], doc.default_role)).join("")
+      : `<div class="empty">No groups yet. A charter with no groups is a ceiling and nothing else —
+         members can join, and joining gives them nothing.</div>`}
+    ${(doc.unassigned || []).length ? `<div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>In no group</h2></div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:10px;max-width:74ch">Enrolled, and this
+        organization's ceiling applies to their terms — but nothing here is shared with them.</div>
+      ${doc.unassigned.map(o => `<div class="row"><span class="mono">${esc(o)}</span>
+        <a href="#/member/${encodeURIComponent(o)}">Open →</a></div>`).join("")}
+    </div>` : ""}
+    <div class="card pad-lg">
+      <div class="section-head"><h2>New group</h2></div>
+      ${groupFields("new", { name: "", grants: [], delegation: "first-party-only" })}
+      <button class="btn" onclick="saveGroup('new')">Create group</button>
+    </div>`;
+});
+
+function groupFields(id, role) {
+  const d = role.delegation || "none";
+  const opt = (v, label) =>
+    `<option value="${v}"${d === v ? " selected" : ""}>${label}</option>`;
+  return `
+    <label class="fld"><div class="lbl">Group id</div>
+      <input type="text" id="g-id-${id}" value="${id === "new" ? "" : esc(id)}"
+        ${id === "new" ? `placeholder="trader"` : "readonly"}></label>
+    <label class="fld"><div class="lbl">Name members are shown</div>
+      <input type="text" id="g-name-${id}" value="${esc(role.name || "")}"></label>
+    <label class="fld"><div class="lbl">Grants — resources this group may reach (comma-separated)</div>
+      <input type="text" id="g-grants-${id}" value="${esc((role.grants || []).join(", "))}"></label>
+    <label class="fld"><div class="lbl">Whose agent may act on them</div>
+      <select id="g-deleg-${id}">
+        ${opt("none", "Nobody's — only the member herself")}
+        ${opt("first-party-only", "Only agents she operates herself")}
+        ${opt("any-agent", "Any agent, if her own terms allow it")}
+      </select></label>`;
+}
+
+function groupCard(id, role, members, defaultRole) {
+  const isDefault = defaultRole === id;
+  return `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>${esc(role.name || id)}</h2>
+      <span class="chip mono">${esc(id)}</span>
+      ${isDefault ? `<span class="chip">joined into by default</span>` : ""}
+      <span class="chip">${members.length} member${members.length === 1 ? "" : "s"}</span></div>
+    ${groupFields(id, role)}
+    <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+      <button class="btn sm" onclick="saveGroup('${esc(id)}')">Save</button>
+      ${isDefault ? "" :
+        `<button class="btn ghost sm" onclick="makeDefault('${esc(id)}')">Make default</button>`}
+      <button class="btn ghost sm" onclick="deleteGroup('${esc(id)}')">Delete</button>
+    </div>
+    ${members.length ? `<div style="margin-top:14px">
+      <div class="lbl">In this group</div>
+      ${members.map(o => `<div class="row"><span class="mono">${esc(o)}</span>
+        <a href="#/member/${encodeURIComponent(o)}">Open →</a></div>`).join("")}
+    </div>` : ""}
+  </div>`;
+}
+
+window.saveGroup = async (key) => {
+  const id = ($(`#g-id-${key}`).value || "").trim();
+  if (!id) { toast("Not saved", "A group needs an id", "warn"); return; }
+  const body = {
+    name: $(`#g-name-${key}`).value,
+    grants: ($(`#g-grants-${key}`).value || "").split(",").map(s => s.trim()).filter(Boolean),
+    delegation: $(`#g-deleg-${key}`).value,
+  };
+  try {
+    const r = await api(`/api/org/roles/${encodeURIComponent(id)}`, {
+      method: "PUT", headers: { "content-type": "application/json" },
+      body: JSON.stringify(body) });
+    toast("Group saved", `Charter v${r.version}. Every member's authority is told, and the ones in
+      this group pick up the change on their next envelope read.`);
+  } catch (e) { toast("Not saved", e.message, "warn"); }
+  render();
+};
+
+window.makeDefault = async (id) => {
+  try {
+    const r = await api("/api/org/roles/default", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: id }) });
+    toast("Default set", `Charter v${r.version}. New members land in ${id}; nobody already
+      enrolled moves.`);
+  } catch (e) { toast("Not set", e.message, "warn"); }
+  render();
+};
+
+window.deleteGroup = async (id) => {
+  try {
+    const r = await api(`/api/org/roles/${encodeURIComponent(id)}`, { method: "DELETE" });
+    toast("Group removed", `Charter v${r.version}`);
+  } catch (e) { toast("Not removed", e.message, "warn"); }
   render();
 };
 
@@ -157,26 +295,27 @@ route("members", async (view) => {
         member's private arrangements would have replaced the member's layer rather than sat above
         it.</div>
     </div>
-    <div class="card pad-lg"><table>
+    <div class="card pad-lg"><div class="table-scroll"><table>
       <thead><tr><th>Member</th><th>Role</th><th>Agents may act</th><th>Joined</th>
         <th>Charter</th><th>Narrowed by</th><th class="r">State</th><th></th></tr></thead>
       <tbody>${members.map(m => `<tr>
         <td><div class="tick"><div class="badge2">👤</div>
           <div class="nm"><a href="#/member/${encodeURIComponent(m.owner)}">${esc(m.owner)}</a></div></div></td>
-        <td><select data-role-for="${esc(m.owner)}">
+        <td class="role-cell"><select data-role-for="${esc(m.owner)}">
           <option value=""${m.role ? "" : " selected"}>no access</option>
           ${Object.entries(ROLES).map(([id, r]) =>
             `<option value="${esc(id)}"${id === m.role ? " selected" : ""}>${esc(r.name || id)}</option>`).join("")}
         </select><div class="cell-sub mono">${(m.grants || []).join(", ") || "—"}</div></td>
         <td>${DELEGATION[m.delegation] || esc(m.delegation)}</td>
-        <td class="nowrap">${esc((m.joined || "").replace("T", " ").replace("Z", ""))}</td>
+        <td class="nowrap" title="${esc((m.joined || "").replace("T", " ").replace("Z", ""))}">${
+          esc((m.joined || "").slice(0, 10))}</td>
         <td>v${esc(m.charter_version)}${m.charter_version !== m.current_version
           ? `<div class="cell-sub">current is v${esc(m.current_version)}</div>` : ""}</td>
         <td>${((m.compliance || {}).clamped_fields || []).map(f =>
           `<span class="chip">${esc(f)}</span>`).join(" ") || "—"}</td>
-        <td class="r"><span class="member-state ${esc(m.state)}">${esc(STATE[m.state] || m.state)}</span></td>
+        <td class="r state-cell"><span class="member-state ${esc(m.state)}">${esc(STATE[m.state] || m.state)}</span></td>
         <td class="r"><button class="btn danger sm" data-remove="${esc(m.owner)}">Remove</button></td>
-      </tr>`).join("")}</tbody></table></div>`;
+      </tr>`).join("")}</tbody></table></div></div>`;
   /* Bound by attribute rather than an inline handler: an owner name arrives
      from a member's enrolment and building JavaScript out of it is the one
      way this table could be made to run someone else's code. */
@@ -632,7 +771,7 @@ const REGO_STARTER = `package u4a.custom
 
 import rego.v1
 
-# Your rules. Two sets, and only two:
+# The organization's operating rules. Two sets, and only two:
 #
 #   deny contains "<sentence>"   the request is refused
 #   ask  contains "<sentence>"   the member is asked first
@@ -640,13 +779,41 @@ import rego.v1
 # The sentence ends up in the member's ledger and in the dialog she is shown,
 # so write it for her rather than for you.
 #
-# Available: input.member, input.request.{resource_id, scopes, expires_in,
-# purpose, reason, mission, operation, tier, assurance, standing}.
+# Available: input.member, input.role.{id, name, delegation},
+# input.request.{resource_id, scopes, expires_in, purpose, reason, mission,
+# operation, tier, assurance, standing}, and input.charter.
 
+# A close period. The kind of rule that belongs here rather than in the
+# charter: it is true for three weeks a quarter, nobody re-consents when it
+# starts, and stating it needs a clock.
 deny contains msg if {
-	input.request.resource_id == "alice-vault/execute_trade"
-	input.request.expires_in > 300
-	msg := "trade authority may not last more than five minutes at this firm"
+	freeze
+	input.request.resource_id == "northwind-vault/execute_trade"
+	msg := "the firm is in its close period and is not executing trades"
+}
+
+freeze if {
+	[_, month, day] := time.date(time.now_ns())
+	month in [3, 6, 9, 12]
+	day >= 25
+}
+
+# Tighter than the charter's ceiling, for one group. The ceiling is what
+# every member agreed to; this is what this firm currently thinks an analyst
+# should hold, and it moves without touching the bargain.
+deny contains msg if {
+	input.role.id == "analyst"
+	input.request.expires_in > 900
+	msg := "an analyst's access to the firm's book is granted a quarter of an hour at a time"
+}
+
+# Outside market hours, a person decides. Not a refusal — the member is asked,
+# which is the right answer when the request is unusual rather than wrong.
+ask contains msg if {
+	[hour, _, _] := time.clock(time.now_ns())
+	hour < 13
+	input.request.resource_id == "northwind-vault/execute_trade"
+	msg := "this order was placed outside market hours"
 }
 `;
 
@@ -654,13 +821,21 @@ function charterRego(view, doc) {
   const existing = doc.charter.rego || "";
   view.innerHTML = charterHead(doc) + charterTabs("rego") + `
     <div class="card pad-lg" style="margin-bottom:14px">
-      <div class="muted" style="font-size:12.5px;max-width:74ch">Rules of your own, evaluated by this
-        organization's policy engine alongside the settings on the first tab. They can contribute two
-        things and nothing else: <span class="mono">deny</span> and <span class="mono">ask</span>. There
-        is no rule you can write here that widens a member's terms, and that is a property of the shape
-        rather than a convention — the shipped module reads those two sets and there is no third.
-        A module that does not compile is never published, so the charter in force always has an engine
-        that can evaluate it.</div>
+      <div class="muted" style="font-size:12.5px;max-width:74ch;line-height:1.55">This organization's
+        operating rules, evaluated per request by its policy engine alongside the settings on the first
+        tab. They can contribute two things and nothing else: <span class="mono">deny</span> and
+        <span class="mono">ask</span>. There is no rule you can write here that widens a member's terms,
+        and that is a property of the shape rather than a convention — the shipped module reads those
+        two sets and there is no third. A module that does not compile is never published, so the
+        charter in force always has an engine that can evaluate it.
+        <div style="margin-top:10px"><b>Which layer does a rule belong in?</b> Ask whether a member
+        would need to agree to it again. The <a href="#/charter">Settings</a> tab is the bargain — what
+        this organization governs, what her groups may reach, the ceiling on her terms — and every
+        member is shown it in full before she joins. These rules are not shown to her line by line;
+        she is told they exist and sees the sentence of any rule that stops her. So a close period,
+        market hours, or a limit this firm is trying for a quarter belongs here. Widening what a group
+        may reach does not: that is the bargain, and it belongs in the charter where the version
+        history of it lives.</div></div>
     </div>
     <div class="editor-wrap">
       <div class="editor-bar"><span class="dot" style="background:${existing ? "var(--pos)" : "var(--text-faint)"}"></span>
@@ -825,6 +1000,7 @@ route("activity", async (view) => {
   const name = me.name || "Administrator";
   $("#whoName").textContent = name;
   $("#avatar").textContent = name[0].toUpperCase();
+  await orgHeader();
   if (!location.hash) location.hash = "#/overview";
   await render();
 })();

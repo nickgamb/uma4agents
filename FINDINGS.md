@@ -858,8 +858,8 @@ authority already distinguishes an agent she activated from one somebody else
 operates (recommendation 12's first-party fact), and it is safe to rest a rule
 on because the requesting side cannot assert it.
 
-Two properties are worth specifying alongside it, because both are easy to get
-wrong in ways that are invisible afterwards:
+Three properties are worth specifying alongside it, because each is easy to
+get wrong in ways that are invisible afterwards:
 
 - **A layer above the owner may only narrow, and the narrowing belongs in the
   terms.** The obvious implementation applies an organization's ceiling at
@@ -875,6 +875,20 @@ wrong in ways that are invisible afterwards:
   read surfaces as much as the write ones: her pending queue, her connections,
   her operators and her record. Revocation likewise: shutting an agent out of
   the organization's resources must not touch its standing with her.
+- **The upper layer's policy has two halves with different disclosure
+  obligations, and the boundary is re-consent.** What a member agrees to must
+  be a bounded, versioned document she is shown in full — what the
+  organization claims, what her group may reach, the ceiling on her terms.
+  What the organization enforces operationally — a close period, market hours,
+  a limit tried for one quarter — moves on a compliance function's clock, not
+  a membership's, and cannot be re-consented to every time it changes. Fusing
+  the two gives either a bargain nobody can read or an agreement that changes
+  under the people who signed it. The workable line is that the operational
+  half may only refuse or interrupt, and that a member is shown the sentence
+  of any rule that stops her even though she is not shown the rules. A related
+  containment matters as much: a group may only grant what the charter
+  *claims*, or "create a group" becomes a route into a member's personal
+  resources — the single most dangerous edit in an administrator's console.
 
 And one honest note for the spec: an override *does* have to exist — the
 organization owns the data — but it cannot be a flag on a decision the
@@ -887,7 +901,7 @@ POC the check is introspection at the organization, which is also where the
 single-use burn serializes; the grant is a JWS over published keys, so local
 verification is available to a deployment willing to solve single use itself.
 
-Built and demonstrated: `make org-check` (80 assertions over six processes),
+Built and demonstrated: `make org-check` (90 assertions over six processes),
 `docs/ORG.md`.
 
 ---

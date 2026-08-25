@@ -109,6 +109,19 @@ because only she can claim an operator and only that operator can publish an
 agent's key in its own directory. See [agent
 assurance](/docs/overview/assurance/).
 
+Roles are groups, and an administrator manages them as such: create one, set
+what it reaches, mark the one joiners land in, move people between them. Three
+rules shape that surface, and each could reasonably have gone the other way.
+
+A group may only grant what the charter **claims** — a group handing out
+`alice-vault/*` is refused before it can become a version, because otherwise
+"create a group" is a route into somebody's personal accounts. Saving a group
+publishes a charter version, because a group is a set of grants that every
+member was shown and widening one is handing out access. And a group with
+members in it cannot be deleted: they would be left holding an id that
+resolves to nothing, which fails *closed*, so their access would quietly stop
+working with no event anyone would think to look at.
+
 ## The two mechanisms, and why they are different
 
 **A ceiling is clamped.** A bound on what her terms may say is an algebra over
@@ -181,6 +194,39 @@ the [policy engines](/docs/overview/compare-policy-engines/) page that the two
 compose. The administrator's own Rego can contribute exactly two things —
 `deny` and `ask` — and there is no third, so nothing an organization writes
 can make a request easier than the member's own policy already makes it.
+
+### Charter or rule?
+
+The charter and the engine are not two ways of saying the same thing. **The
+test is whether a member would have to agree to it again.**
+
+The charter is the bargain: versioned, shown to her in full before she joins,
+agreed to by name — the organization's counterpart to the terms she proffers
+her own agents. What it may say is deliberately small, because it is a
+document people read. The rules are the organization's operating controls. She
+is told they exist and is shown the sentence of any rule that stops her, but
+not the text, because they are not part of what she agreed to; they move on a
+compliance function's clock rather than a membership's, and they can only
+refuse or interrupt.
+
+Widening what a group may reach is charter. A close period, market hours, or a
+limit the firm is trying for one quarter is a rule:
+
+```rego
+deny contains msg if {
+	input.role.id == "analyst"
+	input.request.expires_in > 900
+	msg := "an analyst's access to the firm's book is granted a quarter of an hour at a time"
+}
+```
+
+That rule is also the join between the layers, and the reason neither collapses
+into the other. A settings form cannot express "for analysts, during the close
+period" — the combinations are open-ended and an engine has a clock and a
+standard library. An engine holding its own membership list would be a
+directory with a worse query language. **Who is in which group is state; what
+that group may do today is a decision.** The charter remembers, the group
+arrives in the engine's input, and the engine decides.
 
 ## Where the organization's reach stops
 

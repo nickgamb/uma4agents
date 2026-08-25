@@ -501,4 +501,22 @@ async def index(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+class RevalidatingStatic(StaticFiles):
+    """Static files the browser must revalidate before reusing.
+
+    Without a `Cache-Control` header a browser is free to apply heuristic
+    freshness — roughly a tenth of the age of the file — and serve a cached
+    copy without asking. In a lab whose images are rebuilt while somebody has
+    the page open, that shows up as a console running new JavaScript against
+    an old stylesheet, which looks like a layout bug and is not one.
+    `no-cache` still allows a 304 against the ETag already sent, so this costs
+    a conditional request rather than a transfer.
+    """
+
+    def file_response(self, *args, **kw):
+        r = super().file_response(*args, **kw)
+        r.headers["Cache-Control"] = "no-cache"
+        return r
+
+
+app.mount("/static", RevalidatingStatic(directory=STATIC_DIR), name="static")

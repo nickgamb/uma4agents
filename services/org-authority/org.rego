@@ -23,10 +23,30 @@
 #                                the console without opening this file
 #   input.charter.envelope       the ceiling, for the checks worth making
 #                                twice (see always_ask below)
-#   input.role                   the member's role here, and what it lets her
-#                                delegate to an agent
+#   input.role                   the group the member is in — its id, its
+#                                grants, and what it lets her delegate to an
+#                                agent
 #   input.request                resource, scopes, expiry, reason, mission,
 #                                assurance axes, standing
+#
+# On why both a charter and an engine:
+#
+# The charter is the bargain. It is versioned, it is shown to a member in
+# full before she joins, and she agrees to it by name — the organization's
+# counterpart to the terms she proffers her own agents. What it may say is
+# therefore deliberately small, because it is a document people read.
+#
+# These rules are the organization's operating controls. A member is told
+# they exist and is shown the sentence of any rule that stops her; she is not
+# shown them line by line, because they are not part of what she agreed to.
+# They can only ever refuse or interrupt, so nothing here can change the
+# bargain without changing the charter.
+#
+# The test for which layer a rule belongs in is whether a member would have
+# to agree to it again. Widening what a group may reach: charter. A close
+# period, market hours, a limit this firm is trying for a quarter: here.
+# The two are joined by `input.role` — the charter says what a group is and
+# this decides using it, which is a thing neither half can do alone.
 package u4a.org
 
 import rego.v1

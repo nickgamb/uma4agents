@@ -566,9 +566,12 @@ def summarize(charter: dict, role: dict | None = None) -> list[str]:
     if conditions.get("require_mission"):
         out.append("An agent that cites no mandate for its errand is refused.")
     if charter.get("rego"):
-        out.append("The organization applies further rules of its own, "
-                   "evaluated by its policy engine. They can only make a "
-                   "request harder, never easier.")
+        out.append("The organization applies operating rules of its own, "
+                   "evaluated by its policy engine — things like a close "
+                   "period or trading hours, which change without this "
+                   "agreement changing. They can only make a request harder, "
+                   "never easier, and whenever one of them stops you it is "
+                   "named in your own record.")
     if glass.get("enabled"):
         out.append(
             "Break-glass: the organization can reach "

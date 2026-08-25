@@ -46,6 +46,7 @@ organization is a single small thing here, and `make reset` rewinds it.
 """
 
 import asyncio
+import copy
 import json
 import os
 import secrets
@@ -208,6 +209,22 @@ async def publish_charter(doc: dict, by: str) -> dict:
     note("charter.published", version=entry["version"], by=by,
          rego=bool(validated.get("rego")))
     return entry
+
+
+async def announce_charter(entry: dict) -> None:
+    """Tell every member a new version is in force.
+
+    Their authorities would find out anyway on the next envelope read, but
+    "anyway" is up to a poll interval of requests decided under the old
+    ceiling. Clearing `compliance` matters as much as the notification: it is
+    this service's cached answer to "is this member's policy inside the
+    envelope", and after a republish that answer is about a document that is
+    no longer the charter.
+    """
+    for owner in list(MEMBERS):
+        MEMBERS[owner]["compliance"] = None
+        await notify_member(owner, {"kind": "charter_changed",
+                                    "charter_version": entry["version"]})
 
 
 # --- The engine --------------------------------------------------------------
@@ -533,7 +550,13 @@ def role_of(owner: str) -> tuple[str | None, dict]:
     member = MEMBERS.get(owner) or {}
     roles = current()["charter"].get("roles") or {}
     role_id = member.get("role")
-    return role_id, dict(roles.get(role_id) or {})
+    role = dict(roles.get(role_id) or {})
+    if role:
+        # Carried so that a rule in the engine can name the group — `input.role.id
+        # == "analyst"` is the shape most of an organization's operating rules
+        # want, and without it the id is only a key in a map the rule cannot see.
+        role["id"] = role_id
+    return role_id, role
 
 
 def _envelope_doc(owner: str | None = None) -> dict:
@@ -1136,6 +1159,7 @@ async def admin_org(request: Request) -> dict:
         "versions": len(CHARTERS),
         "members": len(MEMBERS),
         "break_glass": bool((entry["charter"].get("break_glass") or {}).get("enabled")),
+        "claims": entry["charter"].get("claims") or [],
         "summary": charter_mod.summarize(entry["charter"]),
     }
 
@@ -1169,13 +1193,7 @@ async def admin_put_charter(request: Request) -> dict:
         # line is — and in both cases the words that help are the specific
         # ones, not a paraphrase.
         raise HTTPException(status_code=400, detail=str(exc))
-    # Every member is told at once. Her authority would find out anyway on
-    # its next envelope read, but "anyway" is up to a poll interval of
-    # requests decided under the old ceiling.
-    for owner in list(MEMBERS):
-        MEMBERS[owner]["compliance"] = None
-        await notify_member(owner, {"kind": "charter_changed",
-                                    "charter_version": entry["version"]})
+    await announce_charter(entry)
     return {"version": entry["version"], "charter": entry["charter"],
             "summary": charter_mod.summarize(entry["charter"])}
 
@@ -1264,9 +1282,134 @@ async def admin_set_role(owner: str, request: Request) -> dict:
 
 @app.get("/admin/roles")
 async def admin_roles(request: Request) -> dict:
+    """The groups this charter defines, and who is in each.
+
+    The count comes from `MEMBERS` rather than from the charter because
+    membership is *state*, not policy: the charter says what a group may
+    reach, and this service remembers who is in it. Keeping those apart is
+    what lets a group be renamed without anybody re-joining, and what stops
+    the decision engine from being asked a question it has no business
+    answering.
+    """
     require_admin(request)
-    return {"roles": current()["charter"].get("roles") or {},
-            "default_role": current()["charter"].get("default_role")}
+    roles = current()["charter"].get("roles") or {}
+    held: dict[str, list[str]] = {role_id: [] for role_id in roles}
+    unassigned = []
+    for owner, member in MEMBERS.items():
+        held.setdefault(member.get("role") or "", []).append(owner)
+    unassigned = held.pop("", [])
+    return {"roles": roles,
+            "default_role": current()["charter"].get("default_role"),
+            "members": held,
+            "unassigned": unassigned}
+
+
+@app.put("/admin/roles/{role_id}")
+async def admin_put_role(role_id: str, request: Request) -> dict:
+    """Create a group, or change what it may reach.
+
+    This publishes a new charter version rather than editing the roles map in
+    place, and it is worth being clear about why, because a group looks like
+    the kind of administrative detail that ought to be cheap to change. It is
+    not: a group is a set of grants over the organization's resources, every
+    member was shown the group she was joining, and her authority holds an
+    envelope derived from it. Widening a group is handing out access; the
+    record of when it happened and who did it belongs in the same versioned
+    document as the rest of the bargain.
+
+    The validator does the load-bearing check — a group may only grant what
+    the charter claims — so an administrator cannot invent a group that
+    reaches somebody's personal accounts.
+    """
+    admin = require_admin(request)
+    role_id = role_id.strip()
+    if not role_id:
+        raise HTTPException(status_code=400, detail="a group needs an id")
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="expected an object")
+    doc = copy.deepcopy(current()["charter"])
+    roles = doc.setdefault("roles", {})
+    existed = role_id in roles
+    roles[role_id] = {
+        "name": (body.get("name") or "").strip() or role_id,
+        "grants": body.get("grants") or [],
+        "delegation": body.get("delegation") or "none",
+    }
+    if body.get("default"):
+        doc["default_role"] = role_id
+    try:
+        entry = await publish_charter(doc, by=admin)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    note("role.saved", role=role_id, by=admin,
+         version=entry["version"], created=not existed)
+    await announce_charter(entry)
+    return {"version": entry["version"], "role": role_id,
+            "roles": entry["charter"].get("roles") or {},
+            "default_role": entry["charter"].get("default_role")}
+
+
+@app.delete("/admin/roles/{role_id}")
+async def admin_delete_role(role_id: str, request: Request) -> dict:
+    """Remove a group, once nobody is in it.
+
+    Refusing while it is held is the whole of the design here. Deleting a
+    group out from under its members would leave them enrolled with a role id
+    that resolves to nothing — which fails *closed*, so their access would
+    quietly stop working with no event anyone would think to look at. Making
+    the administrator move them first means the access change is a thing he
+    did on purpose, to named people.
+    """
+    admin = require_admin(request)
+    doc = copy.deepcopy(current()["charter"])
+    roles = doc.get("roles") or {}
+    if role_id not in roles:
+        raise HTTPException(status_code=404, detail="no such group")
+    holders = sorted(o for o, m in MEMBERS.items() if m.get("role") == role_id)
+    if holders:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{len(holders)} member(s) are in this group — "
+                   f"{', '.join(holders)}. Move them to another group first, "
+                   f"so the access they lose is something you did to them "
+                   f"rather than something that stopped working.")
+    del roles[role_id]
+    if doc.get("default_role") == role_id:
+        doc["default_role"] = None
+    try:
+        entry = await publish_charter(doc, by=admin)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    note("role.removed", role=role_id, by=admin, version=entry["version"])
+    await announce_charter(entry)
+    return {"version": entry["version"], "removed": role_id,
+            "roles": entry["charter"].get("roles") or {},
+            "default_role": entry["charter"].get("default_role")}
+
+
+@app.post("/admin/roles/default")
+async def admin_default_role(request: Request) -> dict:
+    """Which group somebody lands in when they join.
+
+    A charter with no default is a legitimate configuration and not an
+    oversight: it means joining grants nothing until an administrator says
+    what this person is, which is what an organization handling anything
+    sensitive would actually want. So `null` is accepted.
+    """
+    admin = require_admin(request)
+    body = await request.json()
+    role_id = (body.get("role") or "").strip() or None
+    doc = copy.deepcopy(current()["charter"])
+    doc["default_role"] = role_id
+    try:
+        entry = await publish_charter(doc, by=admin)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    note("role.default_set", role=role_id, by=admin, version=entry["version"])
+    await announce_charter(entry)
+    return {"version": entry["version"],
+            "default_role": entry["charter"].get("default_role")}
 
 
 @app.delete("/admin/members/{owner}")

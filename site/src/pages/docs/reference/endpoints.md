@@ -183,7 +183,18 @@ A party of its own, not a table inside anyone's authorization server.
 | `GET /membership/{owner}` | For an enforcement point: whether this owner is governed here, what is shared with her, and the ceiling to check grants against |
 | `POST /break-glass` | An agent redeeming a window, signing with the key the grant will bind to |
 | `POST /introspect`, `/consume` | RFC 7662 over the grants this service signed, shaped exactly like a member authority's answers |
-| `/admin/…` | The console's backend: charter versions, members and their roles, invitations, break-glass windows, activity |
+| `/admin/…` | The console's backend: charter versions, members and their groups, invitations, break-glass windows, activity |
+
+Groups are charter data, so the four endpoints that manage them publish a
+charter version rather than editing the one in force:
+
+| Endpoint | Answers |
+|---|---|
+| `GET /admin/roles` | The groups this charter defines, which one joiners land in, and who is in each. Membership is state this service holds, not something the engine is asked |
+| `PUT /admin/roles/{id}` | Create a group or change what it reaches. Refused if it grants anything the charter does not claim |
+| `DELETE /admin/roles/{id}` | Remove a group. Refused while anybody is in it — deleting one fails closed for its members, which is an access change nobody would see happen |
+| `POST /admin/roles/default` | Which group somebody lands in when they join. `null` is valid: joining grants nothing until an administrator says what this person is |
+| `POST /admin/members/{owner}/role` | Move one member. The only endpoint in this console that widens anything |
 
 ## The requesting party's operator
 

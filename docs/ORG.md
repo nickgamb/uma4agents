@@ -20,7 +20,7 @@ mechanism.
 Run it:
 
 ```bash
-make org-check        # 80 assertions across six processes
+make org-check        # 90 assertions across six processes
 make org-test         # the ceiling algebra and the charter validator, no stack
 ```
 
@@ -181,6 +181,55 @@ a judgement about that request, and it is made at the organization's own
 decision point against policy the member's authority never sees. That decision
 point is [OPA](https://www.openpolicyagent.org), evaluating `org.rego`.
 
+## Groups
+
+A group is a named set of the organization's resources, plus whether a member
+may let an agent reach them at all. It is the reason anybody joins: everything
+else in the charter is a ceiling on terms she was going to write anyway.
+
+```json
+"roles": {
+  "analyst": { "name": "Analyst",
+               "grants": ["northwind-vault/get_positions",
+                          "northwind-vault/get_transactions"],
+               "delegation": "first-party-only" },
+  "trader":  { "name": "Trader",
+               "grants": ["northwind-vault/*"],
+               "delegation": "any-agent" }
+},
+"default_role": "analyst"
+```
+
+An administrator creates one, sets what it reaches, marks one as the group
+joiners land in, and moves people between them — from the console's **Groups**
+page, or over `PUT /admin/roles/{id}`, `DELETE /admin/roles/{id}`,
+`POST /admin/roles/default` and `POST /admin/members/{owner}/role`.
+
+Three properties are worth stating, because each is a thing that could
+reasonably have gone the other way.
+
+**A group may only grant what the charter claims.** The validator refuses a
+group granting `alice-vault/*` before it can become a version. Without that
+check, "create a group" is a route to somebody's personal accounts, and it is
+the single most dangerous edit in the console.
+
+**Saving a group publishes a charter version.** Groups look like the kind of
+administrative detail that ought to be cheap to change, and they are not: a
+group is a set of grants, every member was shown the group she was joining,
+and her authority holds an envelope derived from it. Widening a group is
+handing out access, and the record of when and by whom belongs in the same
+versioned document as the rest of the bargain.
+
+**A group with members in it cannot be deleted.** Deleting one would leave
+those members holding a role id that resolves to nothing — which fails
+*closed*, so their access would quietly stop working with no event anyone
+would think to look at. The administrator moves them first, so the loss of
+access is something he did to named people.
+
+A member holds one group at a time. Two would mean composing two `delegation`
+settings, and while most-restrictive-wins is the obvious answer, it should be
+a decision somebody made rather than a default that fell out of a `union`.
+
 ## Why an engine here and not there
 
 The [comparison page](https://u4a.ai/docs/overview/compare-policy-engines/)
@@ -201,6 +250,43 @@ policy. One who does gets a `u4a.custom` package that can contribute exactly
 two things — `deny` and `ask` — and there is no third. That is a property of
 the shape rather than a convention: no charter and no administrator's Rego can
 make a request easier than the member's own policy already makes it.
+
+### Which layer a rule belongs in
+
+The charter and the rules are not two ways of saying the same thing, and the
+line between them is not a matter of taste. **The test is whether a member
+would have to agree to it again.**
+
+The charter is the bargain. It is versioned, it is shown to her in full before
+she joins, and she agrees to it by name — the organization's counterpart to the
+terms she proffers her own agents. What it may say is deliberately small,
+because it is a document people read.
+
+The rules are the organization's operating controls. She is told they exist
+and is shown the sentence of any rule that stops her; she is not shown them
+line by line, because they are not part of what she agreed to. They change on
+a compliance function's clock rather than a membership's, and they can only
+refuse or interrupt — so nothing there can move the bargain without moving the
+charter.
+
+So: widening what a group may reach is charter. A close period, market hours,
+or a limit this firm is trying for one quarter is a rule.
+
+```rego
+deny contains msg if {
+	input.role.id == "analyst"
+	input.request.expires_in > 900
+	msg := "an analyst's access to the firm's book is granted a quarter of an hour at a time"
+}
+```
+
+That rule is also the join between the layers, and the reason neither collapses
+into the other. A settings form cannot express "for analysts, during the close
+period" — the combinations are open-ended and an engine has a clock and a
+standard library. An engine that held its own membership list would be a
+directory with a worse query language. **Who is in which group is state; what
+that group may do today is a decision.** The charter remembers, `input.role`
+carries it across, and the engine decides.
 
 Here is one, taken from a running lab. Every field below came off the wire:
 
@@ -439,4 +525,4 @@ answer `/decision` and be conformant.
 - `services/org-authority/charter.py` — the charter, and what may be said in it
 - `services/org-authority/org.rego` — the shipped module, and the delegation rule
 - `services/uma-as/org.py` — the clamp, and the party boundary from the member's side
-- `clients/demo-driver/org_check.py` — the 80 assertions
+- `clients/demo-driver/org_check.py` — the 90 assertions

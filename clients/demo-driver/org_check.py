@@ -584,6 +584,70 @@ def main() -> int:                                            # noqa: C901
         rpt, why = negotiate(c, "alice", hers, "shared")
         check("the administrator's own rule refuses what the settings allowed",
               rpt is None and "quarterly close" in why, f"{why}")
+        # A rule that names the group. This is the join between the two
+        # layers: the charter says what a group *is* and who is in it, the
+        # engine decides using it. Neither half can do this alone — a
+        # settings form cannot express "for analysts, on Fridays", and an
+        # engine holding its own membership list would be a directory.
+        by_group = {**base, "rego": (
+            "package u4a.custom\n\nimport rego.v1\n\n"
+            "deny contains msg if {\n"
+            '\tinput.role.id == "analyst"\n'
+            '\tmsg := "analysts are read-only while the desk is under review"\n'
+            "}\n")}
+        r = c.put(f"{ORG}/admin/charter", json=by_group, headers=ADMIN, timeout=20.0)
+        check("a rule can name the group the member is in",
+              r.status_code == 200, f"{r.status_code} {r.text[:200]}")
+        rpt, why = negotiate(c, "alice", hers, "shared")
+        check("and refuses her because of which group she is in",
+              rpt is None and "under review" in why, f"{why}")
+        c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
+
+        # --- 9b. groups are charter data, and only an admin moves anyone ---
+        doc = c.get(f"{ORG}/admin/roles", headers=ADMIN, timeout=15.0).json()
+        check("the console can see who is in each group",
+              "alice" in (doc.get("members") or {}).get("analyst", []),
+              f"{doc.get('members')}")
+        before = c.get(f"{ORG}/admin/org", headers=ADMIN, timeout=15.0).json()
+        r = c.put(f"{ORG}/admin/roles/desk",
+                  json={"name": "Trading desk",
+                        "grants": [f"{BOOK}/get_positions"],
+                        "delegation": "first-party-only"},
+                  headers=ADMIN, timeout=20.0)
+        check("an administrator can create a group without editing JSON",
+              r.status_code == 200 and "desk" in (r.json().get("roles") or {}),
+              f"{r.status_code} {r.text[:180]}")
+        after = c.get(f"{ORG}/admin/org", headers=ADMIN, timeout=15.0).json()
+        check("creating one publishes a charter version rather than editing in place",
+              after["charter_version"] > before["charter_version"],
+              f"{before['charter_version']} -> {after['charter_version']}")
+        r = c.put(f"{ORG}/admin/roles/rogue",
+                  json={"name": "Rogue", "grants": ["alice-vault/*"],
+                        "delegation": "any-agent"},
+                  headers=ADMIN, timeout=20.0)
+        check("a group cannot grant what the charter does not claim",
+              r.status_code == 400 and "does not claim" in r.text,
+              f"{r.status_code} {r.text[:180]}")
+        r = c.request("DELETE", f"{ORG}/admin/roles/analyst",
+                      headers=ADMIN, timeout=20.0)
+        check("a group with members in it cannot be deleted out from under them",
+              r.status_code == 409 and "alice" in r.text,
+              f"{r.status_code} {r.text[:180]}")
+        r = c.post(f"{ORG}/admin/roles/default", json={"role": "desk"},
+                   headers=ADMIN, timeout=20.0)
+        check("an administrator can say which group joiners land in",
+              r.status_code == 200 and r.json().get("default_role") == "desk",
+              f"{r.status_code} {r.text[:180]}")
+        held = c.get(f"{ORG}/admin/roles", headers=ADMIN, timeout=15.0).json()
+        check("and nobody already enrolled moves",
+              "alice" in (held.get("members") or {}).get("analyst", [])
+              and not (held.get("members") or {}).get("desk"),
+              f"{held.get('members')}")
+        r = c.request("DELETE", f"{ORG}/admin/roles/desk",
+                      headers=ADMIN, timeout=20.0)
+        check("an empty group can be removed",
+              r.status_code == 200 and "desk" not in (r.json().get("roles") or {}),
+              f"{r.status_code} {r.text[:180]}")
         c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
 
         # --- 10. break-glass: loud, bounded, and around her authority -----

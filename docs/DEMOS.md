@@ -143,7 +143,14 @@ refused, with the same terms, the same key strength and the same request.
 
 The administrator's surface is at `https://org-console.uma.lab` (`dana` /
 `dana-demo`), and hers is under Agent Access → Organization in her own portal.
-[ORG.md](ORG.md).
+
+Two pages there are worth opening together, because they are the charter's two
+halves. **Groups** is what a member gets and agrees to — create one, set what
+it reaches, mark the one joiners land in, move people between them; saving
+publishes a charter version, because it changes the bargain. **Charter →
+Rules** is what the firm enforces operationally, in Rego, and can only refuse
+or interrupt. The test for which page a rule belongs on is whether a member
+would have to agree to it again. [ORG.md](ORG.md).
 
 ## The third thing, which is not a demo
 

@@ -122,7 +122,12 @@ button { font-family: inherit; cursor: pointer; }
 .menu-pop a:hover { background: var(--surface-3); color: var(--text); }
 .menu-pop a svg { width: 15px; height: 15px; }
 
-.content { padding: 30px; max-width: 1180px; width: 100%; }
+/* Wide enough for the members table, which is eight columns and was being
+   squeezed into a reading-width column with a third of the window sitting
+   empty beside it. Prose is not affected: every explanatory block in this
+   console carries its own `max-width: 74ch`, so raising this widens the
+   tables and leaves the sentences where they were. */
+.content { padding: 30px; max-width: 1440px; width: 100%; }
 
 /* ---- Cards & grid ------------------------------------------------------- */
 .grid { display: grid; gap: 18px; }
@@ -327,6 +332,27 @@ td.prose { max-width: 280px; color: var(--text-dim); font-size: 12.5px; line-hei
    different voice rather than as another of her settings. */
 .note.warn { color: var(--warn); }
 td .cell-sub.warn { color: var(--warn); white-space: normal; }
+
+/* The grants a role hands out can be a long list, and `.cell-sub` does not
+   wrap — so left to itself it sets this column's width and squeezes every
+   column after it, which is how the state cell ended up three lines tall
+   beside a Remove button jammed against the edge. Cap the column and let the
+   list ellipsis; the whole of it is in the tooltip and on the group's page. */
+/* The grants a role hands out are a long list, and `.cell-sub` does not wrap —
+   so left alone it sets this column's width and squeezes every column after
+   it, which is how the state cell ended up three lines tall beside a Remove
+   button jammed against the edge. Cap it and let it wrap instead: two short
+   lines show the whole list, where an ellipsis would have hidden half of it.
+   The cap goes on the inner block rather than the cell, because `max-width`
+   on a `td` is advisory under auto table layout and the browser ignores it. */
+td.role-cell .cell-sub { max-width: 260px; white-space: normal; }
+td.state-cell { white-space: nowrap; }
+
+/* Eight columns do not fit a laptop, and a table that does not fit widens the
+   page rather than shrinking itself — which is what put the Remove button off
+   the right edge. Scroll the table inside its own card and the page never
+   scrolls sideways. */
+.table-scroll { overflow-x: auto; }
 .orgband {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   border: 1px solid var(--border-soft); border-left: 3px solid var(--warn);
