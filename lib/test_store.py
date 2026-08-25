@@ -21,6 +21,7 @@ keeps the two shapes honest about being the same service.
 import asyncio
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..",
                                 "services", "uma-as"))
@@ -60,6 +61,33 @@ async def test_ticket_is_spent_once(store) -> None:
           bool(winners) and winners[0]["family"] == "fam_ticket_race",
           "winner carried the wrong family")
     await store.close_negotiation("fam_ticket_race")
+
+
+async def test_save_creates_an_unseen_negotiation(store) -> None:
+    """`save_negotiation` stores a negotiation that never had a ticket.
+
+    Every negotiation used to begin at `/perm`, which minted a ticket and
+    created the row, so the Postgres store implemented this as an UPDATE
+    while the in-memory one wrote the key either way. A request over a
+    jointly held resource arrives from another owner's tally with no ticket
+    at this authority, and on Postgres it silently stored nothing: the
+    pending request never reached her portal and the negotiation waited out
+    its timeout. Two backends disagreeing about what a method does is the
+    bug, so it is asserted rather than remembered.
+    """
+    rec = {**negotiation("fam_no_ticket"), "state": "awaiting-owner",
+           "decision": None, "expires": time.time() + 300}
+    await store.save_negotiation(rec)
+    got = await store.negotiation("fam_no_ticket")
+    check("save: a negotiation with no ticket is stored",
+          got is not None and got["family"] == "fam_no_ticket",
+          "it was not written")
+    pending = [p["family"] for p in await store.pending_negotiations()]
+    check("save: and it reaches the owner's pending list",
+          "fam_no_ticket" in pending, f"{pending}")
+    check("save: and it can be decided",
+          await store.decide("fam_no_ticket", "approved"), "decide said no")
+    await store.close_negotiation("fam_no_ticket")
 
 
 async def test_negotiation_survives_its_ticket(store) -> None:
@@ -508,6 +536,7 @@ async def test_claimed_origins_round_trip(store) -> None:
 
 TESTS = [
     test_ticket_is_spent_once,
+    test_save_creates_an_unseen_negotiation,
     test_negotiation_survives_its_ticket,
     test_rpt_is_burned_once,
     test_unknown_rpt_cannot_be_burned,

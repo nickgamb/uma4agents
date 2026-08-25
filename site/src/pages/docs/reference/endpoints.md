@@ -196,6 +196,32 @@ charter version rather than editing the one in force:
 | `POST /admin/roles/default` | Which group somebody lands in when they join. `null` is valid: joining grants nothing until an administrator says what this person is |
 | `POST /admin/members/{owner}/role` | Move one member. The only endpoint in this console that widens anything |
 
+## The tally, for a resource held jointly
+
+A party of its own, and the only one here that owns nothing and decides
+nothing. It speaks an ordinary authorization-server surface — `/perm`,
+`/token`, `/introspect`, `/consume` — so an unmodified agent and an ordinary
+enforcement point both work against it unchanged. What is listed below is only
+what is *not* an ordinary authorization server.
+
+| Endpoint | Answers |
+|---|---|
+| `GET /.well-known/uma4agents-configuration` | Discovery, carrying `u4a_tally: true` — a relying party finding this field is being told the party at this endpoint decides nothing |
+| `GET /mandate/{account}` | Who is entitled to be counted, at what weight, and how many it takes. Public: a holder reads it before she agrees, and anyone verifying a grant needs it to re-run the count |
+| `GET /terms/{template_id}` | The folded terms document an agent signed — every holder's terms intersected into one |
+| `GET /jwks` | Its signing keys. Note what they are *not* good for: no relying party accepts a signature from here as a verdict |
+
+And on each holder's own authorization server:
+
+| Endpoint | Answers |
+|---|---|
+| `POST /owner/joint/preview` | What a mandate would commit her to, and what her co-owners' terms would narrow about hers. Nothing happens |
+| `POST /owner/joint` | Agree to a mandate. Refused without an explicit `agreed` — it gives other people a say over a resource she administers |
+| `GET /owner/joint` | The accounts she holds jointly, who holds them with her, and the rule |
+| `DELETE /owner/joint/{account}` | Stop being a holder. Her terms stay exactly as they were |
+| `POST /joint/quote` | Her terms over one jointly held resource, for the fold. That resource only |
+| `POST /joint/verdict` | Her authority's answer about one request — signed, or `pending` while she is asked. Answered only for a mandate she agreed to, and only to the tally that mandate names |
+
 ## The requesting party's operator
 
 | Endpoint | Answers |

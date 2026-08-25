@@ -230,6 +230,39 @@ challenge, the ticket, `need_info`, the agreement and the RPT are the same on
 a shared resource as on a personal one — a requesting agent cannot tell the
 difference, and does not need to.
 
+## 16. Several owners of equal standing over one resource
+
+**Baseline.** UMA 2.0 has exactly one authorization server per protected
+resource. There is no object for "these parties must both agree", and no way
+for a relying party to check that they did.
+
+**Here.** Three objects, and a party that is not trusted:
+
+- a **mandate**, published beside the resource and agreed to by the holders,
+  naming who is entitled to be counted, at what weight, and how many it takes;
+- a **verdict** — one owner's authorization server signing its answer to one
+  negotiation, bound to that negotiation and to the exact agreement digest, so
+  it cannot carry a later request;
+- a **tally**, which folds every holder's terms into the single document the
+  agent signs, collects the verdicts, and issues a grant **carrying them**.
+  The enforcement point verifies each verdict against the keys that holder's
+  authority publishes and re-runs the count from the mandate.
+
+**Why.** With no party above the owners, the decision cannot be put anywhere
+without privileging the place it is put. Carrying the signed verdicts in the
+grant makes the counting party *unable to lie* rather than trusted, which is
+what lets it be an ordinary service instead of a ledger — there is no ordered
+history here to agree on and no long-lived state a fork could damage. See
+[joint ownership](/docs/overview/joint-ownership/) and recommendation 26.
+
+**What is deliberately not extended.** The four beats again, and the
+requesting side with them: a tally speaks an ordinary authorization-server
+surface, so an unmodified agent negotiates with it exactly as with an
+authorization server. Claims-gathering is also deliberately *not* used to
+collect verdicts — a claim the requesting party gathers is a claim it can
+decline to gather, and a refusal has to reach the decision point without the
+cooperation of the party it refuses.
+
 ## Security properties these depend on
 
 Each is enforced somewhere in the code, and the tests that prove refusals rather

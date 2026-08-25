@@ -21,6 +21,10 @@ A joint bank account is the ordinary case. The hard one is a data set with
 several subjects whose interests genuinely conflict, where nobody sits above
 them to arbitrate and no single one of them should be able to release it.
 
+![One resource held by two people: each owner's terms are quoted and folded
+into a single document, each authority signs its own verdict, and the grant
+carries them to a door that verifies and counts again.](/img/docs/joint-ownership.gif)
+
 ## Three objects
 
 ```

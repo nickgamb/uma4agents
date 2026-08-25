@@ -50,3 +50,6 @@ tmp.env
 tmp.*.env
 *.anth.env
 *.env.local
+
+# Diagram sources. The GIFs they render are committed; these are not.
+tools/diagrams/

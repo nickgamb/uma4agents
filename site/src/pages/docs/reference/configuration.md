@@ -163,6 +163,27 @@ invitation, none of it does anything.
 | `UMA_PEP_SHARED_PREFIX` | `mcp/shared` | The path an organization's resources are reached at, one segment per member |
 | `UMA_PEP_SHARED_NAMESPACE` | `northwind-vault` | The resource-id namespace those resources publish under |
 
+## The tally, for resources held jointly
+
+Read by the party that counts verdicts over a resource with several owners of
+equal standing — see [joint ownership](/docs/overview/joint-ownership/). With
+none of it set, no account is jointly held and the whole layer is inert.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `TALLY_ISSUER` | `https://joint-tally.uma.lab` | Its own origin. Holders' authorities verify its requests, and enforcement points verify its grants, against the keys published here |
+| `TALLY_MANDATES` / `TALLY_MANDATES_FILE` | unset | The mandates it counts for. Configuration rather than an API, because a mandate names the electorate and a coordinator that could edit it would be deciding who gets a say |
+| `TALLY_THRESHOLD_FLOOR` | `0` | A minimum the holders may not vote themselves below. A mandate under it is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
+| `TALLY_RS_SECRET` | `tally-rs-dev-secret` | What an enforcement point presents to mint tickets and introspect. It buys nothing that matters: the verdicts inside a grant are checked against the holders' published keys, not against this |
+| `TALLY_SIGNING_KEY` | `/keys/tally-ed25519.pem` | Persisted, not generated per process — both holders' authorities cache what this service publishes, and a key that changed on restart reads as a broken mandate |
+
+And on the enforcement point:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `UMA_PEP_JOINT_TALLY` | unset | The tally it will accept grants from. Named rather than read off a token: a resource server that accepted whichever issuer embedded a plausible mandate would be taking the electorate from the party that assembled it |
+| `UMA_PEP_JOINT_ACCOUNTS` | unset | Which accounts it fronts, at `/mcp/joint/<account>` |
+
 ## The two settings people get wrong
 
 **Issuer versus metadata URL.** An issuer is an *identifier* — what a token

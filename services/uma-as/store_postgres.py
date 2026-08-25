@@ -271,11 +271,26 @@ class PostgresOwnerStore:
         return json.loads(row["rec"]) if row else None
 
     async def save_negotiation(self, rec: dict) -> None:
+        """Store this negotiation, whether or not it has been seen before.
+
+        An UPDATE here for as long as every negotiation began at `/perm` with
+        a ticket, which inserted the row. One does not: a request over a
+        jointly held resource is created when another owner's tally asks
+        about it, and there is no ticket at this authority to have made a row.
+        The UPDATE matched nothing, the pending request never reached her
+        portal, and the negotiation waited out its timeout — on Postgres only,
+        because the in-memory store writes the key either way. Two backends
+        that disagree about what a method does is the bug; `make store-test`
+        now asserts they do not.
+        """
         await self._pool.execute(
-            "UPDATE negotiations SET state = $2, decision = $3, rec = $4 "
-            "WHERE family = $1 AND owner = $5",
-            rec["family"], rec["state"], rec.get("decision"), json.dumps(rec),
-            self._o)
+            "INSERT INTO negotiations (owner, family, expires, state, decision, rec) "
+            "VALUES ($6, $1, $2, $3, $4, $5) "
+            "ON CONFLICT (owner, family) DO UPDATE SET "
+            "  expires = EXCLUDED.expires, state = EXCLUDED.state, "
+            "  decision = EXCLUDED.decision, rec = EXCLUDED.rec",
+            rec["family"], rec.get("expires", time.time() + 3600),
+            rec["state"], rec.get("decision"), json.dumps(rec), self._o)
 
     async def close_negotiation(self, family: str | None) -> None:
         if not family:

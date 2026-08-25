@@ -119,6 +119,12 @@ class OwnerStore(Protocol):
     async def negotiation(self, family: str) -> dict | None: ...
 
     async def save_negotiation(self, rec: dict) -> None:
+        """Store this negotiation, creating it if this is the first time.
+
+        Most negotiations are created by `mint_ticket` and only updated here.
+        One kind is not: a request over a jointly held resource arrives from
+        a tally, and there is no ticket at this authority to have made it.
+        """
         """Write back a record mutated in place, without minting a ticket."""
 
     async def close_negotiation(self, family: str | None) -> None:

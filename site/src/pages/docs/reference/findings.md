@@ -64,7 +64,7 @@ permissions, and it has nowhere to live in UMA 2.0, in OAuth, or in a policy
 engine. It becomes expressible only because the owner's authority already
 knows which agents she activated.
 
-## The twenty-five recommendations
+## The twenty-six recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and reviving the 2010 term, *requesting agent*
@@ -364,6 +364,43 @@ authority may be hers to run. It has to be a grant the organization signs
 itself, checked at the enforcement point with the organization rather than
 with her authority, bounded by a clause she was shown before joining, and
 impossible to perform quietly.
+
+**26. Co-ownership needs a counting party, and it must not be a trusted one.**
+Recommendation 25 is a layer *above* the owner. The other arrangement is
+several owners of equal standing over one resource, where none can decide
+alone and nobody sits above them to arbitrate. UMA 2.0 has one authorization
+server per protected resource and no object for "these parties must both
+agree".
+
+The obstacle is not the counting — it is that whatever counts is structurally
+privileged while every party is a peer. The reflex is to make the privileged
+thing trustworthy: replicate it, distribute it, reach for a ledger. That
+imports a great deal to solve a problem this is not. Verdicts about one
+negotiation are a **set** rather than an ordered history, there is no
+long-lived state a fork could damage, and replay is prevented by binding each
+verdict to a negotiation and an agreement digest.
+
+The workable shape is to make the counting party **unable to lie**. A
+published **mandate** names who is entitled to be counted; each owner's
+authority signs a **verdict**; a **tally** folds the owners' terms into the one
+document the agent signs and collects the verdicts, and the grant it issues
+carries them. The enforcement point verifies each against that owner's
+published keys and re-runs the count. A larger token, and the only property
+that matters.
+
+Four things to specify alongside it. **Say which facts the requesting party
+may carry** — a claim it gathers is one it can decline to gather, so a
+co-owner's refusal must travel between authorities. **Fold the terms, and let
+everyone who could have been cheated check the fold.** **Silence and
+unreachability are not consent**, and both fail closed. And **a threshold may
+come from outside the group** — a group cannot answer what quorum sets the
+quorum, so an account agreement or a regulator supplies a floor it may not
+vote itself below. That is the same shape as recommendation 25's ceiling,
+which means peers compose horizontally while an authority above clamps
+vertically.
+
+The honest gap is authoring a mandate in the first place, which is exactly
+where "who decides who decides" lives.
 
 ## Parking lot
 

@@ -9,6 +9,12 @@ set with several subjects whose interests genuinely conflict, where there is
 no party above them to arbitrate and no obvious reason any one of them should
 be able to release it.
 
+![One resource held by Alice and Carol: the tally asks each of them for her
+terms, folds them into the one document the agent signs, collects a verdict
+signed by each owner's own authority, and issues a grant carrying those
+verdicts — which the enforcement point verifies and counts
+again.](joint-ownership.gif)
+
 ```bash
 make joint-check
 ```
