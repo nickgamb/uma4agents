@@ -28,6 +28,7 @@ export const people = [
 
 export const navLinks = [
   { label: "Docs", to: "/docs/overview/" },
+  { label: "Changelog", to: "/changelog/" },
   { label: "Blog", to: "/blog/" },
   { label: "Contact", to: "/contact/" },
 ];

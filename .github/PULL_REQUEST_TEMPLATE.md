@@ -12,6 +12,17 @@
 <!-- Breaking changes, removed endpoints, renamed config, new required
      environment. Write "None" if there are none. -->
 
+## Changelog
+
+<!-- The lines to add to site/src/pages/changelog/index.md when this merges,
+     under a `### v<YYYY.MM.N>` for the next release of the month, nested
+     under today's date. One line per change, prefixed with the component, in
+     the register the file already uses — what changed, not why it is good.
+     Group them under New, Enhancements, Bug fixes or Feature deprecations.
+
+     "None" for changes nobody outside would notice: a refactor with no
+     behaviour change, a typo, a comment. -->
+
 ## Verification
 
 <!-- What was run, and any new checks added. -->

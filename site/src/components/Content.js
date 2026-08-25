@@ -1,5 +1,6 @@
 import * as React from "react";
 import PropTypes from "prop-types";
+import slugify from "../utils/slugify";
 
 export const HTMLContent = ({ content, className }) => (
   <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
@@ -35,6 +36,32 @@ function attachCodeCopyButtons(container) {
   });
 }
 
+/**
+ * Give every h2/h3 an id, in the HTML string, before React renders it.
+ *
+ * `TableOfContents` used to set these on the live nodes instead. That works
+ * exactly once: the first anchor click changes the route hash, React
+ * re-renders, `dangerouslySetInnerHTML` replaces the markup, and every id it
+ * had written is gone — so the contents list keeps pointing at anchors that
+ * no longer exist and nothing moves. Reported on the changelog, latent on
+ * every doc and post for the same reason.
+ *
+ * Ids that are part of the rendered markup survive re-renders, and they are
+ * also in the HTML a crawler or a reader-mode sees. The slug rule is shared
+ * with the contents list so the two cannot disagree.
+ */
+function withHeadingIds(html) {
+  if (!html) return html;
+  const seen = new Map();
+  return html.replace(/<(h[23])([^>]*)>([\s\S]*?)<\/\1>/g, (m, tag, attrs, inner) => {
+    if (/\sid=/.test(attrs)) return m;
+    const base = slugify(inner.replace(/<[^>]+>/g, "")) || "section";
+    const n = seen.get(base) || 0;
+    seen.set(base, n + 1);
+    return `<${tag}${attrs} id="${n ? `${base}-${n}` : base}">${inner}</${tag}>`;
+  });
+}
+
 /** Same as HTMLContent plus a prod-style Copy control on fenced code blocks. */
 export const HTMLContentWithCodeCopy = ({ content, className }) => {
   const ref = React.useRef(null);
@@ -45,7 +72,7 @@ export const HTMLContentWithCodeCopy = ({ content, className }) => {
     <div
       ref={ref}
       className={className}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: withHeadingIds(content) }}
     />
   );
 };

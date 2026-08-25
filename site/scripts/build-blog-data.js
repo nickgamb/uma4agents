@@ -4,6 +4,7 @@
  *
  *   netlify/functions/blog-data.json   what the MCP server answers from
  *   netlify/functions/docs-data.json   the same, for the documentation
+ *   netlify/functions/changelog-data.json  the same, for the changelog
  *   static/search-index.json           what ⌘K filters, client-side
  *   static/llms.txt                    the guided index for language models
  *
@@ -24,6 +25,8 @@ const BLOG_DIR = path.join(root, "src", "pages", "blog");
 const DOCS_DIR = path.join(root, "src", "pages", "docs");
 const DATA_OUT = path.join(root, "netlify", "functions", "blog-data.json");
 const DOCS_OUT = path.join(root, "netlify", "functions", "docs-data.json");
+const CHANGELOG_DIR = path.join(root, "src", "pages", "changelog");
+const CHANGELOG_OUT = path.join(root, "netlify", "functions", "changelog-data.json");
 const SEARCH_OUT = path.join(root, "static", "search-index.json");
 const LLMS_OUT = path.join(root, "static", "llms.txt");
 const SITE = siteMetadata.siteUrl;
@@ -149,6 +152,56 @@ const docs = allPages().map((entry) => {
 
 fs.writeFileSync(DOCS_OUT, JSON.stringify(docs, null, 2));
 
+// --- the changelog -------------------------------------------------------
+// One entry per release, split out of the page so an agent can be asked what
+// changed on a date without being handed the whole file. The date headings
+// are `## `, the version is the paragraph under each, and everything below a
+// heading belongs to it — which is the page's own structure rather than a
+// second format maintained beside it.
+const changelog = fs
+  .readdirSync(CHANGELOG_DIR)
+  .filter((f) => f.endsWith(".md"))
+  .flatMap((file) => {
+    const { frontmatter, body } = parseFrontmatter(
+      fs.readFileSync(path.join(CHANGELOG_DIR, file), "utf-8")
+    );
+    const slug = file === "index.md" ? "" : `/${file.replace(/\.md$/, "")}`;
+    const url = `/changelog${slug}/`;
+    // `## ` is the date and `### ` the release under it, because several
+    // land on most days. One record per release, carrying its date.
+    return body
+      .split(/^## /m)
+      .slice(1)
+      .flatMap((day) => {
+        const [date, ...dayRest] = day.split("\n");
+        return dayRest
+          .join("\n")
+          .split(/^### /m)
+          .slice(1)
+          .map((chunk) => {
+            const [version, ...rest] = chunk.split("\n");
+            const text = rest.join("\n").trim();
+            return { date: date.trim(), version: version.trim(), text };
+          });
+      })
+      .map(({ date, version, text }) => {
+        return {
+          date,
+          version,
+          url,
+          page: frontmatter.title || "Changelog",
+          // Every line that is a change, without the section headings — the
+          // headings say which kind, and the kind travels on the line below.
+          changes: (text.match(/^- .+$/gm) || []).map((l) =>
+            l.replace(/^- /, "").replace(/\*\*/g, "")
+          ),
+          body: text,
+        };
+      });
+  });
+
+fs.writeFileSync(CHANGELOG_OUT, JSON.stringify(changelog, null, 2));
+
 // --- the search index ----------------------------------------------------
 // Deliberately small: title, where it sits, its headings, and the first
 // paragraph. Enough for a name-what-you-want search over a few dozen pages,
@@ -175,6 +228,17 @@ const searchIndex = [
     headings: d.figure
       ? [...d.headings, d.figure.title, ...d.figure.steps]
       : d.headings,
+  })),
+  // One row per release rather than one for the page: somebody searching
+  // "break-glass" wants the day it landed, and a single Changelog row would
+  // match everything and locate nothing.
+  ...changelog.map((c) => ({
+    title: c.version ? `${c.date} — ${c.version}` : c.date,
+    url: c.url,
+    section: "Changelog",
+    group: c.date.replace(/^\w+ \d+ /, ""),
+    description: c.changes[0] || "",
+    headings: c.changes,
   })),
   ...posts.map((p) => ({
     title: p.title,
@@ -218,6 +282,20 @@ const llms = [
       `- [${d.section} · ${d.title}](${SITE}${d.markdown}): ${d.description || ""}`.trimEnd()
   ),
   "",
+  "## Changelog",
+  "",
+  "Every release, newest first. One entry per merged change; several land on",
+  "most days.",
+  "",
+  ...changelog
+    .slice(0, 12)
+    .map(
+      (c) =>
+        `- [${c.date}${c.version ? ` · ${c.version}` : ""}](${SITE}/changelog.md): ` +
+        `${c.changes[0] || ""}`.trimEnd()
+    ),
+  `- [The full changelog](${SITE}/changelog.md): every release since the first.`,
+  "",
   "## Posts",
   "",
   ...posts.map(
@@ -228,6 +306,7 @@ const llms = [
   "",
   `- [Home](${SITE}/): The four-beat grant as an animated walkthrough — challenge, terms, commit, grant.`,
   `- [Docs](${SITE}/docs/overview/): Concepts, guides and the wire contract.`,
+  `- [Changelog](${SITE}/changelog/): Every release of the reference architecture, newest first.`,
   `- [Blog](${SITE}/blog/): Working notes on carrying UMA into the agent era.`,
   `- [Contact](${SITE}/contact/): Use cases, problems and ideas are what shape where this goes next.`,
   "",

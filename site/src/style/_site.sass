@@ -1827,3 +1827,133 @@ $docs-toc-w: 220px
     height: 100%
     border: 0
 
+
+// ---------------------------------------------------------------- changelog
+//
+// Two columns: the dates on the left, the entries in the middle. Built on the
+// blog's article styles rather than the docs' three-column shell, because a
+// changelog is scanned for a date rather than read through.
+
+.changelog-hero
+  padding: calc(#{$nav-height} + 3rem) 1.5rem 2rem
+  border-bottom: 1px solid $border
+
+.changelog-hero__inner
+  max-width: 62rem
+  margin: 0 auto
+  h1
+    font-size: clamp(1.9rem, 4vw, 2.6rem)
+    letter-spacing: -0.02em
+    margin: 0 0 0.6rem
+  p
+    color: $fg-muted
+    max-width: 60ch
+    margin: 0 0 1.2rem
+
+.changelog-area
+  padding: 2.5rem 1.5rem 5rem
+
+.changelog-wrapper
+  max-width: 62rem
+  margin: 0 auto
+  display: grid
+  grid-template-columns: 13rem minmax(0, 1fr)
+  gap: 3rem
+  @media (max-width: $bp-lg)
+    grid-template-columns: 1fr
+    gap: 1.5rem
+
+.changelog-wrapper .changelog-body
+  grid-column: 2
+  @media (max-width: $bp-lg)
+    grid-column: 1
+    grid-row: 2
+
+.changelog-wrapper .changelog-toc
+  grid-column: 1
+  grid-row: 1
+  position: sticky
+  top: calc(#{$nav-height} + 1.5rem)
+  align-self: start
+  max-height: calc(100vh - #{$nav-height} - 3rem)
+  overflow-y: auto
+  @media (max-width: $bp-lg)
+    position: static
+    max-height: none
+    padding-bottom: 1.25rem
+    border-bottom: 1px solid $border
+  h4
+    font-family: $font-mono
+    font-size: 0.68rem
+    letter-spacing: 0.16em
+    color: $fg-dim
+    margin: 0 0 0.9rem
+  ul
+    list-style: none
+    margin: 0
+    padding: 0
+    display: grid
+    gap: 0.5rem
+  li.is-sub
+    padding-left: 0.85rem
+    a
+      font-family: $font-mono
+      font-size: 0.78rem
+  a
+    color: $fg-muted
+    text-decoration: none
+    font-size: 0.85rem
+    &:hover
+      color: $primary
+
+.changelog-body
+  min-width: 0
+  font-size: 0.97rem
+  color: $fg-body
+
+  // One entry per date. The rule above it is what separates releases at a
+  // glance when several land in a week.
+  h2
+    font-size: 1.3rem
+    letter-spacing: -0.01em
+    margin: 2.8rem 0 0.4rem
+    padding-top: 2.2rem
+    border-top: 1px solid $border
+    &:first-of-type
+      margin-top: 0
+      padding-top: 0
+      border-top: 0
+
+  // The release. Several land on most days, so the version is its own
+  // heading under the date rather than a repeated date heading per release.
+  h3
+    font-family: $font-mono
+    font-size: 0.95rem
+    color: $fg-body
+    margin: 1.8rem 0 0.9rem
+
+  // The kind of change.
+  h4
+    font-size: 0.72rem
+    font-family: $font-mono
+    letter-spacing: 0.14em
+    text-transform: uppercase
+    color: $fg-dim
+    margin: 1.5rem 0 0.7rem
+
+  ul
+    margin: 0
+    padding-left: 1.1rem
+    display: grid
+    gap: 0.5rem
+  li
+    line-height: 1.55
+  li > strong:first-child
+    color: $fg-body
+    font-weight: 600
+
+  a
+    color: $primary
+  code
+    font-family: $font-mono
+    font-size: 0.86em

@@ -64,6 +64,25 @@ UMA 2.0. Listed in reading order.
 - [Reference · Deviations from UMA 2.0](https://u4a.ai/docs/reference/deviations.md): The extension register — every place this profile departs from stock UMA, what the baseline says, and why each departure exists.
 - [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-five recommendations, and what was parked.
 
+## Changelog
+
+Every release, newest first. One entry per merged change; several land on
+most days.
+
+- [August 25 2026 · v2026.08.22](https://u4a.ai/changelog.md): Organization: a charter may only claim a namespace it names. `northwind-vault/*` is accepted; `*/get_positions` is refused.
+- [August 25 2026 · v2026.08.21](https://u4a.ai/changelog.md): Joint ownership: a resource can have several owners of equal standing, none of whom can decide alone. A published mandate names who is entitled to be counted, at what weight and how many it takes; each owner's authority signs a verdict bound to one negotiation and one agreement; a tally collects them.
+- [August 25 2026 · v2026.08.20](https://u4a.ai/changelog.md): Organization: an organization can own resources, share them with members under a role, and set policy over them. Each member administers access through her own authorization server and her own terms. New `org-authority` service.
+- [August 23 2026 · v2026.08.19](https://u4a.ai/changelog.md): Authorization server: one resource server can hold many people's accounts, each governed by an authorization server of her own. Every owner-scoped artifact carries its owner: the ticket, the grant, the resource id, the terms template and the RFC 9728 document.
+- [August 21 2026 · v2026.08.18](https://u4a.ai/changelog.md): kagent: `make kagent-ask Q=…` asks your own question instead of a hardcoded one, and `SIM=0` lets a person answer the request rather than the check answering it.
+- [August 21 2026 · v2026.08.17](https://u4a.ai/changelog.md): Licensing: `NOTICE` rewritten from a component-by-component audit, separating the application stack, the Kubernetes platform, the website and upstream checkouts. One licence had been stated incorrectly.
+- [August 20 2026 · v2026.08.16](https://u4a.ai/changelog.md): Authorization server: `standing.first_party` — an agent is first-party when the operator it names is an origin the owner claimed *and* her authority found that agent's key published in that operator's directory.
+- [August 19 2026 · v2026.08.15](https://u4a.ai/changelog.md): Authorization server: the derived `enforced` annotation was written through `publish_terms`, which is idempotent per template id — so on any store that had already published a version the field was dropped and never appeared. Postgres failed where the in-memory store passed, because the latter republishes on every boot.
+- [August 19 2026 · v2026.08.14](https://u4a.ai/changelog.md): Authorization server: her terms mark which prohibitions the enforcement point refuses outright — `operation_mismatch` and `already_consumed` — rather than presenting every line as equally a matter of trust.
+- [August 19 2026 · v2026.08.13](https://u4a.ai/changelog.md): Protocol: two optional requester-authored claims on the agreement — a stated reason and a cited mandate — recorded and shown to the owner, never judged. The requesting side previously had nowhere to say what it was asking for.
+- [August 17 2026 · v2026.08.12](https://u4a.ai/changelog.md): Docs: the assurance material split by subject — what an authority can verify, the owner's attention as a denial-of-service surface, revoking an operator rather than an agent, and a guide to writing rules.
+- [August 17 2026 · v2026.08.11](https://u4a.ai/changelog.md): Authorization server: the owner configures the attention budget and the assurance floors from her portal, rather than them being constants.
+- [The full changelog](https://u4a.ai/changelog.md): every release since the first.
+
 ## Posts
 
 - [Everything You Need to Know About Deploying U4A at Scale](https://u4a.ai/blog/2026-08-12-deploying-u4a-at-scale.md): A field guide to running owner-authoritative authorization for real: how it differs from the policy engine you already run, the parts list, the five things that will bite you, a complete Kubernetes reference architecture on the solo.io stack — and an honest list of what it does not solve yet.
@@ -73,6 +92,7 @@ UMA 2.0. Listed in reading order.
 
 - [Home](https://u4a.ai/): The four-beat grant as an animated walkthrough — challenge, terms, commit, grant.
 - [Docs](https://u4a.ai/docs/overview/): Concepts, guides and the wire contract.
+- [Changelog](https://u4a.ai/changelog/): Every release of the reference architecture, newest first.
 - [Blog](https://u4a.ai/blog/): Working notes on carrying UMA into the agent era.
 - [Contact](https://u4a.ai/contact/): Use cases, problems and ideas are what shape where this goes next.
 

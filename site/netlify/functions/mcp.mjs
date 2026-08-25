@@ -7,8 +7,10 @@ import { createRequire } from "module";
  * u4a.ai as an MCP server.
  *
  * The site is about agents negotiating for access to things, so it should be
- * readable by one. Two pairs of tools: list what is here, and fetch one thing
- * in full — once for the documentation, once for the blog.
+ * readable by one. Pairs of tools: list what is here, and fetch one thing in
+ * full — for the documentation and for the blog. The changelog gets a single
+ * tool instead, because a release is already small: listing them and fetching
+ * one would be two calls to read what fits in the first.
  *
  * The indexes are generated at build time by scripts/build-blog-data.js and
  * bundled with the function — reading the Markdown from disk at request time
@@ -23,6 +25,7 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const blogData = require("./blog-data.json");
 const docsData = require("./docs-data.json");
+const changelogData = require("./changelog-data.json");
 
 const SITE = "https://u4a.ai";
 const NAME = "u4a";
@@ -102,6 +105,42 @@ function createServer() {
       ].join("\n");
 
       return { content: [{ type: "text", text: header + doc.body }] };
+    }
+  );
+
+  server.tool(
+    "listChangelog",
+    "List releases of the UMA for Agents reference architecture, newest " +
+      "first, with the date, version and the changes in each. Optionally " +
+      "filter to releases whose text mentions a term, or take the most " +
+      "recent few.",
+    {
+      contains: z
+        .string()
+        .optional()
+        .describe("Only releases whose changes mention this text."),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Return at most this many, newest first."),
+    },
+    async ({ contains, limit }) => {
+      const needle = (contains || "").toLowerCase();
+      const hits = changelogData
+        .filter((r) => !needle || r.body.toLowerCase().includes(needle))
+        .slice(0, limit || 25)
+        .map((r) => ({
+          date: r.date,
+          version: r.version,
+          changes: r.changes,
+          url: `${SITE}${r.url}`,
+          markdown: `${SITE}/changelog.md`,
+        }));
+      return {
+        content: [{ type: "text", text: JSON.stringify(hits, null, 2) }],
+      };
     }
   );
 
@@ -194,10 +233,11 @@ export default async (req) => {
         name: NAME,
         version: VERSION,
         description:
-          "MCP server for u4a.ai. Tools: listDocs, getDoc, listBlogs, getBlog. " +
+          "MCP server for u4a.ai. Tools: listDocs, getDoc, listChangelog, " +
+          "listBlogs, getBlog. " +
           "Every page is also plain Markdown — /docs/<section>/<page>.md and " +
           "/blog/<slug>.md",
-        tools: ["listDocs", "getDoc", "listBlogs", "getBlog"],
+        tools: ["listDocs", "getDoc", "listChangelog", "listBlogs", "getBlog"],
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

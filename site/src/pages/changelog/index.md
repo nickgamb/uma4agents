@@ -1,0 +1,243 @@
+---
+templateKey: changelog
+title: Changelog
+seoTitle: "Changelog — UMA for Agents"
+description: Release notes for the UMA for Agents reference architecture, newest first.
+---
+
+<!-- Each merged pull request adds a release at the top.
+
+     `## <Month D YYYY>` is the date, and every release that day is a
+     `### v<YYYY.MM.N>` under it — several land on most days, and a repeated
+     date heading is neither a unique anchor nor a usable contents entry.
+     Under the version, `#### New`, `#### Enhancements`, `#### Bug fixes` or
+     `#### Feature deprecations`.
+
+     One line per change, prefixed with the component. State what changed;
+     the reasoning belongs in the docs. The pull request template asks for
+     these lines. -->
+
+Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
+release within that month. One entry per release.
+
+## August 25 2026
+
+### v2026.08.22
+
+#### Enhancements
+
+- **Organization:** a charter may only claim a namespace it names. `northwind-vault/*` is accepted; `*/get_positions` is refused.
+- **Authorization server:** an organization reaches nothing an owner holds jointly with somebody else, whatever its charter claims. Enforced at her authority, not in the charter.
+- **Authorization server:** terms over a jointly held resource can no longer share a tier with anything else.
+- **Portal:** Agent Access → **Joint accounts** — who else holds each account, what it takes to release it, and a preview to agree to before joining.
+
+#### Bug fixes
+
+- **Authorization server:** the two organization-admin endpoints returned 500 instead of filtering a jointly held resource out of the results.
+
+### v2026.08.21
+
+#### New
+
+- **Joint ownership:** a resource can have several owners of equal standing, none of whom can decide alone. A published **mandate** names who is entitled to be counted, at what weight and how many it takes; each owner's authority signs a **verdict** bound to one negotiation and one agreement; a **tally** collects them.
+- **Tally:** new `joint-tally` service, speaking an ordinary authorization-server surface so an unmodified agent negotiates with it as with any authority. Reachable at `/mcp/joint/<account>`.
+- **Tally:** every holder's terms are folded into the single document the agent signs: shortest expiry, intersected scopes, unioned prohibitions. Each holder's authority refuses anything signed that is wider than what she published.
+- **Enforcement point:** a joint grant carries the holders' signed verdicts. Each is verified against that holder's published keys and the count is re-run before the call is allowed.
+- **Authorization server:** `/owner/joint` to join, preview and leave a mandate; `/joint/quote` and `/joint/verdict` for the tally, answered only for a mandate she agreed to.
+- **Kubernetes:** the tally runs in a namespace of its own, belonging to neither owner.
+
+#### Bug fixes
+
+- **Authorization server:** `save_negotiation` creates a negotiation that never had a ticket. On Postgres it was an UPDATE that matched no row, so a request created by another owner's tally never reached the owner's queue and timed out.
+- **Kubernetes:** `joint-vault` gained the AuthorizationPolicy naming its caller. Without it the mesh reset the connection and the gateway reported a 500 from an upstream that never saw the request.
+- **Kubernetes:** `policy-test` declares its own ServiceAccount rather than borrowing one from `smoke-test`, which made it unschedulable on a fresh cluster.
+
+### v2026.08.20
+
+#### New
+
+- **Organization:** an organization can own resources, share them with members under a role, and set policy over them. Each member administers access through her own authorization server and her own terms. New `org-authority` service.
+- **Console:** new `org-console`, the administrator's surface. The charter is editable as a form or as JSON, with a Rego editor for the organization's own operating rules.
+- **Organization:** roles carry `delegation` — `none`, `first-party-only`, `any-agent` — naming *whose* agent may act on a shared resource.
+- **Organization:** groups are managed from the console: create one, set what it reaches, choose which one joiners land in, move members between them. Each publishes a charter version.
+- **Organization:** break-glass grants, signed by the organization and recognised at the enforcement point by issuer. Bounded by a disclosed clause, single-use, and notified to the member when opened.
+- **Authorization server:** an organization's ceiling is clamped into her terms on write, so it appears in the document the agent signs.
+- **Resource server:** `/mcp/shared/<member>` — one resource administered by several people, each under her own authority.
+
+## August 23 2026
+
+### v2026.08.19
+
+#### New
+
+- **Authorization server:** one resource server can hold many people's accounts, each governed by an authorization server of her own. Every owner-scoped artifact carries its owner: the ticket, the grant, the resource id, the terms template and the RFC 9728 document.
+- **Resource server:** `POST /rs/register` — a resource server introduces itself to an authority nobody configured it against, signing with a key published at the origin of the resource it serves. Registration is `pending` until the owner authorizes it.
+- **Authorization server:** a second owner runs in the lab on her own authority.
+
+## August 21 2026
+
+### v2026.08.18
+
+#### Enhancements
+
+- **kagent:** `make kagent-ask Q=…` asks your own question instead of a hardcoded one, and `SIM=0` lets a person answer the request rather than the check answering it.
+
+#### Bug fixes
+
+- **kagent:** the model config dropped its final line for any provider without an extra block, so `anthropic` and `openai` produced an invalid config.
+
+### v2026.08.17
+
+#### Enhancements
+
+- **Licensing:** `NOTICE` rewritten from a component-by-component audit, separating the application stack, the Kubernetes platform, the website and upstream checkouts. One licence had been stated incorrectly.
+
+## August 20 2026
+
+### v2026.08.16
+
+#### New
+
+- **Authorization server:** `standing.first_party` — an agent is first-party when the operator it names is an origin the owner claimed *and* her authority found that agent's key published in that operator's directory.
+- **Authorization server:** the owner as requesting party, with her own agent as a third party. No new branch in the grant loop.
+
+## August 19 2026
+
+### v2026.08.15
+
+#### Bug fixes
+
+- **Authorization server:** the derived `enforced` annotation was written through `publish_terms`, which is idempotent per template id — so on any store that had already published a version the field was dropped and never appeared. Postgres failed where the in-memory store passed, because the latter republishes on every boot.
+
+### v2026.08.14
+
+#### Enhancements
+
+- **Authorization server:** her terms mark which prohibitions the enforcement point refuses outright — `operation_mismatch` and `already_consumed` — rather than presenting every line as equally a matter of trust.
+
+### v2026.08.13
+
+#### New
+
+- **Protocol:** two optional requester-authored claims on the agreement — a stated reason and a cited mandate — recorded and shown to the owner, never judged. The requesting side previously had nowhere to say what it was asking for.
+- **Authorization server:** every ledger entry with a party to name is attributed, so a refused or denied exchange can be traced to an agent.
+
+#### Bug fixes
+
+- **Portal:** requester-supplied strings were rendered unescaped.
+
+## August 17 2026
+
+### v2026.08.12
+
+#### Enhancements
+
+- **Docs:** the assurance material split by subject — what an authority can verify, the owner's attention as a denial-of-service surface, revoking an operator rather than an agent, and a guide to writing rules.
+
+### v2026.08.11
+
+#### Enhancements
+
+- **Authorization server:** the owner configures the attention budget and the assurance floors from her portal, rather than them being constants.
+
+#### Bug fixes
+
+- **Authorization server:** `assess()` returned `binding: 1` unconditionally. Every axis now starts at 0 and is raised only by a check that ran and passed in this negotiation.
+
+### v2026.08.10
+
+#### New
+
+- **Authorization server:** agent assurance — three axes an owner's authority can establish about the asking agent (binding, provenance, accountability), readable by her rules without naming an agent. No level grants access; a strong showing can only stop a rule from firing.
+- **Authorization server:** a depth budget on the owner's attention, counted per lane, so a flood of anonymous agents cannot crowd out an attributable one.
+
+## August 16 2026
+
+### v2026.08.9
+
+#### Enhancements
+
+- **Docs:** the owner's side described as it now works — a browser session *or* a signature from a key her own device holds. The walkthrough gains a route to the personal-AI demo.
+
+### v2026.08.8
+
+#### New
+
+- **Kwaai binding:** Kwaai's pAI-OS runs in the lab from a pinned upstream ref, with the U4A ability installed in the layout it scans for. `make paios`, `make paios-check`, `make paios-down`, and the same three in Kubernetes.
+- **Kwaai binding:** it grants the tiers the owner gave standing consent to, and refuses an ask-me trade — an ability has no channel to reach its person.
+
+### v2026.08.7
+
+#### New
+
+- **Protocol:** `make flow-check` — the same negotiation run four times with the requesting side arranged four ways: a bare key, an identified agent whose session key rotates, one described by a metadata document, one published in a key directory. Her terms, her grant and her policy come out identical.
+- **Authorization server:** an owner credential, so her authority accepts either a browser session or a signature from a key her own device holds.
+
+## August 15 2026
+
+### v2026.08.6
+
+#### New
+
+- **Docs:** the documentation site, around thirty pages across overview, guides and reference.
+
+## August 14 2026
+
+### v2026.08.5
+
+#### New
+
+- **Kubernetes:** a devcontainer, so the Kubernetes lab runs in a browser with nothing installed.
+
+#### Bug fixes
+
+- **Kubernetes:** `alice/uma-as` and `meridian/uma-pep` need the waypoint label and no manifest carried it — both had been applied by hand, so a clean clone returned 6 of 13 smoke checks. Without the label the mesh judges the policy at L4, where it cannot read a path, and denies everything with nothing in any log naming a reason.
+
+## August 12 2026
+
+### v2026.08.4
+
+#### Enhancements
+
+- **Docs:** the Kubernetes reference architecture on the site.
+
+### v2026.08.3
+
+#### New
+
+- **Kubernetes:** the same source deployed on Kubernetes — six namespaces, one per party, each with its own workload identity, the authorization server replicated against a replicated database, and the cross-principal boundary enforced by a service mesh.
+- **Kubernetes:** `make k8s-policy-test`, asserting the refusals rather than only the allows.
+
+## August 11 2026
+
+### v2026.08.2
+
+#### Enhancements
+
+- **Kubernetes:** the deployed shape brought up to the scale the claims need.
+
+### v2026.08.1
+
+#### New
+
+- **Enforcement point:** `ENFORCEMENT_MODE=gateway|embedded`. The decision logic takes request facts and returns a verdict with no transport of its own, so the same core runs in a gateway or inside the resource server.
+- **Protocol:** the challenge is specified as parameters rather than a header — `401 + WWW-Authenticate: UMA` where there is a status line, JSON-RPC `-32001` carrying the same parameters where there is not.
+
+#### Enhancements
+
+- **MCP:** aligned to the 2026-07-28 revision. The handshake moved to `server/discover`, sessions were removed, and client identity travels per request.
+
+#### Feature deprecations
+
+- **Registration:** push registration removed from the main line. It remains conformant and is preserved on the `legacy/rreg-baseline` branch.
+
+## July 29 2026
+
+### v2026.07.1
+
+#### New
+
+- **Discovery:** beat 0 split into two layers. A public RFC 9728 document names the tool surfaces, the owner's authorization servers and the signing keys; a protected owner-resources listing is served only to a querier that proves possession of the owner's authority key.
+- **Registration:** declarative pull registration — the resource server publishes, the authority fetches, verifies the signed metadata and materialises its registry.
+- **Discovery:** a second binding encoding at `/.well-known/aauth-resource.json`, with a content-addressed vocabulary. Both documents point at the same owner-resources endpoint.
+- **Licensing:** Apache 2.0.

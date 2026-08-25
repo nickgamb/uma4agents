@@ -153,13 +153,17 @@ function writeSitemap({ fs, siteMeta }) {
           ? "1.0"
           : ["/docs/overview/", "/docs/guides/roles/", "/docs/reference/wire-contract/"].includes(p)
           ? "0.9"
-          : p.startsWith("/blog/") || p.startsWith("/docs/")
+          : p.startsWith("/blog/") || p.startsWith("/docs/") || p.startsWith("/changelog")
           ? "0.8"
           : "0.6";
+      // Most of this site changes when something is rewritten. The changelog
+      // changes when anything ships, which is several times a day, and a
+      // crawler told "weekly" will keep serving a stale one.
+      const changefreq = p.startsWith("/changelog") ? "daily" : "weekly";
       return [
         "  <url>",
         `    <loc>${siteMeta.siteUrl}${p}</loc>`,
-        `    <changefreq>weekly</changefreq>`,
+        `    <changefreq>${changefreq}</changefreq>`,
         `    <priority>${priority}</priority>`,
         "  </url>",
       ].join("\n");
@@ -175,16 +179,22 @@ function writeSitemap({ fs, siteMeta }) {
 }
 
 /**
- * Publish a plain-Markdown copy of every doc page beside its HTML page, e.g.
- * /docs/overview/why.md next to /docs/overview/why/.
+ * Publish a plain-Markdown copy of every page under a section, beside its
+ * HTML page — e.g. /docs/overview/why.md next to /docs/overview/why/.
  *
  * The URL is what PageActions asks for: the page path with its trailing slash
  * dropped and `.md` appended. So a section index at src/pages/docs/overview/
  * index.md lands at /docs/overview.md — one level up from where the source
- * file sits — because /docs/overview/ is the page it belongs to.
+ * file sits — because /docs/overview/ is the page it belongs to. The
+ * changelog's index.md lands at /changelog.md for the same reason.
+ *
+ * Parameterised by section rather than copied per section: the twins are what
+ * the "Copy page" action and every language model read, and a section whose
+ * twins were written by a second copy of this is a section whose twins go
+ * stale on their own schedule.
  */
-function writeDocTwins({ fs, siteMeta }) {
-  const srcRoot = path.resolve("src/pages/docs");
+function writeMarkdownTwins({ fs, siteMeta, section }) {
+  const srcRoot = path.resolve(`src/pages/${section}`);
   if (!fs.existsSync(srcRoot)) return 0;
 
   const { scriptFor, titleFor } = require("./src/data/figure-scripts");
@@ -214,8 +224,12 @@ function writeDocTwins({ fs, siteMeta }) {
       .join("/")
       .replace(/\.md$/, "")
       .replace(/(^|\/)index$/, "");
-    const url = `/docs/${rel}/`.replace(/\/+$/, "/");
-    const out = path.resolve(`public/docs/${rel.replace(/\/$/, "")}.md`);
+    const url = `/${section}/${rel}/`.replace(/\/+$/, "/");
+    const out = path.resolve(
+      rel === ""
+        ? `public/${section}.md`
+        : `public/${section}/${rel.replace(/\/$/, "")}.md`
+    );
 
     const header = [
       `# ${field("title")}`,
@@ -268,8 +282,10 @@ exports.onPostBuild = async () => {
   // early return when there are no posts cannot silently skip it.
   writeSitemap({ fs, siteMeta });
 
-  const docs = writeDocTwins({ fs, siteMeta });
+  const docs = writeMarkdownTwins({ fs, siteMeta, section: "docs" });
   console.info(`Published ${docs} Markdown copies to /docs/**.md`);
+  const changes = writeMarkdownTwins({ fs, siteMeta, section: "changelog" });
+  console.info(`Published ${changes} Markdown copies to /changelog**.md`);
 
   if (!fs.existsSync(srcDir)) return;
   fs.mkdirSync(outDir, { recursive: true });
