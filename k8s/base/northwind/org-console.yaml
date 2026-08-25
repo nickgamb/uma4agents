@@ -55,7 +55,7 @@ spec:
             - { name: CONSOLE_PUBLIC_URL, value: "https://org-console.uma.lab" }
             - name: CONSOLE_SESSION_SECRET
               valueFrom: { secretKeyRef: { name: org-config, key: session-secret } }
-            - { name: SSL_CERT_FILE, value: /certs/ca.crt }
+            - { name: SSL_CERT_FILE, value: /certs/rootCA.pem }
           volumeMounts:
             - { name: ca, mountPath: /certs, readOnly: true }
           readinessProbe:
@@ -69,7 +69,9 @@ spec:
             allowPrivilegeEscalation: false
             capabilities: { drop: ["ALL"] }
       volumes:
+        # trust-manager writes the lab CA into a ConfigMap in every
+        # namespace labelled with a party, under the same filename the
+        # compose stack mounts. Same value for UMA4A_CA_BUNDLE either way, and
+        # no application change for Kubernetes.
         - name: ca
-          secret:
-            secretName: uma-lab-ca
-            items: [{ key: ca.crt, path: ca.crt }]
+          configMap: { name: uma-lab-ca-bundle }

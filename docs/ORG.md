@@ -39,7 +39,7 @@ is the useful result:
 | State | What it is | Status |
 |---|---|---|
 | **Self-administration** | The subject administers her own resources | The base profile. Alice over `alice-vault/*`. |
-| **Administration by proxy** | One administrator who is not the subject | A **deployment**, not protocol. Her authority accepts a credential that is hers; who holds it is a question for her identity provider, and the lab already runs the case where something other than her browser acts for her (`UMA_AS_OWNER_AUTH=local-key`). |
+| **Administration by proxy** | One administrator who is not the subject | Nothing changes in the grant loop. What it needs is the one thing her authority already does implicitly: **who may administer this owner's policy**. The lab says it in configuration (`UMA_AS_OWNER_AUTH` for what kind of credential counts, `UMA_AS_OWNER_KEY_OWNER` for whose it is — a signature proves a holder, not an owner). A real deployment needs that as a managed list, and it is worth specifying: it is the difference between a guardian, a power of attorney, and an account takeover. |
 | **Co-administration** | Several administrators over one subject's resources | **This.** One resource, several people administering access to it, each under her own authorization server — which is the part that had no mechanism. |
 | **Co-administration by proxy** | Both at once | The two above composed. Nothing further is needed. |
 
@@ -162,6 +162,19 @@ lengthen an expiry, add a scope, remove a prohibition or turn off an ask —
 which is what makes it safe to run on every write without checking first
 whether it would help or hurt. `lib/test_org.py` enumerates the combinations
 and asserts it.
+
+The other design that suggests itself is to publish the envelope as a second
+document and let the agent read both. It is worse in three ways, and they are
+the reasons this one is worth specifying:
+
+- it makes the requesting side compute the intersection, which is a decision
+  procedure to get wrong in a party that has every incentive to get it wrong
+  generously;
+- two documents can disagree, and nothing says which wins;
+- the signature would be over *her* terms. The organization's requirements
+  would be the only part of the arrangement nobody signed.
+
+One document, one signature, one thing to hold both sides to.
 
 **The decision is asked for.** Whether one particular request is acceptable is
 a judgement about that request, and it is made at the organization's own

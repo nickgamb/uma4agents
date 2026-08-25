@@ -37,7 +37,7 @@ result:
 | State | Status |
 |---|---|
 | **Self-administration** | The base profile: she administers her own resources. |
-| **Administration by proxy** | A deployment, not protocol. Her authority accepts a credential that is hers; who holds it is a question for her identity provider. |
+| **Administration by proxy** | Nothing changes in the grant loop. What it needs is the thing an owner's authority already does implicitly and no specification names: who may administer this owner's policy. Worth specifying — it is the difference between a guardian, a power of attorney, and an account takeover. |
 | **Co-administration** | This page. Several administrators over one subject's resources, each deciding through **her own authority**. |
 | **Co-administration by proxy** | The two above composed. Nothing further needed. |
 
@@ -121,6 +121,14 @@ the organization requires is *in* what the agent agreed to.
 
 Every field of it moves one way. Nothing in a charter can lengthen an expiry,
 add a scope, remove a prohibition or turn off an ask.
+
+The other design that suggests itself — publish the ceiling as a second
+document and let the agent read both — is worse in three ways: it makes the
+requesting side compute an intersection it has every incentive to compute
+generously, it allows two documents to disagree with nothing saying which
+wins, and the signature would be over her terms alone, leaving the
+organization's requirements as the only part of the arrangement nobody
+signed.
 
 **A decision is asked for.** Whether one particular request is acceptable is a
 judgement about that request, made at the organization's own decision point

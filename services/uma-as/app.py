@@ -1721,12 +1721,24 @@ async def org_related_connections(owner: str) -> list:
     pending_handles = {
         rec.get("handle") for rec in await st(owner).pending_negotiations()
         if org.claims_match(rec.get("resource_id") or "", claims)}
+    blocked = _org_blocked(await org_record(owner))
     out = []
     for conn in await st(owner).connections():
         touched = (set(conn.get("tiers_granted") or []) |
                    set(conn.get("tiers_approved") or [])) & governed
         if touched or conn["handle"] in pending_handles:
-            out.append({**conn, "org_tiers": sorted(touched)})
+            out.append({
+                **conn,
+                "org_tiers": sorted(touched),
+                # Whether the organization has shut this one out of *its*
+                # resources — which is not the same as her `status`, and the
+                # console has to be able to tell them apart or it offers to
+                # shut out an agent it has already shut out.
+                "blocked_for_organization": (
+                    conn["handle"] in blocked["handles"]
+                    or (operator_origin(conn.get("identity") or {}) or "")
+                    in blocked["operators"]),
+            })
     return out
 
 

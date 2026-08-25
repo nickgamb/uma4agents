@@ -406,6 +406,12 @@ def main() -> int:                                            # noqa: C901
               r.status_code == 200, f"{r.status_code} {r.text[:160]}")
         rpt, why = negotiate(c, "alice", hers, "shared")
         check("and it is out", rpt is None and "withdrawn" in why, f"{why}")
+        shown = c.get(f"{ORG}/admin/members/alice/connections", headers=ADMIN,
+                      timeout=15.0).json()
+        check("and the console can see that it is out, rather than offering to "
+              "shut out an agent it already shut out",
+              any(x["handle"] == book_handle and x.get("blocked_for_organization")
+                  for x in shown), f"{[(x['handle'][:14], x.get('blocked_for_organization')) for x in shown]}")
         entry = [e for e in c.get(f"{alice['as']}/owner/ledger",
                                   headers=hdrs(c, "alice"), timeout=15.0).json()
                  if e["kind"] == "org_acted"]

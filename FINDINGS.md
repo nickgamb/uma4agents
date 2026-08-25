@@ -827,9 +827,16 @@ express it.
 What the POC found is that three of the four states already work with what UMA
 has, and the fourth needs one new field.
 
-*Administration by proxy* and *co-administration* are deployments, not
-protocol: an owner-of-record whose authority is administered by somebody else
-is exactly the existing party model with a different person at the console.
+*Administration by proxy* needs nothing from the grant loop. What it needs is
+one thing the owner's authority already does implicitly and no specification
+names: **who may administer this owner's policy**. The lab expresses it as
+configuration — `UMA_AS_OWNER_AUTH` says what kind of credential counts and
+`UMA_AS_OWNER_KEY_OWNER` says whose it is, because a signature proves a holder
+and not an owner — and a real deployment needs that as a managed list rather
+than two environment variables. Naming it is cheap and worth doing: it is the
+difference between a guardian, a power of attorney and an account takeover,
+and today each deployment invents it.
+
 What is genuinely absent is the shape where **the resource stays the
 organization's and the administration is distributed to several people, each
 under her own authorization server**. One resource, several administrators,

@@ -493,7 +493,11 @@ spec:
             principals: ["cluster.local/ns/uma-edge/sa/edge"]
 ---
 # The waypoints themselves must be allowed through to the workloads they
-# front, and this is the piece that is easy to miss.
+# front, and this is the piece that is easy to miss. It was missed again
+# adding the third namespace, and presented exactly as described below: the
+# organization's authority could not reach its own policy engine, one
+# namespace, two pods apart, with an ALLOW naming its service account sitting
+# right there and accepted.
 #
 # Once a workload is behind a waypoint the traffic arrives in two hops:
 # caller → waypoint (where the path rules above are evaluated) → workload
@@ -530,6 +534,20 @@ spec:
     - from:
         - source:
             principals: ["cluster.local/ns/meridian/sa/waypoint"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-waypoint
+  namespace: northwind
+spec:
+  selector:
+    matchLabels: { istio.io/use-waypoint: waypoint }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/northwind/sa/waypoint"]
 ---
 # ═══ aauth ═══════════════════════════════════════════════════════════════
 #

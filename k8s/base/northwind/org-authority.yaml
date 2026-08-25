@@ -83,7 +83,7 @@ spec:
               valueFrom: { secretKeyRef: { name: org-config, key: rs-token } }
             - name: ORG_JOIN_CODE
               valueFrom: { secretKeyRef: { name: org-config, key: join-code } }
-            - { name: UMA4A_CA_BUNDLE, value: /certs/ca.crt }
+            - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }
           volumeMounts:
             - { name: keys, mountPath: /keys }
             - { name: ca, mountPath: /certs, readOnly: true }
@@ -103,7 +103,9 @@ spec:
         # new one, which is the same trade Carol's authority makes, and is why
         # the checks re-establish rather than assume.
         - { name: keys, emptyDir: {} }
+        # trust-manager writes the lab CA into a ConfigMap in every
+        # namespace labelled with a party, under the same filename the
+        # compose stack mounts. Same value for UMA4A_CA_BUNDLE either way, and
+        # no application change for Kubernetes.
         - name: ca
-          secret:
-            secretName: uma-lab-ca
-            items: [{ key: ca.crt, path: ca.crt }]
+          configMap: { name: uma-lab-ca-bundle }
