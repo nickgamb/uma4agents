@@ -521,6 +521,29 @@ spec:
             principals:
               - cluster.local/ns/meridian/sa/meridian
 ---
+# The jointly held account, reachable by the agent-facing gateway alone.
+#
+# The same one-line policy each vault beside it has, and the same reason for
+# writing it: a namespace with a default-deny has to name every caller of
+# every workload, and a workload added without one does not fail visibly —
+# ztunnel resets the connection and the gateway reports a 500 from an
+# upstream that never saw the request. Which is exactly what happened when
+# this file did not have it.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: joint-vault-callers
+  namespace: meridian
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: joint-vault }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/meridian
+---
 # The agent-facing gateway. Reachable from the edge — which is how Bob's
 # agent arrives, and the only way it can.
 apiVersion: security.istio.io/v1
