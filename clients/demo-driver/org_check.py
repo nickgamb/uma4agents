@@ -238,6 +238,15 @@ def main() -> int:                                            # noqa: C901
         for owner in OWNERS:
             ensure_resource_server(c, owner)
             leave(c, owner)
+            # And from the organization's side as well. An authority that
+            # restarted since the last run has forgotten its membership while
+            # the organization still holds it, and the two have to be cleared
+            # independently or a second run enrols somebody who is already a
+            # member. Which is a real property — a membership is a
+            # relationship, and both parties keep their own record of it — and
+            # it makes this check idempotent rather than order-dependent.
+            c.request("DELETE", f"{ORG}/admin/members/{owner}", headers=ADMIN,
+                      timeout=15.0)
             drop_book_tier(c, owner)
             c.request("DELETE", f"{ORG}/admin/invites/{owner}", headers=ADMIN,
                       timeout=15.0)
@@ -337,13 +346,15 @@ def main() -> int:                                            # noqa: C901
         check("terms over the firm's book that exceed the ceiling are refused",
               r.status_code == 400 and "caps access" in r.text, f"{r.text[:160]}")
         r = write_book_terms(c, "alice", 3600)
-        created = r.json()
+        created = r.json() if r.status_code == 200 else {}
         check("terms inside it are hers to write", r.status_code == 200,
-              f"{r.text[:160]}")
+              f"{r.text[:200]}")
         check("and the charter's prohibitions are added to them",
               set(base["envelope"]["require_prohibited"])
-              <= set(created["terms"]["prohibited"]), f"{created.get('terms')}")
-        doc = c.get(f"{alice['as']}/terms/{created['terms']['template_id']}",
+              <= set((created.get("terms") or {}).get("prohibited") or []),
+              f"{created.get('terms')}")
+        doc = c.get(f"{alice['as']}/terms/"
+                    f"{(created.get('terms') or {}).get('template_id', 'none')}",
                     timeout=15.0).json()
         check("the terms document an agent reads names the organization",
               (doc.get("organization") or {}).get("name") == "Northwind Capital",

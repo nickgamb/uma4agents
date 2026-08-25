@@ -476,6 +476,27 @@ spec:
               - cluster.local/ns/meridian/sa/meridian
               - cluster.local/ns/carol/sa/portal
 ---
+# Northwind's book, and the list is shorter than the two above rather than
+# longer. It is reachable from the gateway and from nowhere else: no member's
+# portal reads it directly — she reaches it the same way an agent does, at
+# /mcp/shared/<her>, through the enforcement point and under her own terms.
+# An organization's resource shared with several people is the case where a
+# convenience path for the owner would quietly be a path for every owner.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: northwind-vault-callers
+  namespace: meridian
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: northwind-vault }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/meridian
+---
 # The agent-facing gateway. Reachable from the edge — which is how Bob's
 # agent arrives, and the only way it can.
 apiVersion: security.istio.io/v1

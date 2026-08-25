@@ -113,6 +113,17 @@ spec:
               value: postgres://u4a:u4a-dev-password@uma-as-db-rw.alice.svc.cluster.local:5432/u4a
             # The same path and the same variable the compose stack uses, so
             # nothing in the application knows which shape it is running in.
+            # Where an enrolment code is redeemed, if this owner chooses
+            # to administer resources for an organization. Naming one is not
+            # enrolment and grants nothing: until she enters a code or accepts
+            # an invitation, every line of that layer is inert.
+            - name: UMA_AS_ORG_ISSUER
+              value: https://northwind-org.uma.lab
+            # How the organization reaches this server to deliver a notice.
+            # Its view of her authority, which is the address an agent is
+            # challenged with here and need not be in general.
+            - name: UMA_AS_ORG_CALLBACK
+              value: https://alice-as.uma.lab
             - name: UMA4A_CA_BUNDLE
               value: /certs/rootCA.pem
           volumeMounts:

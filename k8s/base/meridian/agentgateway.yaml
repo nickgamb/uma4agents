@@ -184,12 +184,20 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: alice-vault-mcp
-    # Both. An enforcement point that covered one owner's route and not the
-    # other would not be a weaker version of this — it would be an open door
-    # to a stranger's account, and nothing about the second route says so.
+    # Every route. An enforcement point that covered one owner's route and
+    # not another would not be a weaker version of this — it would be an open
+    # door to a stranger's account, and nothing about the uncovered route
+    # says so. This list was two entries long when the organization's book
+    # was added, and `/mcp/shared/<member>` served the firm's positions to an
+    # unauthenticated caller until `make k8s-org-check` said so. Adding a
+    # route without adding it here is the mistake this comment exists for,
+    # and the comment did not prevent it.
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: carol-vault-mcp
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: northwind-vault-mcp
   traffic:
     extAuth:
       backendRef:

@@ -3410,8 +3410,27 @@ async def owner_resources(request: Request) -> list:
     resource, joined with the tier whose policy governs it. This is the
     surface Alice attaches policy to before any agent has ever called."""
     owner = await require_owner(request)
-    tiers = await st(owner).tiers()
     envelope = await org_envelope(owner) or {}
+    # An organization's resource arrives *after* this process started, so a
+    # replica that was already running when she enrolled has never pulled it.
+    # `RESOURCES` is a per-process cache of what the resource server
+    # publishes — deliberately, since it is re-pullable at any time — and the
+    # repair is the same one `/perm` performs on an unknown id: read what the
+    # resource server publishes now.
+    #
+    # It only bites on a replicated authority. Carol's is one process and
+    # never noticed; Alice's is three over Postgres, and two of them were
+    # showing her a portal with the firm's book missing from it.
+    missing = [g for g in (envelope.get("grants") or [])
+               if not any(org.claims_match(rid, [g]) for rid in RESOURCES)]
+    if missing:
+        for client_id, rs in (await st(owner).resource_servers()).items():
+            try:
+                await asyncio.to_thread(pull_registrations, client_id, rs)
+            except Exception as exc:                            # noqa: BLE001
+                event("resources.pull_retry", client_id=client_id,
+                      error=str(exc)[:200])
+    tiers = await st(owner).tiers()
     out = []
     for rid, desc in RESOURCES.items():
         tier_id, tier = policy.tier_for_resource(tiers, rid)
