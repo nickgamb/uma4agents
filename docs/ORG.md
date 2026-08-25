@@ -20,7 +20,7 @@ mechanism.
 Run it:
 
 ```bash
-make org-check        # 71 assertions across six processes
+make org-check        # 80 assertions across six processes
 make org-test         # the ceiling algebra and the charter validator, no stack
 ```
 
@@ -404,4 +404,4 @@ answer `/decision` and be conformant.
 - `services/org-authority/charter.py` — the charter, and what may be said in it
 - `services/org-authority/org.rego` — the shipped module, and the delegation rule
 - `services/uma-as/org.py` — the clamp, and the party boundary from the member's side
-- `clients/demo-driver/org_check.py` — the 71 assertions
+- `clients/demo-driver/org_check.py` — the 80 assertions

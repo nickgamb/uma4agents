@@ -887,7 +887,7 @@ POC the check is introspection at the organization, which is also where the
 single-use burn serializes; the grant is a JWS over published keys, so local
 verification is available to a deployment willing to solve single use itself.
 
-Built and demonstrated: `make org-check` (71 assertions over six processes),
+Built and demonstrated: `make org-check` (80 assertions over six processes),
 `docs/ORG.md`.
 
 ---

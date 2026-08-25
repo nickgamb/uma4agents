@@ -214,7 +214,7 @@ k8s-multi-owner-check:
 	$(call run_job,multi-owner-check,cat $(K8S)/base/jobs/multi-owner-check.yaml,420s)
 
 ## k8s-org-check: shared ownership — an organization's resources, administered
-## by its members. The same 71 assertions the compose stack runs, against
+## by its members. The same 80 assertions the compose stack runs, against
 ## three parties that are three namespaces with no path between them.
 .PHONY: k8s-org-check
 k8s-org-check:
