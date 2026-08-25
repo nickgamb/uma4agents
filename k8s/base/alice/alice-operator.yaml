@@ -2,9 +2,24 @@
 #
 # The same image as Bob's firm's, in her namespace instead of his, because an
 # operator directory is a party's own infrastructure and which namespace it
-# sits in is the whole statement. The service holds no authoritative state and
-# is parameterised by origin, so running two is the intended shape rather than
-# a duplication -- see clients/agent-operator/server.py.
+# sits in is the whole statement.
+#
+# One replica, unlike his, and the difference is the point rather than an
+# oversight. His firm *provisions* its directory: a document mounted from a
+# Secret, identical on every replica, and `POST /register` refused outright —
+# which is what makes running several correct. Hers is the other case, and
+# the one she actually needs: she activates an agent, and it registers its
+# key at runtime. A directory filled in at runtime lives in one process's
+# memory, so with two replicas the registration lands on one and the
+# authorization server's fetch is load-balanced to the other. The agent then
+# scores accountability 1 instead of 2 — about half the time, with nothing
+# logging a reason.
+#
+# The note on sterling-vance/agent-operator.yaml describes exactly this and
+# was written from a failing check. It was true here too, and this deployment
+# said `replicas: 2` anyway until `make k8s-org-check` caught it. The way to
+# make a service horizontally scalable is to stop it holding state; until
+# hers does, it runs one.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -27,7 +42,10 @@ metadata:
   name: alice-operator
   namespace: alice
 spec:
-  replicas: 2
+  replicas: 1
+  strategy:
+    # Never two at once, for the same reason as the replica count.
+    type: Recreate
   selector:
     matchLabels: { app: alice-operator }
   template:

@@ -63,6 +63,10 @@ CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 # accountability 2 over the firm's book, which is the posture a firm takes.
 HIS_OPERATOR = os.environ.get("UMA4A_AGENT_OPERATOR", "https://agent.uma.lab")
 HER_OPERATOR = os.environ.get("UMA4A_ALICE_OPERATOR", "https://alice-agent.uma.lab")
+# Where the private halves of a provisioned directory are mounted, in the
+# deployment shape that provisions one. Absent under compose, where the
+# operator accepts a key at runtime.
+PUBLISHED_KEYS = os.environ.get("UMA4A_PUBLISHED_KEYS")
 BOOK = "northwind-vault"
 META = mcp_meta("u4a-org-check")
 RUN = uuid.uuid4().hex[:8]
@@ -100,8 +104,29 @@ def hdrs(c: httpx.Client, owner: str) -> dict:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def attested(c: httpx.Client, operator: str) -> AgentKeys:
-    """An agent whose operator published its key — accountability 2."""
+def attested(c: httpx.Client, operator: str, name: str) -> AgentKeys:
+    """An agent whose operator's directory actually carries its key.
+
+    Two ways an operator comes to publish a key, and both are real:
+
+      provisioned  the operator serves a document it was handed, identical on
+                   every replica, and refuses a key registered at runtime.
+                   That is the shape a firm runs, and it is why Bob's
+                   operator has two replicas.
+      registered   the agent registers its key when it is activated. That is
+                   the shape a person runs — she turns on an agent and it
+                   introduces itself — and it holds state, so it runs one.
+
+    Which one applies is a property of the deployment, not of this check, so
+    the provisioned key is used when it is there.
+    """
+    directory = f"{operator}/.well-known/http-message-signatures-directory"
+    provisioned = f"{PUBLISHED_KEYS}/{name}-ed25519.pem" if PUBLISHED_KEYS else None
+    if provisioned and os.path.exists(provisioned):
+        keys = AgentKeys.load_or_create(provisioned)
+        keys.client_id = f"{operator}/agent.json"
+        keys.signature_agent = directory
+        return keys
     keys = AgentKeys()
     keys.client_id = f"{operator}/agent.json"
     keys.signature_agent = keys.publish(c, operator)
@@ -364,8 +389,8 @@ def main() -> int:                                            # noqa: C901
         # --- 5. whose agent it is decides the answer ----------------------
         # The centrepiece. Same terms, same resource, same key strength, same
         # stated reason — and the answer differs because of who runs the agent.
-        his = attested(c, HIS_OPERATOR)
-        hers = attested(c, HER_OPERATOR)
+        his = attested(c, HIS_OPERATOR, "attested")
+        hers = attested(c, HER_OPERATOR, "alice")
         # Both halves of accountability 2, asserted here so that a failure to
         # publish reports as itself rather than as a refusal three beats later.
         check("each operator published its agent's key",
@@ -456,7 +481,7 @@ def main() -> int:                                            # noqa: C901
         known = {x["handle"] for x in
                  c.get(f"{alice['as']}/owner/connections", headers=hdrs(c, "alice"),
                        timeout=15.0).json()}
-        fresh = attested(c, HER_OPERATOR)
+        fresh = attested(c, HER_OPERATOR, "alice")
         rpt, why = negotiate(c, "alice", fresh, "shared", answer="org")
         check("an administrator can answer a request waiting on her",
               rpt is not None, f"{why}")

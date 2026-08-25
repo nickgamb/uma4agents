@@ -49,10 +49,20 @@ spec:
             # Read from the same value the gateway is configured with, so a
             # wait here cannot drift into a flaky one.
             - { name: UMA_PEP_MEMBERSHIP_TTL_S, value: "10" }
+            # The private half of a key Bob's operator already publishes.
+            # It provisions its directory and refuses a key registered at
+            # runtime — which is what makes running two replicas of it
+            # correct — so an agent that wants to be attributable here signs
+            # with a key that operator issued. Absent under compose, where
+            # the operator accepts one at runtime and the check falls back to
+            # registering. Her operator is the other way round, deliberately:
+            # she activates an agent and it introduces itself.
+            - { name: UMA4A_PUBLISHED_KEYS, value: /published }
           volumeMounts:
             - { name: driver, mountPath: /driver/org_check.py, subPath: org_check.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }
             - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: published, mountPath: /published, readOnly: true }
             - { name: keys, mountPath: /driver/keys }
           workingDir: /driver
           resources:
@@ -65,5 +75,10 @@ spec:
           configMap: { name: demo-lib }
         - name: ca
           configMap: { name: uma-lab-ca-bundle }
+        - name: published
+          secret:
+            secretName: agent-published-key
+            items:
+              - { key: attested-ed25519.pem, path: attested-ed25519.pem }
         - name: keys
           emptyDir: {}
