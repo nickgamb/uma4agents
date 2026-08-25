@@ -366,6 +366,11 @@ def main() -> int:                                            # noqa: C901
         # stated reason — and the answer differs because of who runs the agent.
         his = attested(c, HIS_OPERATOR)
         hers = attested(c, HER_OPERATOR)
+        # Both halves of accountability 2, asserted here so that a failure to
+        # publish reports as itself rather than as a refusal three beats later.
+        check("each operator published its agent's key",
+              bool(his.signature_agent) and bool(hers.signature_agent),
+              f"his={his.signature_agent} hers={hers.signature_agent}")
         rpt_his, why_his = negotiate(c, "alice", his, "shared")
         check("under first-party-only, somebody else's agent is refused the book",
               rpt_his is None and "operates herself" in why_his, f"{why_his}")
@@ -378,6 +383,10 @@ def main() -> int:                                            # noqa: C901
         rpt_own, why_own = negotiate(c, "alice", his, "own")
         check("while the same third-party agent still reaches her own accounts",
               rpt_own is not None, f"{why_own}")
+        check("and an organization that cannot be reached does not stop that",
+              "organization" not in why_own.lower(),
+              "her own accounts were refused on account of somebody else's "
+              "policy service")
         check("which are hers, and different",
               "NWCF" not in spend(c, "alice", his, "own", rpt_own) if rpt_own else False)
 

@@ -1225,8 +1225,17 @@ async def org_client(owner: str) -> org.OrgClient | None:
         record = await org_record(owner)
         if record is None:
             return None
+        if not record.get("issuer") or not record.get("token"):
+            # A record without the two things that make it a membership. It
+            # should not be possible to store one — see the refresh below,
+            # which used to be able to — and an enrolment that cannot be used
+            # is worse than none: every request over the organization's
+            # resources would fail on a KeyError inside the grant loop.
+            event("org.record_unusable", owner=owner, keys=sorted(record))
+            await st(owner).clear_organization()
+            return None
         client = _ORG[owner] = org.OrgClient(
-            record["issuer"], record["token"], record["envelope"])
+            record["issuer"], record["token"], record.get("envelope") or {})
     if not client.stale():
         return client
 
@@ -1238,7 +1247,14 @@ async def org_client(owner: str) -> org.OrgClient | None:
         event("org.unreachable", owner=owner, error=error,
               usable=not client.unusable())
         return client
-    record = await org_record(owner) or {}
+    record = await org_record(owner)
+    if record is None:
+        # She stopped being a member while this refresh was in flight —
+        # another replica cleared it, or she left from her portal. Writing
+        # the envelope back now would recreate the record with nothing in it
+        # but a ceiling, which is not a membership and cannot be used.
+        _ORG.pop(owner, None)
+        return None
     known = (record.get("envelope") or {}).get("charter_version")
     record["envelope"] = envelope
     await st(owner).set_organization(record)
@@ -1409,6 +1425,17 @@ async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
     """
     client = await org_client(rec["owner"])
     if client is None:
+        return {}
+    # Whether this is the organization's business at all, decided here from
+    # the ceiling this server already holds — before any call is made.
+    #
+    # Asking first and reading `governed` out of the answer was wrong in the
+    # one case that matters: when the organization cannot be reached, the
+    # failure path returns a refusal, and a refusal it has no standing to
+    # give. Her own brokerage account stopped working because somebody else's
+    # policy service was restarting. An organization's outage must be
+    # survivable by everything it does not govern.
+    if not org.claims_match(rec["resource_id"], client.envelope.get("claims") or []):
         return {}
     contract = rec.get("contract") or {}
     verdict = await client.decide({
