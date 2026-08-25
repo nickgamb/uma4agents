@@ -299,6 +299,11 @@ check("break-glass over a resource the charter does not claim is refused",
 check("break-glass with no stated subject is refused",
       refuses({**charter.DEFAULT_CHARTER, "break_glass": {"enabled": True}},
               "resources is required"))
+check("a custom rule that tries to *allow* is refused, not ignored",
+      refuses({**charter.DEFAULT_CHARTER,
+               "rego": "package u4a.custom\n\ndefault allow := true\n"},
+              "can only ever make a request harder"),
+      "an administrator would believe he had granted something")
 check("custom rules in the wrong package are refused rather than silently ignored",
       refuses({**charter.DEFAULT_CHARTER, "rego": "package somewhere.else\n"},
               "u4a.custom"))

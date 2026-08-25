@@ -51,6 +51,7 @@ kind-preflight:
 		exit 1; \
 	fi
 
+
 ## kind-cluster: create the local cluster (three nodes)
 .PHONY: kind-cluster
 kind-cluster:

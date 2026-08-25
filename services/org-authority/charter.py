@@ -33,6 +33,7 @@ under, one layer up.
 """
 
 import copy
+import re
 
 from uma4a_org import claims_match as _claims_match
 
@@ -324,6 +325,19 @@ def validate(charter: dict) -> dict:
             "consulted. It is a sibling of `u4a.org` rather than a child of "
             "it so that the shipped rules can read it without the engine "
             "seeing a package that depends on itself.")
+    # A rule this package cannot express, refused rather than ignored.
+    #
+    # The shipped module reads exactly two things out of `u4a.custom`: `deny`
+    # and `ask`. An administrator who writes `allow` has written something
+    # that will load cleanly, evaluate correctly, and change nothing — and
+    # will reasonably believe he has granted access. Saying so at the moment
+    # he saves it is the difference between a limitation and a trap.
+    if re.search(r"^\s*(default\s+)?allow\b", rego, re.M):
+        raise ValueError(
+            "custom rules can contribute `deny` and `ask` and nothing else. "
+            "An `allow` here would load, evaluate, and be ignored: this layer "
+            "sits above the member's policy and can only ever make a request "
+            "harder. What she permits is hers to decide.")
     out["rego"] = rego
     return out
 

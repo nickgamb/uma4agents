@@ -11,6 +11,22 @@
 # no-op and running it after a version bump is the upgrade.
 set -euo pipefail
 
+# Every chart below is public, and none of them needs a credential. Helm's OCI
+# client does not know that: it consults ~/.docker/config.json, finds
+# `credsStore: desktop`, and shells out to `docker-credential-desktop get`.
+# When that helper hangs — and under Docker Desktop it sometimes does, with no
+# error, no timeout and no network connection — the install hangs with it, at
+# the kgateway step, for as long as anyone is willing to wait.
+#
+# So these pulls get a registry config of their own, with nothing in it. It
+# costs one directory and removes the only step here that can stall
+# indefinitely. A private chart would need the real config back, and would
+# need to say so.
+HELM_ISOLATED_CONFIG="$(mktemp -d)"
+printf '{}' > "$HELM_ISOLATED_CONFIG/config.json"
+export DOCKER_CONFIG="$HELM_ISOLATED_CONFIG"
+trap 'rm -rf "$HELM_ISOLATED_CONFIG"' EXIT
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$HERE/versions.env"
