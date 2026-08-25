@@ -137,6 +137,18 @@ spec:
               #                   only over resources the charter claims.
               - /org/notice
               - /org/admin/*
+              # A tally asking about a resource this owner holds jointly with
+              # somebody else, arriving through the edge for the same reason
+              # the organization does — that is the address it knows her
+              # authority by. Verified inside the process against the keys
+              # the tally publishes, and answered only for a mandate she
+              # agreed to, so reaching this proves nothing and grants
+              # nothing.
+              #
+              #   /joint/quote    her terms over the jointly held resource
+              #   /joint/verdict  her authority's answer about one request
+              - /joint/quote
+              - /joint/verdict
               - /.well-known/*
               - /health
               - /health/*
@@ -296,6 +308,18 @@ spec:
               #                   only over resources the charter claims.
               - /org/notice
               - /org/admin/*
+              # A tally asking about a resource this owner holds jointly with
+              # somebody else, arriving through the edge for the same reason
+              # the organization does — that is the address it knows her
+              # authority by. Verified inside the process against the keys
+              # the tally publishes, and answered only for a mandate she
+              # agreed to, so reaching this proves nothing and grants
+              # nothing.
+              #
+              #   /joint/quote    her terms over the jointly held resource
+              #   /joint/verdict  her authority's answer about one request
+              - /joint/quote
+              - /joint/verdict
               - /.well-known/*
               - /health
               - /health/*
@@ -762,3 +786,44 @@ spec:
         - source:
             principals:
               - cluster.local/ns/northwind/sa/org-authority
+---
+# ────────────────────────────────────────────────────────────────────────
+# tally — the party that counts, and is not trusted
+#
+# Two callers and nothing else. The edge, because an agent negotiating over a
+# jointly held account arrives there and because the holders read the mandate
+# and the published keys from outside; and Meridian's enforcement point,
+# which mints tickets and introspects the grants this service issues.
+#
+# No waypoint here, deliberately. Every other namespace with one has a
+# distinction to draw that only L7 can draw — /owner from /token in Alice's,
+# /admin from /member in Northwind's — and this service has none: it holds no
+# policy, so there is no surface on it that a caller reaching the port should
+# be kept away from. What protects the two enforcement-facing endpoints is
+# the secret they check, and what protects everything that matters is that a
+# grant from here is worth exactly what the holders' signatures inside it are
+# worth.
+# ────────────────────────────────────────────────────────────────────────
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny
+  namespace: tally
+spec:
+  {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: joint-tally-callers
+  namespace: tally
+spec:
+  selector:
+    matchLabels: { app: joint-tally }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+              - cluster.local/ns/meridian/sa/uma-pep

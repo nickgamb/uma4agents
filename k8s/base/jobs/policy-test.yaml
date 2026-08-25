@@ -89,6 +89,16 @@ data:
     check("cannot reach the administrator's console",
           lambda: denied("http://org-console.northwind.svc.cluster.local:9050/health"))
 
+    # And the tally's. It holds no policy, so the interesting boundary is not
+    # what could be read out of it — it is that the two endpoints which mint
+    # tickets and introspect belong to the enforcement point, and that a
+    # workload with no path here cannot reach the service at all.
+    print("\n== and out of the tally's ==")
+    check("cannot reach the tally's service directly",
+          lambda: denied("http://joint-tally.tally.svc.cluster.local:9060/health"))
+    check("cannot mint a ticket over a jointly held account",
+          lambda: denied("http://joint-tally.tally.svc.cluster.local:9060/perm"))
+
     print("\n== but the front door is open, and discovery is public ==")
     def allowed(url):
         r = urllib.request.urlopen(url, timeout=10, context=ctx)
@@ -97,6 +107,12 @@ data:
           lambda: allowed("https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp"))
     check("the authorization server answers on its public name",
           lambda: allowed("https://alice-as.uma.lab/health"))
+    # The mandate is public on purpose: a holder reads it before she agrees,
+    # and anybody verifying a grant this tally issued needs it to re-run the
+    # count. Publishing who is entitled to be counted is not a leak — it is
+    # what makes the count checkable by someone other than the counter.
+    check("who is entitled to be counted is published",
+          lambda: allowed("https://joint-tally.uma.lab/mandate/meridian-joint"))
 
     def challenged():
         body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",

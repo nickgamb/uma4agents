@@ -40,11 +40,13 @@ What arrives here is the notice, and what this module does with it is put it
 in front of her. See `/org/notice` in app.py.
 """
 
-import copy
 import os
 import time
 
-from uma4a_org import claims_match as _claims_match
+from uma4a_org import (claims_match as _claims_match, clamp as _clamp,
+                       compliance as _compliance, governs as _governs,
+                       patch_for as _patch_for, tier_view as _tier_view,
+                       would_exceed as _would_exceed)
 
 # Where the envelope is re-read from, and how long a copy may be trusted.
 #
@@ -60,214 +62,19 @@ HTTP_TIMEOUT_S = float(os.environ.get("UMA_AS_ORG_TIMEOUT_S", "5"))
 CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 
 
-# Shared with the organization's own service and the enforcement point —
-# see `lib/uma4a_org.py`. Re-exported here because everything else in this
-# module is written in terms of it.
+# The pattern language and the clamp algebra both live in `lib/uma4a_org.py`
+# and are re-exported here, because everything below is written in terms of
+# them and because three services now need the same answers: this one, the
+# organization's own, and the tally that folds several owners' terms over one
+# jointly held resource. A second implementation of "narrow this document by
+# that one" is a second implementation to disagree with the first.
 claims_match = _claims_match
-
-def governs(tier: dict, envelope: dict) -> bool:
-    """Whether the organization's charter reaches this tier at all.
-
-    Any resource is enough. A tier is one terms document over a set of
-    resources, so a tier that mixes a claimed resource with an unclaimed one
-    cannot be half-governed — and of the two directions available, applying
-    the ceiling to the whole tier is the one that cannot leak. Her portal
-    says so plainly rather than leaving her to work it out.
-    """
-    claims = envelope.get("claims") or []
-    return any(claims_match(rid, claims) for rid in tier.get("resources") or [])
-
-
-def _duration(seconds) -> str:
-    if not seconds:
-        return "—"
-    for unit, size in (("day", 86400), ("hour", 3600), ("minute", 60)):
-        if seconds >= size and seconds % size == 0:
-            n = seconds // size
-            return f"{n} {unit}{'' if n == 1 else 's'}"
-    return f"{seconds}s"
-
-
-def clamp(tier: dict, envelope: dict) -> tuple[dict, list[dict]]:
-    """This tier, narrowed to the organization's ceiling, and what changed.
-
-    Pure, and every field moves in one direction only. There is no envelope
-    field that can lengthen an expiry, add a scope, remove a prohibition or
-    turn off an ask — which is what makes it safe to run this on every write
-    and every publish without checking first whether it would help or hurt.
-
-    The changes are returned rather than logged because two surfaces need
-    them in words: her portal, which shows her what joining did to terms she
-    had already written, and the compliance report, which tells the
-    organization *which of its fields* bit without telling it what hers said.
-    """
-    if not governs(tier, envelope):
-        return copy.deepcopy(tier), []
-
-    tier = copy.deepcopy(tier)
-    terms = tier["terms"]
-    changes: list[dict] = []
-
-    ceiling = envelope.get("max_expires_in")
-    if ceiling and terms.get("expires_in", 0) > ceiling:
-        changes.append({
-            "field": "max_expires_in",
-            "was": terms["expires_in"], "now": ceiling,
-            "text": f"Access expires after {_duration(terms['expires_in'])} "
-                    f"→ {_duration(ceiling)}",
-        })
-        terms["expires_in"] = ceiling
-
-    allowed = envelope.get("allowed_scopes")
-    if allowed is not None:
-        dropped = [s for s in terms.get("scope") or [] if s not in allowed]
-        if dropped:
-            changes.append({
-                "field": "allowed_scopes",
-                "was": list(terms.get("scope") or []),
-                "now": [s for s in terms.get("scope") or [] if s in allowed],
-                "text": f"No longer offers {', '.join(dropped)} — the "
-                        f"organization does not allow it",
-            })
-            terms["scope"] = [s for s in terms.get("scope") or [] if s in allowed]
-
-    required = envelope.get("require_prohibited") or []
-    missing = [p for p in required if p not in (terms.get("prohibited") or [])]
-    if missing:
-        changes.append({
-            "field": "require_prohibited",
-            "was": list(terms.get("prohibited") or []),
-            "now": list(terms.get("prohibited") or []) + missing,
-            "text": f"Always forbids {', '.join(missing)}",
-        })
-        terms["prohibited"] = list(terms.get("prohibited") or []) + missing
-
-    always_ask = envelope.get("always_ask") or []
-    if not tier.get("ask_me") and any(
-            claims_match(rid, always_ask) for rid in tier.get("resources") or []):
-        changes.append({
-            "field": "always_ask", "was": False, "now": True,
-            "text": "Asks you every time — the organization requires it here",
-        })
-        tier["ask_me"] = True
-
-    return tier, changes
-
-
-def patch_for(tier: dict, envelope: dict) -> tuple[dict | None, list[dict]]:
-    """The edit that would bring a tier inside the envelope, or None.
-
-    Returned as a patch rather than a tier so the store applies it through
-    the same path as one of her own edits — which bumps the terms version and
-    republishes the document. A clamp that wrote the tier directly would
-    change what an agent is held to without changing the id it cites, and
-    every signed agreement pointing at that id would quietly stop describing
-    what it agreed to.
-    """
-    clamped, changes = clamp(tier, envelope)
-    if not changes:
-        return None, []
-    terms = {
-        "expires_in": clamped["terms"]["expires_in"],
-        "prohibited": clamped["terms"]["prohibited"],
-    }
-    # Only when she had one. A tier with no `scope` should not acquire an
-    # empty one because a ceiling passed over it — the patch is meant to
-    # narrow what is there, not to add fields to her document.
-    if "scope" in clamped["terms"]:
-        terms["scope"] = clamped["terms"]["scope"]
-    return {"ask_me": clamped["ask_me"], "terms": terms}, changes
-
-
-def would_exceed(spec: dict, resources: list[str], envelope: dict) -> list[str]:
-    """What is wrong with terms she is about to write, in her words.
-
-    Used on the create path, where refusing is better than silently
-    narrowing: a tier she asked for and did not get is something she should
-    be told about at the moment she asks, not discover later in a document
-    she thought she had written. Editing an existing tier clamps instead —
-    there the alternative is refusing to store a policy the organization
-    changed under her, which would be blaming her for someone else's edit.
-    """
-    if not any(claims_match(rid, envelope.get("claims") or []) for rid in resources):
-        return []
-    problems = []
-    terms = spec.get("terms") or {}
-    ceiling = envelope.get("max_expires_in")
-    if ceiling and int(terms.get("expires_in") or 0) > ceiling:
-        problems.append(
-            f"{envelope.get('name')} caps access to these resources at "
-            f"{_duration(ceiling)}; these terms ask for "
-            f"{_duration(int(terms['expires_in']))}")
-    allowed = envelope.get("allowed_scopes")
-    if allowed is not None:
-        extra = [s for s in terms.get("scope") or [] if s not in allowed]
-        if extra:
-            problems.append(
-                f"{envelope.get('name')} does not allow {', '.join(extra)} "
-                f"over these resources")
-    return problems
-
-
-def compliance(tiers: dict, envelope: dict, resources,
-               clamped_fields=None) -> dict:
-    """What her authority tells the organization, and the shape of it is the
-    point: counts and field names, never a value out of her policy.
-
-    An organization is entitled to know its ceiling is being applied to the
-    resources it claims. It is not entitled to read the arrangements she
-    made underneath it — if it were, the member layer would have been
-    replaced rather than governed.
-    """
-    claims = envelope.get("claims") or []
-    governed_tiers = {tid: t for tid, t in tiers.items() if governs(t, envelope)}
-    # Two different questions, and conflating them was a bug worth naming.
-    #
-    # `within` is a property of the tiers as they stand *now* — recomputed
-    # here, so it can only be false in the window between an organization's
-    # edit and this server's next clamp. `clamped_fields` is a property of
-    # what the clamp just did, which the caller has to hand in because by the
-    # time this runs the evidence has been applied and is gone. Deriving it
-    # here produced an empty list every time and told the organization that
-    # its ceiling had never bitten anyone.
-    outstanding = set()
-    within = True
-    for tier in governed_tiers.values():
-        _, changes = clamp(tier, envelope)
-        if changes:
-            within = False
-            outstanding |= {c["field"] for c in changes}
-    return {
-        "charter_version": envelope.get("charter_version"),
-        "resources_governed": sum(1 for rid in resources if claims_match(rid, claims)),
-        "tiers_governed": len(governed_tiers),
-        "clamped_fields": sorted(set(clamped_fields or []) | outstanding),
-        "within": within,
-    }
-
-
-def tier_view(tier: dict, envelope: dict | None) -> dict | None:
-    """What her portal shows above a tier's own terms, when there is an
-    organization above it. `None` when this tier is hers alone."""
-    if not envelope or not governs(tier, envelope):
-        return None
-    _, changes = clamp(tier, envelope)
-    return {
-        "org": envelope.get("org"),
-        "name": envelope.get("name"),
-        "charter_version": envelope.get("charter_version"),
-        "max_expires_in": envelope.get("max_expires_in"),
-        "require_prohibited": list(envelope.get("require_prohibited") or []),
-        "allowed_scopes": envelope.get("allowed_scopes"),
-        "always_ask": any(claims_match(rid, envelope.get("always_ask") or [])
-                          for rid in tier.get("resources") or []),
-        # Non-empty means her stored terms are outside the ceiling right now,
-        # which happens between an organization's edit and this server's next
-        # clamp. Showing it is better than hiding it: the pending narrowing is
-        # about to change what her agents are held to.
-        "pending": [c["text"] for c in changes],
-    }
-
+governs = _governs
+clamp = _clamp
+patch_for = _patch_for
+would_exceed = _would_exceed
+compliance = _compliance
+tier_view = _tier_view
 
 # --- Talking to the organization ---------------------------------------------
 

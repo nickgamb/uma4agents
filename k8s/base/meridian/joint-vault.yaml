@@ -1,0 +1,33 @@
+# The account Alice and Carol hold together, at Meridian.
+#
+# The same vault image a fourth time, with a different book in it. A jointly
+# held account is not a different kind of resource — it is a resource with a
+# different number of owners, and everything that makes it different lives in
+# the mandate and in which authority the challenge names.
+#
+# Reached at /mcp/joint/<account>. Unlike /mcp/shared/<member>, the segment
+# after the prefix names the **account** rather than a person: no single
+# holder's authority governs this, so there is nobody to name there.
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: joint-vault
+  namespace: meridian
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 9020
+    path: /mcp
+  deployment:
+    image: localhost:5001/u4a/alice-vault-mcp:dev
+    imagePullPolicy: Always
+    port: 9020
+    replicas: 1
+    env:
+      ENFORCEMENT_MODE: gateway
+      UMA_VAULT_OWNER: joint
+      UMA_VAULT_FIXTURES: /app/fixtures-joint.json
+    resources:
+      requests: { cpu: 50m, memory: 96Mi }
+      limits: { memory: 256Mi }

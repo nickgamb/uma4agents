@@ -152,6 +152,45 @@ spec:
           kind: AgentgatewayBackend
           name: northwind-vault
 ---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: joint-vault
+  namespace: meridian
+spec:
+  mcp:
+    sessionRouting: Stateful
+    targets:
+      - name: joint-vault
+        static:
+          host: joint-vault.meridian.svc.cluster.local
+          port: 9020
+          protocol: StreamableHTTP
+          path: /mcp
+---
+# The jointly held accounts.
+#
+# The difference from /mcp/shared above is worth stating, because the two
+# routes look alike and mean opposite things. There, the segment names a
+# member and decides *whose* authority governs one request. Here it names an
+# account, and the answer is that no single holder's authority governs it at
+# all: the challenge points at the tally, which asks every holder.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: joint-vault-mcp
+  namespace: meridian
+spec:
+  parentRefs:
+    - name: meridian
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /mcp/joint }
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: joint-vault
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -198,6 +237,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: northwind-vault-mcp
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: joint-vault-mcp
   traffic:
     extAuth:
       backendRef:

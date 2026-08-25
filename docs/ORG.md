@@ -40,7 +40,7 @@ is the useful result:
 |---|---|---|
 | **Self-administration** | The subject administers her own resources | The base profile. Alice over `alice-vault/*`. |
 | **Administration by proxy** | One administrator who is not the subject | Nothing changes in the grant loop. What it needs is the one thing her authority already does implicitly: **who may administer this owner's policy**. The lab says it in configuration (`UMA_AS_OWNER_AUTH` for what kind of credential counts, `UMA_AS_OWNER_KEY_OWNER` for whose it is — a signature proves a holder, not an owner). A real deployment needs that as a managed list, and it is worth specifying: it is the difference between a guardian, a power of attorney, and an account takeover. |
-| **Co-administration** | Several administrators over one subject's resources | **This.** One resource, several people administering access to it, each under her own authorization server — which is the part that had no mechanism. |
+| **Co-administration** | Several administrators over one subject's resources | **This, with authority partitioned.** One resource, several people administering access to it, each under her own authorization server — the part that had no mechanism. Every request has exactly one member authority plus this ceiling, so two administrators' decisions never meet. The *conjoint* case, where several authorities must answer the same request and none is above the others, is [JOINT.md](JOINT.md). |
 | **Co-administration by proxy** | Both at once | The two above composed. Nothing further is needed. |
 
 What made the third one hard is not the number of administrators. It is that
@@ -519,6 +519,8 @@ answer `/decision` and be conformant.
 
 ## See also
 
+- [JOINT.md](JOINT.md) — the other co-administration: several owners of equal
+  standing over one resource, and none of them above the rest
 - [MULTI-OWNER.md](MULTI-OWNER.md) — many owners of one resource server, which this builds on
 - [PROTOCOL.md](PROTOCOL.md) — the four beats the shared surface runs unchanged
 - [ASSURANCE.md](ASSURANCE.md) — where `first_party` comes from, and why it may relax

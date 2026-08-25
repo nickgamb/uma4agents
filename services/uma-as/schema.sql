@@ -185,6 +185,17 @@ CREATE TABLE IF NOT EXISTS organizations (
     record jsonb NOT NULL
 );
 
+-- Resources she holds jointly with other people. Keyed by account, unlike
+-- `organizations` above: two mandates are two resources with two different
+-- sets of co-owners and they never meet, which is exactly what is not true
+-- of two organizations over one terms document.
+CREATE TABLE IF NOT EXISTS mandates (
+    owner   text NOT NULL,
+    account text NOT NULL,
+    record  jsonb NOT NULL,
+    PRIMARY KEY (owner, account)
+);
+
 -- The owner's event feed. Rows exist so NOTIFY can carry an id instead of a
 -- payload: Postgres caps NOTIFY payloads at 8000 bytes and a pending event
 -- carries the purpose, the prohibitions and the agent's identity. Every

@@ -42,6 +42,7 @@ services:
           - alice-agent.uma.lab
           - northwind-org.uma.lab
           - org-console.uma.lab
+          - joint-tally.uma.lab
 
   keycloak:
     init: true
@@ -213,8 +214,20 @@ services:
       # member. The window is somebody's access to the firm's book after the
       # firm withdrew it, so it is short and it is configuration.
       UMA_PEP_MEMBERSHIP_TTL_S: ${UMA_PEP_MEMBERSHIP_TTL_S:-10}
+      # Jointly held accounts. The tally is named here rather than read off a
+      # grant: a resource server that accepted whichever issuer embedded a
+      # plausible mandate would be taking the electorate from the party that
+      # assembled it.
+      UMA_PEP_JOINT_TALLY: https://joint-tally.uma.lab
+      UMA_PEP_JOINT_TALLY_INTERNAL: http://joint-tally:9060
+      UMA_PEP_JOINT_SECRET: ${TALLY_RS_SECRET:-tally-rs-dev-secret}
+      UMA_PEP_JOINT_ACCOUNTS: meridian-joint,meridian-either
+      # Verifying a holder's verdict means reaching her authority at its
+      # public name, which is the only TLS this gateway does to a peer.
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
     volumes:
       - uma-pep-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
     depends_on:
       uma-as:
         condition: service_healthy
@@ -373,6 +386,25 @@ services:
       timeout: 5s
       retries: 10
 
+  # The account Alice and Carol hold together. The same vault image as every
+  # other holding here, with its own book — a jointly held account is not a
+  # different kind of resource, it is a resource with a different number of
+  # owners.
+  joint-vault-mcp:
+    init: true
+    build:
+      context: .
+      dockerfile: mcp/alice-vault/Dockerfile
+    environment:
+      UMA_VAULT_OWNER: joint
+      UMA_VAULT_FIXTURES: /app/fixtures-joint.json
+      ENFORCEMENT_MODE: gateway
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('localhost',9020),2)\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   agent-operator:
     init: true
     build: ./clients/agent-operator
@@ -479,6 +511,40 @@ services:
   # authorization server. Alice's authority holds a ceiling and asks this for
   # decisions; this holds the charter and never sees her policy. Neither can
   # read the other's, which is the arrangement the whole thing is about.
+  # One resource, several owners of equal standing, and an authority that is
+  # nobody's. This service counts the holders' signed verdicts and holds no
+  # policy of its own — see the module docstring for why that is the whole
+  # design rather than a simplification.
+  joint-tally:
+    init: true
+    build:
+      context: .
+      dockerfile: services/joint-tally/Dockerfile
+    environment:
+      TALLY_ISSUER: https://joint-tally.uma.lab
+      TALLY_AUDIENCE: https://gateway.uma.lab
+      TALLY_RS_SECRET: ${TALLY_RS_SECRET:-tally-rs-dev-secret}
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
+      # A minimum the holders may not vote themselves below. Zero here so the
+      # lab can carry both an every-holder account and an either-holder one;
+      # set it and the second is refused at startup, by name. The floor is
+      # what an account agreement or a regulator supplies in the world, and
+      # it is the only answer to what quorum sets the quorum.
+      TALLY_THRESHOLD_FLOOR: ${TALLY_THRESHOLD_FLOOR:-0}
+      TALLY_SIGNING_KEY: /keys/tally-ed25519.pem
+      TALLY_MANDATES: '{"meridian-joint":{"resources":["meridian-joint/get_positions","meridian-joint/get_transactions","meridian-joint/execute_trade"],"holders":[{"owner":"alice","issuer":"https://alice-as.uma.lab"},{"owner":"carol","issuer":"https://carol-as.uma.lab"}],"rule":{"kind":"all"}},"meridian-either":{"resources":["meridian-either/get_positions","meridian-either/get_transactions","meridian-either/execute_trade"],"holders":[{"owner":"alice","issuer":"https://alice-as.uma.lab"},{"owner":"carol","issuer":"https://carol-as.uma.lab"}],"rule":{"kind":"any"}}}'
+    volumes:
+      - tally-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+    depends_on:
+      uma-as:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9060/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   org-authority:
     init: true
     build:
@@ -710,6 +776,23 @@ services:
       - driver-keys:/driver/keys
     profiles: ["test"]
 
+  joint-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/joint_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      UMA4A_TALLY: https://joint-tally.uma.lab
+    volumes:
+      - ./clients/demo-driver/joint_check.py:/driver/joint_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
   assurance-check:
     image: python:3.12-slim
     entrypoint:
@@ -877,6 +960,7 @@ services:
 volumes:
   carol-as-keys:
   org-keys:
+  tally-keys:
   paios-data:
   uma-as-keys:
   uma-pep-keys:

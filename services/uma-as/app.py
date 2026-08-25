@@ -33,7 +33,9 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import assurance
+import joint
 import org
+import uma4a_joint
 import policy
 import store
 
@@ -1329,6 +1331,26 @@ async def clamp_to_envelope(owner: str, envelope: dict,
     return changed
 
 
+async def pull_registrations_now(owner: str) -> None:
+    """Re-read what this owner's resource servers publish.
+
+    Extracted because three things now need it and they need it for the same
+    reason: `RESOURCES` is a per-process cache of somebody else's listing,
+    and the events that change that listing happen elsewhere. Her portal
+    re-reads it on a clock; `/perm` re-reads it on a miss; and joining a
+    jointly held account re-reads it because the resources the mandate names
+    have to exist here before she can write a word of terms over them — and
+    a holder with no terms is a holder who has consented to nothing.
+    """
+    _LAST_PULL[owner] = time.time()
+    for client_id, rs in (await st(owner).resource_servers()).items():
+        try:
+            await asyncio.to_thread(pull_registrations, client_id, rs)
+        except Exception as exc:                                # noqa: BLE001
+            event("resources.pull_retry", client_id=client_id,
+                  error=str(exc)[:200])
+
+
 async def resync_shared(owner: str, envelope: dict | None,
                         claims: list | None = None) -> None:
     """Re-read what this owner's resource server publishes, and drop what the
@@ -1479,9 +1501,17 @@ async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
 # --- Notices from the organization -------------------------------------------
 
 
-def org_issuer_keys(issuer: str) -> list:
+def issuer_keys(issuer: str, fresh: bool = False) -> list:
+    """The signing keys a party publishes, cached.
+
+    Used for any peer this server has to verify rather than trust: the
+    organization above an owner, and the tally that counts verdicts over a
+    resource she holds jointly. One cache, because the question is the same
+    one — what does this issuer sign with — and two would be two TTLs to
+    reason about.
+    """
     cached = _ORG_JWKS.get(issuer)
-    if cached and cached[0] > now():
+    if cached and cached[0] > now() and not fresh:
         return cached[1]
     import httpx
 
@@ -1520,7 +1550,7 @@ async def org_notice(request: Request) -> dict:
         raise HTTPException(status_code=403, detail="not enrolled")
     issuer = record["issuer"]
     claims = None
-    for jwk_dict in org_issuer_keys(issuer):
+    for jwk_dict in issuer_keys(issuer):
         try:
             claims = jwt.decode(body["notice"],
                                 OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
@@ -1702,7 +1732,7 @@ async def require_org_admin(request: Request, owner: str) -> dict:
                             detail=f"an administration token has typ {ORG_ADMIN_TYP}")
     issuer = record["issuer"]
     claims = None
-    for jwk_dict in org_issuer_keys(issuer):
+    for jwk_dict in issuer_keys(issuer):
         try:
             claims = jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                 algorithms=["EdDSA"], issuer=issuer,
@@ -2424,13 +2454,19 @@ def resolve_client_id(client_id: str) -> dict:
     return out
 
 
-def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
-    """Verify the intent contract JWS and its echo of the dictated template.
+def contract_identity(claim_token_b64: str,
+                      audience: str) -> tuple[dict, dict, dict]:
+    """Verify an intent contract's signature and establish who signed it.
 
-    Returns (contract_claims, signer_jwk). The signer key comes from the JWS
-    protected header: `jwk` (pseudonymous bare key, an AAuth identity level)
-    or the `cnf.jwk` of an embedded `agent_token` (an aa-agent+jwt whose
-    signature is verified against its issuer's published keys).
+    Returns (contract_claims, signer_jwk, identity). Split out of
+    `verify_contract` because a second caller needs exactly this half and
+    none of the half that follows it: when a resource is held jointly, the
+    agent signs one folded document addressed to the party that folded it,
+    and each co-owner's authority then verifies that same JWS for itself.
+    The audience differs; establishing who is asking does not, and it is the
+    subtlest code here — identity levels, CIMD resolution, whether the named
+    operator actually published this key. A second implementation of it would
+    be a second set of answers to "how sure are we who this is".
     """
     raw = base64.urlsafe_b64decode(claim_token_b64 + "=" * (-len(claim_token_b64) % 4))
     token = raw.decode()
@@ -2467,12 +2503,24 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
                 client_id, directory, signer_jwk)
 
     key = OKPAlgorithm.from_jwk(json.dumps(signer_jwk))
-    contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=ISSUER)
+    contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=audience)
     # The signature verified against a key this server can name and will
     # recognise again. Recorded rather than assumed: `assurance.assess` reads
     # this, so the binding level is an observation and not a comment about the
     # call path. See assurance.py.
     identity["key_bound"] = True
+    return contract, signer_jwk, identity
+
+
+def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
+    """Verify the contract *and* its echo of the terms this server dictated.
+
+    Returns (contract_claims, signer_jwk). Everything below the split is
+    about one negotiation this server is running: the nonce it issued, the
+    template it proffered, and that nothing in the document came back
+    weakened.
+    """
+    contract, signer_jwk, identity = contract_identity(claim_token_b64, ISSUER)
 
     template = rec["template"]
     if contract.get("nonce") != template["nonce"]:
@@ -2592,6 +2640,256 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     event("receipt.issued", corr=family, agreement=contract_hash)
     return {"access_token": token, "token_type": "PoP",
             "expires_in": exp - int(now()), "receipt": receipt}
+
+
+# --- Resources held jointly with somebody else -------------------------------
+#
+# One resource, several owners, none above the others. The counting happens
+# somewhere else — at a tally that holds no policy — and what this server
+# contributes is a signed answer about one negotiation. Two properties are
+# worth holding on to while reading:
+#
+#   * nothing here answers a party this owner has not agreed to deal with;
+#   * nothing the tally says is taken on trust. It relays the agent's signed
+#     agreement and this server verifies it, folds nothing and is checked
+#     against her own terms when it claims to have folded faithfully.
+
+
+def joint_verdict_jws(claims: dict) -> str:
+    return jwt.encode({**claims, "iss": ISSUER, "iat": int(now())},
+                      SIGNING_KEY, algorithm="EdDSA",
+                      headers={"typ": "u4a-verdict+jwt", "kid": KID})
+
+
+def tally_claims(jws: str, issuer: str) -> dict:
+    """A request from a tally, verified against the keys it publishes.
+
+    Same shape as `/org/notice` and for the same reason: the alternative is a
+    shared secret, and a shared secret between one owner's authority and a
+    coordinator that several owners use is a secret that authenticates the
+    wrong set of people.
+    """
+    # Twice: once against what is cached, and once against a fresh fetch if
+    # that fails. A key the other party has rotated is indistinguishable from
+    # a forgery when all you have is a stale copy of its JWKS, and the two
+    # deserve very different answers.
+    for fresh in (False, True):
+        for jwk_dict in issuer_keys(issuer, fresh=fresh):
+            try:
+                return jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                  algorithms=["EdDSA"], issuer=issuer,
+                                  options={"verify_aud": False})
+            except jwt.InvalidTokenError:
+                continue
+    raise HTTPException(status_code=401,
+                        detail="not signed by the tally named in this mandate")
+
+
+async def tally_request(request: Request) -> tuple[str, dict, dict]:
+    """(owner, record, claims) for a signed request from a tally.
+
+    The order matters. The issuer is read from the *unverified* token only to
+    find which mandate this is about, then the record says which tally that
+    mandate names, and the signature is checked against that one. Reading the
+    issuer to decide where to look is safe; reading it to decide anything
+    else is not.
+    """
+    body = await request.json()
+    token = body.get("request") or ""
+    try:
+        unverified = jwt.decode(token, options={"verify_signature": False})
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="that is not a tally request")
+    owner = unverified.get("owner") or ""
+    account = unverified.get("account") or ""
+    if not serves(owner):
+        raise HTTPException(status_code=404, detail="not an owner here")
+    record = await st(owner).mandate(account)
+    if record is None:
+        raise HTTPException(status_code=403,
+                            detail="this owner is not a party to that mandate")
+    claims = tally_claims(token, record["tally"])
+    if claims.get("owner") != owner or claims.get("account") != account:
+        raise HTTPException(status_code=401, detail="that request is about somebody else")
+    return owner, record, claims
+
+
+async def joint_tier(owner: str, resource_id: str) -> tuple[str | None, dict]:
+    return policy.tier_for_resource(await st(owner).tiers(), resource_id)
+
+
+@app.post("/joint/quote")
+async def joint_quote(request: Request) -> dict:
+    """This owner's terms over a jointly held resource.
+
+    Quoted so that the tally can fold every holder's terms into the one
+    document an agent signs. A holder who has written nothing over the
+    resource quotes nothing, which under a unanimity rule stops the request:
+    silence is not consent, and an owner who has not said what she permits
+    has not permitted anything.
+    """
+    owner, record, claims = await tally_request(request)
+    resources = (record["mandate"].get("resources") or [])
+    tier_id, tier = await joint_tier(owner, claims.get("resource_id") or "")
+    event("joint.quoted", owner=owner, account=record["account"],
+          resource_id=claims.get("resource_id"), tier=tier_id)
+    if tier_id is None:
+        return {"owner": owner, "tier": None,
+                "because": "this holder has written no terms over this resource"}
+    return {"owner": owner, "tier_id": tier_id,
+            "tier": joint.quote_of(tier, resources)}
+
+
+@app.post("/joint/verdict")
+async def joint_verdict(request: Request) -> dict:
+    """This owner's answer about one negotiation over a jointly held resource.
+
+    Either a signed verdict or `pending`. Pending is not a failure and not a
+    timeout: it is a person being asked, and the tally holds the agent's
+    ticket while she is asked exactly as a single authority would.
+    """
+    owner, record, claims = await tally_request(request)
+    account, negotiation = record["account"], claims.get("negotiation") or ""
+    resource_id = claims.get("resource_id") or ""
+    mandate = record["mandate"]
+
+    def refuse(*because: str) -> dict:
+        return {"verdict": joint_verdict_jws({
+            "holder": owner, "account": account, "negotiation": negotiation,
+            "resource_id": resource_id, "contract": claims.get("contract"),
+            "effect": "refuse", "because": list(because),
+            "exp": int(now()) + 300})}
+
+    if not joint.claims_match(resource_id, mandate.get("resources") or []):
+        return refuse("that resource is not part of this mandate")
+
+    # She may already have answered. Read before anything is re-evaluated:
+    # the tally polls, and a question she has decided must not be re-asked or
+    # re-judged against a policy she has edited in the meantime.
+    pended = await st(owner).negotiation(negotiation)
+    if pended is not None and pended.get("decision") in ("approved", "denied"):
+        await close_negotiation(pended)
+        if pended["decision"] == "denied":
+            event("joint.verdict", owner=owner, negotiation=negotiation,
+                  effect="refuse", why="owner-denied")
+            return refuse("this holder declined")
+        event("joint.verdict", owner=owner, negotiation=negotiation,
+              effect="allow", why="owner-approved")
+        await ledger_add(owner, "joint_allowed", negotiation,
+                         {"account": account, "resource_id": resource_id},
+                         handle=pended.get("handle"))
+        return {"verdict": joint_verdict_jws({
+            "holder": owner, "account": account, "negotiation": negotiation,
+            "resource_id": resource_id, "contract": claims.get("contract"),
+            "effect": "allow", "exp": int(now()) + 300})}
+    if pended is not None:
+        return {"pending": True, "family": negotiation}
+
+    tier_id, tier = await joint_tier(owner, resource_id)
+    if tier_id is None:
+        return refuse("this holder has written no terms over this resource")
+
+    # The agent's own signature, verified here rather than relayed. The
+    # audience is the tally, because the tally is who the agent negotiated
+    # with — and this is the point at which a tally that folded dishonestly
+    # is caught, because what comes out is compared against her terms below.
+    try:
+        contract, signer_jwk, identity = contract_identity(
+            claims.get("agreement") or "", record["tally"])
+    except Exception as exc:                                    # noqa: BLE001
+        return refuse(f"the agreement did not verify: {exc}")
+    if s256(base64.urlsafe_b64decode(
+            claims["agreement"] + "=" * (-len(claims["agreement"]) % 4))) \
+            != claims.get("contract"):
+        return refuse("the agreement does not match the digest it was sent under")
+
+    if problems := joint.verdict_problems(contract, tier, resource_id):
+        event("joint.fold_rejected", owner=owner, negotiation=negotiation,
+              because=problems)
+        await ledger_add(owner, "joint_refused", negotiation,
+                         {"account": account, "because": problems})
+        return refuse(*problems)
+
+    handle = connection_handle(identity, signer_jwk)
+    conn = await st(owner).connection(handle)
+    if origin := operator_origin(identity):
+        if origin in await st(owner).blocked_operators():
+            return refuse("this holder does not accept agents from that operator")
+    axes = assurance.assess(identity)
+    facts = {
+        "assurance": axes,
+        "standing": standing_facts(
+            conn, tier_id, await trajectory_facts(owner, handle),
+            await first_party_fact(owner, identity, axes)),
+        "request": {"expires_in": contract.get("expires_in", 0),
+                    "max_expires_in": tier["terms"]["expires_in"],
+                    "reason": contract.get("reason"),
+                    "mission": contract.get("mission")},
+        "tier": tier_id,
+    }
+    requirement, reasons = policy.evaluate(tier, facts)
+    if requirement == policy.REFUSE:
+        await ledger_add(owner, "joint_refused", negotiation,
+                         {"account": account, "because": reasons}, handle=handle)
+        return refuse(*(reasons or ["this holder's terms refuse it"]))
+
+    needs_connection = conn is None or conn["status"] != "active"
+    if needs_connection or requirement == policy.ASK:
+        # Her decision, in her own portal, alongside every other request
+        # waiting on her. A joint resource does not get its own queue: the
+        # question "may this agent do this" is the same question, and the
+        # only thing different about it is who else is being asked.
+        rec = {
+            "family": negotiation,
+            "owner": owner,
+            "state": "awaiting-owner",
+            "decision": None,
+            # Every negotiation this store holds carries one, and a joint one
+            # has to as well: the reaper reads it across all of them, so a
+            # record without it does not merely fail to expire — it takes the
+            # whole grant loop down on the next sweep. It also means a
+            # question no holder ever answers stops waiting, which is the
+            # behaviour the rest of the queue already has.
+            "expires": time.time() + PENDING_TTL,
+            "pending_kind": "joint",
+            "tier": tier_id,
+            "resource_id": resource_id,
+            "resource_scopes": list(contract.get("scope") or []),
+            "handle": handle,
+            "contract": {**contract, "_identity": identity},
+            "template": {"enforced": {}},
+            "assurance": axes,
+            "assurance_notes": assurance.describe(axes, identity),
+            "because": reasons,
+            "joint": {"account": account, "tally": record["tally"],
+                      "holders": [h["owner"] for h in mandate.get("holders") or []],
+                      "rule": (mandate.get("rule") or {}).get("kind")},
+        }
+        await st(owner).save_negotiation(rec)
+        event("joint.pending", owner=owner, negotiation=negotiation,
+              account=account, tier=tier_id)
+        await owner_notify(owner, {
+            "type": "pending", "kind": "joint", "family": negotiation,
+            "tier": tier_id, "tier_name": tier["name"],
+            "purpose": contract.get("purpose"),
+            "operation": contract.get("operation"),
+            "reason": contract.get("reason"), "mission": contract.get("mission"),
+            "prohibited": contract.get("prohibited"), "enforced": {},
+            "identity": identity, "handle": handle, "assurance": axes,
+            "assurance_notes": assurance.describe(axes, identity),
+            "because": reasons, "joint": rec["joint"]})
+        return {"pending": True, "family": negotiation}
+
+    await st(owner).touch_connection(handle, utcstamp())
+    event("joint.verdict", owner=owner, negotiation=negotiation, effect="allow",
+          why="auto")
+    await ledger_add(owner, "joint_allowed", negotiation,
+                     {"account": account, "resource_id": resource_id},
+                     handle=handle)
+    return {"verdict": joint_verdict_jws({
+        "holder": owner, "account": account, "negotiation": negotiation,
+        "resource_id": resource_id, "contract": claims.get("contract"),
+        "effect": "allow", "exp": int(now()) + 300})}
 
 
 @app.post("/token")
@@ -3479,13 +3777,7 @@ async def owner_resources(request: Request) -> list:
     absent = any(not any(org.claims_match(rid, [g]) for rid in RESOURCES)
                  for g in granted)
     if absent or _LAST_PULL.get(owner, 0) < time.time() - RESOURCE_REFRESH_S:
-        _LAST_PULL[owner] = time.time()
-        for client_id, rs in (await st(owner).resource_servers()).items():
-            try:
-                await asyncio.to_thread(pull_registrations, client_id, rs)
-            except Exception as exc:                            # noqa: BLE001
-                event("resources.pull_retry", client_id=client_id,
-                      error=str(exc)[:200])
+        await pull_registrations_now(owner)
     tiers = await st(owner).tiers()
     out = []
     for rid, desc in RESOURCES.items():
@@ -3852,6 +4144,131 @@ def _org_error(exc: Exception) -> str:
         except Exception:                                       # noqa: BLE001
             return exc.response.text
     return f"the organization could not be reached: {exc}"
+
+
+# --- Joining a jointly held account -----------------------------------------
+
+
+async def fetch_mandate(tally: str, account: str) -> dict:
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(verify=org.CA_BUNDLE or True,
+                                     timeout=joint.TALLY_TTL_S) as c:
+            r = await c.get(f"{tally.rstrip('/')}/mandate/{account}")
+            r.raise_for_status()
+            return r.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502,
+                            detail=f"could not read that mandate: {exc}")
+
+
+def joint_preview_of(mandate: dict, tiers: dict) -> dict:
+    """What agreeing would commit her to, and what it would do to terms she
+    has already written.
+
+    The second half is the one worth showing. Joining does not change her
+    terms — unlike an organization's ceiling, nothing here is clamped into
+    her policy — but it does mean the terms an agent is actually held to over
+    this resource are hers intersected with everybody else's, and she should
+    see which of her own fields her co-owners are about to narrow before she
+    agrees rather than afterwards.
+    """
+    resources = mandate.get("resources") or []
+    mine = [t for t in tiers.values()
+            if any(joint.claims_match(r, t.get("resources") or [])
+                   for r in resources)]
+    return {"mandate": mandate, "summary": uma4a_joint.describe(mandate),
+            "my_terms": [{"name": t.get("name"),
+                          "expires_in": (t.get("terms") or {}).get("expires_in"),
+                          "ask_me": bool(t.get("ask_me"))} for t in mine],
+            "writes_terms": bool(mine)}
+
+
+@app.post("/owner/joint/preview")
+async def owner_joint_preview(request: Request) -> dict:
+    owner = await require_owner(request)
+    body = await request.json()
+    mandate = await fetch_mandate(body.get("tally") or "", body.get("account") or "")
+    return joint_preview_of(mandate, await st(owner).tiers())
+
+
+@app.post("/owner/joint")
+async def owner_joint_join(request: Request) -> dict:
+    """Agree to a mandate.
+
+    Refused without an explicit `agreed`, for the reason joining an
+    organization is: this hands other people a say over a resource she
+    administers, and a party she has never met the standing to ask her
+    authorization server questions. Neither is a thing to acquire by
+    forgetting to say no.
+    """
+    owner = await require_owner(request)
+    body = await request.json()
+    tally = (body.get("tally") or "").rstrip("/")
+    account = body.get("account") or ""
+    if not body.get("agreed"):
+        raise HTTPException(
+            status_code=400,
+            detail="joining a jointly held account gives its other holders a "
+                   "say over what your agents may do with it. Say so explicitly.")
+    mandate = await fetch_mandate(tally, account)
+    if not any(h.get("owner") == owner for h in mandate.get("holders") or []):
+        raise HTTPException(status_code=403,
+                            detail="that mandate does not name you as a holder")
+    await st(owner).set_mandate(account, joint.record_of(account, tally, mandate))
+    # The resources this mandate names have to exist at this authority before
+    # she can write terms over them, and they arrive from the resource
+    # server's listing rather than from the mandate. Pulled here rather than
+    # left to the clock: she agreed to this a second ago and the next thing
+    # she will try to do is say what she permits.
+    await pull_registrations_now(owner)
+    event("joint.joined", owner=owner, account=account, tally=tally,
+          holders=[h["owner"] for h in mandate.get("holders") or []])
+    await ledger_add(owner, "joint_joined", "-",
+                     {"account": account, "tally": tally,
+                      "holders": [h["owner"] for h in mandate.get("holders") or []]})
+    await owner_notify(owner, {"type": "joint", "state": "joined",
+                               "account": account})
+    return {"joined": account, "mandate": mandate,
+            "summary": uma4a_joint.describe(mandate)}
+
+
+@app.get("/owner/joint")
+async def owner_joint_list(request: Request) -> list:
+    owner = await require_owner(request)
+    out = []
+    for account, record in (await st(owner).mandates()).items():
+        mandate = record.get("mandate") or {}
+        out.append({
+            "account": account,
+            "tally": record.get("tally"),
+            "resources": mandate.get("resources") or [],
+            "holders": [{"owner": h["owner"], "weight": h["weight"]}
+                        for h in mandate.get("holders") or []],
+            "rule": mandate.get("rule") or {},
+            "summary": uma4a_joint.describe(mandate),
+        })
+    return out
+
+
+@app.delete("/owner/joint/{account}")
+async def owner_joint_leave(account: str, request: Request) -> dict:
+    """Stop being a holder.
+
+    What this does not do is end the account. The other holders' mandate is
+    theirs, and a party leaving it is a fact for the tally to reflect — this
+    server can only stop answering. Her terms stay exactly as they were, for
+    the reason leaving an organization leaves its narrowings in place.
+    """
+    owner = await require_owner(request)
+    if not await st(owner).clear_mandate(account):
+        raise HTTPException(status_code=404, detail="not a party to that mandate")
+    event("joint.left", owner=owner, account=account)
+    await ledger_add(owner, "joint_left", "-", {"account": account})
+    await owner_notify(owner, {"type": "joint", "state": "left",
+                               "account": account})
+    return {"left": account}
 
 
 @app.get("/owner/connections")

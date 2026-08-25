@@ -152,6 +152,28 @@ Rules** is what the firm enforces operationally, in Rego, and can only refuse
 or interrupt. The test for which page a rule belongs on is whether a member
 would have to agree to it again. [ORG.md](ORG.md).
 
+## Two owners, neither above the other
+
+```bash
+make joint-check
+```
+
+Meridian holds an account for Alice and Carol together. Neither of them can
+release it alone, and there is no firm above them — so the thing an agent
+negotiates with is a **tally**, which owns nothing and decides nothing.
+
+Two moments are worth watching for. The agent is offered **one** terms
+document that is both holders' at once: the shorter expiry, only the scopes
+both of them offer, every prohibition either of them wrote. And the grant it
+receives carries a signed verdict from each holder, which the gateway verifies
+against the keys their authorities publish before re-running the count itself
+— so a tally that fabricated an answer is refused at the door rather than
+believed.
+
+`meridian-either` is the same machinery with the rule set to `any`, which is
+the "either or survivor" half of how joint accounts actually work.
+[JOINT.md](JOINT.md).
+
 ## The third thing, which is not a demo
 
 `make fixture` is a two-container stack with no identity provider, no database

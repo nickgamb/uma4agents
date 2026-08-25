@@ -240,6 +240,14 @@ differed between Alice and Carol. [ORG.md](ORG.md) covers what is new: the
 ceiling, the roles, whose agent may act, and where the organization's reach
 stops.
 
+They are also unchanged when a resource has several owners of equal standing.
+`/mcp/joint/<account>` challenges with a **tally** as its `as_uri` — a party
+that owns nothing, decides nothing, and speaks an ordinary authorization-server
+surface so that an unmodified agent cannot tell the difference. What is new is
+where the answer comes from: each holder's own authority signs a verdict, the
+tally counts them, and the gateway re-verifies every verdict and re-runs the
+count before letting the call through. [JOINT.md](JOINT.md).
+
 ## Ports and hostnames
 
 TLS everywhere via the Envoy edge and a local CA (`make init`). Browser access

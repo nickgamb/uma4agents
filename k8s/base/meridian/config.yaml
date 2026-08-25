@@ -22,4 +22,10 @@ stringData:
   # the grants that organization signs itself. Provisioned on both sides,
   # unlike a member's authority — the firm's own gateway and the firm's own
   # organization service were stood up by the same people.
-  org-rs-token: org-rs-dev-token 
+  org-rs-token: org-rs-dev-token
+  # What this gateway presents to the tally to mint tickets over a jointly
+  # held account and to introspect the grants it issues. Provisioned on both
+  # sides for the same reason: both are infrastructure. It buys nothing that
+  # matters — the verdicts inside a joint grant are checked against the
+  # holders' own published keys, not against this.
+  tally-rs-secret: tally-rs-dev-secret 

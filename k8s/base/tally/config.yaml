@@ -1,0 +1,50 @@
+# The mandates this tally counts for, and the secret the enforcement point
+# presents.
+#
+# Two accounts, because the interesting comparison is between them: the same
+# machinery, the same holders, and a different rule. `meridian-joint` needs
+# both of them; `meridian-either` is the "either or survivor" arrangement
+# every joint bank account actually has.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tally-mandates
+  namespace: tally
+data:
+  mandates.json: |
+    {
+      "meridian-joint": {
+        "resources": ["meridian-joint/get_positions",
+                      "meridian-joint/get_transactions",
+                      "meridian-joint/execute_trade"],
+        "holders": [
+          {"owner": "alice", "issuer": "https://alice-as.uma.lab"},
+          {"owner": "carol", "issuer": "https://carol-as.uma.lab"}
+        ],
+        "rule": {"kind": "all"}
+      },
+      "meridian-either": {
+        "resources": ["meridian-either/get_positions",
+                      "meridian-either/get_transactions",
+                      "meridian-either/execute_trade"],
+        "holders": [
+          {"owner": "alice", "issuer": "https://alice-as.uma.lab"},
+          {"owner": "carol", "issuer": "https://carol-as.uma.lab"}
+        ],
+        "rule": {"kind": "any"}
+      }
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tally-config
+  namespace: tally
+type: Opaque
+stringData:
+  # What the enforcement point presents to mint tickets and introspect. A
+  # provisioned secret is honest here: the gateway and this service are both
+  # infrastructure, unlike a member's authority, which nobody is in a
+  # position to configure both ends of.
+  rs-secret: tally-rs-dev-secret

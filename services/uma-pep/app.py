@@ -130,6 +130,20 @@ SHARED_NAMESPACE = os.environ.get("UMA_PEP_SHARED_NAMESPACE", "northwind-vault")
 SHARED_RS_NAME = os.environ.get("UMA_PEP_SHARED_RS_NAME",
                                 "Meridian Wealth shared-book gateway")
 
+# A jointly held account: one resource, several owners of equal standing, and
+# an authority that is nobody's. `/mcp/joint/<account>` reaches it, and the
+# party at the other end of the challenge is the tally rather than any
+# owner's authorization server — which is why this needs no per-owner
+# enforcer and no membership lookup. Who is entitled to a say is in the
+# mandate, and the grant is checked against it here.
+JOINT_PREFIX = os.environ.get("UMA_PEP_JOINT_PREFIX", "mcp/joint")
+JOINT_TALLY = os.environ.get("UMA_PEP_JOINT_TALLY", "")
+JOINT_TALLY_INTERNAL = os.environ.get("UMA_PEP_JOINT_TALLY_INTERNAL", "") or JOINT_TALLY
+JOINT_SECRET = os.environ.get("UMA_PEP_JOINT_SECRET", "")
+JOINT_ACCOUNTS = [a for a in os.environ.get("UMA_PEP_JOINT_ACCOUNTS", "").split(",") if a]
+JOINT_RS_NAME = os.environ.get("UMA_PEP_JOINT_RS_NAME",
+                               "Meridian Wealth joint-account gateway")
+
 
 def authority_for(owner: str) -> tuple[str, str]:
     """(public, internal) for the authority that governs this owner."""
@@ -164,23 +178,41 @@ def shared_tools(grants) -> dict:
             if claims_match(f"{SHARED_NAMESPACE}/{tool}", grants)}
 
 
-def route_of(path: str) -> tuple[str, bool]:
-    """(owner, is-shared) for a request path.
+def route_of(path: str) -> tuple[str, str]:
+    """(name, kind) for a request path, where kind is own|shared|joint.
 
     On an unauthenticated tool call the path is the only thing that can say
-    whose authority governs, which is why every owner has one — and why a
-    resource shared with several people has one per person rather than one
-    for the resource.
+    which authority governs, and the three kinds are three different answers
+    to that. `own` is an owner's own authorization server. `shared` is a
+    resource the organization owns, administered by the member named — one
+    path per person, because each of them administers it under her own
+    authority. `joint` is one resource with several owners of equal standing,
+    and there the path names the *account* rather than a person: no single
+    holder's authority governs it, which is the whole difference.
     """
     tail = path.rstrip("/").rsplit("/mcp", 1)[-1].strip("/")
-    leaf = SHARED_PREFIX.rsplit("/", 1)[-1]
-    if tail.startswith(f"{leaf}/"):
-        return tail.split("/", 1)[1], True
-    return (tail if tail in ALL_OWNERS else OWNER), False
+    shared_leaf = SHARED_PREFIX.rsplit("/", 1)[-1]
+    joint_leaf = JOINT_PREFIX.rsplit("/", 1)[-1]
+    if tail.startswith(f"{shared_leaf}/"):
+        return tail.split("/", 1)[1], "shared"
+    if tail.startswith(f"{joint_leaf}/"):
+        return tail.split("/", 1)[1], "joint"
+    return (tail if tail in ALL_OWNERS else OWNER), "own"
 
 
 def owner_for_path(path: str) -> str:
     return route_of(path)[0]
+
+
+def joint_tools(account: str) -> dict:
+    """The tool surface over one jointly held account.
+
+    The account is the namespace. Two accounts held by different people are
+    two sets of resources, and sharing a namespace between them would make
+    "which mandate covers this request" ambiguous at the one place it has to
+    be exact.
+    """
+    return {tool: (f"{account}/{tool}", ss) for tool, (_, ss) in TOOLS.items()}
 SINGLE_USE_TOOLS = {"execute_trade"}
 # Deny by default. An allow-list of open methods silently admits every method
 # a future protocol revision invents — 2026-07-28 alone added tasks/*,
@@ -333,6 +365,94 @@ def _shared_enforcer_for(owner: str) -> Enforcer:
     )
 
 
+_MANDATES: dict[str, tuple[float, dict]] = {}
+MANDATE_TTL_S = float(os.environ.get("UMA_PEP_MANDATE_TTL_S", "30"))
+
+
+async def mandate_of(account: str) -> dict | None:
+    """The mandate for one jointly held account, from the tally that publishes
+    it. Cached briefly: it names who is entitled to a say, and a holder
+    leaving should stop being listed here in seconds rather than at a
+    restart."""
+    if not JOINT_TALLY_INTERNAL:
+        return None
+    cached = _MANDATES.get(account)
+    if cached and cached[0] > time.time():
+        return cached[1]
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{JOINT_TALLY_INTERNAL}/mandate/{account}")
+            r.raise_for_status()
+            doc = r.json()
+    except httpx.HTTPError as exc:
+        event("mandate.unreachable", account=account, error=str(exc)[:160])
+        return cached[1] if cached else None
+    _MANDATES[account] = (time.time() + MANDATE_TTL_S, doc)
+    return doc
+
+
+async def joint_held_by(owner: str) -> dict[str, dict]:
+    """The jointly held accounts this owner is a holder of, with their tools.
+
+    Used to put those resources in the listing her authorization server
+    reads, which is how they come to exist at her authority at all — the same
+    route the organization's shared resources take. Without it she has
+    nothing to write terms over, and a holder with no terms is a holder who
+    has consented to nothing.
+    """
+    out = {}
+    for account in JOINT_ACCOUNTS:
+        doc = await mandate_of(account)
+        if doc and any(h.get("owner") == owner for h in doc.get("holders") or []):
+            out[account] = joint_tools(account)
+    return out
+
+
+JOINT: dict[str, Enforcer] = {}
+
+
+def joint_enforcer(account: str) -> Enforcer | None:
+    """One per jointly held account, pointed at the tally rather than at any
+    owner.
+
+    Everything else about it is an ordinary enforcement point, and that is
+    the useful part: the tally speaks the same authorization-server surface,
+    so nothing here needs to know that the party it is negotiating with owns
+    nothing. What it does know — because it is named in configuration rather
+    than read off a token — is which tally it will accept a grant from.
+    """
+    if not JOINT_TALLY or (JOINT_ACCOUNTS and account not in JOINT_ACCOUNTS):
+        return None
+    if account not in JOINT:
+        leaf = f"{JOINT_PREFIX}/{account}"
+        JOINT[account] = Enforcer(
+            owner=account,
+            as_internal=JOINT_TALLY_INTERNAL,
+            as_public=JOINT_TALLY,
+            client_id=RS_CLIENT_ID,
+            client_secret=JOINT_SECRET,
+            key_id=PEP_KID,
+            resource_uri=f"{PUBLIC_BASE}/{leaf}",
+            rs_name=JOINT_RS_NAME,
+            # The protection space is the account, not the primary owner's
+            # vault. A challenge from a jointly held resource that announced
+            # `realm="alice-vault"` would be naming one holder as the party
+            # behind a resource that is equally the other's.
+            realm=account,
+            tools=joint_tools(account),
+            single_use_tools=SINGLE_USE_TOOLS,
+            protected_methods=PROTECTED_METHODS,
+            open_methods=OPEN_METHODS,
+            expected_authority=EXPECTED_AUTHORITY,
+            allowed_origins=ALLOWED_ORIGINS,
+            resource_metadata_url=(
+                f"{PUBLIC_BASE}/.well-known/oauth-protected-resource/{leaf}"),
+            joint_issuer=JOINT_TALLY,
+            event=event,
+        )
+    return JOINT[account]
+
+
 async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
     """The enforcer for the organization's book as administered by `owner`,
     or None if the organization has not shared it with her.
@@ -415,8 +535,16 @@ async def check(request: Request, rest: str = "") -> Response:
         signature_agent=h.get("signature-agent"),
         traceparent=h.get("traceparent"),
     )
-    owner, is_shared = route_of(original_path)
-    if is_shared:
+    owner, kind = route_of(original_path)
+    if kind == "joint":
+        enforcer = joint_enforcer(owner)
+        if enforcer is None:
+            event("access.denied", reason="no-mandate", account=owner,
+                  path=original_path)
+            return deny(404, {"error": "no_mandate",
+                              "error_description": "this gateway serves no "
+                              "jointly held account by that name"})
+    elif kind == "shared":
         enforcer = await shared_enforcer(owner)
         if enforcer is None:
             # Not a member, or the organization stopped sharing. Not a
@@ -510,6 +638,24 @@ async def shared_resource_metadata(owner: str) -> Response:
     # though they are not hers to own, and her authority reads everything it
     # protects for her from one place.
     doc = prm_document(owner, f"{SHARED_PREFIX}/{owner}", enforcer=enforcer,
+                       tools=enforcer.tools)
+    return JSONResponse(_sign_prm(doc))
+
+
+@app.get("/.well-known/oauth-protected-resource/mcp/joint/{account}")
+async def joint_resource_metadata(account: str) -> Response:
+    """A jointly held account, as a protected resource.
+
+    Its `authorization_servers` names the **tally**, and that is the only
+    document in this gateway of which that is true. Every other resource here
+    points an agent at some owner's authority; this one points it at a party
+    that owns nothing and decides nothing, because no single holder's
+    authority governs a resource all of them hold.
+    """
+    enforcer = joint_enforcer(account)
+    if enforcer is None:
+        return JSONResponse({"error": "no such resource"}, status_code=404)
+    doc = prm_document(account, f"{JOINT_PREFIX}/{account}", enforcer=enforcer,
                        tools=enforcer.tools)
     return JSONResponse(_sign_prm(doc))
 
@@ -689,17 +835,27 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
         for tool, (rid, ss) in shared.tools.items():
             tools[f"shared:{tool}"] = (rid, ss)
             shared_ids.add(rid)
+    # And the accounts she holds jointly with somebody else. They arrive by
+    # the same route as the organization's, and for the same reason: a
+    # resource has to exist at her authority before she can write terms over
+    # it, and her terms are half of what an agent will be held to here.
+    joint_ids = set()
+    for account, jtools in (await joint_held_by(who)).items():
+        for tool, (rid, ss) in jtools.items():
+            tools[f"joint:{account}:{tool}"] = (rid, ss)
+            joint_ids.add(rid)
     leaf = f"mcp/{who}"
     event("owner_resources.served", owner=who, count=len(tools),
-          shared=len(shared_ids))
+          shared=len(shared_ids), joint=len(joint_ids))
     return Response(
         content=json.dumps({
             "owner": who,
             "resource": f"{PUBLIC_BASE}/{leaf}",
             "resources": [
-                {"_id": rid, "tool": tool.split(":", 1)[-1],
+                {"_id": rid, "tool": tool.rsplit(":", 1)[-1],
                  "resource_scopes": ss, "type": "mcp-tool",
-                 "name": (f"Shared: {tool.split(':', 1)[-1]}" if rid in shared_ids
+                 "name": (f"Shared: {tool.rsplit(':', 1)[-1]}" if rid in shared_ids
+                          else f"Joint: {tool.rsplit(':', 1)[-1]}" if rid in joint_ids
                           else f"{who.title()}'s vault: {tool}")}
                 for tool, (rid, ss) in tools.items()
             ],

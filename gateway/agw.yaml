@@ -48,6 +48,47 @@ binds:
           # request. That is shared ownership — the resource belongs to
           # Northwind, and each member administers access to it under her own
           # authority and her own terms.
+          # One resource, several owners of equal standing. Unlike
+          # /mcp/shared above, the segment after the prefix names the
+          # *account* rather than a person: no single holder's authority
+          # governs this, so there is nobody to name. The challenge from
+          # here points at the tally.
+          - name: joint-vault-mcp
+            matches:
+              - path:
+                  pathPrefix: /mcp/joint
+            policies:
+              cors:
+                allowOrigins: ["*"]
+                allowHeaders: [mcp-protocol-version, content-type,
+                               cache-control, mcp-session-id, authorization]
+                exposeHeaders: ["Mcp-Session-Id", "WWW-Authenticate"]
+              extAuthz:
+                host: "uma-pep:9002"
+                includeRequestBody:
+                  maxRequestBytes: 16384
+                includeRequestHeaders:
+                  - x-envoy-auth-partial-body
+                  - authorization
+                  - signature
+                  - signature-input
+                  - host
+                  - content-type
+                  - mcp-method
+                  - mcp-name
+                  - mcp-protocol-version
+                  - origin
+                  - signature-agent
+                  - traceparent
+                protocol:
+                  http:
+                    path: '"/check" + request.path'
+            backends:
+              - mcp:
+                  targets:
+                    - name: joint-vault
+                      mcp:
+                        host: http://joint-vault-mcp:9020/mcp
           - name: northwind-vault-mcp
             matches:
               - path:

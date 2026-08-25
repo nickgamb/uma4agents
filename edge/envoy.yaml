@@ -57,6 +57,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: org_authority }
+                    - name: joint_tally
+                      domains: ["joint-tally.uma.lab", "joint-tally.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: joint_tally }
                     - name: org_console
                       domains: ["org-console.uma.lab", "org-console.uma.lab:*"]
                       routes:
@@ -152,6 +157,14 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: org-authority, port_value: 9040 } }
+    - name: joint_tally
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: joint_tally
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: joint-tally, port_value: 9060 } }
     - name: org_console
       type: STRICT_DNS
       load_assignment:

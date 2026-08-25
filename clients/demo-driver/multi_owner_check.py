@@ -274,8 +274,16 @@ def main() -> int:
         for i, a in enumerate(names):
             for b in names[i + 1:]:
                 overlap |= (fams[a] & fams[b]) - {None, "-"}
-        check("and no negotiation appears in more than one record",
-              not overlap, f"shared: {sorted(overlap)}")
+        # A negotiation over a resource one of them owns must never appear in
+        # another's record. A negotiation over a resource they hold *jointly*
+        # must appear in both, and that is not a leak but the point of it —
+        # each holder keeps her own record of what she was asked and what she
+        # answered. So the property is not "no overlap" but "nothing overlaps
+        # except the negotiations that belong to all of them". See
+        # docs/JOINT.md; `jnt_` is a tally's family prefix.
+        leaked = {f for f in overlap if not str(f).startswith("jnt_")}
+        check("and no negotiation over one owner's resources reaches another's record",
+              not leaked, f"shared: {sorted(leaked)}")
 
     print()
     print(f"{len(PASS)} passed, {len(FAIL)} failed", flush=True)

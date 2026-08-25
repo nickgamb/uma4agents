@@ -46,6 +46,7 @@ class MemoryOwnerStore:
         self._tiers: dict[str, dict] = {}
         self._rs: dict[str, dict] = {}
         self._organization: dict | None = None
+        self._mandates: dict[str, dict] = {}
         self._subscribers: list[asyncio.Queue] = []
 
     # --- lifecycle ---------------------------------------------------------
@@ -296,6 +297,21 @@ class MemoryOwnerStore:
         updated = policy.apply_patch(self._tiers[tier_id], patch)
         self._tiers[tier_id] = updated
         return copy.deepcopy(updated)
+
+    # --- resources held jointly -----------------------------------------------
+
+    async def mandates(self) -> dict[str, dict]:
+        return copy.deepcopy(self._mandates)
+
+    async def mandate(self, account: str) -> dict | None:
+        rec = self._mandates.get(account)
+        return copy.deepcopy(rec) if rec else None
+
+    async def set_mandate(self, account: str, record: dict) -> None:
+        self._mandates[account] = copy.deepcopy(record)
+
+    async def clear_mandate(self, account: str) -> bool:
+        return self._mandates.pop(account, None) is not None
 
     # --- the organization above her -------------------------------------------
 

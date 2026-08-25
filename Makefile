@@ -159,6 +159,13 @@ establishment-check:
 org-check:
 	@docker compose --profile test run --rm org-check
 
+## joint-check: one resource, two owners, neither above the other. The
+## holders' signed verdicts, counted by a party that holds no policy and is
+## not trusted to have counted right. See docs/JOINT.md.
+.PHONY: joint-check
+joint-check:
+	@docker compose --profile test run --rm joint-check
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:
@@ -398,6 +405,13 @@ rules-test:
 org-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		python lib/test_org.py
+
+## joint-test: the mandate validator, the fold and the count, with nothing
+## running and nothing installed.
+.PHONY: joint-test
+joint-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		python lib/test_joint.py
 
 ## store-test: prove single-use really is single-use, on both storage backends
 # The authorization server's state has two implementations — in-process for

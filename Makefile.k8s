@@ -113,6 +113,7 @@ k8s-apply:
 	@kubectl apply -f $(K8S)/base/alice/ >/dev/null
 	@kubectl apply -f $(K8S)/base/carol/ >/dev/null
 	@kubectl apply -f $(K8S)/base/northwind/ >/dev/null
+	@kubectl apply -f $(K8S)/base/tally/ >/dev/null
 	@kubectl apply -f $(K8S)/base/meridian/ >/dev/null
 	@kubectl apply -f $(K8S)/base/sterling-vance/ >/dev/null
 	@kubectl apply -f $(K8S)/base/aauth/ >/dev/null
@@ -138,6 +139,7 @@ k8s-wait:
 	@kubectl -n northwind rollout status deploy/opa --timeout=300s >/dev/null
 	@kubectl -n northwind rollout status deploy/org-authority --timeout=300s >/dev/null
 	@kubectl -n northwind rollout status deploy/org-console --timeout=300s >/dev/null
+	@kubectl -n tally rollout status deploy/joint-tally --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/uma-pep --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/alice-vault --timeout=300s >/dev/null
 	@kubectl -n meridian rollout status deploy/carol-vault --timeout=300s >/dev/null
@@ -214,11 +216,18 @@ k8s-multi-owner-check:
 	$(call run_job,multi-owner-check,cat $(K8S)/base/jobs/multi-owner-check.yaml,420s)
 
 ## k8s-org-check: shared ownership — an organization's resources, administered
-## by its members. The same 80 assertions the compose stack runs, against
+## by its members. The same 90 assertions the compose stack runs, against
 ## three parties that are three namespaces with no path between them.
 .PHONY: k8s-org-check
 k8s-org-check:
 	$(call run_job,org-check,cat $(K8S)/base/jobs/org-check.yaml,900s)
+
+## k8s-joint-check: joint ownership — one account, two owners of equal
+## standing, and a tally in a namespace of its own that can reach either
+## holder's authority only through the edge.
+.PHONY: k8s-joint-check
+k8s-joint-check:
+	$(call run_job,joint-check,cat $(K8S)/base/jobs/joint-check.yaml,900s)
 
 ## k8s-establishment-check: a resource server and an authority that were never
 ## configured against each other, introducing themselves — and the four ways

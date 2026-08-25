@@ -349,6 +349,33 @@ class OwnerStore(Protocol):
         button in this system.
         """
 
+    # --- resources she holds jointly with somebody else ----------------------
+    #
+    # Keyed, unlike the organization above. Two ceilings over one terms
+    # document would have to be intersected and an intersection nobody wrote
+    # is a policy nobody agreed to — but two *mandates* are two different
+    # resources with two different sets of co-owners, and they never meet.
+    # The thing that made one organization the right number is exactly what
+    # makes several mandates fine.
+
+    async def mandates(self) -> dict[str, dict]:
+        """Every jointly held resource this owner is a party to, by account."""
+
+    async def mandate(self, account: str) -> dict | None:
+        """One of them, or ``None``."""
+
+    async def set_mandate(self, account: str, record: dict) -> None:
+        """Store or replace her side of one mandate."""
+
+    async def clear_mandate(self, account: str) -> bool:
+        """Leave one. False if she was not a party to it.
+
+        Leaves her terms exactly as they were, for the reason
+        ``clear_organization`` does: what her co-owners' terms narrowed while
+        she was in it stays narrowed. Withdrawing from a joint arrangement is
+        not an act that may widen a grant.
+        """
+
     # --- fan-out to the owner's surface -------------------------------------
 
     async def notify(self, payload: dict) -> None:

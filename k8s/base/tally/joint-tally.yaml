@@ -1,0 +1,106 @@
+# The tally — the party that counts, and owns nothing.
+#
+# It has a namespace of its own for the same reason the identity provider
+# does: it belongs to neither owner. A resource held jointly by Alice and
+# Carol cannot have its decision made in Alice's namespace without being, in
+# some small way, more Alice's than Carol's.
+#
+# What crosses this boundary is short and worth naming:
+#
+#   * a **quote** goes out to each holder's authority and her terms over the
+#     jointly held resource come back — that resource only, so folding them
+#     is possible and nothing else about her policy is;
+#   * a **verdict** comes back per request, signed by her authority. This
+#     service verifies it and adds it up. It has no key that anybody accepts
+#     as a verdict, so the worst it can do is withhold or misreport;
+#   * a **grant** goes to the requesting agent carrying those verdicts, and
+#     the enforcement point in meridian re-verifies each one against the keys
+#     that holder publishes and re-runs the count.
+#
+# That last line is why running this next to the resource server, or having
+# the bank run it, is not a privilege: nothing here has to be trusted.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: joint-tally
+  namespace: tally
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: joint-tally
+  namespace: tally
+spec:
+  selector: { app: joint-tally }
+  ports:
+    - { name: http, port: 9060, targetPort: 9060 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: joint-tally
+  namespace: tally
+spec:
+  # One. Negotiations in flight are held in this process, so two replicas
+  # would be two tallies each holding half the verdicts and neither able to
+  # reach a threshold. The honest fix is to persist them the way the
+  # authorization servers here do; the lab does not need it and says so.
+  replicas: 1
+  selector:
+    matchLabels: { app: joint-tally }
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels: { app: joint-tally }
+    spec:
+      serviceAccountName: joint-tally
+      containers:
+        - name: joint-tally
+          image: localhost:5001/u4a/joint-tally:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9060 }
+          env:
+            - { name: TALLY_ISSUER, value: "https://joint-tally.uma.lab" }
+            - { name: TALLY_AUDIENCE, value: "https://gateway.uma.lab" }
+            - name: TALLY_RS_SECRET
+              valueFrom: { secretKeyRef: { name: tally-config, key: rs-secret } }
+            # A minimum the holders may not vote themselves below. Zero here
+            # so the lab can carry both an every-holder account and an
+            # either-holder one; set it and the second is refused at startup,
+            # by name. This is what an account agreement or a regulator
+            # supplies in the world, and it is the only answer to what quorum
+            # sets the quorum.
+            - { name: TALLY_THRESHOLD_FLOOR, value: "0" }
+            - { name: TALLY_MANDATES_FILE, value: /mandates/mandates.json }
+            - { name: TALLY_SIGNING_KEY, value: /keys/tally-ed25519.pem }
+            - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }
+          volumeMounts:
+            - { name: mandates, mountPath: /mandates, readOnly: true }
+            - { name: keys, mountPath: /keys }
+            - { name: ca, mountPath: /certs, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /health, port: 9060 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        # Who is entitled to be counted, mounted read-only. A mandate is not
+        # this service's to write: it names the electorate, the holders agreed
+        # to it, and a coordinator that could edit it would be deciding who
+        # gets a say.
+        - name: mandates
+          configMap: { name: tally-mandates }
+        # Its signing key. Persisted across restarts within the pod's life —
+        # both holders' authorities cache what this service publishes, and a
+        # key that changed every restart would read as a broken mandate.
+        - { name: keys, emptyDir: {} }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }

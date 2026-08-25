@@ -21,13 +21,14 @@ available on request.
 | Cross-principal grant topology (RO ≠ RqP; AS is the owner's policy home) | **Keep** | The idea the rest hangs off; nothing else on the table has it |
 | Permission ticket as negotiation handle | **Keep** | Carried clean; its single-use rotation is exactly what makes "pending" safe |
 | `request_submitted` pending state | **Keep** | Already specifies "ask me"; the agent era only adds *where* the owner is asked |
-| Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats |
+| Claims-gathering (`need_info` demand loop) | **Keep, transform** | Becomes the owner *proffering* a terms template (MyTerms / IEEE 7012-shaped), not just naming claim formats. And it needs a stated boundary: a claim the requesting party gathers is one it can decline to gather, so a fact that may be adverse to it — a co-owner's refusal above all — must travel between authorities instead (rec 26) |
 | RPT (requesting party token) | **Keep semantics, replace token** | Keep the per-permission introspection array; drop the bearer token for a PoP token |
 | RS-side registration + PAT (FedAuthz) | **Keep direction, relocate work; specify the bootstrap** | The owner-authoritative direction is right; the RS burden is *relocatable* — a gateway, a framework, or the resource itself (rec 7). Both hosts run here against one AS. What is missing is how the RS becomes a client of *her* authority at all: FedAuthz assumes it already is, which holds only where one operator runs both sides. The RS can authenticate as its own origin instead (rec 21) |
 | One AS per protected resource (implicit) | **Transform** | A resource server holds many people's accounts and each of them may name a different authorization server. Every owner-scoped artifact has to carry its owner — the ticket, the RPT, the resource id, the terms template, and the RFC 9728 document itself. Two owners run here over one resource server, one of them on an authority the resource server was never configured against |
 | Resource registration model | **Transform** | Durable resources → *tool/capability surfaces*; and registration itself becomes method-agnostic — classic push RReg, or declarative pull from RFC 9728 metadata plus a protected owner-resources listing (rec 5; both run in this POC) |
 | Interactive claims gathering (browser redirect) | **Transform** | Same slot, new interlocutors: agent-side elicitation, owner-side push |
 | Resource rights administration (RO ≠ the person at the console) | **Transform** | Named since 2015, never mechanised. Three of PP2PI's four co-administration states are deployments of the existing party model; the fourth — one resource owned by an organization, administered by several people under *their own* authorities — needs the authority selected per (resource, administrator) and one new field in the organization's policy: whose agent may act. See rec 25 |
+| One deciding party per resource (implicit) | **Transform** | Holds while a resource has one owner. It does not when several people hold it at equal standing: two authorities must answer the same request and no ceiling sits above either. That needs three objects UMA has no room for — a mandate naming who is entitled to be counted, a signed verdict from each owner's authority, and a counting party that carries those verdicts in the grant so it never has to be trusted. See rec 26 |
 | Trust-elevation levels, multi-AS, legal framework | **Parking lot** | Real and implicated, out of scope for a first POC; revival conditions noted |
 
 The POC also surfaced four capabilities the agent era demands. They split
@@ -48,6 +49,7 @@ carries the parts, but the agent-era *use* deserves normative naming:
 | Per-operation, single-use grants | Built | "Approve this trade" must not become "may trade"; the RPT carries an operation hash and is consumed on use. Classic UMA scopes authorize *classes* of action, not one action. |
 | Owner's agent / app as the consent surface | Built (portal) | The 2010 out-of-band-consent wireframes, with an interlocutor that finally exists |
 | Delegation by party (`none` / `first-party-only` / `any-agent`) | Built | The organization can say *whose* agent may act on a resource it shares, which is a statement about parties rather than permissions. Nothing in UMA 2.0, OAuth or any policy engine has a place for it, and it only becomes expressible once the owner's authority can distinguish an agent she activated from one somebody else runs |
+| Verdicts as portable signed documents | Built | An authority's answer about one negotiation, bound to that negotiation and to the exact agreement, signed and carried in the grant. It is the object that lets several owners decide one request without anybody having to trust whoever added the answers up — and, more generally, the thing missing whenever a decision needs more than one authority |
 
 ---
 
@@ -903,6 +905,69 @@ verification is available to a deployment willing to solve single use itself.
 
 Built and demonstrated: `make org-check` (90 assertions over six processes),
 `docs/ORG.md`.
+
+**26. Co-ownership needs a counting party, and it must not be a trusted one.**
+Recommendation 25 is a layer *above* the owner. The other arrangement is
+several owners of equal standing over one resource, where none of them can
+decide alone and there is nobody above them to arbitrate — a joint account is
+the ordinary case and a data set with several subjects is the hard one. UMA
+2.0 has exactly one authorization server per protected resource and no object
+for "these parties must both agree".
+
+The obstacle is not the counting. It is that whatever does the counting sits
+in a privileged position, and every party in the arrangement is a peer, so
+there is no principled place to put it. The reflex is to make the privileged
+thing trustworthy — replicate it, distribute it, reach for a ledger. That
+imports a great deal (permissioned or permissionless, who runs the nodes,
+finality) to solve a problem this is not: verdicts about one negotiation are
+a *set* rather than an ordered history, there is no long-lived state a fork
+could damage, and replay is prevented by binding each verdict to a negotiation
+and an agreement digest rather than by a global log.
+
+The workable shape is to make the counting party **unable to lie** and then
+stop caring who runs it. Three objects: a published **mandate** naming who is
+entitled to be counted, at what weight and how many it takes; a **verdict**,
+which is one owner's authority signing its answer to one negotiation; and a
+**tally**, which folds the owners' terms into the single document the agent
+signs and collects the verdicts. The grant it issues carries the verdicts, and
+the enforcement point verifies each against the keys that owner's authority
+publishes and re-runs the count from the mandate. A tally that fabricates a
+verdict, replays an old one, or reports a threshold it never reached is
+refused at the door. It costs a larger token and it buys the only property
+that matters.
+
+Four things are worth specifying alongside it:
+
+- **Say which facts the requesting party may carry.** Claims-gathering is the
+  obvious UMA-shaped home for a co-owner's answer, and it is the wrong one: a
+  claim the client gathers is a claim it can decline to gather, so an agent
+  holding two allows and a refusal would present the two and report the third
+  as outstanding. A missing claim and an unanswered one are indistinguishable.
+  Anything that may be adverse to the requesting party has to travel between
+  authorities.
+- **Fold the terms, and let everyone who could have been cheated check the
+  fold.** An agent cannot usefully sign several documents, and an intersection
+  computed by the requesting side is computed by the party that benefits from
+  computing it generously. So one document — shortest expiry, intersected
+  scopes, unioned prohibitions — and each owner's authority independently
+  refuses anything signed that is wider than what she published. That is also
+  the same narrowing algebra as an organization's ceiling, pointed sideways.
+- **Silence and unreachability are not consent.** An owner who has written no
+  terms is left out of the fold rather than defaulted into one, and an
+  authority that cannot be reached is not a yes. Both fail closed; only the
+  logging distinguishes them.
+- **A threshold may come from outside the group.** A group cannot answer what
+  quorum sets the quorum, and in practice it does not have to: an account
+  agreement or a regulator supplies a floor the holders may not vote
+  themselves below. That is the same shape as recommendation 25's ceiling,
+  which means peers compose horizontally while an authority above them clamps
+  vertically, and the two arrangements are orthogonal rather than rival.
+
+The honest gap is the bootstrapping of a mandate. Authoring one is exactly
+where "who decides who decides" lives, and this defers it to configuration.
+
+Built and demonstrated: `make joint-check` (29 assertions over six processes),
+`make joint-test`, `docs/JOINT.md`.
 
 ---
 

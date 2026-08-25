@@ -1,0 +1,34 @@
+{
+  "as_of": "2026-07-06",
+  "positions": [
+    {
+      "symbol": "VTSAX",
+      "name": "Vanguard Total Stock Market Index",
+      "quantity": 1840,
+      "cost_basis": 198720.0,
+      "market_value": 241040.0
+    },
+    {
+      "symbol": "VBTLX",
+      "name": "Vanguard Total Bond Market Index",
+      "quantity": 2260,
+      "cost_basis": 226000.0,
+      "market_value": 218420.0
+    },
+    {
+      "symbol": "MMDA",
+      "name": "Meridian Money Market Deposit",
+      "quantity": 64500,
+      "cost_basis": 64500.0,
+      "market_value": 64500.0
+    }
+  ],
+  "transactions": [
+    {"date": "2026-06-02", "type": "buy", "symbol": "VTSAX", "quantity": 120,
+     "amount": 15720.0},
+    {"date": "2026-05-18", "type": "dividend", "symbol": "VBTLX", "quantity": 0,
+     "amount": 742.15},
+    {"date": "2026-04-27", "type": "deposit", "symbol": "MMDA", "quantity": 8000,
+     "amount": 8000.0}
+  ]
+}

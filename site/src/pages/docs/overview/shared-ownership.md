@@ -3,6 +3,9 @@ templateKey: doc
 title: Shared ownership
 description: A firm owns a book, shares parts of it with the people who work on it, and sets policy over it that none of them can waive — while each of them still administers access under her own authority.
 next:
+  - title: Joint ownership
+    to: /docs/overview/joint-ownership/
+    blurb: The other co-administration — owners of equal standing, none above the rest.
   - title: Many owners, one resource server
     to: /docs/overview/multi-owner/
     blurb: The arrangement this builds on.
@@ -121,6 +124,12 @@ member was shown and widening one is handing out access. And a group with
 members in it cannot be deleted: they would be left holding an id that
 resolves to nothing, which fails *closed*, so their access would quietly stop
 working with no event anyone would think to look at.
+
+Authority here is **partitioned**: Alice administers the book for herself,
+Carol for herself, and their decisions never meet — every request has exactly
+one member authority plus the firm's ceiling. The *conjoint* case, where two
+authorities must answer the same request and neither is above the other, is
+[joint ownership](/docs/overview/joint-ownership/).
 
 ## The two mechanisms, and why they are different
 

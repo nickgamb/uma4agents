@@ -1,0 +1,20 @@
+# The tally's front door, published by the tally.
+#
+# Attaching a route to the shared Gateway is how a party publishes itself,
+# and no other namespace can publish this hostname. That matters more here
+# than elsewhere: the holders' authorities verify what this service signs
+# against the keys served at this name, so a namespace that could publish it
+# could impersonate the party doing the counting.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: joint-tally
+  namespace: tally
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["joint-tally.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: joint-tally, port: 9060 }

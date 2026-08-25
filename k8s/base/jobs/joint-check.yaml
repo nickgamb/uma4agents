@@ -1,0 +1,65 @@
+# Joint ownership, in the cluster — where the tally is a namespace of its own
+# with no path into either owner's, rather than a container on one Docker
+# network.
+#
+# The deployed shape is what makes the claim legible. Under compose the tally
+# is a process beside two authorities; here it is a party that can reach the
+# holders' authorities only through the edge, exactly as anything on the
+# internet would, and neither holder's namespace can reach into the other's
+# at all. The verdicts have to travel as signed documents because there is no
+# shortcut available for them to take.
+#
+# It runs from sterling-vance, which is Bob's namespace and has a path into
+# none of the three.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: joint-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: joint-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: joint-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/joint_check.py
+          env:
+            - { name: PYTHONPATH, value: /driver/lib }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+            - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }
+            - { name: UMA4A_TALLY, value: "https://joint-tally.uma.lab" }
+            - { name: UMA4A_JOINT_ACCOUNT, value: meridian-joint }
+            - { name: UMA4A_EITHER_ACCOUNT, value: meridian-either }
+            # Read from the same value the authorities are configured with,
+            # so a wait here cannot drift into a flaky one.
+            - { name: UMA_AS_RESOURCE_REFRESH_S, value: "15" }
+          volumeMounts:
+            - { name: driver, mountPath: /driver/joint_check.py, subPath: joint_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

@@ -11,5 +11,6 @@ COPY mcp/alice-vault/uma_publish.py ./
 # One image, one fixture file per owner. UMA_VAULT_FIXTURES picks.
 COPY mcp/alice-vault/fixtures.json mcp/alice-vault/fixtures-carol.json ./
 COPY mcp/alice-vault/fixtures-northwind.json ./
+COPY mcp/alice-vault/fixtures-joint.json ./
 EXPOSE 9020
 CMD ["python", "server.py"]

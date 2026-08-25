@@ -340,6 +340,22 @@ of it is under **Agent Access → Organization** in her own portal.
 Why it matters: UMA has had a name for her role since 2015 — resource rights
 administrator — and no mechanism for it. [docs/ORG.md](docs/ORG.md).
 
+That layer is asymmetric: a firm above, a member below. The other arrangement
+is two owners of *equal* standing over one resource, where neither can decide
+alone and there is nobody above them to arbitrate.
+
+```bash
+make joint-check
+```
+
+Alice and Carol hold an account together. An agent asking for it is offered
+**one** terms document that is both of theirs at once — the shorter expiry,
+only the scopes both offer, every prohibition either wrote — and the grant it
+receives carries a signed verdict from each of them. The gateway verifies
+those against the keys each authority publishes and re-runs the count, so the
+party that did the counting never had to be trusted. Either of them can stop
+it. [docs/JOINT.md](docs/JOINT.md).
+
 ## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other
@@ -413,6 +429,8 @@ answer *that same request*. Not a fresh one.
   about an agent, and why none of it can ever buy access
 - **[docs/ORG.md](docs/ORG.md)** — shared ownership: a firm's resources,
   administered by its people under their own authorities
+- **[docs/JOINT.md](docs/JOINT.md)** — joint ownership: one resource, several
+  owners of equal standing, and a party that counts without being trusted
 - **[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** — many owners of one resource
   server, and how one of them brings an authority nobody provisioned
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with

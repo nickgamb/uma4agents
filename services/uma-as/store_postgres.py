@@ -633,6 +633,31 @@ class PostgresOwnerStore:
             "DELETE FROM organizations WHERE owner = $1 RETURNING owner", self._o)
         return row is not None
 
+    # --- resources held jointly -----------------------------------------------
+
+    async def mandates(self) -> dict[str, dict]:
+        rows = await self._pool.fetch(
+            "SELECT account, record FROM mandates WHERE owner = $1", self._o)
+        return {r["account"]: json.loads(r["record"]) for r in rows}
+
+    async def mandate(self, account: str) -> dict | None:
+        row = await self._pool.fetchrow(
+            "SELECT record FROM mandates WHERE owner = $1 AND account = $2",
+            self._o, account)
+        return json.loads(row["record"]) if row else None
+
+    async def set_mandate(self, account: str, record: dict) -> None:
+        await self._pool.execute(
+            "INSERT INTO mandates (owner, account, record) VALUES ($1, $2, $3) "
+            "ON CONFLICT (owner, account) DO UPDATE SET record = EXCLUDED.record",
+            self._o, account, json.dumps(record))
+
+    async def clear_mandate(self, account: str) -> bool:
+        row = await self._pool.fetchrow(
+            "DELETE FROM mandates WHERE owner = $1 AND account = $2 "
+            "RETURNING account", self._o, account)
+        return row is not None
+
     # --- fan-out ---------------------------------------------------------------
 
     async def notify(self, payload: dict) -> None:

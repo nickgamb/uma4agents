@@ -127,6 +127,19 @@ spec:
             # configuration.
             - name: UMA_PEP_MEMBERSHIP_TTL_S
               value: "10"
+            # Jointly held accounts. The tally is named here rather than read
+            # off a grant: a resource server that accepted whichever issuer
+            # embedded a plausible mandate would be taking the electorate
+            # from the party that assembled it.
+            - name: UMA_PEP_JOINT_TALLY
+              value: https://joint-tally.uma.lab
+            - name: UMA_PEP_JOINT_TALLY_INTERNAL
+              value: http://joint-tally.tally.svc.cluster.local:9060
+            - name: UMA_PEP_JOINT_SECRET
+              valueFrom:
+                secretKeyRef: { name: meridian-config, key: tally-rs-secret }
+            - name: UMA_PEP_JOINT_ACCOUNTS
+              value: meridian-joint,meridian-either
             # The authority the RFC 9421 signature base is rebuilt from.
             # Deliberately configuration and never the request: the Host
             # header does not survive the ext_authz hop (it arrives as this
