@@ -202,6 +202,41 @@ two things — `deny` and `ask` — and there is no third. That is a property of
 the shape rather than a convention: no charter and no administrator's Rego can
 make a request easier than the member's own policy already makes it.
 
+Here is one, taken from a running lab. Every field below came off the wire:
+
+```json
+{
+  "template_id": "alice/firmbook/v2",
+  "terms_uri":   "https://alice-as.uma.lab/terms/alice/firmbook/v2",
+  "proffered_by": "https://alice-as.uma.lab",
+  "purpose": "Desk research on the firm book",
+  "scope": ["positions:read", "transactions:read"],
+  "expires_in": 3600,
+  "prohibited": [
+    "client-benchmarking",
+    "model-training", "sharing-outside-engagement-team",
+    "retention-after-engagement"
+  ],
+  "organization": {
+    "name": "Northwind Capital",
+    "issuer": "https://northwind-org.uma.lab",
+    "charter_version": 6,
+    "requires": [
+      "Shares northwind-vault/get_positions, northwind-vault/get_transactions with you, as Analyst.",
+      "Only agents you operate yourself may act on them. Somebody else's agent may not, whatever your own terms say.",
+      "Governs northwind-vault/* — your own accounts are outside this entirely.",
+      "No grant over its resources may last longer than 1 hour, whatever your own terms say."
+    ]
+  }
+}
+```
+
+The first prohibition is hers. The next three are the charter's, added on
+write. `expires_in` is 3600 because she asked for a day and the ceiling is an
+hour. And the `organization` block is there so the agent reading this — before
+it has a token, before it signs anything — can see that the party proffering
+these terms is not the only party behind them.
+
 An agreement is therefore tied to a charter version as well as to a terms
 version: the published document carries `organization.charter_version`, the
 agent signs against that document, and both stay dereferenceable. "What did

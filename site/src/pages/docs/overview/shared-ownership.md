@@ -134,6 +134,35 @@ signed.
 judgement about that request, made at the organization's own decision point
 against policy the member's authority never sees.
 
+Here is what an agent actually dereferences, from a running lab:
+
+```json
+{
+  "template_id": "alice/firmbook/v2",
+  "purpose": "Desk research on the firm book",
+  "expires_in": 3600,
+  "prohibited": [
+    "client-benchmarking",
+    "model-training", "sharing-outside-engagement-team",
+    "retention-after-engagement"
+  ],
+  "organization": {
+    "name": "Northwind Capital",
+    "charter_version": 6,
+    "requires": [
+      "Only agents you operate yourself may act on them. Somebody else's agent may not, whatever your own terms say.",
+      "No grant over its resources may last longer than 1 hour, whatever your own terms say."
+    ]
+  }
+}
+```
+
+The first prohibition is hers; the rest are the charter's, added on write.
+`expires_in` is an hour because she asked for a day. And the `organization`
+block is there so the agent reading this — before it has a token, before it
+signs anything — can see that the party proffering these terms is not the only
+party behind them.
+
 The composition rule is one sentence: **both layers must allow, and either may
 refuse.** Her policy is what permits; the organization's `allow` means it has
 no objection.
