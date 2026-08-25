@@ -128,6 +128,23 @@ make store-test         # both storage backends, against one property suite
 None of these is a demo — they are checks — but the first reads like one, and
 it is the shortest route to what [ASSURANCE.md](ASSURANCE.md) argues.
 
+## When the stuff is not hers
+
+Everything above is Alice's own account. `make org-check` is the other case:
+Meridian also holds Northwind Capital's book, the firm shares parts of it with
+Alice and Carol under a role, and each of them administers access to it under
+her own authority and her own terms.
+
+Two beats are worth watching for. Joining *grants* something — the firm's book
+appears in her authorization server, marked shared, and leaving takes it back.
+And whose agent it is decides the answer: under the analyst role's
+`first-party-only`, an agent she operates reads the book and Bob's agent is
+refused, with the same terms, the same key strength and the same request.
+
+The administrator's surface is at `https://org-console.uma.lab` (`dana` /
+`dana-demo`), and hers is under Agent Access → Organization in her own portal.
+[ORG.md](ORG.md).
+
 ## The third thing, which is not a demo
 
 `make fixture` is a two-container stack with no identity provider, no database

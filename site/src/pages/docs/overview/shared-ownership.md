@@ -21,10 +21,30 @@ it is whichever member of staff that part of the book was shared with.
 
 UMA has had a name for her role since 2015: **resource rights administrator**,
 the party who administers access to resources she does not necessarily own.
-The healthcare analysis that names the general shape calls it
-*co-administration*. What neither has had is a mechanism.
+The Kantara UMA Work Group's 2022 report on the Julie Adams healthcare use
+case calls the general shape **delegation of control** and lays out the four
+states it can be in. What neither has had is a mechanism.
 
 ![Shared ownership in seven beats. One resource server holds three owners of record: Alice's account, Carol's account, and Northwind Capital's book. The firm shares its book with Alice under a role that grants two resources and sets delegation to first-party-only, so the book appears in her authorization server as something she administers rather than owns. She writes the terms an agent must accept and the charter's ceiling is clamped into that same document. Bob's agent asks for the book and is refused — not by her terms but by the organization's engine, because somebody else operates it. An agent she operates herself makes the identical request and is granted. Two columns then list what the organization can do — see and shut out the agents that touch its book, answer requests about its own resources, break the glass under a clause she was shown — against what it cannot: see the agents that touch her own accounts, read her policy, widen anything, or act as her. Leaving takes back the access and leaves every narrowing in place.](/img/docs/shared-ownership.gif)
+
+## Against the four states of delegated control
+
+The healthcare analysis that names this problem lays it out as four states —
+one administrator or several, and a data subject who can or cannot manage her
+own resources. Three need no new protocol. Naming which one did is the useful
+result:
+
+| State | Status |
+|---|---|
+| **Self-administration** | The base profile: she administers her own resources. |
+| **Administration by proxy** | A deployment, not protocol. Her authority accepts a credential that is hers; who holds it is a question for her identity provider. |
+| **Co-administration** | This page. Several administrators over one subject's resources, each deciding through **her own authority**. |
+| **Co-administration by proxy** | The two above composed. Nothing further needed. |
+
+What made the third hard is not the number of administrators. It is that each
+decides through her own authorization server, so the enforcement point has to
+know which one to ask — and the answer has to be per (resource,
+administrator) rather than per resource. Everything else follows from that.
 
 ## Three kinds of owner behind one resource server
 
@@ -162,6 +182,27 @@ technical fact rather than a request. It reaches only resources the charter both
 names for it, it is short and single-use, and it cannot be done quietly — she
 is told the moment a window opens, before any data moves, and every use lands
 in her own record.
+
+## What a specification would have to say
+
+Most of this is deployment. Three things are not:
+
+1. **The authority is selected per (resource, administrator), not per
+   resource.** A shared resource may name a different authorization server
+   depending on which administrator is being asked, and something on an
+   unauthenticated first call has to be able to say which.
+2. **`delegation`, and its three values** — `none`, `first-party-only`,
+   `any-agent`. Whose agent may act, on behalf of which person.
+3. **Two obligations on the layer above.** It may only narrow, and the
+   narrowing belongs in the terms document rather than being applied at the
+   door. And its reach, including what it can read, stops at the resources it
+   claims — with the scoping performed by the owner's authority rather than
+   left to the upper layer's good manners.
+
+Two things should *not* be specified, because specifying them buys nothing and
+costs adoption: the internal shape of a charter, and what evaluates it. An
+organization with Cedar, or with a compliance system nobody has heard of,
+should be able to answer the decision endpoint and be conformant.
 
 ## Leaving
 

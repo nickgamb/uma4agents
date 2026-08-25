@@ -196,6 +196,50 @@ names a different authority. [MULTI-OWNER.md](MULTI-OWNER.md) covers it,
 including how a resource server comes to hold a protection token from an
 authority nobody configured it against.
 
+## Resources that are not hers
+
+The section above adds owners. This one adds a kind of owner: a company that
+owns resources and shares them with the people who work on them.
+
+```
+┌──────────────────────────────┐        ┌─────────────────────────────────┐
+│  Northwind Capital           │        │  Alice's side                   │
+│                              │        │                                 │
+│   org-authority   charter,   │◀──1───▶│   uma-as    clamps her tiers to │
+│                   members,   │        │             the ceiling; asks   │
+│                   roles,     │        │             the organization    │
+│                   break-glass│        │             about each request  │
+│   opa             the engine │        │                                 │
+│   org-console     the admin  │        └─────────────────────────────────┘
+└───────────┬──────────────────┘                        │
+            │ 2                                         │ governs
+            ▼                                           ▼
+     ┌──────────────────────────────────────────────────────────┐
+     │  Meridian — one resource server                          │
+     │    alice-vault/*       hers          → alice's authority │
+     │    carol-vault/*       hers          → carol's authority │
+     │    northwind-vault/*   Northwind's   → whichever member  │
+     │                        shared with     is named in the   │
+     │                        Alice, Carol    path              │
+     └──────────────────────────────────────────────────────────┘
+              /mcp   /mcp/carol   /mcp/shared/alice   /mcp/shared/carol
+```
+
+1. The envelope goes out and a decision comes back. The charter's conditions
+   and the administrator's Rego stay on the organization's side; her tiers
+   stay on hers. Neither reads the other's.
+2. The organization *owns* `northwind-vault/*`. It does not enforce anything:
+   the enforcement point asks whichever member's authority the path names, and
+   independently checks that the ceiling was applied.
+
+The four beats are unchanged on a shared resource. An agent negotiating for
+the firm's book runs the same challenge, the same terms, the same agreement
+and the same grant it runs for Alice's own account, with a different
+authority named in the challenge — which is the same thing that already
+differed between Alice and Carol. [ORG.md](ORG.md) covers what is new: the
+ceiling, the roles, whose agent may act, and where the organization's reach
+stops.
+
 ## Ports and hostnames
 
 TLS everywhere via the Envoy edge and a local CA (`make init`). Browser access

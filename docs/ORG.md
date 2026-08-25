@@ -10,9 +10,12 @@ it is whichever member of staff that part of the book was shared with.
 
 UMA has had a name for her role since 2015: **resource rights administrator**,
 the party who administers access to resources she does not necessarily own.
-The [PP2PI healthcare analysis](https://kantarainitiative.org/) calls the
-general shape *co-administration* and lays out the four states it can be in.
-What neither has had is a mechanism. This is the mechanism.
+The Kantara UMA Work Group's report *Patient-Centric Data Sharing with UMA:
+The Julie Adams Healthcare Use Case from the Protecting Privacy to Promote
+Interoperability Work Group* (v1.0, 2022 — eds. Nancy Lush, Alec Laws, Eve
+Maler) calls the general shape **delegation of control** and lays out the four
+states it can be in. What neither has had is a mechanism. This is the
+mechanism.
 
 Run it:
 
@@ -25,6 +28,26 @@ In the cluster, where the three parties are three namespaces with no path
 between them: `make k8s-org-check`.
 
 ![Shared ownership in seven beats. One resource server holds three owners of record: Alice's account, Carol's account, and Northwind Capital's book. The firm shares its book with Alice under a role that grants two resources and sets delegation to first-party-only, so the book appears in her authorization server as something she administers rather than owns. She writes the terms an agent must accept and the charter's ceiling is clamped into that same document. Bob's agent asks for the book and is refused — not by her terms but by the organization's engine, because somebody else operates it. An agent she operates herself makes the identical request and is granted. Two columns then list what the organization can do — see and shut out the agents that touch its book, answer requests about its own resources, break the glass under a clause she was shown — against what it cannot: see the agents that touch her own accounts, read her policy, widen anything, or act as her. Leaving takes back the access and leaves every narrowing in place.](shared-ownership.gif)
+
+## Against PP2PI's four states
+
+The healthcare analysis lays out delegation of control as four states — one
+administrator or several, and a data subject who can or cannot manage her own
+resources. Three of them need no new protocol. Only one did, and naming which
+is the useful result:
+
+| State | What it is | Status |
+|---|---|---|
+| **Self-administration** | The subject administers her own resources | The base profile. Alice over `alice-vault/*`. |
+| **Administration by proxy** | One administrator who is not the subject | A **deployment**, not protocol. Her authority accepts a credential that is hers; who holds it is a question for her identity provider, and the lab already runs the case where something other than her browser acts for her (`UMA_AS_OWNER_AUTH=local-key`). |
+| **Co-administration** | Several administrators over one subject's resources | **This.** One resource, several people administering access to it, each under her own authorization server — which is the part that had no mechanism. |
+| **Co-administration by proxy** | Both at once | The two above composed. Nothing further is needed. |
+
+What made the third one hard is not the number of administrators. It is that
+each of them decides through **her own authority**, so the enforcement point
+has to know which one to ask — and the answer has to be per (resource,
+administrator) rather than per resource. Everything else follows from that
+one change.
 
 ## The three kinds of owner
 
@@ -166,6 +189,13 @@ two things — `deny` and `ask` — and there is no third. That is a property of
 the shape rather than a convention: no charter and no administrator's Rego can
 make a request easier than the member's own policy already makes it.
 
+An agreement is therefore tied to a charter version as well as to a terms
+version: the published document carries `organization.charter_version`, the
+agent signs against that document, and both stay dereferenceable. "What did
+this organization require when that was agreed" is answerable years later,
+which is the same property her own terms already had and the reason the
+charter is published in versions rather than edited.
+
 ## The composition rule
 
 One sentence:
@@ -284,6 +314,37 @@ ceiling; it does not raise what is underneath one. An unenrolment that
 silently widened every grant she had made would be the most dangerous button
 in this system. Anything she wants back she widens herself, deliberately, one
 tier at a time.
+
+## What a specification would have to say
+
+Most of this is deployment. Three things are not, and they are what a working
+group would have to write down. Recommendation 25 in
+[FINDINGS.md](../FINDINGS.md) is the long form.
+
+1. **The authority is selected per (resource, administrator), not per
+   resource.** RFC 9728's `authorization_servers` is already an array and the
+   challenge already carries `as_uri`; what is missing is the sentence saying
+   that a shared resource may name a different authority depending on which
+   administrator is being asked, and a way to address that. A path segment is
+   how this profile does it; the requirement is that *something* on an
+   unauthenticated first call can say which administrator the caller is acting
+   through.
+2. **`delegation`, and its three values.** `none`, `first-party-only`,
+   `any-agent`. Not what may be accessed — whose agent may do the accessing on
+   behalf of which person. It rests on the owner's authority being able to
+   distinguish an agent she activated from one somebody else operates, which
+   is itself worth naming.
+3. **Two obligations on the layer above.** It may only narrow, and the
+   narrowing belongs *in the terms document*, not applied at the door. And its
+   reach — including what it can read — stops at the resources it claims, with
+   the scoping performed by the owner's authority rather than left to the
+   upper layer's good manners.
+
+And two things that should **not** be specified, because specifying them buys
+nothing and costs adoption: the internal shape of a charter, and what
+evaluates it. This profile ships a JSON document and OPA; an organization with
+Cedar, or with a compliance system nobody here has heard of, should be able to
+answer `/decision` and be conformant.
 
 ## Limits
 

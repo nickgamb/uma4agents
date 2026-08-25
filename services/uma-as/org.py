@@ -161,14 +161,16 @@ def patch_for(tier: dict, envelope: dict) -> tuple[dict | None, list[dict]]:
     clamped, changes = clamp(tier, envelope)
     if not changes:
         return None, []
-    return {
-        "ask_me": clamped["ask_me"],
-        "terms": {
-            "expires_in": clamped["terms"]["expires_in"],
-            "prohibited": clamped["terms"]["prohibited"],
-            "scope": clamped["terms"].get("scope") or [],
-        },
-    }, changes
+    terms = {
+        "expires_in": clamped["terms"]["expires_in"],
+        "prohibited": clamped["terms"]["prohibited"],
+    }
+    # Only when she had one. A tier with no `scope` should not acquire an
+    # empty one because a ceiling passed over it — the patch is meant to
+    # narrow what is there, not to add fields to her document.
+    if "scope" in clamped["terms"]:
+        terms["scope"] = clamped["terms"]["scope"]
+    return {"ask_me": clamped["ask_me"], "terms": terms}, changes
 
 
 def would_exceed(spec: dict, resources: list[str], envelope: dict) -> list[str]:

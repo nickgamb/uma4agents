@@ -166,8 +166,13 @@ ALLOWED = ("org", "charter", "members", "invites", "roles", "activity",
 async def proxy(path: str, request: Request):
     if require_login(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    if not path.split("/")[0] in ALLOWED:
+    # Same rule as the authority's own proxy: the first segment names the
+    # surface, and no segment may climb out of `/admin/`. A relative segment
+    # that survives to a URL library is a way out of the allow-list.
+    segments = [x for x in path.split("/") if x not in ("", ".")]
+    if not segments or segments[0] not in ALLOWED or ".." in segments:
         return JSONResponse({"error": "unknown endpoint"}, status_code=404)
+    path = "/".join(segments)
     body = await request.body()
     async with httpx.AsyncClient(timeout=15.0) as c:
         r = await c.request(

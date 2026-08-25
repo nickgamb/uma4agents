@@ -208,6 +208,11 @@ check("new terms over her own accounts are not its business",
 patch, _ = org.patch_for(tier(), envelope())
 check("the clamp is expressed as a patch, so the store bumps the terms version",
       patch is not None and set(patch) == {"ask_me", "terms"})
+scopeless = tier()
+del scopeless["terms"]["scope"]
+patch_s, _ = org.patch_for(scopeless, envelope())
+check("and a tier with no scope does not acquire an empty one",
+      "scope" not in (patch_s or {}).get("terms", {}), f"{patch_s}")
 check("and there is no patch when there is nothing to do",
       org.patch_for(clamped, envelope())[0] is None)
 

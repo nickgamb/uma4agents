@@ -18,29 +18,34 @@ than a table inside anyone's authorization server:
          ▼ terms, clamped to the envelope before an agent ever sees them
        agent
 
-Three things cross that boundary and nothing else does:
+Four things cross that boundary and nothing else does:
 
 * the **envelope** goes out — a ceiling a member's authority clamps her terms
   to, so what the organization requires is visible in the document the agent
-  signs rather than applied invisibly at the door;
+  signs rather than applied invisibly at the door. It carries what her role
+  shares with her, which is the half she joined for;
 * a **decision** comes back, per request, from the organization's own engine.
   The charter's conditions and the admin's Rego stay on this side, in the
   same way Alice's tiers stay on hers;
 * a **compliance report** goes the other way — that her terms are inside the
-  envelope, and which of its fields bit. Never what her terms say.
+  envelope, and which of its fields bit. Never what her terms say;
+* an **administration token**, short-lived and signed here, naming one member
+  and one administrator. It is what lets him act on the agents that touch
+  *this organization's* resources — and her authority is what scopes that to
+  the charter's claims and writes his name into her record, because a limit
+  this service enforced would be a limit this service could route around.
 
 And one thing goes around the member entirely: **break-glass**. The
 organization can reach resources it claims without her authority's
-cooperation, because it signs those grants itself with a key the enforcement
-point knows. It cannot do so quietly: every one lands in her ledger and on
-her screen before the data moves.
+cooperation, because it signs those grants itself and the enforcement point
+recognises the issuer. It cannot do so quietly: every one lands in her ledger
+and on her screen before the data moves.
 
 State is in memory. One replica, like Carol's authority in the same lab — an
 organization is a single small thing here, and `make reset` rewinds it.
 """
 
 import asyncio
-import fnmatch
 import json
 import os
 import secrets
@@ -1327,8 +1332,17 @@ async def admin_member_proxy(owner: str, path: str, request: Request):
             status_code=409,
             detail="this member's authorization server has not told us where "
                    "it is, so there is nowhere to send this")
-    if path.split("/")[0] not in ADMIN_MEMBER_PATHS:
+    # The first segment names the action, and the rest must not be able to
+    # climb out of it. Without this, `pending/../../../token` leaves
+    # `/org/admin/...` entirely once a URL library normalises it — and a
+    # console holding an administration token would be able to reach every
+    # endpoint on a member's authorization server, not the four this proxy
+    # is for. Her authority would refuse most of them; that is not a reason
+    # to send them.
+    segments = [x for x in path.split("/") if x not in ("", ".")]
+    if not segments or segments[0] not in ADMIN_MEMBER_PATHS or ".." in segments:
         raise HTTPException(status_code=404, detail="unknown administration action")
+    path = "/".join(segments)
     body = await request.body()
     url = f"{member['as_uri'].rstrip('/')}/org/admin/{owner}/{path}"
     try:

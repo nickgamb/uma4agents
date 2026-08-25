@@ -453,6 +453,20 @@ def main() -> int:                                            # noqa: C901
         c.put(f"{alice['as']}/owner/policies/firmbook", json={"ask_me": False},
               headers=hdrs(c, "alice"), timeout=15.0)
 
+        # --- 7c. the administration credential, and its limits ------------
+        r = c.get(f"{alice['as']}/org/admin/alice/connections",
+                  headers=hdrs(c, "alice"), timeout=15.0)
+        check("her own credential is not an administration credential",
+              r.status_code == 401, f"{r.status_code} {r.text[:120]}")
+        r = c.get(f"{carol['as']}/org/admin/carol/connections",
+                  headers=ADMIN, timeout=15.0)
+        check("nor is the organization's console token, presented directly",
+              r.status_code == 401, f"{r.status_code} {r.text[:120]}")
+        r = c.get(f"{ORG}/admin/members/alice/pending/../../../member/envelope",
+                  headers=ADMIN, timeout=15.0)
+        check("and an administration path cannot climb out of the admin surface",
+              r.status_code in (400, 404), f"{r.status_code} {r.text[:120]}")
+
         # --- 8. a role is a live thing ------------------------------------
         r = c.post(f"{ORG}/admin/members/alice/role", json={"role": "trader"},
                    headers=ADMIN, timeout=15.0)
@@ -483,7 +497,7 @@ def main() -> int:                                            # noqa: C901
         custom = {**base, "rego": (
             "package u4a.custom\n\nimport rego.v1\n\n"
             "deny contains msg if {\n"
-            f'\tendswith(input.request.resource_id, "/get_positions")\n'
+            '\tendswith(input.request.resource_id, "/get_positions")\n'
             '\tmsg := "positions are frozen during the quarterly close"\n'
             "}\n")}
         r = c.put(f"{ORG}/admin/charter", json=custom, headers=ADMIN, timeout=20.0)

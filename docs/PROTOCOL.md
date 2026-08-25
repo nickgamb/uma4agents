@@ -115,6 +115,44 @@ GET  /owner/ledger                         the activity ledger
 GET  /owner/events                         SSE stream -> the portal notification
 ```
 
+The organization layer, present only where an owner administers resources
+somebody else owns (docs/ORG.md). Everything here is inert until she joins.
+
+```
+GET  /owner/organization                   whether she administers resources for
+                                           anyone, what it shares with her, and
+                                           what its ceiling does to each tier
+POST /owner/organization/preview           what a code would commit her to, and
+                                           what it would change about terms she
+                                           has already written. Nothing happens
+POST /owner/organization                   join. Refused without `agreed: true`
+POST /owner/organization/decline           refuse an invitation, as an answer
+DELETE /owner/organization                 leave. Takes back the access; leaves
+                                           every narrowing in place
+POST /org/notice                           a signed notice from her organization,
+                                           verified against the keys it publishes
+GET  /org/admin/{owner}/pending            an administrator's view, scoped by the
+GET  /org/admin/{owner}/connections        charter's claims before it is answered
+GET  /org/admin/{owner}/operators
+GET  /org/admin/{owner}/ledger
+POST /org/admin/{owner}/pending/{f}/decision
+POST /org/admin/{owner}/connections/{h}/revoke   out of the organization's
+POST /org/admin/{owner}/connections/{h}/restore  resources, not out of hers
+POST /org/admin/{owner}/operators/{block|unblock}
+```
+
+New JWT `typ` values, all of them signed by the organization and verified
+against the JWKS it publishes:
+
+```
+u4a-membership+jwt    issued at enrolment; a member's authority presents it
+u4a-org-notice+jwt    a notice to a member's authority
+u4a-org-admin+jwt     one member, one administrator, 120s
+aa-auth+jwt           a break-glass grant. Deliberately the same typ as any
+                      other grant: it differs by issuer and by a `break_glass`
+                      claim, not by looking like a different kind of thing
+```
+
 ### uma-pep endpoints (behind the gateway)
 
 ```
@@ -589,6 +627,8 @@ The activity ledger is a projection: **promised** = `contract.committed`,
 | 12 | Challenge carries `error="insufficient_authorization"` + `authorization_remediation` (RFC 9396 `authorization_details` + `authorization_reference`), plus `authorization_server` and `ticket` inside it | UMA's challenge carries `as_uri` + `ticket` only | Superset of `draft-zehavi-oauth-rar-metadata` rather than a rival: the same remediation payload, plus the two parameters that let a party who is not the caller decide. The same JSON rides the JSON-RPC encoding byte for byte, which shows the payload is portable and only the envelope is binding-specific |
 | 13 | `POST /rs/register`: a resource server introduces itself to an owner's authority by signing the request (RFC 9421) with a key published at the origin of the resource it claims to serve, verified through that resource's own RFC 9728 document. Success is 202 `pending` — the owner authorizes it from her registry before any PAT is issued, and `/token` then accepts the same signature in place of a client secret | FedAuthz §1.4 requires the PAT to be issued with the resource owner's authorization, and says nothing about how the resource server comes to hold one | Where one operator runs both sides, a provisioned secret is a fair model of that gap. It is not one when the authority is the owner's: nobody is in a position to configure both ends, because the two ends belong to different people. Trusting control of the origin adds no party the protocol did not already depend on — it is the address the challenge pointed at |
 | 14 | Every owner-scoped artifact carries its owner: the ticket, the RPT (`owner` claim), the resource id namespace, the terms `template_id`, and the per-owner RFC 9728 resource at `/mcp/<owner>` naming *her* `authorization_servers` | UMA assumes one authorization server per protected resource, with the owner implicit in the deployment | Two owners of one resource server can name two different authorities, which is the difference between multi-tenancy and an authority that is hers. The store enforces it structurally rather than by parameter — see docs/MULTI-OWNER.md |
+
+| 15 | A layer above the resource owner: an organization publishes a **charter**, a member's authority clamps her tiers to its envelope *on write*, and asks its decision point once per request over a claimed resource. Roles carry `delegation` (`none` / `first-party-only` / `any-agent`) — whose agent may act, not what may be accessed. One resource is administered by several people at `/mcp/shared/<member>`, each under her own authority. Break-glass grants are signed by the organization and recognised at the enforcement point by issuer | UMA 2.0 names the *resource rights administrator* and gives the role no wire surface. There is one deciding party per resource, and nothing expresses a policy above the person deciding | The moment a resource is shared, "may her agent touch it" is a question about parties. The four beats are untouched — a requesting agent cannot tell a shared resource from a personal one — and everything added is either a document (the charter, the envelope) or a question asked of a party that already existed. See docs/ORG.md and FINDINGS recommendation 25 |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth.
 
