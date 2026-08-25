@@ -1241,6 +1241,21 @@ async def org_client(owner: str) -> org.OrgClient | None:
 
     envelope, error = await client.refresh()
     if error == "membership_ended":
+        # The organization refused this membership token. Before concluding
+        # that she is no longer a member, check that the token this process
+        # was holding is still the one on record.
+        #
+        # It is not always. This client is per process, the record is shared,
+        # and a rejoin mints a new token: a replica that missed the rejoin
+        # refreshes with the old one, is told it is not current — which is
+        # true of the token and false of the membership — and would end an
+        # enrolment the other replicas are happily using. Check-and-act
+        # against the record, not against the cache.
+        record = await org_record(owner)
+        if record and record.get("token") != client.token:
+            event("org.client_stale", owner=owner)
+            _ORG.pop(owner, None)
+            return await org_client(owner)
         await end_membership(owner, "your organization ended this membership")
         return None
     if error:

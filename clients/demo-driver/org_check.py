@@ -416,8 +416,12 @@ def main() -> int:                                            # noqa: C901
               "NWCF" not in spend(c, "alice", his, "own", rpt_own) if rpt_own else False)
 
         # --- 6. what the organization can see of her ----------------------
-        conns = c.get(f"{ORG}/admin/members/alice/connections", headers=ADMIN,
-                      timeout=15.0).json()
+        r = c.get(f"{ORG}/admin/members/alice/connections", headers=ADMIN,
+                  timeout=15.0)
+        conns = r.json() if r.status_code == 200 else []
+        check("an administrator can read the agents that touch its book",
+              isinstance(conns, list), f"{r.status_code} {r.text[:200]}")
+        conns = conns if isinstance(conns, list) else []
         handles = {x["handle"] for x in conns}
         check("the organization sees the agent that touched its book",
               any(x.get("org_tiers") for x in conns), f"{conns}")
