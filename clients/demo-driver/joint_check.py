@@ -37,6 +37,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 import time
 
 import httpx
@@ -55,6 +56,10 @@ TALLY = os.environ.get("UMA4A_TALLY", "https://joint-tally.uma.lab")
 BOTH = os.environ.get("UMA4A_JOINT_ACCOUNT", "meridian-joint")
 EITHER = os.environ.get("UMA4A_EITHER_ACCOUNT", "meridian-either")
 VERIFY = os.environ.get("UMA4A_CA_BUNDLE", "/driver/rootCA.pem")
+ORG = os.environ.get("UMA4A_ORG", "https://northwind-org.uma.lab")
+ORG_ADMIN = {"Authorization":
+             f"Bearer {os.environ.get('ORG_ADMIN_TOKEN', 'org-admin-dev-token')}"}
+ORG_CODE = os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX")
 META = mcp_meta("joint-check")
 
 OWNERS = {
@@ -380,7 +385,93 @@ def main() -> int:                                            # noqa: C901
               all("expires_in" not in json.dumps(m) for m in mine),
               "a holder's terms leaked into another holder's view")
 
-        print("\n-- 10. leaving --")
+        print("\n-- 10. no organization reaches what she holds with somebody else --")
+        # The charter here names the joint namespace outright, which is legal:
+        # a claim has to be a concrete namespace, and this is one. What stops
+        # it is not the charter's shape but her own authority — Carol never
+        # enrolled with this organization, was never shown its charter, and
+        # cannot leave it, so Alice cannot enrol a resource that is half his.
+        base = c.get(f"{ORG}/admin/charter", headers=ORG_ADMIN,
+                     timeout=15.0).json()["charter"]
+        greedy = {**base, "claims": list(base["claims"]) + [f"{BOTH}/*"]}
+        r = c.put(f"{ORG}/admin/charter", json=greedy, headers=ORG_ADMIN,
+                  timeout=20.0)
+        check("a charter may claim a namespace it does not own",
+              r.status_code == 200, f"{r.status_code} {r.text[:140]}")
+        r = c.put(f"{ORG}/admin/charter",
+                  json={**base, "claims": ["*/get_positions"]},
+                  headers=ORG_ADMIN, timeout=20.0)
+        check("but not one written as a wildcard, which would reach anybody's",
+              r.status_code == 400 and "namespace" in r.text,
+              f"{r.status_code} {r.text[:140]}")
+        alice = OWNERS["alice"]["as"]
+        c.post(f"{alice}/owner/organization",
+               json={"code": ORG_CODE, "agreed": True},
+               headers=hdrs(c, "alice"), timeout=20.0)
+        time.sleep(1.0)
+
+        # Her terms over the joint account, well above the charter's ceiling.
+        drop_terms(c, "alice", BOTH)
+        w = write_terms(c, "alice", BOTH, expires=86400,
+                        scope=["positions:read"], prohibited=["model-training"])
+        stored = c.get(f"{alice}/owner/policies", headers=hdrs(c, "alice"),
+                       timeout=15.0).json().get(f"{BOTH.replace('-', '')}alice", {})
+        check("its ceiling does not clamp terms over the joint account",
+              (stored.get("terms") or {}).get("expires_in") == 86400,
+              f"{w.status_code} {(stored.get('terms') or {}).get('expires_in')}")
+
+        # And a request waiting on her about it is none of its business.
+        write_terms(c, "carol", BOTH, expires=900, scope=["positions:read"],
+                    prohibited=["resale-to-third-parties"], ask_me=True)
+        drop_terms(c, "alice", BOTH)
+        write_terms(c, "alice", BOTH, expires=86400, scope=["positions:read"],
+                    prohibited=["model-training"], ask_me=True)
+        time.sleep(1.0)
+        waiting = AgentKeys(keyid="joint-6")
+        held = threading.Thread(target=negotiate, args=(c, BOTH, waiting),
+                                kwargs={"answers": None})
+        held.start()
+        time.sleep(7.0)
+        mine = c.get(f"{alice}/owner/pending", headers=hdrs(c, "alice"),
+                     timeout=15.0).json()
+        check("it is waiting on her",
+              any((p.get("resource_id") or "").startswith(f"{BOTH}/") for p in mine),
+              f"{[p.get('resource_id') for p in mine]}")
+        raw = c.get(f"{ORG}/admin/members/alice/pending", headers=ORG_ADMIN,
+                    timeout=15.0)
+        theirs = raw.json() if raw.status_code == 200 else []
+        check("and the organization cannot see it",
+              isinstance(theirs, list) and not any(
+                  (p.get("resource_id") or "").startswith(f"{BOTH}/")
+                  for p in theirs),
+              f"{raw.status_code} {raw.text[:180]}")
+        family = next((p["family"] for p in mine
+                       if (p.get("resource_id") or "").startswith(f"{BOTH}/")), None)
+        d = c.post(f"{ORG}/admin/members/alice/pending/{family}/decision",
+                   json={"decision": "approved"}, headers=ORG_ADMIN, timeout=15.0)
+        check("nor answer it", d.status_code == 403,
+              f"{d.status_code} {d.text[:140]}")
+        answer_pending(c, "alice", "denied")
+        answer_pending(c, "carol", "denied")
+        held.join()
+
+        # And she cannot put it in a tier with anything else, which would be
+        # the way round all of the above.
+        drop_terms(c, "alice", BOTH)
+        r = c.post(f"{alice}/owner/policies", json={
+            "id": "mixedtier", "name": "mixed", "ask_me": False,
+            "resources": [f"{BOTH}/get_positions", "alice-vault/get_positions"],
+            "terms": {"expires_in": 900, "scope": ["positions:read"],
+                      "prohibited": [], "purpose": "mixed"},
+        }, headers=hdrs(c, "alice"), timeout=15.0)
+        check("a tier cannot mix it with anything else",
+              r.status_code == 400 and "held jointly" in r.text,
+              f"{r.status_code} {r.text[:160]}")
+        c.put(f"{ORG}/admin/charter", json=base, headers=ORG_ADMIN, timeout=20.0)
+        c.request("DELETE", f"{alice}/owner/organization",
+                  headers=hdrs(c, "alice"), timeout=15.0)
+
+        print("\n-- 11. leaving --")
         leave(c, "carol", BOTH)
         gone = AgentKeys(keyid="joint-5")
         rpt5, why5 = negotiate(c, BOTH, gone, answers={"alice": "approved"})

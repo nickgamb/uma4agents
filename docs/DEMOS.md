@@ -172,6 +172,11 @@ believed.
 
 `meridian-either` is the same machinery with the rule set to `any`, which is
 the "either or survivor" half of how joint accounts actually work.
+
+Her side is **Agent Access → Joint accounts** in the portal. Worth opening
+beside the Organization tab: one is a firm above her, the other is a person
+beside her, and an organization reaches none of what she holds jointly —
+whatever its charter claims, because her co-owner never enrolled there.
 [JOINT.md](JOINT.md).
 
 ## The third thing, which is not a demo

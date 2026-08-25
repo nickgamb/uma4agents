@@ -45,8 +45,8 @@ import time
 
 from uma4a_org import (claims_match as _claims_match, clamp as _clamp,
                        compliance as _compliance, governs as _governs,
-                       patch_for as _patch_for, tier_view as _tier_view,
-                       would_exceed as _would_exceed)
+                       patch_for as _patch_for, reaches as _reaches,
+                       tier_view as _tier_view, would_exceed as _would_exceed)
 
 # Where the envelope is re-read from, and how long a copy may be trusted.
 #
@@ -69,6 +69,7 @@ CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 # jointly held resource. A second implementation of "narrow this document by
 # that one" is a second implementation to disagree with the first.
 claims_match = _claims_match
+reaches = _reaches
 governs = _governs
 clamp = _clamp
 patch_for = _patch_for

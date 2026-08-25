@@ -354,7 +354,14 @@ only the scopes both offer, every prohibition either wrote — and the grant it
 receives carries a signed verdict from each of them. The gateway verifies
 those against the keys each authority publishes and re-runs the count, so the
 party that did the counting never had to be trusted. Either of them can stop
-it. [docs/JOINT.md](docs/JOINT.md).
+it.
+
+Her side of it is under **Agent Access → Joint accounts** in her own portal:
+who else holds each account, what it takes to release it, and a request
+waiting on her marked as one her answer only half-decides. And the two layers
+do not touch — an organization she belongs to reaches none of this, whatever
+its charter claims, because the person she holds it with never enrolled
+there. [docs/JOINT.md](docs/JOINT.md).
 
 ## 10. Let a whole agent framework try
 

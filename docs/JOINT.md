@@ -165,6 +165,42 @@ The general form is worth stating because it applies beyond this: **claims
 work when the requesting party is the only one who has the fact, and fail when
 the fact might be adverse to it.**
 
+## No organization reaches it
+
+An owner can be two things at once: a member of an organization, and a
+co-owner of something with somebody else. Those are different relationships
+with different people, and the second one is not the first one's business.
+
+**A resource covered by a mandate is outside every organization's reach at
+her authority, whatever that organization's charter claims.** She cannot
+enrol, on her own, something that is half his: her co-owner never saw that
+charter, never agreed to it, and cannot leave it.
+
+Two things enforce it, and it is worth being clear about which one matters.
+
+**A charter may only claim a namespace it names.** `northwind-vault/*` is a
+claim; `*/get_positions` is not, and is refused. A pattern with a wildcard
+where the namespace goes reads as "this kind of resource, wherever it lives",
+which is exactly the reach an organization must not have — it matches a
+member's own brokerage account and an account she holds with a stranger. This
+stops the accident.
+
+**And her authority refuses regardless.** A charter can still name a joint
+namespace outright, so the check that co-owners' safety actually rests on is
+`uma4a_org.reaches`, at the authority of the person being asked rather than
+in the document of the party doing the asking. With it, an administrator
+cannot see a request waiting on her about the joint account, cannot answer
+one, and the organization's ceiling does not touch the terms she writes over
+it.
+
+One consequence is visible to her: **terms over a jointly held resource
+cannot share a tier with anything else.** Partly because they are half
+somebody else's — one edit would change what his agents are held to, in a
+document he cannot see. And partly because a mixed tier is the way round all
+of the above: an organization's ceiling applies to a whole tier once it
+reaches any resource in it, so putting the firm's book and a joint account in
+one tier would clamp the joint account through the back door.
+
 ## Silence is not consent
 
 A holder who has written no terms over the resource quotes nothing, and is
@@ -252,6 +288,13 @@ side to know about joint ownership would not be adoptable.
   what is logged but not in what is granted.
 - **A threshold may come from outside the group**, and when it does the group
   may not lower it.
+- **A layer above one owner does not reach what she holds with another.** An
+  owner is often both a member of something and a co-owner of something else,
+  and a specification that leaves this implicit gets it wrong in the direction
+  that matters: her employer inheriting a say over an account it has never
+  heard of, belonging half to somebody who never enrolled. Say that the upper
+  layer's reach is bounded by what the owner is entitled to enrol on her own,
+  and that a resource with another owner in it is not.
 - **One holder's standing in one resource is not standing anywhere else.**
   Being a co-owner gives no view of a co-owner's other resources, her queue,
   or her terms over anything else.

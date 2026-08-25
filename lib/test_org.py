@@ -369,6 +369,41 @@ check("the shipped charter starts a member on the read-only role",
 
 
 print()
+print("\n-- what no organization reaches, whatever its charter says --")
+joint = "meridian-joint/get_positions"
+wide = {**envelope(), "claims": ["*/get_positions"]}
+check("a pattern can reach an account she holds with somebody else",
+      uma4a_org.claims_match(joint, wide["claims"]))
+check("but the ceiling does not, once it is excluded",
+      not uma4a_org.reaches(joint, {**wide, "excluded": [joint]}))
+check("and her own resources are still reached",
+      uma4a_org.reaches("alice-vault/get_positions",
+                        {**wide, "excluded": [joint]}))
+jt = {"name": "joint", "resources": [joint], "ask_me": False,
+      "terms": {"expires_in": 86400, "scope": ["positions:read"],
+                "prohibited": []}}
+check("a tier over it is not governed, so it is never clamped",
+      not org.governs(jt, {**wide, "excluded": [joint]}))
+clamped_j, changes_j = org.clamp(jt, {**wide, "excluded": [joint]})
+check("and its terms come back exactly as she wrote them",
+      clamped_j["terms"]["expires_in"] == 86400 and not changes_j,
+      f"{clamped_j['terms']['expires_in']} {changes_j}")
+check("with no exclusion, the same charter would have clamped it",
+      org.clamp(jt, wide)[0]["terms"]["expires_in"] == 3600)
+
+print("\n-- a charter may only claim a namespace it names --")
+for bad in ("*/get_positions", "*/*", "*"):
+    try:
+        charter.validate({"name": "t", "claims": [bad],
+                          "envelope": {"max_expires_in": 3600}})
+        check(f"a claim of {bad!r} is refused", False, "it was accepted")
+    except ValueError as exc:
+        check(f"a claim of {bad!r} is refused", True, str(exc))
+check("a concrete namespace is accepted",
+      charter.validate({"name": "t", "claims": ["northwind-vault/*"],
+                        "envelope": {"max_expires_in": 3600}})["claims"]
+      == ["northwind-vault/*"])
+
 print(f"{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
     for f in FAIL:

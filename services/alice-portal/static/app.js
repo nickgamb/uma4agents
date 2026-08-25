@@ -294,6 +294,7 @@ async function agentAuthView(body) {
       <button data-t="resources">Protected resources</button>
       <button data-t="terms">My Terms</button>
       <button data-t="organization">Organization <span id="orgDot"></span></button>
+      <button data-t="joint">Joint accounts</button>
       <button data-t="ledger">Activity ledger</button>
     </div>
     <div id="aaBody"></div>`;
@@ -316,6 +317,7 @@ async function agentAuthView(body) {
   if (agentTab === "resources") return renderResources(target);
   if (agentTab === "terms") return renderTerms(target);
   if (agentTab === "organization") return renderOrganization(target);
+  if (agentTab === "joint") return renderJoint(target);
   if (agentTab === "ledger") return renderLedger(target);
 }
 
@@ -329,10 +331,21 @@ async function renderApprovals(target) {
     routes to you — new agents, or trades — will appear here in real time.</div>`; return; }
   target.innerHTML = items.map(p => {
     const isConn = p.kind === "connection";
+    const isJoint = p.kind === "joint";
+    // A request about something she holds with somebody else has to say so
+    // before she reads anything else on the card. Her answer is half of the
+    // decision, not the whole of it, and an approval that looked like every
+    // other approval would tell her she had settled something she has not.
+    const label = isJoint ? "Joint account" : isConn ? "New agent" : "Trade approval";
     return `<div class="card pending-card ${isConn ? "connection" : ""}" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span class="chip ${isConn ? "" : "warn"}">${isConn ? "New agent" : "Trade approval"}</span>
+        <span class="chip ${isJoint ? "" : isConn ? "" : "warn"}">${label}</span>
         <b>${esc(p.tier_name || p.tier)}</b></div>
+      ${isJoint && p.joint ? `<div class="note" style="margin-bottom:10px">This is about
+        <span class="mono">${esc(p.joint.account)}</span>, which you hold with
+        ${esc((p.joint.holders || []).filter(h => h !== ME).join(", ") || "somebody else")}.
+        ${p.joint.rule === "all" ? "Every holder has to allow it, so your no is enough to stop it and your yes is not enough to release it."
+          : "Any one holder can release it, so your yes is enough on its own."}</div>` : ""}
       <div class="kv"><span class="k">Purpose</span><span>${esc(p.purpose)}</span></div>
       ${p.operation ? `<div class="kv"><span class="k">Operation</span>
         <span class="mono">${esc(p.operation.tool)}(${esc(JSON.stringify(p.operation.params))})</span></div>` : ""}
@@ -806,6 +819,125 @@ function renderTermsCode(target, tiers) {
   });
 }
 
+// Who is signed in, so a mandate can list the *other* holders rather than
+// telling her she holds an account with herself.
+let ME = "";
+
+/* ---- Jointly held accounts -----------------------------------------------
+
+   The other shape of shared stuff, and the opposite asymmetry. An
+   organization sits *above* her; a co-owner sits *beside* her. Neither of
+   them can decide alone, there is nobody over either of them, and what an
+   agent is held to here is both their terms at once.
+
+   Two things this screen has to make true rather than merely say. She sees
+   who else holds the account before she agrees to anything — a mandate is
+   the electorate, and agreeing to one without reading it is agreeing to
+   whoever is on it. And she sees that no organization reaches this, because
+   the co-owner she shares it with never enrolled with hers. */
+async function renderJoint(target) {
+  const held = await api("/api/agent/joint").catch(() => []);
+  target.innerHTML = `
+    <div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>Held with somebody else</h2></div>
+      <div class="muted" style="font-size:12.5px;max-width:72ch">An account you hold jointly.
+        Neither of you can release it alone, and there is nobody above you — what decides is the
+        <b>mandate</b> you both agreed to. An agent asking for it is offered one document that is
+        both your terms at once: the shorter expiry, only the scopes you both offer, every
+        prohibition either of you wrote.
+        <div style="margin-top:8px">No organization reaches any of this, whatever its charter
+        says. The person you hold it with never enrolled with yours and could not leave it.</div>
+      </div>
+    </div>
+    ${(held || []).map(jointCard).join("")}
+    ${(held || []).length ? "" : `<div class="empty">You hold nothing jointly.</div>`}
+    <div class="card pad-lg">
+      <div class="section-head"><h2>Join an account</h2></div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:12px;max-width:72ch">The other
+        holders, and what it takes to release it, are shown before you agree to anything.</div>
+      <label class="fld"><div class="lbl">Where it is counted</div>
+        <input type="text" id="jTally" placeholder="https://joint-tally.uma.lab"></label>
+      <label class="fld"><div class="lbl">Account</div>
+        <input type="text" id="jAccount" placeholder="meridian-joint"></label>
+      <button class="btn" onclick="previewMandate()">See what this commits you to</button>
+      <div id="jPreview"></div>
+    </div>`;
+}
+
+function jointCard(m) {
+  const rule = {all: "Every holder has to allow a request. Any one of you can stop it.",
+                any: "Any one holder can release it alone.",
+                threshold: `It takes ${m.rule?.threshold} of ${(m.holders || [])
+                    .reduce((a, h) => a + (h.weight || 1), 0)} to release it.`}[m.rule?.kind];
+  return `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>${esc(m.account)}</h2>
+      <span class="chip">${esc(m.rule?.kind || "")}</span>
+      <button class="btn ghost sm" style="margin-left:auto"
+        onclick="leaveMandate('${esc(m.account)}')">Leave</button></div>
+    <div class="lbl">Held with</div>
+    <div>${(m.holders || []).map(h => `<span class="chip${h.weight > 1 ? "" : ""}">${esc(h.owner)}${
+      h.weight > 1 ? ` ×${h.weight}` : ""}</span>`).join(" ")}</div>
+    <div class="note" style="margin-top:12px">${esc(rule || "")}</div>
+    <div class="lbl" style="margin-top:18px">Covers</div>
+    <div>${(m.resources || []).map(r => `<span class="chip mono">${esc(r)}</span>`).join(" ")}</div>
+    <div class="muted" style="font-size:12.5px;margin-top:14px;max-width:70ch">Write your terms over
+      these under <b>My Terms</b>, in a tier of their own — terms over something you hold with
+      somebody else cannot share a tier with anything else, because one edit would change what
+      his agents are held to as well.</div>
+  </div>`;
+}
+
+window.previewMandate = async () => {
+  const tally = $("#jTally").value.trim(), account = $("#jAccount").value.trim();
+  const box = $("#jPreview");
+  if (!tally || !account) { box.innerHTML = `<div class="note warn">Both, please.</div>`; return; }
+  box.innerHTML = `<div class="muted" style="margin-top:12px">Reading…</div>`;
+  try {
+    const p = await api("/api/agent/joint/preview", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tally, account }) });
+    const m = p.mandate || {};
+    box.innerHTML = `
+      <div class="card pad-lg" style="margin-top:14px;border-color:var(--accent)">
+        <div class="lbl">You would be holding it with</div>
+        <div>${(m.holders || []).filter(h => h.owner !== ME)
+          .map(h => `<span class="chip">${esc(h.owner)}</span>`).join(" ") || "—"}</div>
+        ${(p.summary || []).map(l => `<div class="note" style="margin-top:8px">${esc(l)}</div>`).join("")}
+        ${p.writes_terms ? `<div class="note warn" style="margin-top:8px">You already have terms
+          over these resources. They stay yours — this does not change them — but what an agent is
+          held to here becomes yours and the other holders' at once, which may be stricter.</div>` : ""}
+        <label style="display:flex;gap:8px;align-items:flex-start;margin-top:16px;cursor:pointer">
+          <input type="checkbox" id="jAgree" style="margin-top:3px">
+          <span style="font-size:13px">I have read who else holds this and what it takes to
+            release it, and I agree to hold it with them.</span></label>
+        <button class="btn primary" id="jJoin" style="margin-top:12px" disabled
+          onclick="joinMandate('${esc(tally)}','${esc(account)}')">Join</button>
+      </div>`;
+    $("#jAgree").onchange = e => { $("#jJoin").disabled = !e.target.checked; };
+  } catch (e) {
+    box.innerHTML = `<div class="note warn" style="margin-top:12px">${esc(e.message)}</div>`;
+  }
+};
+
+window.joinMandate = async (tally, account) => {
+  try {
+    await api("/api/agent/joint", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tally, account, agreed: true }) });
+    toast("Joined", `You now hold ${account} with its other holders.`);
+  } catch (e) { toast("Not joined", e.message, "warn"); }
+  agentAuthView($("#view"));
+};
+
+window.leaveMandate = async (account) => {
+  try {
+    await api(`/api/agent/joint/${encodeURIComponent(account)}`, { method: "DELETE" });
+    toast("Left", `Your terms stay exactly as they were — leaving withdraws your say, it does
+      not raise what was under it.`);
+  } catch (e) { toast("Not left", e.message, "warn"); }
+  agentAuthView($("#view"));
+};
+
 /* ---- Organization -------------------------------------------------------
 
    The layer above her, when there is one. Everything here is about a single
@@ -1248,7 +1380,9 @@ function connectEvents() {
   const es = new EventSource("/api/agent/events");
   es.addEventListener("pending", (e) => {
     const d = JSON.parse(e.data);
-    toast(d.kind === "connection" ? "New agent wants to connect" : "Trade needs your approval",
+    toast(d.kind === "connection" ? "New agent wants to connect"
+          : d.kind === "joint" ? "A jointly held account needs your answer"
+          : "Trade needs your approval",
       d.purpose || "", "warn");
     pollBadge();
     if (location.hash.includes("agent-authorization") && agentTab === "approvals") renderApprovals($("#aaBody"));
@@ -1293,6 +1427,7 @@ function connectEvents() {
   const me = await api("/api/me");
   // Whoever signed in. One image serves any owner, so a name baked in here
   // renders somebody else's on every instance but the first.
+  ME = me.owner || "";
   const name = me.name || me.owner || "Account";
   $("#whoName").textContent = name;
   $("#avatar").textContent = name[0].toUpperCase();

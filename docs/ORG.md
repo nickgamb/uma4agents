@@ -140,7 +140,8 @@ The organization's policy document. Four parts, and they are not the same
 kind of thing:
 
 ```
-claims        which resources are the organization's at all
+claims        which resources are the organization's at all — a namespace it
+              names, never a wildcard where the namespace goes
 roles         what a member may reach, and what she may delegate
 envelope      a ceiling on the terms she writes over them   -> clamped
 conditions    what a request must look like                 -> decided
@@ -180,6 +181,27 @@ One document, one signature, one thing to hold both sides to.
 a judgement about that request, and it is made at the organization's own
 decision point against policy the member's authority never sees. That decision
 point is [OPA](https://www.openpolicyagent.org), evaluating `org.rego`.
+
+### What a charter may claim
+
+A claim has to name a concrete namespace. `northwind-vault/*` is a claim;
+`*/get_positions` is refused.
+
+The wildcard form reads as "this kind of resource, wherever it lives", and
+that is precisely the reach an organization must not have. It matches
+`alice-vault/get_positions`, so the firm would be governing a member's own
+brokerage account. It matches a namespace she holds jointly with somebody
+else, so the firm would be governing an account belonging half to a person
+who never enrolled here and cannot leave.
+
+Both were reachable before the check existed, and both were demonstrated: an
+administrator saw and answered a request over a jointly held account, and the
+charter's ceiling narrowed the terms an agent was held to there.
+
+The charter side stops the accident. The deliberate case — a charter naming a
+joint namespace outright — is refused at the *member's* authority instead,
+which is where a co-owner's safety has to live. See
+[JOINT.md](JOINT.md#no-organization-reaches-it).
 
 ## Groups
 
