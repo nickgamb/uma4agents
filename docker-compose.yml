@@ -44,6 +44,7 @@ services:
           - org-console.uma.lab
           - joint-tally.uma.lab
           - northwind-xaa.uma.lab
+          - northwind-idp.uma.lab
 
   keycloak:
     init: true
@@ -60,6 +61,34 @@ services:
       - ./keycloak/:/opt/keycloak/data/import:ro
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
+  # Northwind's own identity provider — a different party from the Keycloak
+  # above, which is Meridian's and authenticates people into Meridian's own
+  # surfaces. This one is the customer enterprise's: its employee directory,
+  # its administrator, and the provider a charter federates identity to.
+  #
+  # An Okta tenant in the world. A separate process here because it is a
+  # separate company's infrastructure, and modelling it as another realm on
+  # Meridian's server would say the opposite of what it is.
+  northwind-idp:
+    init: true
+    image: quay.io/keycloak/keycloak:26.4.5
+    command: start-dev --import-realm --health-enabled=true --http-port=8081
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${NORTHWIND_IDP_ADMIN_PASSWORD:-northwind-admin}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: https://northwind-idp.uma.lab
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ./keycloak-northwind/:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\n\r\n' >&3 && head -1 <&3 | grep -q 200"]
       interval: 5s
       timeout: 10s
       retries: 30
@@ -587,8 +616,11 @@ services:
       dockerfile: services/xaa-broker/Dockerfile
     environment:
       XAA_ISSUER: https://northwind-xaa.uma.lab
-      XAA_IDP_ISSUER: https://keycloak.uma.lab/realms/northwind
+      # Northwind's own directory. Meridian's Keycloak is a different
+      # party and its word about who Northwind employs is worth nothing.
+      XAA_IDP_ISSUER: https://northwind-idp.uma.lab/realms/employees
       XAA_ADMINS: dana
+      XAA_IDP_ADMIN_CLIENT: northwind-idp-admin
       XAA_ADMIN_TOKEN: ${XAA_ADMIN_TOKEN:-xaa-admin-dev-token}
       XAA_CLIENTS: '{"northwind-research-agent": "${XAA_AGENT_SECRET:-northwind-agent-secret}"}'
       # The edges Dana approved. Two, because Northwind's book is administered
@@ -608,7 +640,7 @@ services:
       - xaa-keys:/keys
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
     depends_on:
-      keycloak:
+      northwind-idp:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9080/health')\""]

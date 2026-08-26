@@ -1,0 +1,66 @@
+{
+  "realm": "employees",
+  "displayName": "Northwind Capital",
+  "enabled": true,
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "northwind-research-agent",
+      "name": "Northwind Research Agent",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["https://agent.uma.lab/*"],
+      "webOrigins": ["+"]
+    },
+    {
+      "clientId": "northwind-idp-admin",
+      "name": "Northwind Identity Administration",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["https://northwind-xaa.uma.lab/*"],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "dana",
+      "enabled": true,
+      "firstName": "Dana",
+      "lastName": "Whitfield",
+      "email": "dana@northwind.example",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "dana-idp", "temporary": false }]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "firstName": "Alice",
+      "lastName": "Nakamura",
+      "email": "alice@northwind.example",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "alice-northwind", "temporary": false }]
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "firstName": "Carol",
+      "lastName": "Ibarra",
+      "email": "carol@northwind.example",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "carol-northwind", "temporary": false }]
+    },
+    {
+      "username": "frank",
+      "enabled": true,
+      "firstName": "Frank",
+      "lastName": "Osei",
+      "email": "frank@northwind.example",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "frank-northwind", "temporary": false }]
+    }
+  ]
+}

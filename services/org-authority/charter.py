@@ -340,19 +340,46 @@ def validate(charter: dict) -> dict:
         if not isinstance(idp, dict):
             raise ValueError("identity_provider must be an object")
         issuer = (idp.get("issuer") or "").strip()
+        enabled = bool(idp.get("enabled", True))
+        if not enabled and not issuer:
+            # Switched off and nothing typed in. That is the same charter as
+            # one that never mentioned a provider, and storing an empty shell
+            # would make every reader test two things instead of one.
+            out.pop("identity_provider", None)
+            idp = None
         # The issuer is a trust root: a member's authority will accept
         # assertions about who her agents act for on the strength of this one
         # string. Plain http would put that decision on the network.
-        if not issuer.startswith("https://"):
+        elif not issuer.startswith("https://"):
             raise ValueError(
                 "identity_provider.issuer must be an https issuer — a "
                 "member's authority trusts assertions signed by it")
+    if idp is not None:
         assertion = (idp.get("assertion") or "id-jag").strip()
         if assertion != "id-jag":
             raise ValueError(
                 "identity_provider.assertion: this profile understands "
                 "`id-jag` and nothing else")
-        out["identity_provider"] = {"issuer": issuer, "assertion": assertion}
+        directory = (idp.get("directory") or "").strip()
+        if directory and not directory.startswith("https://"):
+            raise ValueError(
+                "identity_provider.directory must be an https issuer")
+        out["identity_provider"] = {
+            # Configured but switched off is a real state, and a different one
+            # from never configured: an administrator turning federation off
+            # should not lose the provider she typed in.
+            "enabled": bool(idp.get("enabled", True)),
+            "issuer": issuer,
+            "assertion": assertion,
+            # Where employees actually sign in. Discovered from the provider's
+            # own metadata when blank, which is the normal case — an
+            # administrator should not have to type the same company's two
+            # endpoints and keep them agreeing.
+            "directory": directory,
+            # Whether the provider vouching for her is enough to enrol,
+            # instead of an enrolment code.
+            "enrol": bool(idp.get("enrol", True)),
+        }
 
     rego = out.get("rego") or ""
     if not isinstance(rego, str):
@@ -523,7 +550,11 @@ def envelope_of(charter: dict, role: dict | None = None) -> dict:
         # signature against an issuer she was never told about — and because
         # she should be able to see, in her own portal, whose word about her
         # colleagues her server is taking.
-        "identity_provider": charter.get("identity_provider"),
+        # Only when it is on. A member's authority should not be asking for
+        # assertions on the strength of a provider an administrator disabled.
+        "identity_provider": (charter.get("identity_provider")
+                              if (charter.get("identity_provider") or {}).get("enabled")
+                              else None),
         "max_expires_in": envelope.get("max_expires_in"),
         "allowed_scopes": envelope.get("allowed_scopes"),
         "require_prohibited": list(envelope.get("require_prohibited") or []),

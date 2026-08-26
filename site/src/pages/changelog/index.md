@@ -27,10 +27,16 @@ release within that month. One entry per release.
 #### New
 
 - **Cross App Access:** an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
-- **Cross App Access:** new `xaa-broker` service — the exchange endpoint an administrator configures approved application-to-resource edges in. Keycloak holds the employee directory; it can receive an ID-JAG but cannot yet issue one.
+- **Cross App Access:** new `northwind-idp` — the customer enterprise's own identity provider, a separate deployment from the one Meridian authenticates its surfaces with. A token from Meridian's provider is not an employee assertion.
+- **Cross App Access:** new `xaa-broker` service — the exchange endpoint, holding the application-to-resource edges an administrator approved. It stands in for a tenant that issues ID-JAGs itself; keys are resolved by discovery, permitted algorithms come from the key's type, and the claim naming the person is configurable, so a charter can name a real tenant instead.
 - **Organization:** a member can enrol because her employer's directory vouches for her, instead of with a shared code. Only where the charter names a provider, and one employee's token does not enrol another.
+- **Organization:** Charter → Settings gains federated identity — switch it on, name the provider and directory, and choose whether people may enrol without a code.
 - **Authorization server:** an assertion is bound to one authorization server, one member and one use, and is only ever asked for over resources the organization actually reaches — never a member's own accounts, never anything she holds jointly.
 - **Agent:** `Enterprise` credentials on the grant loop. An agent carrying them satisfies an identity challenge from a server it has never heard of; the challenge names the provider, the audience, the resource and the scope.
+
+#### Enhancements
+
+- **Enforcement point:** a resource refused because the caller is not a member of the organization that owns it now names that organization, and says how membership is come by where its charter federates identity. An assertion still enrols nobody — joining is agreed to, not asserted.
 
 ## August 25 2026
 

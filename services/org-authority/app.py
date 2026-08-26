@@ -453,6 +453,18 @@ async def discovery() -> dict:
         "introspection_endpoint": f"{ISSUER}/introspect",
         "charter_version": current()["version"],
         "break_glass": bool(glass.get("enabled")),
+        # Public, because an authority whose owner is *not* a member has to be
+        # able to find out that this organization claims a resource and asks
+        # for an assertion over it. Without that it can only refuse an agent
+        # opaquely, and the person it is refusing on behalf of never learns
+        # she was invitable. None of it is sensitive: the claims are patterns,
+        # and the provider is a public issuer.
+        "claims": list(current()["charter"].get("claims") or []),
+        "identity_provider": (
+            {"issuer": idp["issuer"], "assertion": idp["assertion"],
+             "enrol": idp["enrol"]}
+            if (idp := (current()["charter"].get("identity_provider") or {})
+                ).get("enabled") and idp.get("issuer") else None),
     }
 
 
@@ -503,24 +515,68 @@ async def boot() -> None:
 # raise a floor.
 
 
+_DIRECTORY_CACHE: dict[str, tuple[float, str, list]] = {}
+
+
+def _directory_of(idp: dict) -> tuple[str, list]:
+    """Where this organization's employees actually sign in, and its keys.
+
+    Two endpoints belong to the enterprise and they are not the same thing:
+    the **provider** mints identity assertions, and the **directory** is the
+    OpenID issuer its people authenticate against. The provider advertises the
+    directory in its own metadata, so an administrator names one endpoint and
+    the second is discovered — a charter carrying two that disagreed would be
+    a charter that trusted the wrong one.
+
+    Neither is this server's own administrator issuer, and the distinction is
+    the point. That issuer authenticates people into *Meridian's* console; it
+    is Meridian's, and its word about who Northwind employs is worth nothing.
+    A customer's employee directory belongs to the customer.
+    """
+    issuer = idp["issuer"].rstrip("/")
+    cached = _DIRECTORY_CACHE.get(issuer)
+    if cached and cached[0] > now():
+        return cached[1], cached[2]
+    with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
+        meta = c.get(f"{issuer}/.well-known/openid-configuration")
+        meta.raise_for_status()
+        directory = (idp.get("directory")
+                     or meta.json().get("id_jag_identity_provider") or "")
+        if not directory:
+            raise ValueError(f"{issuer} does not say where its people sign in")
+        conf = c.get(f"{directory.rstrip('/')}/.well-known/openid-configuration")
+        conf.raise_for_status()
+        jwks = c.get(conf.json()["jwks_uri"])
+        jwks.raise_for_status()
+    keys = jwks.json()["keys"]
+    _DIRECTORY_CACHE[issuer] = (now() + 300, directory, keys)
+    return directory, keys
+
+
 def _employee_assertion(owner: str, assertion: str) -> bool:
     """Does the organization's own identity provider say this is its person?
 
     Only consulted when the charter names a provider, and it is the charter
     that makes this legitimate: a member reads "Northwind federates identity
-    to this provider" before she agrees to anything, so an organization
-    cannot start accepting somebody else's word about who its people are
-    without republishing the bargain.
-
-    The provider named in the charter is the assertion endpoint. Its
-    directory — the realm employees actually sign into — is the issuer this
-    server already trusts for administrators, because they are the same
-    company's people.
+    to this provider" before she agrees to anything, so an organization cannot
+    start accepting somebody else's word about who its people are without
+    republishing the bargain.
     """
     from jwt.algorithms import RSAAlgorithm
 
+    idp = current()["charter"].get("identity_provider") or {}
+    if not idp.get("enabled") or not idp.get("issuer"):
+        return False
+    try:
+        directory, keys = _directory_of(idp)
+    except Exception as exc:                                    # noqa: BLE001
+        raise HTTPException(
+            status_code=503,
+            detail=f"this organization's identity provider could not be "
+                   f"reached to check that: {exc}") from exc
+
     header = jwt.get_unverified_header(assertion)
-    for jwk_dict in admin_issuer_keys():
+    for jwk_dict in keys:
         if jwk_dict.get("use") == "enc":
             continue
         if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
@@ -528,14 +584,13 @@ def _employee_assertion(owner: str, assertion: str) -> bool:
         try:
             claims = jwt.decode(
                 assertion, RSAAlgorithm.from_jwk(json.dumps(jwk_dict)),
-                algorithms=["RS256"], issuer=ADMIN_ISSUER,
+                algorithms=["RS256"], issuer=directory,
                 options={"verify_aud": False})
         except jwt.InvalidTokenError:
             continue
         # The directory's name for her has to be the name she is enrolling
         # under. Without this any employee's token would enrol anybody.
-        who = claims.get("preferred_username") or claims.get("sub")
-        return who == owner
+        return (claims.get("preferred_username") or claims.get("sub")) == owner
     return False
 
 
@@ -550,7 +605,8 @@ def _authorize_enrolment(owner: str, code: str, assertion: str = "") -> str:
     her is enough: an enterprise that already knows its employees should not
     have to hand them a code to prove it.
     """
-    if assertion and (current()["charter"].get("identity_provider") or {}).get("issuer"):
+    idp_cfg = current()["charter"].get("identity_provider") or {}
+    if assertion and idp_cfg.get("enabled") and idp_cfg.get("enrol"):
         if _employee_assertion(owner, assertion):
             return "identity-provider"
         raise HTTPException(

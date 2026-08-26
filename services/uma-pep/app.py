@@ -474,6 +474,33 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
     return enforcer
 
 
+_ORG_DISCOVERY: tuple[float, dict] = (0.0, {})
+
+
+async def org_discovery() -> dict:
+    """The organization's public description of itself, cached.
+
+    Read for one purpose: to say something useful in a refusal. None of it
+    decides anything here — the sharing decision above is unchanged, and a
+    discovery document that failed to load only costs a less helpful message.
+    """
+    global _ORG_DISCOVERY
+    if not ORG_ISSUER:
+        return {}
+    age, doc = _ORG_DISCOVERY
+    if doc and age > time.time():
+        return doc
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as c:
+            r = await c.get(f"{ORG_INTERNAL.rstrip('/')}/.well-known/u4a-organization")
+            r.raise_for_status()
+            doc = r.json()
+    except Exception:                                           # noqa: BLE001
+        return {}
+    _ORG_DISCOVERY = (time.time() + 120, doc)
+    return doc
+
+
 @app.on_event("startup")
 async def announce_registration() -> None:
     event("registration.declarative",
@@ -553,9 +580,28 @@ async def check(request: Request, rest: str = "") -> Response:
             # have it argue with a server that has never heard of this.
             event("access.denied", reason="not-shared", owner=owner,
                   path=original_path)
-            return deny(403, {"error": "not_shared",
-                              "error_description": "this resource is not "
-                              "shared with that member"})
+            # Still not a challenge, for the reason above. But a refusal that
+            # names the organization and says how membership is come by is the
+            # difference between a dead end and something the person acting
+            # for can actually do — and none of it is privileged: the
+            # organization publishes all of it.
+            doc = await org_discovery()
+            org_name = (doc.get("organization") or {}).get("name")
+            idp = doc.get("identity_provider") or {}
+            body = {"error": "not_shared",
+                    "error_description":
+                        (f"this resource belongs to {org_name} and is not "
+                         f"shared with that member" if org_name else
+                         "this resource is not shared with that member")}
+            if org_name:
+                body["organization"] = {"name": org_name,
+                                        "issuer": doc.get("issuer")}
+            if idp.get("enrol"):
+                body["how_to_join"] = (
+                    f"{org_name} federates identity to {idp['issuer']}. "
+                    f"Whoever this authority belongs to can enrol from their "
+                    f"own portal by signing in there — no enrolment code.")
+            return deny(403, body)
     else:
         enforcer = ENFORCERS.get(owner, ENFORCER)
     d = await enforcer.authorize(facts)

@@ -51,7 +51,13 @@ from uma4a_grant import (  # noqa: E402
 )
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
+# Meridian's identity provider. It authenticates people into Meridian's own
+# surfaces — her portal, Dana's console — and it is not Northwind's.
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
+# Northwind's, which is a different company's infrastructure. Its employee
+# directory, and the issuer the charter federates to.
+NORTHWIND_IDP = os.environ.get("UMA4A_NORTHWIND_IDP",
+                               "https://northwind-idp.uma.lab/realms/employees")
 ORG = os.environ.get("UMA4A_ORG", "https://northwind-org.uma.lab")
 XAA = os.environ.get("UMA4A_XAA", "https://northwind-xaa.uma.lab")
 AS = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
@@ -91,13 +97,38 @@ def portal(c: httpx.Client, owner: str, realm: str, password: str) -> dict:
 
 
 def employee_id_token(c: httpx.Client, who: str) -> str:
-    """An employee signing into the application, at Northwind's realm."""
-    r = c.post(f"{KEYCLOAK}/realms/northwind/protocol/openid-connect/token",
+    """An employee signing into the application, at Northwind's own provider."""
+    r = c.post(f"{NORTHWIND_IDP}/protocol/openid-connect/token",
                data={"grant_type": "password", "client_id": AGENT_CLIENT,
                      "username": who, "password": f"{who}-northwind",
                      "scope": "openid"}, timeout=15.0)
     r.raise_for_status()
     return r.json()["id_token"]
+
+
+def meridian_token(c: httpx.Client, who: str, realm: str, password: str,
+                   client: str = "meridian-org-console") -> str:
+    """Somebody signing into a *Meridian* surface. A different company."""
+    r = c.post(f"{KEYCLOAK}/realms/{realm}/protocol/openid-connect/token",
+               data={"grant_type": "password", "client_id": client,
+                     "username": who, "password": password, "scope": "openid"},
+               timeout=15.0)
+    r.raise_for_status()
+    return r.json()["id_token"]
+
+
+def leave_org(c: httpx.Client, hdrs: dict) -> None:
+    if c.get(f"{AS}/owner/organization", headers=hdrs, timeout=15.0
+             ).json().get("enrolled"):
+        c.request("DELETE", f"{AS}/owner/organization", headers=hdrs, timeout=15.0)
+
+
+def federated(base: dict, **over) -> dict:
+    doc = {**base, "identity_provider": {"enabled": True, "issuer": XAA,
+                                         "assertion": "id-jag", "directory": "",
+                                         "enrol": True, "jit_invite": True}}
+    doc["identity_provider"].update(over)
+    return doc
 
 
 def exchange(c: httpx.Client, subject: str, audience: str, scope: str,
@@ -147,8 +178,7 @@ def main() -> int:                                            # noqa: C901
     print("\n1. Northwind federates identity in its charter")
     base = c.get(f"{ORG}/admin/charter/versions/1", headers=ADMIN,
                  timeout=15.0).json()["charter"]
-    federated = {**base, "identity_provider": {"issuer": XAA, "assertion": "id-jag"}}
-    r = c.put(f"{ORG}/admin/charter", json=federated, headers=ADMIN, timeout=20.0)
+    r = c.put(f"{ORG}/admin/charter", json=federated(base), headers=ADMIN, timeout=20.0)
     check("a charter may name the provider its people are asserted by",
           r.status_code == 200, f"{r.status_code} {r.text[:140]}")
     r = c.put(f"{ORG}/admin/charter",
@@ -156,12 +186,29 @@ def main() -> int:                                            # noqa: C901
               headers=ADMIN, timeout=20.0)
     check("and it has to be an https issuer — it is a trust root",
           r.status_code >= 400, f"accepted {r.status_code}")
-    c.put(f"{ORG}/admin/charter", json=federated, headers=ADMIN, timeout=20.0)
+    r = c.put(f"{ORG}/admin/charter",
+              json={**base, "identity_provider": {"enabled": False, "issuer": ""}},
+              headers=ADMIN, timeout=20.0)
+    check("switched off with nothing typed in is a charter that never had one",
+          r.status_code == 200 and not (c.get(f"{ORG}/.well-known/u4a-organization",
+                                              timeout=15.0).json()
+                                        .get("identity_provider")),
+          f"{r.status_code} {r.text[:120]}")
+    c.put(f"{ORG}/admin/charter", json=federated(base), headers=ADMIN, timeout=20.0)
+
+    print("\n1b. the provider is the enterprise's, not Meridian's")
+    r = c.post(f"{XAA}/token", timeout=15.0, data={
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "requested_token_type": ID_JAG_FORMAT,
+        "subject_token": meridian_token(c, "dana", "northwind", "dana-demo"),
+        "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+        "audience": AS, "resource": GATEWAY, "scope": "get_positions",
+        "client_id": AGENT_CLIENT, "client_secret": AGENT_SECRET})
+    check("a token from Meridian's own identity provider is not an employee "
+          "assertion", r.status_code >= 400, f"accepted {r.status_code}")
 
     print("\n2. an employee enrols because the provider says she is one")
-    if c.get(f"{AS}/owner/organization", headers=alice, timeout=15.0
-             ).json().get("enrolled"):
-        c.request("DELETE", f"{AS}/owner/organization", headers=alice, timeout=15.0)
+    leave_org(c, alice)
     r = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
                json={"assertion": employee_id_token(c, "alice"), "agreed": True})
     check("no enrolment code — her employer's directory is the entitlement",
@@ -170,6 +217,15 @@ def main() -> int:                                            # noqa: C901
                 json={"assertion": employee_id_token(c, "carol"), "agreed": True})
     check("and one employee's token does not enrol another",
           r2.status_code >= 400, f"accepted {r2.status_code}")
+    leave_org(c, alice)
+    r3 = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
+                json={"assertion": meridian_token(c, "alice", "alice", "alice-demo",
+                                                 "meridian-portal"),
+                      "agreed": True})
+    check("and Meridian's word about who Northwind employs is worth nothing",
+          r3.status_code >= 400, f"accepted {r3.status_code}")
+    c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
+           json={"assertion": employee_id_token(c, "alice"), "agreed": True})
 
     print("\n3. the terms over the firm's book are still hers to write")
     c.post(f"{AS}/owner/policies", headers=alice, timeout=15.0,
@@ -291,6 +347,46 @@ def main() -> int:                                            # noqa: C901
             "ticket": "x"})
         check("and it is refused at Alice's", rr.status_code >= 400,
               f"{rr.status_code} {rr.text[:120]}")
+
+    print("\n8b. an employee who has not joined yet")
+    # The direction-of-mastering case. Her employer vouches for her; she has
+    # not joined. What must not happen is that the assertion enrols her —
+    # joining hands the organization powers over her agents, and those are
+    # acquired by agreeing to a charter, not by being on a payroll.
+    leave_org(c, alice)
+    r = mcp_call(c, f"{GATEWAY}{BOOK_PATH}", "tools/call",
+                 {"name": "get_positions", "arguments": {}}, META)
+    body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+    check("the firm's book is refused outright — she is not a member of it",
+          r.status_code == 403 and body.get("error") == "not_shared",
+          f"{r.status_code} {r.text[:120]}")
+    check("and no assertion is asked for, because there is nothing to negotiate",
+          not r.headers.get("www-authenticate"),
+          r.headers.get("www-authenticate", "")[:100])
+    check("the refusal names the organization rather than being a dead end",
+          "Northwind" in (body.get("error_description") or ""),
+          str(body)[:160])
+    check("and says how membership is come by",
+          "enrol" in (body.get("how_to_join") or "").lower(), str(body)[:200])
+    check("an ID-JAG for a non-member enrols nobody",
+          not c.get(f"{AS}/owner/organization", headers=alice,
+                    timeout=15.0).json().get("enrolled"),
+          "she was enrolled without agreeing to anything")
+
+    print("\n8c. she joins, and the same agent then works")
+    r = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
+               json={"assertion": employee_id_token(c, "alice"), "agreed": True})
+    check("signing in at her employer is the whole of the enrolment",
+          r.status_code == 200, f"{r.status_code} {r.text[:140]}")
+    c.post(f"{AS}/owner/policies", headers=alice, timeout=15.0,
+           json={"id": "firmbook", "name": "Northwind book", "ask_me": False,
+                 "resources": [f"{BOOK}/get_positions", f"{BOOK}/get_transactions"],
+                 "terms": {"purpose": "Desk research on the firm book",
+                           "expires_in": 600,
+                           "scope": ["positions:read", "transactions:read"],
+                           "prohibited": ["client-benchmarking"]}})
+    rpt6, why6, _ = negotiate(c, BOOK_PATH, keys, ent, hdrs=alice)
+    check("and only then does the same agent get a grant", rpt6 is not None, why6)
 
     print("\n9. the enterprise half stops at the organization's resources")
     rpt3, why3, said3 = negotiate(c, "", keys, None, hdrs=alice)

@@ -18,36 +18,6 @@
           "temporary": false
         }
       ]
-    },
-    {
-      "username": "alice",
-      "enabled": true,
-      "firstName": "Alice",
-      "lastName": "Nakamura",
-      "email": "alice@northwind.uma.lab",
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "alice-northwind",
-          "temporary": false
-        }
-      ]
-    },
-    {
-      "username": "carol",
-      "enabled": true,
-      "firstName": "Carol",
-      "lastName": "Ibarra",
-      "email": "carol@northwind.uma.lab",
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "carol-northwind",
-          "temporary": false
-        }
-      ]
     }
   ],
   "clients": [
@@ -61,20 +31,6 @@
       "redirectUris": [
         "https://org-console.uma.lab/*",
         "http://localhost:9050/*"
-      ],
-      "webOrigins": [
-        "+"
-      ]
-    },
-    {
-      "clientId": "northwind-research-agent",
-      "name": "Northwind Research Agent",
-      "enabled": true,
-      "publicClient": true,
-      "directAccessGrantsEnabled": true,
-      "standardFlowEnabled": true,
-      "redirectUris": [
-        "https://agent.uma.lab/*"
       ],
       "webOrigins": [
         "+"

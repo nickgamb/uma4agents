@@ -127,6 +127,43 @@ and her terms narrow what is left.
   somebody else. Her own accounts never reach that branch. No assertion is
   asked for over them and none would help.
 
+## Who masters what
+
+Three parties, and each masters exactly one thing:
+
+| party | masters |
+|---|---|
+| the identity provider | who its **employees** are |
+| the member | whether her authority comes **under the charter** |
+| the organization | what the **charter** says |
+
+That division answers the awkward case. An employee's agent turns up with a
+perfectly good assertion at a resource belonging to an organization she has
+not joined: the request is refused, and the assertion does not enrol her.
+
+It cannot be allowed to. Joining is a bargain — the charter narrows her terms,
+but it also gives the organization powers over her agents, break-glass among
+them. Those are acquired by agreeing to a document, not by being on a payroll.
+An employer able to enrol somebody by asserting they work there could put a
+stranger's authority under a charter they never read, which is the arrangement
+this whole layer exists to make impossible.
+
+So the enforcement point refuses outright, without a challenge — there is
+nothing to negotiate about a resource nobody has shared. What the refusal does
+carry is the organization's name and how membership is come by:
+
+```json
+{
+  "error": "not_shared",
+  "error_description": "this resource belongs to Northwind Capital and is not shared with that member",
+  "organization": { "name": "Northwind Capital", "issuer": "https://northwind-org.uma.lab" },
+  "how_to_join": "Northwind Capital federates identity to https://…. Whoever this authority belongs to can enrol from their own portal by signing in there — no enrolment code."
+}
+```
+
+None of that is privileged; the organization publishes all of it. It is the
+difference between a dead end and something the person can act on.
+
 ## Federated enrolment
 
 Where a charter names a provider, an employee can enrol as a member because
@@ -158,12 +195,40 @@ accepted. Every other check in the lab runs against an unfederated charter.
 | `lib/uma4a_grant.py` | `Enterprise`, and the exchange an agent performs when asked |
 | `clients/demo-driver/xaa_check.py` | `make xaa-check` |
 
-### On the broker being a separate service
+### Two identity providers, and they are different companies
 
-Keycloak is Northwind's identity provider here and holds the employee
-directory, but it cannot issue an ID-JAG: its support is receiver-side only,
-and behind an experimental feature flag at that. So the exchange endpoint is a
-small service beside it, trusting that realm for subject tokens.
+The lab runs two, and conflating them is the easiest mistake to make here:
 
-An Okta tenant with Cross App Access enabled does both halves in one place.
-The split is a property of this lab, not of the design.
+| | |
+|---|---|
+| `keycloak.uma.lab` | **Meridian's.** It authenticates people into Meridian's own surfaces — Alice's portal, and the org console Dana signs into. Its `northwind` realm exists because Meridian hosts a console for its institutional clients |
+| `northwind-idp.uma.lab` | **Northwind's.** A customer's own infrastructure: its employee directory, its administrator, and the issuer a charter federates identity to |
+
+They are separate processes because they are separate companies, and modelling
+the second as another realm on the first would say the opposite of what it is.
+Meridian's word about who Northwind employs is worth nothing, and the lab
+asserts that: a token from Meridian's realm presented to Northwind's provider
+is refused, and so is one presented as an employee assertion at enrolment.
+
+Northwind's is Keycloak here only because the lab needs a real OpenID provider
+to stand in for an Okta tenant. Keycloak cannot issue an ID-JAG — its support
+is receiver-side, behind an experimental flag — so the exchange endpoint is a
+small service beside it. An Okta tenant with Cross App Access does both halves
+in one place, and `services/xaa-broker/` is what disappears when you point the
+charter at one.
+
+### Pointing it at a real tenant
+
+Only the charter changes: set `identity_provider.issuer` to the tenant, and
+leave `directory` blank so it is discovered. Three things were built for that
+rather than for the lab's own provider:
+
+- **keys are found by discovery.** `{issuer}/.well-known/openid-configuration`
+  (then `oauth-authorization-server`), and `{issuer}/jwks` only as a fallback,
+  because that last one is this lab's convention and no real tenant serves it;
+- **any asymmetric algorithm.** The lab's provider signs EdDSA and a tenant
+  will sign RS256. Permitted algorithms come from the key's type, never from
+  the token's own header;
+- **the subject claim is not assumed.** `preferred_username`, `email`, its
+  local part, and `sub` are all compared against the member; a charter may
+  name one claim explicitly with `identity_provider.subject_claim`.

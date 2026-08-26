@@ -1994,6 +1994,70 @@ def federated_provider(envelope: dict | None, resource_id: str) -> dict | None:
     return idp if idp and idp.get("issuer") else None
 
 
+# What a key of each type is allowed to have signed with. Asymmetric only —
+# a provider publishing a symmetric key in a public JWKS has published its
+# signing secret, and this profile will not treat that as a key.
+_ALGS_BY_KTY = {
+    "OKP": ["EdDSA"],
+    "RSA": ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512"],
+    "EC": ["ES256", "ES384", "ES512"],
+}
+
+
+def algs_for(jwk_dict: dict) -> list:
+    """The algorithms this key may have signed with."""
+    if declared := jwk_dict.get("alg"):
+        # A key that names its own algorithm is taken at its word, provided
+        # the word is one its type could have said.
+        return [declared] if declared in _ALGS_BY_KTY.get(
+            jwk_dict.get("kty"), []) else []
+    return _ALGS_BY_KTY.get(jwk_dict.get("kty"), [])
+
+
+_PROVIDER_JWKS: dict[str, tuple[float, list]] = {}
+
+
+def provider_keys(issuer: str, fresh: bool = False) -> list:
+    """An identity provider's signing keys.
+
+    Discovery first, `{issuer}/jwks` only as a fallback. The fallback is this
+    lab's own convention and nothing else publishes keys there; a real tenant
+    advertises `jwks_uri` in its OpenID metadata and will not have heard of
+    it. Getting this the right way round is the difference between the
+    profile working against an actual identity provider and working only
+    against the one shipped beside it.
+    """
+    import httpx
+
+    cached = _PROVIDER_JWKS.get(issuer)
+    if cached and cached[0] > now() and not fresh:
+        return cached[1]
+    base = issuer.rstrip("/")
+    with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
+        keys = []
+        for url in (f"{base}/.well-known/openid-configuration",
+                    f"{base}/.well-known/oauth-authorization-server"):
+            try:
+                meta = client.get(url)
+                if meta.status_code != 200:
+                    continue
+                jwks_uri = meta.json().get("jwks_uri")
+                if not jwks_uri:
+                    continue
+                doc = client.get(jwks_uri)
+                doc.raise_for_status()
+                keys = doc.json().get("keys") or []
+                break
+            except Exception:                                   # noqa: BLE001
+                continue
+        if not keys:
+            doc = client.get(f"{base}/jwks")
+            doc.raise_for_status()
+            keys = doc.json().get("keys") or []
+    _PROVIDER_JWKS[issuer] = (now() + 300, keys)
+    return keys
+
+
 def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> dict:
     """An identity provider's assertion about who an agent acts for.
 
@@ -2018,10 +2082,10 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     # and the direction to fail in is the same one an unreadable ceiling fails
     # in — see `organization_blocks`.
     try:
-        keys = issuer_keys(issuer)
+        keys = provider_keys(issuer)
         kid = head.get("kid")
         if kid and not any(k.get("kid") == kid for k in keys):
-            keys = issuer_keys(issuer, fresh=True)  # rotated, not forged
+            keys = provider_keys(issuer, fresh=True)  # rotated, not forged
     except Exception as exc:                                    # noqa: BLE001
         raise ValueError(
             f"{issuer} could not be reached to check the assertion") from exc
@@ -2030,9 +2094,16 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
         if kid and jwk_dict.get("kid") != kid:
             continue
         try:
+            # Whatever the provider actually signs with — an RSA tenant and
+            # an Ed25519 one are the same code path here.
+            #
+            # The permitted algorithms come from the *key*, never from the
+            # token's own header: a token that nominated its own algorithm
+            # would be choosing how it gets checked.
+            key = jwt.PyJWK(jwk_dict)
             claims = jwt.decode(
-                assertion, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
-                algorithms=["EdDSA"], issuer=issuer,
+                assertion, key.key, algorithms=algs_for(jwk_dict),
+                issuer=issuer,
                 # The audience check is what stops an assertion minted for
                 # one member's authority being spent at another's. The
                 # provider audiences each one deliberately; honouring that is
@@ -2057,9 +2128,19 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     # above says the assertion was meant for this server; this says it was
     # meant for this server *about this member*. Without it, an assertion for
     # one employee would open a negotiation over another's administration.
-    who = claims.get("preferred_username") or ""
-    if who != owner:
-        raise ValueError(f"the assertion is for {who!r}, not {owner!r}")
+    # Which claim names the person. `preferred_username` is what this lab's
+    # provider sends; a real tenant may only send `sub` and `email`, and the
+    # charter can name the claim it uses. All of them are compared against the
+    # owner this authority serves, so a provider that sends several cannot
+    # have one of them quietly disagree.
+    named = (idp.get("subject_claim")
+             and [claims.get(idp["subject_claim"])]
+             or [claims.get("preferred_username"), claims.get("email"),
+                 (claims.get("email") or "").split("@")[0], claims.get("sub")])
+    if owner not in [n for n in named if n]:
+        raise ValueError(
+            f"the assertion names {[n for n in named if n][:1] or ['nobody']} "
+            f"and this authority is {owner!r}'s")
 
     # And the enterprise's own ceiling: the administrator approved this
     # application for particular operations at that resource. This is the

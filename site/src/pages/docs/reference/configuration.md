@@ -195,7 +195,7 @@ with a code as before.
 | Variable | Default | Meaning |
 |---|---|---|
 | `XAA_ISSUER` | `https://northwind-xaa.uma.lab` | Its own origin. A member's authority verifies assertions against the keys published here, and accepts them only from the issuer her organization's charter names |
-| `XAA_IDP_ISSUER` | `https://keycloak.uma.lab/realms/northwind` | The realm holding the employee directory. A subject token signed by anything else is not an employee assertion, whatever it claims |
+| `XAA_IDP_ISSUER` | `https://northwind-idp.uma.lab/realms/employees` | The **customer's own** directory, not Meridian's. A subject token signed by anything else is not an employee assertion, whatever it claims — the provider that authenticates people into Meridian's surfaces has no standing to say who a client company employs |
 | `XAA_CLIENTS` | `{}` | Applications registered with the provider, and the secret each authenticates the exchange with |
 | `XAA_SEED_CONNECTIONS` | `[]` | The edges an administrator approved — one requesting application, one authorization server it may be sent to, one resource, and the widest scope the enterprise will assert for. Policy about which applications may talk at all, never about what may be done to a resource |
 | `XAA_ADMINS` | `dana` | Who may configure connections, by realm username |
@@ -207,6 +207,10 @@ And in the charter, which is where a member reads it before agreeing:
 |---|---|
 | `identity_provider.issuer` | The provider whose assertions this organization's members' authorities will accept. Must be `https` — it is a trust root |
 | `identity_provider.assertion` | `id-jag`, the only assertion this profile understands |
+| `identity_provider.enabled` | Whether federation is on. Configured-but-off is a real state, so an administrator switching it off does not lose the provider she typed in |
+| `identity_provider.directory` | Where employees sign in. Blank discovers it from the provider's own metadata, which is the normal case |
+| `identity_provider.enrol` | Whether the provider vouching for somebody is enough to enrol, instead of an enrolment code |
+| `identity_provider.subject_claim` | Which claim names the person, where a tenant's claim set makes it ambiguous. Blank compares `preferred_username`, `email`, its local part and `sub` |
 
 ## The two settings people get wrong
 

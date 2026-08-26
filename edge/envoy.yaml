@@ -57,6 +57,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: org_authority }
+                    - name: northwind_idp
+                      domains: ["northwind-idp.uma.lab", "northwind-idp.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: northwind_idp }
                     - name: xaa_broker
                       domains: ["northwind-xaa.uma.lab", "northwind-xaa.uma.lab:*"]
                       routes:
@@ -162,6 +167,14 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: org-authority, port_value: 9040 } }
+    - name: northwind_idp
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: northwind_idp
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: northwind-idp, port_value: 8081 } }
     - name: xaa_broker
       type: STRICT_DNS
       load_assignment:

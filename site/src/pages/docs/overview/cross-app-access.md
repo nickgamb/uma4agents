@@ -116,6 +116,34 @@ would be accepted. The boundary is the same one the
 [organization layer](/docs/overview/shared-ownership/) already draws; Cross
 App Access does not move it.
 
+## Who masters what
+
+Three parties, and each masters exactly one thing:
+
+| party | masters |
+|---|---|
+| the identity provider | who its **employees** are |
+| the member | whether her authority comes **under the charter** |
+| the organization | what the **charter** says |
+
+That division answers the awkward case: an employee's agent turns up with a
+perfectly good assertion, at a resource belonging to an organization she has
+not joined. The request is refused, and **the assertion does not enrol her**.
+
+It cannot be allowed to. Joining is a bargain — the charter narrows her terms,
+but it also gives the organization powers over her agents, break-glass among
+them. Those are acquired by agreeing to a document, not by being on a payroll.
+An employer able to enrol somebody by asserting they work there could put a
+stranger's authority under a charter they never read, which is the arrangement
+[the organization layer](/docs/overview/shared-ownership/) exists to make
+impossible.
+
+So the refusal is flat and carries no challenge — there is nothing to
+negotiate about a resource nobody has shared. What it does carry is the
+organization's name and how membership is come by, which is the difference
+between a dead end and something the person can act on. None of that is
+privileged; the organization publishes it.
+
 ## Enrolling because the directory says so
 
 Where a charter names a provider, an employee enrols as a member on the
@@ -136,9 +164,26 @@ by assertion, the two-beat negotiation, all three ceilings biting separately,
 and the boundaries — one authority, one person, one use, and nothing outside
 the organization's own resources.
 
-The exchange endpoint in the lab is a small service beside Keycloak, because
-Keycloak can *receive* an ID-JAG but cannot yet issue one. An Okta tenant with
-Cross App Access enabled does both halves in one place; the split is a
-property of the lab rather than of the design. See
-[deviation 17](/docs/reference/deviations/) for why the assertion is carried
-as a claim rather than as a `jwt-bearer` grant.
+### Two identity providers, and they are different companies
+
+Conflating them is the easiest mistake here. Meridian runs one, which
+authenticates people into Meridian's own surfaces — the member's portal, and
+the console the administrator signs into. Northwind runs another, which is a
+customer's own infrastructure: its employee directory, its administrator, and
+the issuer a charter federates to.
+
+They are separate deployments in the lab because they are separate companies.
+Meridian's word about who Northwind employs is worth nothing, and that is
+asserted rather than assumed: a token from Meridian's provider is refused both
+at Northwind's exchange endpoint and as an employee assertion at enrolment.
+
+Northwind's is Keycloak only because the lab needs a real OpenID provider to
+stand in for an enterprise tenant, and the exchange endpoint sits beside it
+because Keycloak can *receive* an ID-JAG but cannot yet issue one. A tenant
+with Cross App Access does both halves in one place, and pointing the charter
+at one is the only change required — keys are found by discovery rather than a
+lab convention, permitted algorithms come from the key's type rather than the
+token's header, and the claim naming the person is not assumed.
+
+See [deviation 17](/docs/reference/deviations/) for why the assertion is
+carried as a claim rather than as a `jwt-bearer` grant.

@@ -599,6 +599,7 @@ function wireTabs(view) {
 
 function charterForm(view, doc) {
   const c = doc.charter, e = c.envelope || {}, k = c.conditions || {}, g = c.break_glass || {};
+  const p = c.identity_provider || {};
   view.innerHTML = charterHead(doc) + charterTabs("form") + `
     <div class="card pad-lg" style="margin-bottom:14px">
       <div class="section-head"><h2>What this organization governs</h2></div>
@@ -644,6 +645,31 @@ function charterForm(view, doc) {
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
         <div class="toggle"><input type="checkbox" id="c-mission" ${k.require_mission ? "checked" : ""}><span class="track"></span></div>
         <div><div style="font-weight:560">Refuse an agent that cites no mandate for its errand</div></div>
+      </div>
+    </div>
+
+    <div class="card pad-lg" style="margin-bottom:14px">
+      <div class="section-head"><h2>Federated identity (Cross App Access)</h2></div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:12px;max-width:74ch">Where this
+        organization's people are asserted from. With this on, a member's authority asks an agent
+        which employee it acts for — as an ID-JAG from the provider below — before it dictates her
+        terms. It is an identity provider, not a policy one: it says who and which application, and
+        nothing about what may be done to a resource.
+        <br><br>This is a separate company's endpoint from the one you signed in with. That one is
+        Meridian's and authenticates you into this console; this one is yours, and its connections
+        are administered there rather than here.</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div class="toggle"><input type="checkbox" id="c-idp-on" ${p.enabled ? "checked" : ""}><span class="track"></span></div>
+        <div><div style="font-weight:560">Federate identity to an external provider</div></div>
+      </div>
+      <label class="fld"><div class="lbl">Provider issuer — where assertions are minted</div>
+        <input type="text" id="c-idp-iss" placeholder="https://…" value="${esc(p.issuer || "")}"></label>
+      <label class="fld"><div class="lbl">Directory issuer — where your people sign in (blank to discover it from the provider)</div>
+        <input type="text" id="c-idp-dir" placeholder="discovered" value="${esc(p.directory || "")}"></label>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+        <div class="toggle"><input type="checkbox" id="c-idp-enrol" ${p.enrol !== false ? "checked" : ""}><span class="track"></span></div>
+        <div><div style="font-weight:560">Let your people enrol without a code</div>
+          <div class="muted" style="font-size:12px">The provider vouching for them is the entitlement. One person's token still cannot enrol another.</div></div>
       </div>
     </div>
 
@@ -698,6 +724,13 @@ window.saveForm = async () => {
       min_provenance: parseInt($("#c-prov").value, 10) || 0,
       require_reason: $("#c-reason").checked,
       require_mission: $("#c-mission").checked,
+    },
+    identity_provider: {
+      enabled: $("#c-idp-on").checked,
+      issuer: $("#c-idp-iss").value.trim(),
+      assertion: "id-jag",
+      directory: $("#c-idp-dir").value.trim(),
+      enrol: $("#c-idp-enrol").checked,
     },
     break_glass: {
       enabled: $("#c-glass").checked,
