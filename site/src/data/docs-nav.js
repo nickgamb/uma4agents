@@ -90,6 +90,7 @@ const nav = {
       pages: [
         { title: "The roles you must fill", to: "/docs/guides/roles/" },
         { title: "Run the lab", to: "/docs/guides/run-the-lab/" },
+        { title: "Try it with Okta", to: "/docs/guides/okta-cross-app-access/" },
       ],
     },
     {

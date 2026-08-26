@@ -28,6 +28,7 @@ release within that month. One entry per release.
 
 - **Cross App Access:** an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
 - **Cross App Access:** new `northwind-idp` — the customer enterprise's own identity provider, a separate deployment from the one Meridian authenticates its surfaces with. A token from Meridian's provider is not an employee assertion.
+- **Authorization server:** verified against a real tenant. Provider keys are found by OpenID discovery rather than a lab convention, permitted algorithms come from the key's type rather than the token's header, provider TLS verifies against the public roots *with* the lab CA added, and signature failures are reported separately from issuer and audience ones.
 - **Cross App Access:** new `xaa-broker` service — the exchange endpoint, holding the application-to-resource edges an administrator approved. It stands in for a tenant that issues ID-JAGs itself; keys are resolved by discovery, permitted algorithms come from the key's type, and the claim naming the person is configurable, so a charter can name a real tenant instead.
 - **Organization:** a member can enrol because her employer's directory vouches for her, instead of with a shared code. Only where the charter names a provider, and one employee's token does not enrol another.
 - **Organization:** Charter → Settings gains federated identity — switch it on, name the provider and directory, and choose whether people may enrol without a code.
@@ -36,6 +37,8 @@ release within that month. One entry per release.
 
 #### Enhancements
 
+- **Docs:** [Try it with Okta](/docs/guides/okta-cross-app-access/) — registering the AI agent, the two fields on the resource app that decide `aud` and `aud_tenant`, the resource connection, and the organization console side. Verified against a trial tenant.
+- **Docs:** an animated diagram of the two halves, from the challenge through the assertion to the three ceilings.
 - **Enforcement point:** a resource refused because the caller is not a member of the organization that owns it now names that organization, and says how membership is come by where its charter federates identity. An assertion still enrols nobody — joining is agreed to, not asserted.
 
 ## August 25 2026

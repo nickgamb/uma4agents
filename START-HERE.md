@@ -363,6 +363,39 @@ do not touch — an organization she belongs to reaches none of this, whatever
 its charter claims, because the person she holds it with never enrolled
 there. [docs/JOINT.md](docs/JOINT.md).
 
+## 9d. The enterprise half, beside hers
+
+Both arrangements so far decide what an agent may *do*. Neither answers a
+question an enterprise asks first: **which employee is this agent acting for,
+and did an administrator approve this application reaching that resource at
+all.** That is what Cross App Access answers, and it turns out to compose with
+this profile rather than compete with it.
+
+```bash
+make xaa-check
+```
+
+Northwind runs its own identity provider — a separate deployment from the one
+Meridian authenticates its own surfaces with, because it is a different
+company and its word about who Northwind employs is the only word that counts.
+The charter names it, and from then on a member's authority asks an agent whose
+employee it acts for *before* it will say anything about terms.
+
+Watch two things. The agent starts knowing nothing about Northwind: it calls
+the tool, is refused, and is **told** which provider to visit, what audience to
+name and which scope to ask for. And watch what the assertion does not buy —
+it is not an access token, so a perfectly good one still has to negotiate, and
+an agent somebody else operates is still refused by the charter's
+`first-party-only` rule. Over her own account no assertion is asked for at all.
+
+Three ceilings end up on the grant, each set by a different party and none able
+to widen another: the connection an administrator approved, the charter's
+grants, and her own terms.
+
+The whole thing runs against a real Okta tenant with one field changed — see
+[Try it with Okta](https://u4a.ai/docs/guides/okta-cross-app-access/), which is
+about twenty minutes on a free trial. [docs/XAA.md](docs/XAA.md).
+
 ## 10. Let a whole agent framework try
 
 Everything so far was driven by code in this repository. This is the other

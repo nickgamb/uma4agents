@@ -28,6 +28,8 @@ Northwind cannot know what Alice's terms say. Alice's authority cannot know
 whether Northwind's administrator approved this application at all. Each party
 answers the question it is actually in a position to answer.
 
+![Cross App Access beside UMA in seven beats. An agent calls Northwind's book at Meridian's gateway and is refused with a UMA challenge naming the member's own authorization server. That authority answers need_info, but not with terms: it asks first who the agent acts for, and names the identity provider it will accept, the audience, the resource and the scope. The agent — which knew nothing about Northwind when it started — takes that to Okta and performs an ordinary RFC 8693 token exchange. Okta returns an ID-JAG naming the employee, the application and the approved scope, and carrying no entitlement over any resource. Only then does her authority dictate her terms, capped by Northwind's charter rather than by Okta. The agent signs, receives an ordinary RPT and spends it. The last beat lays out three ceilings side by side — the connection an administrator approved, the charter's grants, and her own terms — each set by a different party, none able to widen another.](/img/docs/cross-app-access.gif)
+
 ## What an ID-JAG is
 
 An **Identity Assertion JWT Authorization Grant** —

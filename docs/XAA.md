@@ -17,6 +17,8 @@ Alice's authority cannot know whether Northwind's administrator approved this
 application. A request over the firm's book needs both answers, and gets them
 from the two parties entitled to give them.
 
+![Cross App Access beside UMA in seven beats. An agent calls Northwind's book at Meridian's gateway and is refused with a UMA challenge naming the member's own authorization server. That authority answers need_info, but not with terms: it asks first who the agent acts for, and names the identity provider it will accept, the audience, the resource and the scope. The agent — which knew nothing about Northwind when it started — takes that to Okta and performs an ordinary RFC 8693 token exchange. Okta returns an ID-JAG naming the employee, the application and the approved scope, and carrying no entitlement over any resource. Only then does her authority dictate her terms, capped by Northwind's charter rather than by Okta. The agent signs, receives an ordinary RPT and spends it. The last beat lays out three ceilings side by side — the connection an administrator approved, the charter's grants, and her own terms — each set by a different party, none able to widen another.](cross-app-access.gif)
+
 Run it with `make xaa-check`.
 
 ## What ID-JAG is
@@ -218,6 +220,10 @@ in one place, and `services/xaa-broker/` is what disappears when you point the
 charter at one.
 
 ### Pointing it at a real tenant
+
+A step-by-step version of this, against a free trial, is
+[Try it with Okta](https://u4a.ai/docs/guides/okta-cross-app-access/) on the
+docs site. The short version:
 
 Only the charter changes: set `identity_provider.issuer` to the tenant, and
 leave `directory` blank so it is discovered. Three things were built for that

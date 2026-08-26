@@ -60,3 +60,4 @@ NOTES.md
 # Okta API token for the XAA work — never in git; see ~/.config/u4a/okta.env
 okta.env
 *.okta.env
+.diagram-out/
