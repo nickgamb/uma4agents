@@ -73,11 +73,19 @@ Okta's and which Okta never calls.
    | **Issuer URL** | the authorization server's issuer, e.g. `https://alice-as.uma.lab` | `aud` |
    | **Audience/tenant ID** | which tenant at that resource, e.g. `northwind` | `aud_tenant` |
 
-**Issuer URL is the one that matters.** It becomes the assertion's `aud`, and
-the member's authority refuses anything not audienced at itself — which is
-what stops an assertion minted for one member being spent at another's. A
-placeholder here produces a token that verifies perfectly and is then refused,
-with a message naming both values so the mismatch is obvious.
+**Issuer URL is the one that matters, and it cannot be changed afterwards.**
+Okta greys the field out once the app exists. It becomes the assertion's
+`aud`, and the member's authority refuses anything not audienced at itself —
+which is what stops an assertion minted for one member being spent at
+another's. Get it right at creation, or delete the app and make it again;
+there is no third option, and a placeholder here produces a token that
+verifies perfectly and is then refused.
+
+Recreating the resource app also destroys any resource connection pointing at
+it, so step 3 has to be done again afterwards.
+
+Audience/tenant ID is editable, and is a *tenant* rather than a person —
+`northwind`, not the name of the administrator configuring it.
 
 ## 3. Connect them
 
@@ -163,7 +171,8 @@ next beat, and it belongs to the member.
 
 - **`invalid_target: Token Exchange requests must include a valid audience`** —
   the `audience` does not match the resource app's **Issuer URL**. A 403 rather
-  than a 400 means the audience *is* recognised and something else was refused.
+  than a 400 means the audience *is* recognised and something else was refused,
+  which is a useful distinction when guessing what a field was set to.
 - **`access_denied` with everything apparently configured** — check the
   resource connection still has its **Scopes**. A connection with no scopes
   authorises nothing.
