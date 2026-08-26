@@ -2014,7 +2014,37 @@ def algs_for(jwk_dict: dict) -> list:
     return _ALGS_BY_KTY.get(jwk_dict.get("kty"), [])
 
 
+_PROVIDER_META: dict[str, tuple[float, dict]] = {}
 _PROVIDER_JWKS: dict[str, tuple[float, list]] = {}
+
+
+def provider_metadata(issuer: str) -> dict:
+    """An identity provider's own description of itself.
+
+    Fetched rather than constructed, because the endpoints are not derivable.
+    A real tenant's token endpoint is `/oauth2/v1/token` under the org, not
+    `{issuer}/token` — so an authority that built the URL itself would send
+    every agent to a 404 and the failure would look like the agent's.
+    """
+    import httpx
+
+    cached = _PROVIDER_META.get(issuer)
+    if cached and cached[0] > now():
+        return cached[1]
+    base = issuer.rstrip("/")
+    doc = {}
+    with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
+        for url in (f"{base}/.well-known/openid-configuration",
+                    f"{base}/.well-known/oauth-authorization-server"):
+            try:
+                r = client.get(url)
+                if r.status_code == 200 and r.json().get("issuer"):
+                    doc = r.json()
+                    break
+            except Exception:                                   # noqa: BLE001
+                continue
+    _PROVIDER_META[issuer] = (now() + 300, doc)
+    return doc
 
 
 def provider_keys(issuer: str, fresh: bool = False) -> list:
@@ -2033,23 +2063,15 @@ def provider_keys(issuer: str, fresh: bool = False) -> list:
     if cached and cached[0] > now() and not fresh:
         return cached[1]
     base = issuer.rstrip("/")
+    keys = []
     with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
-        keys = []
-        for url in (f"{base}/.well-known/openid-configuration",
-                    f"{base}/.well-known/oauth-authorization-server"):
+        if jwks_uri := provider_metadata(issuer).get("jwks_uri"):
             try:
-                meta = client.get(url)
-                if meta.status_code != 200:
-                    continue
-                jwks_uri = meta.json().get("jwks_uri")
-                if not jwks_uri:
-                    continue
                 doc = client.get(jwks_uri)
                 doc.raise_for_status()
                 keys = doc.json().get("keys") or []
-                break
             except Exception:                                   # noqa: BLE001
-                continue
+                keys = []
         if not keys:
             doc = client.get(f"{base}/jwks")
             doc.raise_for_status()
@@ -2174,6 +2196,10 @@ async def need_identity_response(rec: dict, idp: dict) -> JSONResponse:
     rec["state"] = "need_identity"
     rotated = await new_ticket(rec)
     operation = rec["resource_id"].split("/", 1)[-1]
+    try:
+        meta = provider_metadata(idp["issuer"])
+    except Exception:                                           # noqa: BLE001
+        meta = {}
     event("need_info.identity_required", corr=rec["family"],
           provider=idp["issuer"], resource_id=rec["resource_id"])
     return JSONResponse(
@@ -2190,9 +2216,20 @@ async def need_identity_response(rec: dict, idp: dict) -> JSONResponse:
                     # step from this object alone.
                     "identity_provider": {
                         "issuer": idp["issuer"],
-                        "token_endpoint": f"{idp['issuer'].rstrip('/')}/token",
+                        # Discovered, not constructed. See provider_metadata.
+                        "token_endpoint": (meta.get("token_endpoint")
+                                           or f"{idp['issuer'].rstrip('/')}/token"),
                         "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
                         "requested_token_type": ID_JAG_FORMAT,
+                        # What this provider will exchange. A tenant takes a
+                        # refresh token from the employee's sign-in; the one
+                        # shipped beside this lab takes an ID token. An agent
+                        # holds whichever its provider issued it, so the list
+                        # travels rather than a single assumed value.
+                        "subject_token_types_supported":
+                            meta.get("subject_token_types_supported")
+                            or ["urn:ietf:params:oauth:token-type:id_token",
+                                "urn:ietf:params:oauth:token-type:refresh_token"],
                     },
                     "audience": ISSUER,
                     "resource": RS_RESOURCE_URI,

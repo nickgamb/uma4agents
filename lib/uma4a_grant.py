@@ -35,6 +35,8 @@ GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket"
 ID_JAG_FORMAT = "urn:ietf:params:oauth:token-type:id-jag"
 ID_JAG_CLAIM = "urn:ietf:params:oauth:token-type:id-jag"
 TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
+ID_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token"
+REFRESH_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:refresh_token"
 
 
 @dataclass
@@ -54,6 +56,12 @@ class Enterprise:
     subject_token: str
     client_id: str
     client_secret: str = ""
+    # What the subject token *is*. A real tenant exchanges the refresh token
+    # from the employee's sign-in; the provider shipped beside this lab
+    # exchanges an ID token. Left unset, the challenge decides — the provider
+    # advertises what it will take, and an agent should not have to be
+    # configured with a fact its identity provider publishes.
+    subject_token_type: str = ""
 
 
 class GrantDenied(Exception):
@@ -308,7 +316,10 @@ def id_jag_request(ask: dict, enterprise: "Enterprise") -> tuple[str, dict]:
         "grant_type": idp.get("grant_type") or TOKEN_EXCHANGE,
         "requested_token_type": idp.get("requested_token_type") or ID_JAG_FORMAT,
         "subject_token": enterprise.subject_token,
-        "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+        "subject_token_type": (
+            enterprise.subject_token_type
+            or (ask.get("identity_provider") or {}).get(
+                "subject_token_types_supported", [ID_TOKEN_TYPE])[0]),
         "audience": ask.get("audience") or "",
         "resource": ask.get("resource") or "",
         "scope": " ".join(ask.get("scope") or []),

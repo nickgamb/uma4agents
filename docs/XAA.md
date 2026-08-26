@@ -231,4 +231,32 @@ rather than for the lab's own provider:
   the token's own header;
 - **the subject claim is not assumed.** `preferred_username`, `email`, its
   local part, and `sub` are all compared against the member; a charter may
-  name one claim explicitly with `identity_provider.subject_claim`.
+  name one claim explicitly with `identity_provider.subject_claim`;
+- **the subject token type is negotiated.** A tenant exchanges the *refresh
+  token* from the employee's sign-in; the provider shipped here exchanges an
+  ID token. The provider advertises what it takes and the challenge carries
+  the list, so an agent is not configured with a fact its provider publishes.
+
+### Mapping to an Okta tenant
+
+Okta's objects line up with this profile's without much translation. From
+**Directory → AI agents → Register AI agent → Register manually**:
+
+| Okta | here |
+|---|---|
+| the **AI agent** (requesting app) | the agent, and the `client_id` in the assertion |
+| **Client registration → Client secret** | what `Enterprise` carries |
+| the **resource app**, *Resource Server* tab → Cross App Access | the member's authorization server |
+| its **Issuer URL** | that authority's issuer — what goes in `identity_provider.issuer`'s `aud` |
+| **Resource connections → Resource indicator** | the resource server URI |
+| **Resource connections → Scopes** | the enterprise ceiling, the first of the three |
+
+Two practical notes for anyone trying it. The agent's subject token is a
+refresh token from a real sign-in, so the flow has to have happened once
+before an exchange can be made. And Okta's `sub` is a tenant-local
+identifier rather than a member's name, so either the employee's email local
+part matches the member or the charter names a claim.
+
+Registering an AI agent needs an org with SSO and a super admin. It does not
+need Okta for AI Agents, which raises the ID-JAG ceiling above the SSO
+allowance rather than unlocking the flow.
