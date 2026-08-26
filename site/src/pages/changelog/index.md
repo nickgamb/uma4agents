@@ -20,6 +20,18 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## August 26 2026
+
+### v2026.08.25
+
+#### New
+
+- **Cross App Access:** an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
+- **Cross App Access:** new `xaa-broker` service — the exchange endpoint an administrator configures approved application-to-resource edges in. Keycloak holds the employee directory; it can receive an ID-JAG but cannot yet issue one.
+- **Organization:** a member can enrol because her employer's directory vouches for her, instead of with a shared code. Only where the charter names a provider, and one employee's token does not enrol another.
+- **Authorization server:** an assertion is bound to one authorization server, one member and one use, and is only ever asked for over resources the organization actually reaches — never a member's own accounts, never anything she holds jointly.
+- **Agent:** `Enterprise` credentials on the grant loop. An agent carrying them satisfies an identity challenge from a server it has never heard of; the challenge names the provider, the audience, the resource and the scope.
+
 ## August 25 2026
 
 ### v2026.08.24

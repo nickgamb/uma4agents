@@ -228,10 +228,12 @@ async def decline(issuer: str, owner: str, code: str) -> None:
     r.raise_for_status()
 
 
-async def join(issuer: str, code: str, owner: str, as_uri: str) -> dict:
+async def join(issuer: str, code: str, owner: str, as_uri: str,
+               assertion: str = "") -> dict:
     async with _httpx().AsyncClient(verify=CA_BUNDLE or True,
                                  timeout=HTTP_TIMEOUT_S) as c:
         r = await c.post(f"{issuer.rstrip('/')}/member/join",
-                         json={"code": code, "owner": owner, "as_uri": as_uri})
+                         json={"code": code, "owner": owner, "as_uri": as_uri,
+                               "assertion": assertion})
     r.raise_for_status()
     return r.json()

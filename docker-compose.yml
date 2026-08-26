@@ -43,6 +43,7 @@ services:
           - northwind-org.uma.lab
           - org-console.uma.lab
           - joint-tally.uma.lab
+          - northwind-xaa.uma.lab
 
   keycloak:
     init: true
@@ -575,6 +576,46 @@ services:
       timeout: 5s
       retries: 10
 
+  # Northwind's cross-app access endpoint — what an Okta tenant does when an
+  # administrator approves one application's reach into another. It sits beside
+  # the realm rather than inside it because Keycloak can receive an ID-JAG but
+  # cannot yet issue one.
+  xaa-broker:
+    init: true
+    build:
+      context: .
+      dockerfile: services/xaa-broker/Dockerfile
+    environment:
+      XAA_ISSUER: https://northwind-xaa.uma.lab
+      XAA_IDP_ISSUER: https://keycloak.uma.lab/realms/northwind
+      XAA_ADMINS: dana
+      XAA_ADMIN_TOKEN: ${XAA_ADMIN_TOKEN:-xaa-admin-dev-token}
+      XAA_CLIENTS: '{"northwind-research-agent": "${XAA_AGENT_SECRET:-northwind-agent-secret}"}'
+      # The edges Dana approved. Two, because Northwind's book is administered
+      # by two members and each runs her own authority — the assertion has to
+      # be audienced at whichever one holds the resource.
+      XAA_SEED_CONNECTIONS: >-
+        [{"id": "nw-alice", "requesting_client": "northwind-research-agent",
+          "audience": "https://alice-as.uma.lab",
+          "resource": "https://gateway.uma.lab/mcp",
+          "scopes": ["get_positions", "get_balance"]},
+         {"id": "nw-carol", "requesting_client": "northwind-research-agent",
+          "audience": "https://carol-as.uma.lab",
+          "resource": "https://gateway.uma.lab/mcp",
+          "scopes": ["get_positions", "get_balance"]}]
+      UMA4A_CA_BUNDLE: /certs/rootCA.pem
+    volumes:
+      - xaa-keys:/keys
+      - ./certs/rootCA.pem:/certs/rootCA.pem:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9080/health')\""]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   # The administrator's surface, hosted by Meridian for its institutional
   # clients. The same chassis as the client portal and the same rule: it
   # holds no policy, decides nothing, and exists so the administrator's token
@@ -713,6 +754,27 @@ services:
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
     volumes:
       - ./clients/demo-driver/first_party_check.py:/driver/first_party_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  # Cross App Access beside UMA — the enterprise half and the owner's half of
+  # one request. See clients/demo-driver/xaa_check.py.
+  xaa-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' cryptography && exec python /driver/xaa_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
+      ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
+      XAA_AGENT_SECRET: ${XAA_AGENT_SECRET:-northwind-agent-secret}
+    volumes:
+      - ./clients/demo-driver/xaa_check.py:/driver/xaa_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys
@@ -959,6 +1021,7 @@ services:
 
 volumes:
   carol-as-keys:
+  xaa-keys:
   org-keys:
   tally-keys:
   paios-data:

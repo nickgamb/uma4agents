@@ -179,6 +179,30 @@ beside her, and an organization reaches none of what she holds jointly —
 whatever its charter claims, because her co-owner never enrolled there.
 [JOINT.md](JOINT.md).
 
+## An enterprise identity provider, beside her authority
+
+```bash
+make xaa-check
+```
+
+Northwind runs an identity provider. Alice runs an authorization server. This
+is both of them in one negotiation, and the point is that neither answers the
+other's question.
+
+Watch the beats. The agent calls a tool, is refused, and is *told* which
+provider to go to — it knew nothing about Northwind when it started. It comes
+back with an **ID-JAG**: a short-lived assertion, audienced at Alice's
+authority alone, saying which employee is behind the application and that an
+administrator approved that application reaching that resource. Her authority
+checks it and then does what it always does — dictates her terms.
+
+The other thing to watch is what the assertion does *not* buy. It is not an
+access token. A perfectly good one still has to negotiate, and an agent
+somebody else operates is still refused by the charter's `first-party-only`
+role — because whose agent it is remains her declaration, not her employer's.
+And over her own account, no assertion is asked for at all.
+[XAA.md](XAA.md).
+
 ## The third thing, which is not a demo
 
 `make fixture` is a two-container stack with no identity provider, no database

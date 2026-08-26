@@ -503,14 +503,60 @@ async def boot() -> None:
 # raise a floor.
 
 
-def _authorize_enrolment(owner: str, code: str) -> str:
+def _employee_assertion(owner: str, assertion: str) -> bool:
+    """Does the organization's own identity provider say this is its person?
+
+    Only consulted when the charter names a provider, and it is the charter
+    that makes this legitimate: a member reads "Northwind federates identity
+    to this provider" before she agrees to anything, so an organization
+    cannot start accepting somebody else's word about who its people are
+    without republishing the bargain.
+
+    The provider named in the charter is the assertion endpoint. Its
+    directory — the realm employees actually sign into — is the issuer this
+    server already trusts for administrators, because they are the same
+    company's people.
+    """
+    from jwt.algorithms import RSAAlgorithm
+
+    header = jwt.get_unverified_header(assertion)
+    for jwk_dict in admin_issuer_keys():
+        if jwk_dict.get("use") == "enc":
+            continue
+        if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
+            continue
+        try:
+            claims = jwt.decode(
+                assertion, RSAAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                algorithms=["RS256"], issuer=ADMIN_ISSUER,
+                options={"verify_aud": False})
+        except jwt.InvalidTokenError:
+            continue
+        # The directory's name for her has to be the name she is enrolling
+        # under. Without this any employee's token would enrol anybody.
+        who = claims.get("preferred_username") or claims.get("sub")
+        return who == owner
+    return False
+
+
+def _authorize_enrolment(owner: str, code: str, assertion: str = "") -> str:
     """How this person is entitled to join, or a refusal.
 
-    Two ways, and they are different in kind. The shared code admits anybody
-    who has it, which is what makes it right for onboarding a group and wrong
-    as the only mechanism. An invitation names one person and is good once —
-    the organization already knew who she was.
+    Three ways, and they are different in kind. The shared code admits
+    anybody who has it, which is what makes it right for onboarding a group
+    and wrong as the only mechanism. An invitation names one person and is
+    good once — the organization already knew who she was. And where the
+    charter federates identity, the organization's own provider vouching for
+    her is enough: an enterprise that already knows its employees should not
+    have to hand them a code to prove it.
     """
+    if assertion and (current()["charter"].get("identity_provider") or {}).get("issuer"):
+        if _employee_assertion(owner, assertion):
+            return "identity-provider"
+        raise HTTPException(
+            status_code=403,
+            detail="that assertion is not this organization's provider "
+                   "vouching for you")
     given = (code or "").strip()
     invite = INVITES.get(owner)
     if invite and invite["state"] == "open" and secrets.compare_digest(
@@ -610,7 +656,8 @@ async def member_join(request: Request) -> dict:
     as_uri = (body.get("as_uri") or "").strip()
     if not owner:
         raise HTTPException(status_code=400, detail="which member is joining?")
-    how = _authorize_enrolment(owner, body.get("code") or "")
+    how = _authorize_enrolment(owner, body.get("code") or "",
+                               body.get("assertion") or "")
     if how == "invitation":
         # Spent. An invitation names one person and admits her once; leaving
         # and rejoining is a new decision by the organization, not a code she

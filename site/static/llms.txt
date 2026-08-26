@@ -39,6 +39,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · Many owners, one resource server](https://u4a.ai/docs/overview/multi-owner.md): A firm holds many people's accounts, and each of them may name a different authorization server — including one the firm was never configured against.
 - [Overview · Shared ownership](https://u4a.ai/docs/overview/shared-ownership.md): A firm owns a book, shares parts of it with the people who work on it, and sets policy over it that none of them can waive — while each of them still administers access under her own authority.
 - [Overview · Joint ownership](https://u4a.ai/docs/overview/joint-ownership.md): Two people hold an account together and neither can release it alone. What counts the votes owns nothing, decides nothing, and does not have to be trusted.
+- [Overview · Cross App Access](https://u4a.ai/docs/overview/cross-app-access.md): An enterprise identity provider says which employee and which application. The owner's authority says what may be done, on whose terms. Neither can answer the other's question.
 - [Overview · Compared to UMA 2.0](https://u4a.ai/docs/overview/compare-uma.md): What this profile keeps, what it changes, and why each change was necessary rather than preferred.
 - [Overview · Compared to OAuth 2.0 and GNAP](https://u4a.ai/docs/overview/compare-oauth-gnap.md): OAuth, CIBA-style asynchronous authorization and GNAP can all carry a negotiation. None of them, on its own, puts the deciding party anywhere but the service.
 - [Overview · Compared to policy engines](https://u4a.ai/docs/overview/compare-policy-engines.md): OPA, Cedar and AuthZEN decide well. They do not decide whose policy is being expressed, and the two compose.
@@ -69,6 +70,7 @@ UMA 2.0. Listed in reading order.
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [August 26 2026 · v2026.08.25](https://u4a.ai/changelog.md): Cross App Access: an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
 - [August 25 2026 · v2026.08.24](https://u4a.ai/changelog.md): Docs: search moved from the docs tab bar into the site navigation. It already covered the blog and the changelog; now it is reachable from them.
 - [August 25 2026 · v2026.08.23](https://u4a.ai/changelog.md): Docs: a changelog at `/changelog/`, back to the first release. In `⌘K` search as one row per release, in `llms.txt`, in the sitemap, published as `/changelog.md`, and readable over MCP with a new `listChangelog` tool.
 - [August 25 2026 · v2026.08.22](https://u4a.ai/changelog.md): Organization: a charter may only claim a namespace it names. `northwind-vault/*` is accepted; `*/get_positions` is refused.
@@ -80,7 +82,6 @@ most days.
 - [August 20 2026 · v2026.08.16](https://u4a.ai/changelog.md): Authorization server: `standing.first_party` — an agent is first-party when the operator it names is an origin the owner claimed *and* her authority found that agent's key published in that operator's directory.
 - [August 19 2026 · v2026.08.15](https://u4a.ai/changelog.md): Authorization server: the derived `enforced` annotation was written through `publish_terms`, which is idempotent per template id — so on any store that had already published a version the field was dropped and never appeared. Postgres failed where the in-memory store passed, because the latter republishes on every boot.
 - [August 19 2026 · v2026.08.14](https://u4a.ai/changelog.md): Authorization server: her terms mark which prohibitions the enforcement point refuses outright — `operation_mismatch` and `already_consumed` — rather than presenting every line as equally a matter of trust.
-- [August 19 2026 · v2026.08.13](https://u4a.ai/changelog.md): Protocol: two optional requester-authored claims on the agreement — a stated reason and a cited mandate — recorded and shown to the owner, never judged. The requesting side previously had nowhere to say what it was asking for.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts

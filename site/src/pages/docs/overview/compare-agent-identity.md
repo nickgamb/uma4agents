@@ -114,6 +114,12 @@ owner is, and an agent economy will need both — an enterprise IdP governing th
 agents an organisation runs, and something owner-side governing what those
 agents may reach that belongs to somebody else.
 
+The lab now runs both in one negotiation. An enterprise identity provider
+asserts which employee is behind an application and that an administrator
+approved its reach; the member's authority decides what may then be done to
+the resource, on whose terms. See
+[Cross App Access](/docs/overview/cross-app-access/).
+
 ## Two levels, and everything else is description
 
 Worth stating precisely, because it is checkable and because getting it wrong

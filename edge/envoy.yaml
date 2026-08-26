@@ -57,6 +57,11 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: org_authority }
+                    - name: xaa_broker
+                      domains: ["northwind-xaa.uma.lab", "northwind-xaa.uma.lab:*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: xaa_broker }
                     - name: joint_tally
                       domains: ["joint-tally.uma.lab", "joint-tally.uma.lab:*"]
                       routes:
@@ -157,6 +162,14 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address: { socket_address: { address: org-authority, port_value: 9040 } }
+    - name: xaa_broker
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: xaa_broker
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: xaa-broker, port_value: 9080 } }
     - name: joint_tally
       type: STRICT_DNS
       load_assignment:

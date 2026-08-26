@@ -335,6 +335,25 @@ def validate(charter: dict) -> dict:
                     "charter does not claim — an override may only reach what "
                     "members were told the organization governs")
 
+    idp = out.get("identity_provider")
+    if idp is not None:
+        if not isinstance(idp, dict):
+            raise ValueError("identity_provider must be an object")
+        issuer = (idp.get("issuer") or "").strip()
+        # The issuer is a trust root: a member's authority will accept
+        # assertions about who her agents act for on the strength of this one
+        # string. Plain http would put that decision on the network.
+        if not issuer.startswith("https://"):
+            raise ValueError(
+                "identity_provider.issuer must be an https issuer — a "
+                "member's authority trusts assertions signed by it")
+        assertion = (idp.get("assertion") or "id-jag").strip()
+        if assertion != "id-jag":
+            raise ValueError(
+                "identity_provider.assertion: this profile understands "
+                "`id-jag` and nothing else")
+        out["identity_provider"] = {"issuer": issuer, "assertion": assertion}
+
     rego = out.get("rego") or ""
     if not isinstance(rego, str):
         raise ValueError("rego must be a string — the module text")
@@ -499,6 +518,12 @@ def envelope_of(charter: dict, role: dict | None = None) -> dict:
         # same thing is how that happens.
         "charter_name": charter["name"],
         "claims": list(charter.get("claims") or []),
+        # Which provider's assertions a member's authority should accept
+        # about who her agents act for. It crosses because she cannot check a
+        # signature against an issuer she was never told about — and because
+        # she should be able to see, in her own portal, whose word about her
+        # colleagues her server is taking.
+        "identity_provider": charter.get("identity_provider"),
         "max_expires_in": envelope.get("max_expires_in"),
         "allowed_scopes": envelope.get("allowed_scopes"),
         "require_prohibited": list(envelope.get("require_prohibited") or []),

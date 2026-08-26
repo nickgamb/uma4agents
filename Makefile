@@ -166,6 +166,13 @@ org-check:
 joint-check:
 	@docker compose --profile test run --rm joint-check
 
+## xaa-check: Cross App Access beside UMA — an enterprise identity provider
+## says which employee and which application, her authority says what may be
+## done to the resource. See docs/XAA.md.
+.PHONY: xaa-check
+xaa-check:
+	@docker compose --profile test run --rm xaa-check
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:

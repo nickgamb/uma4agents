@@ -63,6 +63,7 @@ const nav = {
         { title: "Many owners, one resource server", to: "/docs/overview/multi-owner/" },
         { title: "Shared ownership", to: "/docs/overview/shared-ownership/" },
         { title: "Joint ownership", to: "/docs/overview/joint-ownership/" },
+        { title: "Cross App Access", to: "/docs/overview/cross-app-access/" },
       ],
     },
     {

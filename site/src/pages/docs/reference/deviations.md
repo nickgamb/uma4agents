@@ -263,6 +263,40 @@ collect verdicts — a claim the requesting party gathers is a claim it can
 decline to gather, and a refusal has to reach the decision point without the
 cooperation of the party it refuses.
 
+## 17. An enterprise identity assertion as a claim, not as a grant
+
+**Baseline.** Cross App Access
+([`draft-ietf-oauth-identity-assertion-authz-grant`](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/))
+has the client present an ID-JAG at the resource authorization server as
+`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` with `assertion=…`,
+and receive an access token.
+
+**Here.** The ID-JAG arrives as a `claim_token` against an open permission
+ticket, with `claim_token_format=urn:ietf:params:oauth:token-type:id-jag`. The
+authorization server names that format in `required_claims` — so the resource
+side asks for the assertion — and answers with a second `need_info` carrying
+the owner's terms. The grant is issued against the signed agreement, as it is
+for every other request.
+
+**Why.** A `jwt-bearer` exchange would have the identity provider's assertion
+produce the access token directly, which makes the provider the deciding party
+over the resource. That is the right design when the enterprise owns the data
+and the wrong one here, where an organization's charter governs its own book
+and the member administering it sets the terms. An ID-JAG proves *identity and
+approved reach* and carries no entitlement of its own, which is precisely what
+a UMA claim is for. Nothing is invented: this is stock claims-gathering, one
+claim per beat, with the ticket rotating.
+
+The order matters too. Identity is asked for before terms are dictated,
+because which tier applies and what her terms may say both follow from which
+member the agent acts for.
+
+**What is deliberately not extended.** The exchange at the identity provider
+is unmodified — ordinary RFC 8693 token exchange with the draft's parameters
+and `typ: oauth-id-jag+jwt` on the result. An enterprise's existing provider
+needs no knowledge of this profile, and the assertion it mints is the one the
+draft describes. See [cross app access](/docs/overview/cross-app-access/).
+
 ## Security properties these depend on
 
 Each is enforced somewhere in the code, and the tests that prove refusals rather

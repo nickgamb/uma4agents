@@ -30,6 +30,30 @@ from uma4a_http_sig import sign
 # MyTerms-shaped agreement: the owner proffers the terms; this side signs them.
 AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
 GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket"
+# The enterprise half, asked for by an authorization server whose owner is a
+# member of an organization that federates identity. See `Enterprise`.
+ID_JAG_FORMAT = "urn:ietf:params:oauth:token-type:id-jag"
+ID_JAG_CLAIM = "urn:ietf:params:oauth:token-type:id-jag"
+TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
+
+
+@dataclass
+class Enterprise:
+    """What an agent running inside an enterprise application already holds.
+
+    Nothing here is arranged with any particular authorization server, and
+    that is the point: these are the credentials the application has because
+    an employee signed into it and because an administrator registered it.
+    An agent carrying them can satisfy an identity challenge from a server it
+    has never heard of, which is what makes the exchange resource-initiated.
+
+    `subject_token` is the employee's OpenID Connect ID token. The client
+    credentials are the application's own, at the identity provider — not at
+    the authorization server, which never sees them.
+    """
+    subject_token: str
+    client_id: str
+    client_secret: str = ""
 
 
 class GrantDenied(Exception):
@@ -263,6 +287,49 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     return base64.urlsafe_b64encode(jws.encode()).rstrip(b"=").decode()
 
 
+def identity_ask(body: dict) -> dict | None:
+    """The identity requirement in a `need_info`, if that is what it is."""
+    for claim in body.get("required_claims") or []:
+        if claim.get("claim_type") == ID_JAG_CLAIM:
+            return claim
+    return None
+
+
+def id_jag_request(ask: dict, enterprise: "Enterprise") -> tuple[str, dict]:
+    """Where to go and what to ask for, taken from what the server said.
+
+    Every field but the credentials comes out of the challenge. The agent
+    contributes who it is; the resource side contributes everything about
+    where it will be honoured.
+    """
+    idp = ask.get("identity_provider") or {}
+    endpoint = idp.get("token_endpoint") or f"{idp.get('issuer', '').rstrip('/')}/token"
+    return endpoint, {
+        "grant_type": idp.get("grant_type") or TOKEN_EXCHANGE,
+        "requested_token_type": idp.get("requested_token_type") or ID_JAG_FORMAT,
+        "subject_token": enterprise.subject_token,
+        "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+        "audience": ask.get("audience") or "",
+        "resource": ask.get("resource") or "",
+        "scope": " ".join(ask.get("scope") or []),
+        "client_id": enterprise.client_id,
+        "client_secret": enterprise.client_secret,
+    }
+
+
+def id_jag_from(response) -> str:
+    body = response.json()
+    if response.status_code != 200:
+        raise GrantDenied(
+            "the identity provider would not assert this: "
+            + (body.get("error_description") or body.get("error", "unknown")))
+    if body.get("issued_token_type") != ID_JAG_FORMAT:
+        raise GrantDenied(
+            f"the identity provider issued {body.get('issued_token_type')!r}, "
+            f"not an identity assertion")
+    return body["access_token"]
+
+
 def run_grant(
     client: httpx.Client,
     as_uri: str,
@@ -275,6 +342,7 @@ def run_grant(
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
+    enterprise: "Enterprise | None" = None,
 ) -> str:
     """Walks beats 2-4. Returns the RPT; the counter-signed MyTerms receipt
     (the agent's half of the dual record) is delivered via on_receipt.
@@ -284,6 +352,24 @@ def run_grant(
     on_status("presenting ticket at Alice's AS")
     r = client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
+
+    # Beat 1a: the server wants to know whose agent this is before it will
+    # say anything about terms. Nothing was arranged in advance — where to go
+    # and what to ask for are both in what it just said.
+    if (ask := identity_ask(body)) is not None:
+        if enterprise is None:
+            raise GrantDenied(
+                "this resource is governed by an organization that federates "
+                "identity, and this agent carries no enterprise credentials")
+        endpoint, payload = id_jag_request(ask, enterprise)
+        on_status(f"identity required — exchanging at {endpoint}")
+        assertion = id_jag_from(client.post(endpoint, data=payload))
+        on_status("assertion obtained, presenting it")
+        r = client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                         "ticket": body["ticket"],
+                                         "claim_token": assertion,
+                                         "claim_token_format": ID_JAG_FORMAT})
+        body = r.json()
 
     if body.get("error") == "need_info":
         template = body["required_claims"][0]["terms_template"]
@@ -377,6 +463,7 @@ async def run_grant_async(
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
+    enterprise: "Enterprise | None" = None,
     on_pending=None,   # async Callable[[dict], bool] | None
 ) -> str:
     """Async twin of run_grant — the shim awaits elicitation mid-dance.
@@ -396,6 +483,21 @@ async def run_grant_async(
     on_status("presenting ticket at Alice's AS")
     r = await client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
+
+    if (ask := identity_ask(body)) is not None:
+        if enterprise is None:
+            raise GrantDenied(
+                "this resource is governed by an organization that federates "
+                "identity, and this agent carries no enterprise credentials")
+        endpoint, payload = id_jag_request(ask, enterprise)
+        on_status(f"identity required — exchanging at {endpoint}")
+        assertion = id_jag_from(await client.post(endpoint, data=payload))
+        on_status("assertion obtained, presenting it")
+        r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                               "ticket": body["ticket"],
+                                               "claim_token": assertion,
+                                               "claim_token_format": ID_JAG_FORMAT})
+        body = r.json()
 
     if body.get("error") == "need_info":
         template = body["required_claims"][0]["terms_template"]

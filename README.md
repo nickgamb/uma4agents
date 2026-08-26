@@ -57,6 +57,13 @@ and there is nobody above them. Its answer is a **tally** — a party that
 counts the owners' signed verdicts, holds no policy, and is not trusted,
 because the grant carries the verdicts and the enforcement point re-runs the
 count itself.
+**[docs/XAA.md](docs/XAA.md)** is the enterprise half beside the owner's half.
+An identity provider asserts which employee is behind an application and that
+an administrator approved its reach; her authority decides what may then be
+done to the resource, on whose terms. Cross App Access and this profile turn
+out to compose rather than compete — the assertion arrives as a UMA claim,
+because it proves identity and carries no entitlement.
+
 **[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md)** puts her side inside a
 personal AI, and **[docs/FIXTURE.md](docs/FIXTURE.md)** is the minimal
 fixture the protocol is tested on with nothing underneath it.
@@ -237,6 +244,7 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make multi-owner-check` | Two owners of one resource server, each with her own authority, keys, identity provider and record |
 | `make org-check` | Shared ownership: a firm's book, shared with two members, administered by each under her own terms and capped by a charter neither wrote |
 | `make joint-check` | Joint ownership: one account held by two people of equal standing, one folded terms document, and a count re-run at the door from signatures the counting party cannot forge |
+| `make xaa-check` | Cross App Access beside UMA: an enterprise identity provider says which employee and which application, her authority says what may be done on whose terms — and three ceilings, one per party |
 | `make org-test` | The ceiling algebra and the charter validator, with nothing running |
 | `make establishment-check` | A resource server and an authority nobody configured against each other, introducing themselves — and the ways of not getting in |
 | `make kind-up` / `make kind-down` | The whole Kubernetes lab, from nothing / delete it |

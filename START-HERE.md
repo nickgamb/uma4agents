@@ -434,6 +434,9 @@ answer *that same request*. Not a fresh one.
   and the adapter that makes that possible
 - **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her authority can verify
   about an agent, and why none of it can ever buy access
+- **[docs/XAA.md](docs/XAA.md)** — Cross App Access beside UMA: an
+  enterprise identity provider and an owner's authority answering the two
+  halves of one request.
 - **[docs/ORG.md](docs/ORG.md)** — shared ownership: a firm's resources,
   administered by its people under their own authorities
 - **[docs/JOINT.md](docs/JOINT.md)** — joint ownership: one resource, several
