@@ -2014,6 +2014,44 @@ def algs_for(jwk_dict: dict) -> list:
     return _ALGS_BY_KTY.get(jwk_dict.get("kty"), [])
 
 
+_PROVIDER_TRUST: str | None = None
+
+
+def provider_trust() -> str | bool:
+    """What to verify an identity provider's TLS against.
+
+    Everywhere else in this server the lab CA *replaces* the trust store,
+    which is deliberate: a peer inside the lab should not be trusted because
+    some public authority vouched for it. An identity provider is the one
+    party that may legitimately be outside — a real tenant has an ordinary
+    public certificate — so here the lab CA is *added to* the public roots
+    rather than swapped for them.
+
+    Getting this the wrong way round fails in a way that reads like the
+    provider being down: discovery returns nothing and the keys never load.
+    """
+    global _PROVIDER_TRUST
+    if _PROVIDER_TRUST is not None:
+        return _PROVIDER_TRUST
+    lab = org.CA_BUNDLE
+    if not lab or not os.path.exists(lab):
+        _PROVIDER_TRUST = True          # public roots only
+        return _PROVIDER_TRUST
+    try:
+        import certifi
+        combined = "/tmp/u4a-provider-trust.pem"
+        with open(combined, "w") as out:
+            out.write(open(certifi.where()).read())
+            out.write("\n")
+            out.write(open(lab).read())
+        _PROVIDER_TRUST = combined
+    except Exception:                                           # noqa: BLE001
+        # No public roots available; the lab CA alone still serves a provider
+        # hosted inside the lab, which is the shipped arrangement.
+        _PROVIDER_TRUST = lab
+    return _PROVIDER_TRUST
+
+
 _PROVIDER_META: dict[str, tuple[float, dict]] = {}
 _PROVIDER_JWKS: dict[str, tuple[float, list]] = {}
 
@@ -2033,7 +2071,7 @@ def provider_metadata(issuer: str) -> dict:
         return cached[1]
     base = issuer.rstrip("/")
     doc = {}
-    with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
+    with httpx.Client(verify=provider_trust(), timeout=5.0) as client:
         for url in (f"{base}/.well-known/openid-configuration",
                     f"{base}/.well-known/oauth-authorization-server"):
             try:
@@ -2064,7 +2102,7 @@ def provider_keys(issuer: str, fresh: bool = False) -> list:
         return cached[1]
     base = issuer.rstrip("/")
     keys = []
-    with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
+    with httpx.Client(verify=provider_trust(), timeout=5.0) as client:
         if jwks_uri := provider_metadata(issuer).get("jwks_uri"):
             try:
                 doc = client.get(jwks_uri)
@@ -2111,7 +2149,14 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     except Exception as exc:                                    # noqa: BLE001
         raise ValueError(
             f"{issuer} could not be reached to check the assertion") from exc
+    # Signature first, claims second, and reported separately.
+    #
+    # Folding them together is tempting and costs hours: an assertion minted
+    # for a different audience then reports as "does not verify against the
+    # provider", which sends whoever is debugging it to the keys — the one
+    # thing that was never wrong.
     claims = None
+    signature_error = None
     for jwk_dict in keys:
         if kid and jwk_dict.get("kid") != kid:
             continue
@@ -2125,17 +2170,31 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
             key = jwt.PyJWK(jwk_dict)
             claims = jwt.decode(
                 assertion, key.key, algorithms=algs_for(jwk_dict),
-                issuer=issuer,
-                # The audience check is what stops an assertion minted for
-                # one member's authority being spent at another's. The
-                # provider audiences each one deliberately; honouring that is
-                # the whole of this server's side of the bargain.
-                audience=ISSUER)
+                options={"verify_aud": False, "verify_iss": False})
             break
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as exc:
+            signature_error = exc
             continue
     if claims is None:
-        raise ValueError("the assertion does not verify against the provider")
+        raise ValueError(
+            f"the assertion's signature does not verify against {issuer}"
+            + (f": {signature_error}" if signature_error else ""))
+
+    if claims.get("iss") != issuer:
+        raise ValueError(
+            f"the assertion is from {claims.get('iss')!r}, and this "
+            f"organization federates to {issuer!r}")
+    # The audience check is what stops an assertion minted for one member's
+    # authority being spent at another's. The provider audiences each one
+    # deliberately; honouring that is the whole of this server's side of the
+    # bargain.
+    aud = claims.get("aud")
+    audiences = [aud] if isinstance(aud, str) else list(aud or [])
+    if ISSUER not in audiences:
+        raise ValueError(
+            f"the assertion is audienced at {audiences or ['nothing']} and "
+            f"this authority is {ISSUER!r} — the resource application's "
+            f"audience at the provider has to be this authority")
 
     jti = claims.get("jti") or ""
     if not jti:
