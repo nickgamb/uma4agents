@@ -137,11 +137,28 @@ One field in the charter is the whole integration:
 }
 ```
 
-Okta's `sub` is a tenant-local identifier rather than a member's name, so the
-subject has to resolve to somebody. `preferred_username`, `email`, the email's
-local part and `sub` are all compared against the member; where a tenant's
-claim set makes that ambiguous, name the claim with
-`identity_provider.subject_claim`.
+Then the part everybody hits. **Okta's `sub` is an identifier local to your
+tenant, and its `email` is an email — neither is the name a member's authority
+knows her by.** Two separate questions follow, and running them together is
+why an integration can look finished and still refuse every request:
+
+- *which claim carries the name* — `preferred_username`, `email`, the email's
+  local part and `sub` are all compared; `identity_provider.subject_claim`
+  names one explicitly where a tenant's claim set makes it ambiguous;
+- *who that name is here* — `identity_provider.subject_map`.
+
+```json
+"identity_provider": {
+  "enabled": true,
+  "issuer":  "https://trial-NNNNNNN.okta.com",
+  "subject_map": { "alice@northwind.example": "alice" }
+}
+```
+
+The map lives in the charter because the organization is the party that knows.
+These are its people; it enrolled them, and it is the only party that can say
+its provider's `00u1…` is the member an authority calls `alice`. Neither Okta
+nor the member's authority can answer that alone.
 
 ## What you should see
 
@@ -178,6 +195,12 @@ next beat, and it belongs to the member.
   authorises nothing.
 - **The agent cannot obtain a subject token** — the linked app is missing the
   **Refresh Token** grant.
+- **`the assertion names ['00u1…'] — which this organization does not map to
+  'alice'`** — the assertion is good and nobody has said who that identifier
+  belongs to. Add the pair to `subject_map`.
+- **`CERTIFICATE_VERIFY_FAILED` the moment the agent leaves the deployment** —
+  a trust store holding a private CA *instead of* the public roots rather than
+  as well as them. Both an authorization server and an agent need both.
 - **"could not be reached to check the assertion"** — the authorization server
   cannot fetch the tenant's keys. Where a deployment trusts a private CA, that
   CA has to be *added to* the public roots rather than replacing them, or every

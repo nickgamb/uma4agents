@@ -71,6 +71,7 @@ UMA 2.0. Listed in reading order.
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [August 26 2026 · v2026.08.26](https://u4a.ai/changelog.md): Cross App Access: `identity_provider.subject_map` in the charter — what a provider asserts, mapped to the member it means. A real tenant's `sub` is local to that tenant, so somebody has to say who it is, and the organization is the party that knows.
 - [August 26 2026 · v2026.08.25](https://u4a.ai/changelog.md): Cross App Access: an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
 - [August 25 2026 · v2026.08.24](https://u4a.ai/changelog.md): Docs: search moved from the docs tab bar into the site navigation. It already covered the blog and the changelog; now it is reachable from them.
 - [August 25 2026 · v2026.08.23](https://u4a.ai/changelog.md): Docs: a changelog at `/changelog/`, back to the first release. In `⌘K` search as one row per release, in `llms.txt`, in the sitemap, published as `/changelog.md`, and readable over MCP with a new `listChangelog` tool.
@@ -82,7 +83,6 @@ most days.
 - [August 21 2026 · v2026.08.17](https://u4a.ai/changelog.md): Licensing: `NOTICE` rewritten from a component-by-component audit, separating the application stack, the Kubernetes platform, the website and upstream checkouts. One licence had been stated incorrectly.
 - [August 20 2026 · v2026.08.16](https://u4a.ai/changelog.md): Authorization server: `standing.first_party` — an agent is first-party when the operator it names is an origin the owner claimed *and* her authority found that agent's key published in that operator's directory.
 - [August 19 2026 · v2026.08.15](https://u4a.ai/changelog.md): Authorization server: the derived `enforced` annotation was written through `publish_terms`, which is idempotent per template id — so on any store that had already published a version the field was dropped and never appeared. Postgres failed where the in-memory store passed, because the latter republishes on every boot.
-- [August 19 2026 · v2026.08.14](https://u4a.ai/changelog.md): Authorization server: her terms mark which prohibitions the enforcement point refuses outright — `operation_mismatch` and `already_consumed` — rather than presenting every line as equally a matter of trust.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts

@@ -183,6 +183,7 @@ And on the enforcement point:
 |---|---|---|
 | `UMA_PEP_JOINT_TALLY` | unset | The tally it will accept grants from. Named rather than read off a token: a resource server that accepted whichever issuer embedded a plausible mandate would be taking the electorate from the party that assembled it |
 | `UMA_PEP_JOINT_ACCOUNTS` | unset | Which accounts it fronts, at `/mcp/joint/<account>` |
+| `UMA_PEP_ORG_DISCOVERY_TTL_S` | `120` | How long a refusal may be worded from a cached description of the organization. Never affects a decision — only what an agent is told about how membership is come by |
 
 ## Cross App Access, where an organization federates identity
 
@@ -211,6 +212,7 @@ And in the charter, which is where a member reads it before agreeing:
 | `identity_provider.directory` | Where employees sign in. Blank discovers it from the provider's own metadata, which is the normal case |
 | `identity_provider.enrol` | Whether the provider vouching for somebody is enough to enrol, instead of an enrolment code |
 | `identity_provider.subject_claim` | Which claim names the person, where a tenant's claim set makes it ambiguous. Blank compares `preferred_username`, `email`, its local part and `sub` |
+| `identity_provider.subject_map` | What the provider asserts, mapped to the member it means here. A real tenant's `sub` is local to that tenant, so somebody has to say who it is — and the organization is the party that knows, since they are its people |
 
 ## The two settings people get wrong
 

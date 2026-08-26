@@ -62,6 +62,9 @@ class Enterprise:
     # advertises what it will take, and an agent should not have to be
     # configured with a fact its identity provider publishes.
     subject_token_type: str = ""
+    # The deployment's own CA, where an agent knows it and would rather not
+    # have it discovered. Public roots are added to it either way.
+    ca_bundle: str = ""
 
 
 class GrantDenied(Exception):
@@ -295,6 +298,58 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     return base64.urlsafe_b64encode(jws.encode()).rstrip(b"=").decode()
 
 
+_PROVIDER_TRUST: dict = {}
+
+# Where a deployment's own CA is conventionally mounted. Consulted only after
+# the caller and the environment have both been asked.
+_LAB_CA_PATHS = ("/driver/rootCA.pem", "/certs/rootCA.pem")
+
+
+def provider_trust(ca_bundle: str = ""):
+    """What to verify an identity provider's TLS against.
+
+    An agent's own client is configured for the resource server it came to
+    talk to, which in a private deployment means a private CA and *only* that
+    CA. An identity provider is the one party in this exchange that may
+    legitimately be somewhere else, with an ordinary public certificate — so
+    the exchange gets a trust store with the public roots *and* whatever
+    private CA the agent was given.
+
+    Both halves matter, and dropping either breaks a different deployment.
+    Public roots alone cannot verify a provider inside the lab; a private CA
+    alone cannot verify a real tenant, and fails as `CERTIFICATE_VERIFY_FAILED`
+    at the moment the agent leaves the deployment — which reads like the
+    provider being unreachable rather than like a trust store that was never
+    going to work.
+    """
+    import os
+
+    private = (ca_bundle
+               or os.environ.get("UMA4A_CA_BUNDLE")
+               or os.environ.get("UMA4A_CACERT") or "")
+    if not private or not os.path.exists(private):
+        private = next((p for p in _LAB_CA_PATHS if os.path.exists(p)), "")
+    if private in _PROVIDER_TRUST:
+        return _PROVIDER_TRUST[private]
+
+    if not private:
+        _PROVIDER_TRUST[private] = True          # public roots only
+        return True
+    try:
+        import certifi
+        combined = "/tmp/u4a-agent-provider-trust.pem"
+        with open(combined, "w") as out:
+            out.write(open(certifi.where()).read())
+            out.write("\n")
+            out.write(open(private).read())
+        _PROVIDER_TRUST[private] = combined
+    except Exception:                                           # noqa: BLE001
+        # No public roots to be had; a provider inside the deployment still
+        # verifies, which is the shipped arrangement.
+        _PROVIDER_TRUST[private] = private
+    return _PROVIDER_TRUST[private]
+
+
 def identity_ask(body: dict) -> dict | None:
     """The identity requirement in a `need_info`, if that is what it is."""
     for claim in body.get("required_claims") or []:
@@ -374,7 +429,11 @@ def run_grant(
                 "identity, and this agent carries no enterprise credentials")
         endpoint, payload = id_jag_request(ask, enterprise)
         on_status(f"identity required — exchanging at {endpoint}")
-        assertion = id_jag_from(client.post(endpoint, data=payload))
+        # A client of its own, trusting the provider's world as well as this
+        # deployment's — see `provider_trust`.
+        with httpx.Client(verify=provider_trust(enterprise.ca_bundle),
+                          timeout=30.0) as idp:
+            assertion = id_jag_from(idp.post(endpoint, data=payload))
         on_status("assertion obtained, presenting it")
         r = client.post(token_url, data={"grant_type": GRANT_TYPE,
                                          "ticket": body["ticket"],
@@ -502,7 +561,9 @@ async def run_grant_async(
                 "identity, and this agent carries no enterprise credentials")
         endpoint, payload = id_jag_request(ask, enterprise)
         on_status(f"identity required — exchanging at {endpoint}")
-        assertion = id_jag_from(await client.post(endpoint, data=payload))
+        async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
+                                     timeout=30.0) as idp:
+            assertion = id_jag_from(await idp.post(endpoint, data=payload))
         on_status("assertion obtained, presenting it")
         r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
                                                "ticket": body["ticket"],

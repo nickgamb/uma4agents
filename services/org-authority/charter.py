@@ -364,6 +364,17 @@ def validate(charter: dict) -> dict:
         if directory and not directory.startswith("https://"):
             raise ValueError(
                 "identity_provider.directory must be an https issuer")
+        # Who the provider's identifiers belong to here. A real tenant asserts
+        # a `sub` that means something only inside it, so somebody has to say
+        # which member that is — and the organization is the party that knows,
+        # since they are its people and it enrolled them.
+        subject_map = idp.get("subject_map") or {}
+        if not isinstance(subject_map, dict) or not all(
+                isinstance(k, str) and isinstance(v, str)
+                for k, v in subject_map.items()):
+            raise ValueError(
+                "identity_provider.subject_map maps what the provider asserts "
+                "to the member it means here — strings to strings")
         out["identity_provider"] = {
             # Configured but switched off is a real state, and a different one
             # from never configured: an administrator turning federation off
@@ -376,6 +387,7 @@ def validate(charter: dict) -> dict:
             # administrator should not have to type the same company's two
             # endpoints and keep them agreeing.
             "directory": directory,
+            "subject_map": subject_map,
             # Whether the provider vouching for her is enough to enrol,
             # instead of an enrolment code.
             "enrol": bool(idp.get("enrol", True)),

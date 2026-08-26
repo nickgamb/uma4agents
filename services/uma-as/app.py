@@ -2209,18 +2209,31 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     # above says the assertion was meant for this server; this says it was
     # meant for this server *about this member*. Without it, an assertion for
     # one employee would open a negotiation over another's administration.
-    # Which claim names the person. `preferred_username` is what this lab's
-    # provider sends; a real tenant may only send `sub` and `email`, and the
-    # charter can name the claim it uses. All of them are compared against the
-    # owner this authority serves, so a provider that sends several cannot
-    # have one of them quietly disagree.
+    # Which claim names the person, and whether that name means anybody here.
+    #
+    # `preferred_username` is what the provider shipped beside this lab sends.
+    # A real tenant sends `sub` — an identifier local to that tenant and
+    # meaningless anywhere else — and usually `email`. So there are two
+    # separate questions, and conflating them is why this looked like it
+    # worked against the lab's own provider and could not work against a real
+    # one: *which claim carries the name*, and *who that name is here*.
+    #
+    # `subject_map` answers the second. An organization publishing one is
+    # saying "these are our people, under the names their authorities know
+    # them by" — which is the organization's to say, and nobody else's.
     named = (idp.get("subject_claim")
              and [claims.get(idp["subject_claim"])]
              or [claims.get("preferred_username"), claims.get("email"),
                  (claims.get("email") or "").split("@")[0], claims.get("sub")])
-    if owner not in [n for n in named if n]:
+    named = [n for n in named if n]
+    mapped = idp.get("subject_map") or {}
+    resolved = [mapped.get(n, n) for n in named]
+    if owner not in resolved:
         raise ValueError(
-            f"the assertion names {[n for n in named if n][:1] or ['nobody']} "
+            f"the assertion names {named[:1] or ['nobody']} — which this "
+            f"organization does not map to {owner!r}"
+            if mapped else
+            f"the assertion names {named[:1] or ['nobody']} "
             f"and this authority is {owner!r}'s")
 
     # And the enterprise's own ceiling: the administrator approved this

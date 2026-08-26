@@ -22,6 +22,19 @@ release within that month. One entry per release.
 
 ## August 26 2026
 
+### v2026.08.26
+
+#### New
+
+- **Cross App Access:** `identity_provider.subject_map` in the charter — what a provider asserts, mapped to the member it means. A real tenant's `sub` is local to that tenant, so somebody has to say who it is, and the organization is the party that knows.
+- **Cross App Access:** `make okta-live` runs the whole negotiation against a real tenant rather than the provider shipped beside the lab.
+
+#### Bug fixes
+
+- **Agent:** the token exchange borrowed the client configured for the resource server, so an agent in a deployment with a private CA could not reach a public identity provider at all — `CERTIFICATE_VERIFY_FAILED` at the moment it left the deployment. It now verifies against the public roots *and* the deployment's CA, taken from the caller, the environment or the conventional path in that order.
+- **Enforcement point:** how long a refusal may be worded from a cached description of the organization is configurable (`UMA_PEP_ORG_DISCOVERY_TTL_S`), and the lab sets it short. A charter that had just started federating was described from a copy read before it did.
+
+
 ### v2026.08.25
 
 #### New

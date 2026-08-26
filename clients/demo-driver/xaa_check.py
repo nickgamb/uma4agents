@@ -76,6 +76,10 @@ BOOK = "northwind-vault"
 # Where the firm's book is served, for this member. Her own account is the
 # bare path — the same gateway, a different resource.
 BOOK_PATH = "/shared/alice"
+# How long the enforcement point may word a refusal from a cached description
+# of the organization. Read from the same variable the service is configured
+# with, so a wait here cannot drift into a flaky failure.
+ORG_DISCOVERY_TTL = float(os.environ.get("UMA_PEP_ORG_DISCOVERY_TTL_S", "15")) + 2
 META = mcp_meta("u4a-xaa-check")
 
 PASS: list[str] = []
@@ -354,6 +358,9 @@ def main() -> int:                                            # noqa: C901
     # joining hands the organization powers over her agents, and those are
     # acquired by agreeing to a charter, not by being on a payroll.
     leave_org(c, alice)
+    # The charter started federating at the top of this run, and the refusal
+    # below quotes what the organization publishes about itself.
+    time.sleep(ORG_DISCOVERY_TTL)
     r = mcp_call(c, f"{GATEWAY}{BOOK_PATH}", "tools/call",
                  {"name": "get_positions", "arguments": {}}, META)
     body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}

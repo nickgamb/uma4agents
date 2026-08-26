@@ -173,6 +173,23 @@ joint-check:
 xaa-check:
 	@docker compose --profile test run --rm xaa-check
 
+## okta-live: the whole negotiation against a real Okta tenant rather than
+## the provider shipped beside the lab. Needs OKTA_ORG, OKTA_CLIENT_ID,
+## OKTA_CLIENT_SECRET, OKTA_REFRESH_TOKEN and OKTA_SUBJECT in the environment
+## — see the "Try it with Okta" guide. Not part of any suite: it talks to
+## somebody else's tenant and needs a refresh token from a real sign-in.
+.PHONY: okta-live
+okta-live:
+	@docker run --rm --network uma4agents_default \
+		-v "$(PWD)/clients/demo-driver/okta_live.py":/driver/okta_live.py:ro \
+		-v "$(PWD)/lib":/driver/lib:ro \
+		-v "$(PWD)/certs/rootCA.pem":/driver/rootCA.pem:ro \
+		-e PYTHONPATH=/driver/lib -e PYTHONUNBUFFERED=1 \
+		-e OKTA_ORG -e OKTA_CLIENT_ID -e OKTA_CLIENT_SECRET \
+		-e OKTA_REFRESH_TOKEN -e OKTA_SUBJECT \
+		python:3.12-slim bash -c \
+		"pip install -q httpx 'pyjwt[crypto]' cryptography certifi && exec python /driver/okta_live.py"
+
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
 assurance-check:

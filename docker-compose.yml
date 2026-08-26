@@ -239,6 +239,9 @@ services:
       # never seen by her authority, is recognised here.
       UMA_PEP_ORG_ISSUER: https://northwind-org.uma.lab
       UMA_PEP_ORG_INTERNAL: http://org-authority:9040
+      # Short here: the lab publishes charters mid-run, and this only
+      # governs how a refusal is worded.
+      UMA_PEP_ORG_DISCOVERY_TTL_S: ${UMA_PEP_ORG_DISCOVERY_TTL_S:-15}
       UMA_PEP_ORG_TOKEN: ${ORG_RS_TOKEN:-org-rs-dev-token}
       # How long this gateway may act on a cached answer about who is a
       # member. The window is somebody's access to the firm's book after the
@@ -805,6 +808,7 @@ services:
       ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
       XAA_AGENT_SECRET: ${XAA_AGENT_SECRET:-northwind-agent-secret}
+      UMA_PEP_ORG_DISCOVERY_TTL_S: ${UMA_PEP_ORG_DISCOVERY_TTL_S:-15}
     volumes:
       - ./clients/demo-driver/xaa_check.py:/driver/xaa_check.py:ro
       - ./lib:/driver/lib:ro

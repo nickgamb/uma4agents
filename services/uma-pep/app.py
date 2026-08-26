@@ -475,6 +475,12 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
 
 
 _ORG_DISCOVERY: tuple[float, dict] = (0.0, {})
+# How long this may serve a cached description of the organization. Only ever
+# affects the wording of a refusal, never a decision — but a charter that has
+# just started or stopped federating identity should be reflected in what an
+# agent is told within a sensible time, and a checker has to be able to read
+# the same number rather than guess it.
+ORG_DISCOVERY_TTL_S = float(os.environ.get("UMA_PEP_ORG_DISCOVERY_TTL_S", "120"))
 
 
 async def org_discovery() -> dict:
@@ -497,7 +503,7 @@ async def org_discovery() -> dict:
             doc = r.json()
     except Exception:                                           # noqa: BLE001
         return {}
-    _ORG_DISCOVERY = (time.time() + 120, doc)
+    _ORG_DISCOVERY = (time.time() + ORG_DISCOVERY_TTL_S, doc)
     return doc
 
 
