@@ -165,10 +165,36 @@ k8s-wait:
 define run_job
 	@kubectl -n $(NS_AGENT) delete job $(1) --ignore-not-found >/dev/null 2>&1
 	@$(2) | kubectl apply -f - >/dev/null
-	@kubectl -n $(NS_AGENT) wait --for=condition=Complete --for=condition=Failed \
-		job/$(1) --timeout=$(3) >/dev/null 2>&1 || true
+	@# Polled rather than `kubectl wait`, because wait keeps only the *last*
+	@# --for: asking it for Complete and Failed together asks it for Failed
+	@# alone. A job that succeeds is then waited out to the full timeout — and
+	@# where that timeout is longer than the job's ttlSecondsAfterFinished the
+	@# Job is collected before the wait ends, so the logs below print nothing
+	@# and the test underneath fails a run that passed. Every check paid for
+	@# it in wall time; joint-check and org-check failed outright.
+	@end=$$(( $$(date +%s) + $(patsubst %s,%,$(3)) )); \
+	while [ $$(date +%s) -lt $$end ]; do \
+		case "$$(kubectl -n $(NS_AGENT) get job $(1) \
+			-o jsonpath='{.status.conditions[*].type}' 2>/dev/null)" in \
+			*Complete*|*Failed*) break ;; \
+		esac; \
+		sleep 3; \
+	done
 	@kubectl -n $(NS_AGENT) logs job/$(1) 2>/dev/null
 	@test "$$(kubectl -n $(NS_AGENT) get job $(1) -o jsonpath='{.status.succeeded}')" = "1"
+endef
+
+# The same, for the demos rather than the checks. Follows the log instead of
+# waiting in silence, because with nobody answering for the owner the pause is
+# the thing being demonstrated, and it has to be visible while it happens.
+define run_live_job
+	@$(K8S)/scripts/job-configmaps.sh
+	@kubectl -n $(NS_AGENT) delete job $(1) --ignore-not-found >/dev/null 2>&1
+	@$(2) | kubectl apply -f - >/dev/null
+	@kubectl -n $(NS_AGENT) wait --for=condition=ready pod -l app=$(1) \
+		--timeout=180s >/dev/null 2>&1 || true
+	@kubectl -n $(NS_AGENT) logs -f job/$(1) 2>/dev/null \
+		|| kubectl -n $(NS_AGENT) logs job/$(1) --tail=80
 endef
 
 ## k8s-smoke-test: verify the deployed lab end to end
@@ -189,6 +215,21 @@ k8s-demo-all:
 		$(if $(filter 0,$(SIM)),-e 's| --simulate-alice||',) \
 		$(K8S)/base/jobs/demo.yaml,600s)
 
+## k8s-demo: Alice's day, with her taps left to you.
+##
+## The same driver `k8s-demo-all` runs, with two differences that only matter
+## in front of people: nobody answers for her, and the log is followed rather
+## than printed at the end. Under `run_job` a pend looks identical to a hang —
+## the terminal stays empty until the run is over, which is the wrong half of
+## the demo to hide.
+##
+##   make k8s-demo ACT=tier1     first contact, held for her
+##   make k8s-demo ACT=tier3     the ask-me tier; approve or deny it
+.PHONY: k8s-demo
+k8s-demo: ACT ?= tier1
+k8s-demo:
+	$(call run_live_job,demo-live,sed -e 's|--act all --simulate-alice|--act $(ACT)|' -e 's|^  name: demo$$|  name: demo-live|' -e 's|app: demo }|app: demo-live }|' -e 's|^        - name: demo$$|        - name: demo-live|' $(K8S)/base/jobs/demo.yaml)
+
 ## k8s-policy-test: prove the trust boundary denies what it claims to
 .PHONY: k8s-policy-test
 k8s-policy-test:
@@ -208,12 +249,25 @@ k8s-assurance-check:
 k8s-first-party-check:
 	$(call run_job,first-party-check,cat $(K8S)/base/jobs/first-party-check.yaml,420s)
 
+## k8s-first-party-demo: her own agent and Bob's, under one rule on one tier.
+## Hers trades without waking her; his is asked, and she answers it.
+.PHONY: k8s-first-party-demo
+k8s-first-party-demo:
+	$(call run_live_job,first-party-demo,sed -e '/UMA4A_SIMULATE_OWNER/{n;s|"1"|"0"|;}' -e 's|first-party-check|first-party-demo|g' $(K8S)/base/jobs/first-party-check.yaml)
+
 ## k8s-multi-owner-check: two owners of one resource server, each with her own
 ## authority in her own namespace — one replicated over Postgres, one a single
 ## process — and nothing shared between them. See docs/MULTI-OWNER.md.
 .PHONY: k8s-multi-owner-check
 k8s-multi-owner-check:
 	$(call run_job,multi-owner-check,cat $(K8S)/base/jobs/multi-owner-check.yaml,420s)
+
+## k8s-multi-owner-demo: the same agent at both owners' resources, with each
+## of them deciding for herself in her own portal. Approve one and refuse the
+## other: nothing has to be reconciled, and neither authority is told.
+.PHONY: k8s-multi-owner-demo
+k8s-multi-owner-demo:
+	$(call run_live_job,multi-owner-demo,sed -e '/UMA4A_SIMULATE_OWNER/{n;s|"1"|"0"|;}' -e 's|multi-owner-check|multi-owner-demo|g' $(K8S)/base/jobs/multi-owner-check.yaml)
 
 ## k8s-org-check: shared ownership — an organization's resources, administered
 ## by its members. The same 90 assertions the compose stack runs, against
@@ -228,6 +282,15 @@ k8s-org-check:
 .PHONY: k8s-joint-check
 k8s-joint-check:
 	$(call run_job,joint-check,cat $(K8S)/base/jobs/joint-check.yaml,900s)
+
+## k8s-joint-demo: the same account, with nobody answering for either holder.
+##
+## Both of them are asked, in two different portals under two different
+## authorities, and neither can finish it alone. A fresh agent key every run,
+## so it always reaches them and the demo repeats without a reset.
+.PHONY: k8s-joint-demo
+k8s-joint-demo:
+	$(call run_live_job,joint-demo,sed -e '/UMA4A_SIMULATE_OWNER/s|"1"|"0"|' -e 's|joint-check|joint-demo|g' $(K8S)/base/jobs/joint-check.yaml)
 
 ## k8s-establishment-check: a resource server and an authority that were never
 ## configured against each other, introducing themselves — and the four ways
@@ -251,23 +314,24 @@ k8s-intent-check:
 ## Off by default because it brings a model with it, and that is a cost nobody
 ## should pay for a lab they only wanted to read. Two ways to supply one:
 ##
-##   make kagent                       a model in the cluster, no account
-##                                     anywhere (ollama, pulled on start)
-##   make kagent MODEL=anthropic       ANTHROPIC_API_KEY from your environment
+##   make kagent                       ANTHROPIC_API_KEY from your environment
 ##   make kagent MODEL=openai          OPENAI_API_KEY from your environment
+##   make kagent MODEL=ollama          a model in the cluster, no account
+##                                     anywhere (pulled on start)
 ##
 ## Either way the U4A path is identical: the adapter holds Bob's key and runs
 ## the four beats, and the model only decides which tool to call.
 .PHONY: kagent kagent-down kagent-check kagent-ask
-kagent: MODEL ?= ollama
+kagent: MODEL ?= anthropic
+kagent: RESOURCE ?= alice
 kagent:
-	@./k8s/scripts/kagent.sh up "$(MODEL)"
+	@./k8s/scripts/kagent.sh up "$(MODEL)" "$(RESOURCE)"
 
 kagent-down:
 	@./k8s/scripts/kagent.sh down
 
 ## kagent-check: ask it a question and watch Alice's policy decide
-kagent-check: MODEL ?= ollama
+kagent-check: MODEL ?= anthropic
 kagent-check: kagent
 	@./k8s/scripts/kagent.sh check
 
@@ -277,8 +341,9 @@ kagent-check: kagent
 ##               make kagent-ask Q="What is in Alice's portfolio?" SIM=0
 kagent-ask: Q ?= What is in Alice's portfolio?
 kagent-ask: SIM ?= 1
+kagent-ask: RESOURCE ?= alice
 kagent-ask:
-	@./k8s/scripts/kagent.sh ask "$(Q)" "$(SIM)"
+	@./k8s/scripts/kagent.sh ask "$(Q)" "$(SIM)" "$(RESOURCE)"
 
 ## k8s-adapter: the U4A adapter as a service in Bob's namespace. Off by
 ## default, like every other opt-in piece, so a cold cluster stays the portal

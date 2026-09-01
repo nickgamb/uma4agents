@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 import uuid
 
 import httpx
@@ -143,6 +144,96 @@ def approving(client, seconds: float):
 
     threading.Thread(target=loop, daemon=True).start()
     return stop
+
+
+# ---------------------------------------------------------------------------
+# The contrast, with her actually deciding
+#
+# One rule, one tier, two agents. Hers trades without waking her; an attested
+# agent that is somebody else's is asked anyway. The suite proves that with a
+# background approver; this puts the asking in front of a person, because
+# "she was not asked" only means something if you have just watched her be
+# asked about the other one.
+#
+# Her first contacts are answered here rather than by her. They are the same
+# handshake every other demo already shows, and three taps before the contrast
+# starts is how a room loses the thread.
+# ---------------------------------------------------------------------------
+
+PORTAL = os.environ.get("UMA4A_PORTAL", "https://portal.uma.lab")
+
+
+def live(wait_s: int) -> int:
+    with httpx.Client(verify=CA, timeout=60.0, follow_redirects=True) as client:
+        h = hdrs(client)
+        print("\n== An agent she activated herself ==")
+        client.post(f"{AS_PUBLIC}/owner/operators/claim",
+                    json={"origin": HER_OPERATOR}, headers=h, timeout=15.0)
+        print(f"   she claims the origin: {HER_OPERATOR}")
+        set_rules(client, "tier3", [{"when": ["standing.first_party"],
+                                     "then": "auto"}])
+        print("   her rule on tier 3: an agent of hers may trade without asking")
+        print("   the rule names no agent — only that it is hers")
+
+        # From here on the rule is in place, and it has to come back out
+        # however this run ends. Leaving `standing.first_party -> auto` on her
+        # trade tier is not a cosmetic leftover: it is a live relaxation of her
+        # policy that the next demo inherits, and it is how a later run of
+        # org-check started failing for reasons that had nothing to do with it.
+        try:
+            return _live_body(client, h, wait_s)
+        finally:
+            set_rules(client, "tier3", [])
+            print("\n   (her tier-3 rule has been put back)")
+
+
+def _live_body(client: httpx.Client, h: dict, wait_s: int) -> int:
+    hers = AgentKeys.load_or_create(f"{KEYS}/fp-live-hers-{RUN}.pem")
+    hers.client_id = f"{HER_OPERATOR}/agent.json"
+    hers.signature_agent = hers.publish(client, HER_OPERATOR)
+    his = AgentKeys.load_or_create(f"{KEYS}/fp-live-his-{RUN}.pem")
+    his.client_id = f"{HIS_OPERATOR}/agent.json"
+    his.signature_agent = his.publish(client, HIS_OPERATOR)
+
+    print("\n   connecting both agents (the ordinary first-contact handshake)")
+    stop = approving(client, 90)
+    try:
+        negotiate(client, hers, "get_positions")
+        negotiate(client, his, "get_positions")
+    finally:
+        stop.set()
+    time.sleep(1.0)
+
+    print("\n-- 1. her own agent asks to trade --")
+    granted, asked = negotiate(client, hers, "execute_trade",
+                               {"symbol": "VTI", "side": "buy", "quantity": 2},
+                               max_wait_s=20)
+    if granted and not asked:
+        print("   granted, and she was never asked.")
+        print("   Nothing appeared in her portal. Say so out loud.")
+    else:
+        print(f"   granted={granted} asked={asked} — expected a quiet grant")
+
+    print("\n-- 2. the same rule, the same tier, Bob's agent --")
+    print(f"   it is attested too, and it is not hers: {HIS_OPERATOR}")
+    print(f"   Decide it at {PORTAL}  (alice / alice-demo)")
+    print("   Settings -> Security -> Agent Authorization")
+    granted, asked = negotiate(client, his, "execute_trade",
+                               {"symbol": "VTI", "side": "buy", "quantity": 3},
+                               max_wait_s=wait_s)
+    print()
+    if not asked:
+        print("   it was not asked — the rule relaxed for an operator she")
+        print("   never claimed, which would be the bug this demo looks for")
+    elif granted:
+        print("   she was asked, and she allowed it.")
+    else:
+        print("   she was asked, and she refused it.")
+    print("\n== What that showed ==")
+    print("   Being hers bought less friction and no more access. The")
+    print("   ceiling is her tier either way, and the only thing that")
+    print("   moved was whether she had to be woken.")
+    return 0
 
 
 def main() -> int:
@@ -278,4 +369,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if os.environ.get("UMA4A_SIMULATE_OWNER", "1") == "0":
+        raise SystemExit(live(int(os.environ.get("UMA4A_LIVE_WAIT_S", "900"))))
     raise SystemExit(main())

@@ -126,6 +126,12 @@ class McpSession:
                 f"resource does not speak {PROTOCOL_VERSION} (offers {versions})")
 
 
+# How long to hold a ticket when nobody is simulating her. Only reached on a
+# run where a person is deciding, so it is measured in "walked to the other
+# screen and read it", not in "the loop should have finished by now".
+OWNER_WAIT_S = int(os.environ.get("UMA4A_OWNER_WAIT_S", "900"))
+
+
 def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
               client: httpx.Client, operation: dict | None = None,
               reason: str | None = None, mission: dict | None = None,
@@ -195,7 +201,8 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
 
     rpt = run_grant(client, as_uri, ticket, keys, approve_terms,
                     operation=operation, reason=reason, mission=mission,
-                    on_status=say, on_receipt=hold_receipt)
+                    on_status=say, on_receipt=hold_receipt,
+                    max_wait_s=120 if simulate_alice else OWNER_WAIT_S)
 
     if on_grant is not None:
         on_grant(rpt)

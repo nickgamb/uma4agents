@@ -45,6 +45,12 @@ spec:
             - name: KAGENT_SIM
               valueFrom:
                 configMapKeyRef: { name: kagent-ask-input, key: sim }
+            # Whose ledger the run reports on. Rewritten by kagent.sh when
+            # the agent is pointed at a resource somebody else owns, because
+            # "were her resources actually reached" is a different question
+            # per owner.
+            - name: UMA4A_AS
+              value: https://alice-as.uma.lab
             - name: KAGENT_A2A
               value: http://kagent-controller.kagent.svc.cluster.local:8083/api/a2a/sterling-vance/advisory-agent
             - name: PYTHONUNBUFFERED

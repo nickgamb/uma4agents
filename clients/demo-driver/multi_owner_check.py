@@ -123,8 +123,15 @@ def ensure_resource_server(c: httpx.Client, owner: str) -> None:
 
 
 def negotiate(c: httpx.Client, owner: str,
-              agent: AgentKeys) -> tuple[bool, str, dict | None]:
-    """Bob's agent, against one owner. Identical for every owner."""
+              agent: AgentKeys, simulate: bool = True,
+              max_wait_s: int = 90) -> tuple[bool, str, dict | None]:
+    """Bob's agent, against one owner. Identical for every owner.
+
+    `simulate` is what separates the check from the demo: with it the owner's
+    queue is answered here, and without it the ticket is held while a person
+    decides in her own portal. Nothing else differs, which is the point —
+    neither the agent nor this function knows which owner it is talking to.
+    """
     o = OWNERS[owner]
     r = mcp_call(c, f"{GATEWAY}/{owner}", "tools/call",
                  {"name": "get_positions", "arguments": {}}, META)
@@ -135,17 +142,22 @@ def negotiate(c: httpx.Client, owner: str,
     answered = {"v": False}
 
     def be_her(msg: str) -> None:
-        if "has been asked" in msg and not answered["v"]:
-            answered["v"] = True
-            for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
-                           timeout=15.0).json():
-                c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
-                       json={"decision": "approved"},
-                       headers=hdrs(c, owner), timeout=15.0)
+        if "has been asked" not in msg or answered["v"]:
+            return
+        answered["v"] = True
+        if not simulate:
+            print(f"   [{owner}] asked — it is waiting in her portal",
+                  flush=True)
+            return
+        for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
+                       timeout=15.0).json():
+            c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
+                   json={"decision": "approved"},
+                   headers=hdrs(c, owner), timeout=15.0)
 
     try:
         rpt = run_grant(c, ch.as_uri, ch.ticket, agent, lambda t: True,
-                        on_status=be_her, max_wait_s=90)
+                        on_status=be_her, max_wait_s=max_wait_s)
     except GrantDenied as exc:
         return False, str(exc)[:160], None
 
@@ -162,6 +174,62 @@ def negotiate(c: httpx.Client, owner: str,
     except (KeyError, IndexError, ValueError, TypeError):
         return True, ch.as_uri, None
     return True, ch.as_uri, data
+
+
+# ---------------------------------------------------------------------------
+# The same two negotiations, with each owner deciding for herself
+#
+# The suite answers for both of them. This holds each ticket instead, so the
+# two decisions are made by two people at two different authorities — and can
+# disagree. Approving one and refusing the other is the whole claim in one
+# screen: there is no privileged owner, and neither authority is told what the
+# other did.
+# ---------------------------------------------------------------------------
+
+LIVE_PORTALS = {
+    "alice": ("https://portal.uma.lab", "alice / alice-demo"),
+    "carol": ("https://carol-portal.uma.lab", "carol / carol-demo"),
+}
+
+
+def live(wait_s: int) -> int:
+    with httpx.Client(verify=CA, timeout=30.0) as c:
+        print("\n== One agent, two owners, two authorities ==")
+        for owner in OWNERS:
+            ensure_resource_server(c, owner)
+            url, creds = LIVE_PORTALS.get(owner, ("?", "?"))
+            print(f"   {owner:<6} {OWNERS[owner]['as']:<34} {url}  ({creds})")
+        print("\n   The same agent key asks both. Each of them decides on her")
+        print("   own screen, and either answer is a good demo.")
+
+        # One key for both, so nothing about the agent explains why the two
+        # answers differ.
+        agent = AgentKeys(keyid=f"multi-live-{int(time.time())}")
+        results = {}
+
+        for owner in OWNERS:
+            print(f"\n-- asking {owner}'s resource --")
+            ok, detail, data = negotiate(c, owner, agent, simulate=False,
+                                         max_wait_s=wait_s)
+            if ok:
+                n = len(data.get("positions", [])) if isinstance(data, dict) else 0
+                print(f"   granted by {owner}'s authority ({detail})")
+                print(f"   spent: {n} positions from her vault")
+            else:
+                print(f"   refused: {detail}")
+            results[owner] = ok
+
+        print("\n== What happened ==")
+        for owner, ok in results.items():
+            print(f"   {owner:<6} {'granted' if ok else 'refused'}")
+        if len(set(results.values())) > 1:
+            print("   They disagreed, and nothing had to be reconciled. Each")
+            print("   authority answered for its own owner and was never told")
+            print("   what the other decided.")
+        else:
+            print("   Same answer from both, reached separately. Neither")
+            print("   authority learned anything about the other's decision.")
+        return 0
 
 
 def main() -> int:
@@ -299,4 +367,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if os.environ.get("UMA4A_SIMULATE_OWNER", "1") == "0":
+        raise SystemExit(live(int(os.environ.get("UMA4A_LIVE_WAIT_S", "900"))))
     raise SystemExit(main())

@@ -48,10 +48,10 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ["/bin/sh", "-c", "sleep 5; ollama pull qwen2.5:1.5b || true"]
+                command: ["/bin/sh", "-c", "sleep 5; ollama pull qwen3.5:9b || true"]
           readinessProbe:
             exec:
-              command: ["/bin/sh", "-c", "ollama list | grep -q qwen2.5"]
+              command: ["/bin/sh", "-c", "ollama list | grep -q qwen3.5"]
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 60
@@ -71,6 +71,6 @@ metadata:
   namespace: sterling-vance
 spec:
   provider: Ollama
-  model: qwen2.5:1.5b
+  model: qwen3.5:9b
   ollama:
     host: http://ollama.kagent.svc.cluster.local:11434

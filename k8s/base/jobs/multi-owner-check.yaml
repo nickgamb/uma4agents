@@ -43,6 +43,10 @@ spec:
               value: "1"
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            # Flipped to "0" by `make k8s-multi-owner-demo`, where each owner
+            # decides for herself instead of being answered for here.
+            - name: UMA4A_SIMULATE_OWNER
+              value: "1"
           volumeMounts:
             - { name: driver, mountPath: /driver/multi_owner_check.py, subPath: multi_owner_check.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }

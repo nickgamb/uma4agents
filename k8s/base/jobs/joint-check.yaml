@@ -45,6 +45,9 @@ spec:
             # Read from the same value the authorities are configured with,
             # so a wait here cannot drift into a flaky one.
             - { name: UMA_AS_RESOURCE_REFRESH_S, value: "15" }
+            # Flipped to "0" by `make k8s-joint-demo`, which is the same
+            # negotiation with nobody answering for either holder.
+            - { name: UMA4A_SIMULATE_OWNER, value: "1" }
           volumeMounts:
             - { name: driver, mountPath: /driver/joint_check.py, subPath: joint_check.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }

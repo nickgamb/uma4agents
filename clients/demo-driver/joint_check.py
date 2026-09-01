@@ -161,7 +161,7 @@ def answer_pending(c: httpx.Client, owner: str, decision: str) -> int:
 def negotiate(c: httpx.Client, account: str, keys: AgentKeys,
               tool: str = "get_positions", answers: dict | None = None,
               reason: str | None = "Reviewing the joint account",
-              capture: dict | None = None):
+              capture: dict | None = None, max_wait_s: int = 60):
     """The ordinary four beats, at a jointly held account.
 
     Nothing about the agent's side of this is joint-aware: same challenge,
@@ -190,7 +190,7 @@ def negotiate(c: httpx.Client, account: str, keys: AgentKeys,
 
     try:
         return run_grant(c, ch.as_uri, ch.ticket, keys, accept, reason=reason,
-                         on_status=be_them, max_wait_s=60), ""
+                         on_status=be_them, max_wait_s=max_wait_s), ""
     except GrantDenied as exc:
         return None, str(exc)[:240]
 
@@ -205,6 +205,139 @@ def spend(c: httpx.Client, account: str, keys: AgentKeys, rpt: str) -> list:
             mcp_json(r)["result"]["content"][0]["text"])["positions"])
     except (KeyError, IndexError, ValueError, TypeError):
         return []
+
+
+# ---------------------------------------------------------------------------
+# The same negotiation, with nobody answering for anyone
+#
+# The suite below answers for both holders, because a check has to. This is
+# the interesting half of the arrangement instead: the ticket is held while
+# two people decide it on two different screens, under two different
+# authorities, and neither of them can finish it alone.
+#
+# It uses a fresh key every run, so the agent is always a stranger and the
+# request always reaches both of them. That makes the demo repeatable without
+# `make k8s-reset` in between.
+# ---------------------------------------------------------------------------
+
+LIVE_PORTALS = {
+    "alice": ("https://portal.uma.lab", "alice / alice-demo"),
+    "carol": ("https://carol-portal.uma.lab", "carol / carol-demo"),
+}
+
+
+def watch_holder(c: httpx.Client, owner: str, stop: threading.Event) -> None:
+    """Say when a holder is asked, and when she has answered.
+
+    Only the queue is watched, not the answer. What she chose shows up in the
+    outcome of the negotiation, and reading it out of her queue here would be
+    reporting a decision from the wrong side of the boundary.
+    """
+    asked = False
+    while not stop.is_set():
+        try:
+            waiting = c.get(f"{OWNERS[owner]['as']}/owner/pending",
+                            headers=hdrs(c, owner), timeout=15.0).json()
+        except Exception:
+            time.sleep(2.0)
+            continue
+        if waiting and not asked:
+            asked = True
+            print(f"   [{owner}] asked — it is waiting in her portal", flush=True)
+        elif asked and not waiting:
+            print(f"   [{owner}] answered", flush=True)
+            return
+        time.sleep(2.0)
+
+
+def live(wait_s: int) -> int:
+    # The suite puts the lab back where it found it, and so must this. A demo
+    # that leaves both holders joined with terms over a jointly held account
+    # is not a tidiness problem: the next thing anybody runs inherits it, and
+    # it is why org-check began failing on resources that have nothing to do
+    # with joint ownership.
+    with httpx.Client(verify=VERIFY, timeout=30.0) as c:
+        try:
+            return _live_body(c, wait_s)
+        finally:
+            for owner in ("alice", "carol"):
+                for account in (BOTH, EITHER):
+                    try:
+                        leave(c, owner, account)
+                        drop_terms(c, owner, account)
+                    except Exception:                          # noqa: BLE001
+                        pass
+            print("\n   (both holders have been put back)")
+
+
+def _live_body(c: httpx.Client, wait_s: int) -> int:
+    doc = c.get(f"{TALLY}/mandate/{BOTH}", timeout=15.0).json()
+    holders = [h["owner"] for h in doc["holders"]]
+    rule = doc["rule"]
+
+    print("\n== One account, two owners, neither above the other ==")
+    print(f"   account: {BOTH}")
+    print(f"   holders: {', '.join(holders)}")
+    print(f"   it takes: {rule['kind']} of {rule['threshold']}")
+
+    # Deliberately different terms, so the folded document visibly comes
+    # from both of them rather than from whoever was asked first.
+    for owner in holders:
+        ensure_resource_server(c, owner)
+        join(c, owner, BOTH)
+    write_terms(c, "alice", BOTH, expires=3600,
+                scope=["positions:read", "transactions:read"],
+                prohibited=["model-training"])
+    write_terms(c, "carol", BOTH, expires=900,
+                scope=["positions:read"],
+                prohibited=["resale-to-third-parties"])
+    time.sleep(1.0)
+    print("   alice allows more than carol does, on every field")
+
+    print("\n== The agent asks ==")
+    keys = AgentKeys(keyid=f"joint-live-{int(time.time())}")
+    seen: dict = {}
+
+    print("\n   Nobody is answering for either of them. Both must decide:")
+    for owner in holders:
+        url, creds = LIVE_PORTALS.get(owner, ("?", "?"))
+        print(f"     {owner:<6} {url}  ({creds})")
+    print("     Agent Access -> Joint accounts")
+    print()
+
+    stop = threading.Event()
+    watchers = [threading.Thread(target=watch_holder, args=(c, o, stop),
+                                 daemon=True) for o in holders]
+    for w in watchers:
+        w.start()
+    try:
+        rpt, why = negotiate(c, BOTH, keys, capture=seen,
+                             max_wait_s=wait_s)
+    finally:
+        stop.set()
+
+    if seen:
+        print("\n== The one document they were folded into ==")
+        print(f"   expiry:       {seen.get('expires_in')}s "
+              f"(the shorter of the two)")
+        print(f"   scope:        {seen.get('scope')} "
+              f"(only what both of them offer)")
+        print(f"   prohibited:   {sorted(seen.get('prohibited') or [])} "
+              f"(everything either of them wrote)")
+
+    print("\n== What happened ==")
+    if rpt is None:
+        print(f"   refused: {why or 'no grant'}")
+        print("   Under a mandate that needs all of them, one refusal is")
+        print("   enough, and nobody waits for the rest.")
+        return 0
+
+    rows = spend(c, BOTH, keys, rpt)
+    print(f"   granted, and spent: {len(rows)} positions returned")
+    print("   The grant carries a signed verdict from each holder. The")
+    print("   enforcement point re-ran the count against the keys their")
+    print("   authorities publish before letting it through.")
+    return 0
 
 
 def main() -> int:                                            # noqa: C901
@@ -502,4 +635,8 @@ def main() -> int:                                            # noqa: C901
 
 
 if __name__ == "__main__":
+    # SIM=0 on the make target sets this. The suite is the default because CI
+    # runs it; the live path is the one a room watches.
+    if os.environ.get("UMA4A_SIMULATE_OWNER", "1") == "0":
+        raise SystemExit(live(int(os.environ.get("UMA4A_LIVE_WAIT_S", "900"))))
     raise SystemExit(main())

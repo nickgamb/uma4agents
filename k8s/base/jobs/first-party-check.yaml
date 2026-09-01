@@ -37,6 +37,11 @@ spec:
               value: https://alice-agent.uma.lab
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            # Flipped to "0" by `make k8s-first-party-demo`, where the tier
+            # she reserved is decided by her rather than by a background
+            # approver.
+            - name: UMA4A_SIMULATE_OWNER
+              value: "1"
             # Must match UMA_AS_MAX_REASON on the uma-as Deployment: a check
             # that sends one byte over a cap the server does not enforce fails
             # for the wrong cause.
