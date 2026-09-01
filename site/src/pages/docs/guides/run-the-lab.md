@@ -158,7 +158,7 @@ Everything above is driven by code in the lab. The adoption question is whether
 something you did not write can be governed the same way.
 
 ```bash
-make kagent            # Kubernetes only; it brings a model with it
+make kagent            # Kubernetes only; needs ANTHROPIC_API_KEY
 make kagent-check
 make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
 ```

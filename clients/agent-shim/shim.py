@@ -310,11 +310,14 @@ class Upstream:
             return data["as_uri"], data["ticket"]
         return None
 
-    async def resume(self, held: dict) -> str | None | str:
+    async def resume(self, held: dict) -> tuple[str, str | None]:
         """Poll a pend this shim is already holding.
 
-        Returns the RPT once she has allowed it, the string "pending" while
-        she has not answered, and None if the ticket is no longer usable.
+        Returns one of ("granted", rpt), ("waiting", None) or ("gone", None).
+        A tuple rather than a bare string because "still waiting" and the
+        grant itself would otherwise be the same type, and telling them apart
+        by value is the kind of thing that survives review and then does not.
+
         Presenting the ticket she is already deciding costs nothing against
         her attention budget: it is the same request, asked once.
         """
@@ -325,20 +328,20 @@ class Upstream:
             body = r.json()
         except Exception as exc:                                # noqa: BLE001
             log(f"could not poll the held ticket: {type(exc).__name__}")
-            return None
+            return "gone", None
         if body.get("error") == "request_submitted":
             # The AS rotates the ticket on every poll; keep the current one or
             # the next check is presenting something already spent.
             held["ticket"] = body.get("ticket", held["ticket"])
             log("still waiting on her — the same request, not a new one")
-            return "pending"
+            return "waiting", None
         if "access_token" in body:
             log("she answered the request that was already waiting")
             if body.get("receipt"):
                 store_receipt(body["receipt"])
-            return body["access_token"]
+            return "granted", body["access_token"]
         log(f"the held request ended: {body.get('error', 'unknown')}")
-        return None
+        return "gone", None
 
     async def call_tool(self, ctx: Context, tool: str, args: dict,
                         operation: dict | None = None,
@@ -390,10 +393,10 @@ class Upstream:
         key = pend_key(tool, params.get("arguments") or {})
         held = OUTSTANDING.get(key)
         if held is not None:
-            resumed = await self.resume(held)
-            if resumed == "pending":
+            state, resumed = await self.resume(held)
+            if state == "waiting":
                 raise PendingHandback(held["as_uri"], held["ticket"])
-            if resumed is not None:
+            if state == "granted" and resumed is not None:
                 OUTSTANDING.pop(key, None)
                 headers = signed_headers("POST", AUTHORITY, MCP_PATH, resumed, keys)
                 r, payload = await self.request("tools/call", params,

@@ -72,7 +72,7 @@ round: [kagent](https://kagent.dev) is not ours, was not changed, and sees
 three ordinary MCP tools.
 
 ```bash
-make kagent            # a model in the cluster, no account anywhere
+make kagent            # a hosted model; ANTHROPIC_API_KEY from your shell
 make kagent-check      # ask it a question; Alice decides
 make kagent-down
 ```
@@ -93,10 +93,10 @@ The model is your choice, and the U4A path is identical either way — it only
 decides which tool to call:
 
 ```bash
-make kagent                   # ollama, in the cluster, no key
-make kagent MODEL=anthropic   # ANTHROPIC_API_KEY from your environment
+make kagent                   # ANTHROPIC_API_KEY from your environment
 make kagent MODEL=openai      # OPENAI_API_KEY
 make kagent MODEL=bedrock     # AWS_BEDROCK_API_KEY, plus AWS_REGION
+make kagent MODEL=ollama      # a model in the cluster, no key anywhere
 ```
 
 Full detail is in [KAGENT.md](KAGENT.md).

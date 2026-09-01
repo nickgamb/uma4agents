@@ -60,7 +60,7 @@ model_config() {
 
     anthropic)
       require_env ANTHROPIC_API_KEY
-      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}"
+      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-5}"
       model_secret "$ANTHROPIC_API_KEY" ;;
 
     openai)

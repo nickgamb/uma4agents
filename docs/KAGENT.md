@@ -9,7 +9,7 @@ not been changed, and has never heard of UMA. It sees three ordinary MCP tools.
 Alice's policy governs it anyway.
 
 ```bash
-make kagent            # opt-in: it brings a model with it
+make kagent            # opt-in: it needs a model to think with
 make kagent-check
 make kagent-ask Q="..."  # your own question
 make kagent-down
@@ -63,9 +63,9 @@ gigabytes, or an account somewhere. The U4A path is identical in every case.
 
 | | |
 |---|---|
-| `make kagent` | Ollama in the cluster. No account anywhere, no key. Pulls a small tool-calling model on first start, which takes a few minutes. |
-| `make kagent MODEL=anthropic` | `ANTHROPIC_API_KEY` from your shell, into a Secret and nowhere else. `ANTHROPIC_MODEL` overrides the pinned model. |
+| `make kagent` | `ANTHROPIC_API_KEY` from your shell, into a Secret and nowhere else. `ANTHROPIC_MODEL` overrides the pinned model. |
 | `make kagent MODEL=openai` | `OPENAI_API_KEY`, likewise, with `OPENAI_MODEL`. |
+| `make kagent MODEL=ollama` | A model in the cluster. No account anywhere, no key. Pulls a tool-calling model on first start, which takes a few minutes and wants the memory to run it. |
 | `make kagent MODEL=bedrock` | `AWS_BEDROCK_API_KEY`, plus `AWS_REGION` and `BEDROCK_MODEL` if the defaults are wrong. |
 
 The key never reaches this repository. `k8s/scripts/kagent.sh` reads it from
@@ -81,10 +81,16 @@ to call.
 Bedrock is written and validated against the CRD but has not been run here; the
 Ollama and Anthropic paths have.
 
-Small model, on purpose. This exists to show a framework negotiating with
-Alice's authority, not to demonstrate reasoning. Any tool-calling model works —
-`qwen2.5:1.5b` is enough, and both it and Claude have been run against this
-end to end.
+Any tool-calling model works. This exists to show a framework negotiating with
+Alice's authority, not to demonstrate reasoning — the model only decides which
+tool to call. A hosted model is the default because a Codespace has no GPU;
+`MODEL=ollama` runs `qwen3.5:9b` in the cluster instead, on a machine with the
+memory for it.
+
+One behaviour the model has to get right: a request waiting on Alice comes back
+as `PENDING`, and the agent is told to report that and stop rather than loop.
+Whoever asked calls again, and the adapter resumes the request already in front
+of her.
 
 If the agent answers without calling anything — "tool not found", or a fluent
 paragraph about a portfolio it never fetched — suspect the *order*, not the

@@ -179,7 +179,7 @@ page adds terms of her own over any resource no tier governs yet.
 ### 7. An agent framework nobody modified
 
 ```bash
-make kagent                     # a model in the cluster; no account anywhere
+make kagent                     # a hosted model; MODEL=ollama for one in the cluster
 make kagent-check
 make kagent-ask Q="..." SIM=0   # your question; SIM=0 leaves it to her portal
 make kagent-down
