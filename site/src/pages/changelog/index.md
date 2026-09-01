@@ -20,6 +20,30 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 1 2026
+
+### v2026.09.1
+
+#### New
+
+- **Demos:** a run sheet per use case, in `docs/cards/` and under Guides → [Lab demonstrations](/docs/guides/demos/). Each one is driven by asking an agent a question and then deciding as the owner, rather than by running a check.
+- **kagent:** `RESOURCE=` points an agent at Carol's account, a jointly held account, the firm's book, or an agent the owner operates herself — `make kagent RESOURCE=carol|joint|either|shared|hers`. Each resource publishes the authority that speaks for it, so which owner decides follows from the resource rather than from configuration.
+- **Agent shim:** `UMA4A_PUBLISH_TO` publishes the adapter's signing key in an operator's key directory and names that origin as its client id, so an adapter can be the owner's own agent rather than a third party's.
+- **Kubernetes:** `make k8s-demo` and `make k8s-joint-demo`, `k8s-multi-owner-demo`, `k8s-first-party-demo` — the same negotiations with nobody answering for the owner, following the Job's log rather than printing it at the end.
+
+#### Enhancements
+
+- **Agent shim:** a pending decision is returned as a result rather than holding the call open, for any client that cannot render an elicitation. Nothing between the agent and the owner has to keep a connection alive while she decides.
+- **Agent shim:** a retry resumes the request the owner is already deciding instead of opening a second one. Re-negotiating spends the attention budget her authority keeps per agent (`UMA_AS_PEND_BUDGET`), so an agent that checked a handful of times was refused with *not accepting new agent requests* — correctly, for behaving like a nuisance.
+- **kagent:** hosted models are the default; `MODEL=ollama` remains, pinned to `qwen3.5:9b`.
+- **Demo driver:** the owner's decision window is `UMA4A_OWNER_WAIT_S` (900s) when nobody is simulating her. 120s is a headless budget.
+
+#### Bug fixes
+
+- **Kubernetes:** `run_job` waited on `Complete` *and* `Failed`, and `kubectl wait` keeps only the last `--for` — so it waited on `Failed` alone. A job that succeeded ran to the full timeout, and where that outlived the job's `ttlSecondsAfterFinished` the Job was collected before its logs printed, failing a run that had passed. `k8s-joint-check` and `k8s-org-check` failed outright; every other check paid for it in wall time. `make k8s-smoke-test` now finishes in seconds rather than minutes.
+- **Docs:** `DEMOS.md` said an ask-me tier pends to her portal while her personal AI is up. It is refused — the ability records *no channel to her* and stops, which is the safe answer when the one thing it cannot do is ask her.
+- **Demo cards:** the pages declare their character set. Without it they rendered as Latin-1 and every `·` and `→` came out as mojibake.
+
 ## August 26 2026
 
 ### v2026.08.26
