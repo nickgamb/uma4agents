@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Alice to Bob Demo Card</title>
+<title>Two Owners, Two Authorities</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -353,8 +353,8 @@
 
 <div class="wrap">
   <header class="masthead">
-    <h1>Alice to Bob Demo Card</h1>
-    <p class="standfirst">Three questions to Bob's agent. Watch Alice's side, not the agent's.</p>
+    <h1>Two Owners, Two Authorities</h1>
+    <p class="standfirst">One agent, one key, two owners. They give opposite answers and nothing anywhere has to reconcile them.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -364,8 +364,8 @@
     </div>
     <div class="screen right">
       <span class="side">Right screen</span>
-      <span class="what">Alice's portal</span>
-      <span class="detail">https://portal.uma.lab</span>
+      <span class="what">Two portals</span>
+      <span class="detail">portal.uma.lab · carol-portal.uma.lab</span>
     </div>
   </section>
   <section class="setup">
@@ -437,7 +437,7 @@ make kagent</code></div>
       </table>
     </div>
 
-    <p class="setup-after">Then open <strong>https://portal.uma.lab</strong> on the right screen, log in as <strong>alice / alice-demo</strong>, and start the run-through. A cluster this fresh already has zero connections, so there is nothing to clear.</p>
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> (<strong>alice / alice-demo</strong>) and <strong>https://carol-portal.uma.lab</strong> (<strong>carol / carol-demo</strong>) side by side.</p>
 
     <div class="afters">
       <div class="after">
@@ -476,7 +476,7 @@ make kagent MODEL=openai</code></div>
   <hr class="rule">
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Terminal on the left, her portal on the right. One question gets asked twice, on purpose.</p>
+    <p class="run-note">Two portals on the right. Answer the two requests differently — the disagreement is the demo, and it is the part no other model of this can do.</p>
 
     <div class="table-scroll">
       <table>
@@ -493,9 +493,6 @@ make kagent MODEL=openai</code></div>
           </tr>
         </thead>
         <tbody>
-
-
-
         <tr class="term">
           <td class="num">0</td>
           <td class="act">
@@ -503,8 +500,10 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
           </td>
           <td class="say">
-            <span class="lede">Display the status of the entire lab</span>
-            Every containers status 
+            <span class="lede">Show the whole lab first.</span>
+            Two things to point at: <code>alice</code> and <code>carol</code>
+            are separate namespaces with a <code>uma-as</code> each. Two
+            authorities, not one server with two rows in a table.
           </td>
         </tr>
 
@@ -512,106 +511,88 @@ make kagent MODEL=openai</code></div>
           <td class="num">1</td>
           <td class="act">
             <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
+            <div class="cmdwrap"><code class="cmd">make kagent RESOURCE=carol</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 1 · Holdings summary</span>
-            <span class="lede">Bob's agent is about to ask for Alice's holdings.</span>
-            This is stock kagent. Nobody changed it, and it has never heard of UMA. All it sees is three MCP tools.
-          </td>
-        </tr>
-
-        <tr class="port">
-          <td class="num">2</td>
-          <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Badge shows 1 → <span class="btn approve">Approve</span></span>
-          </td>
-          <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stopped. Alice has never met this agent.</span>
-            Nothing happens until she says yes. Approve, and the holdings come back on the left. <strong>What she granted covers that one call and nothing else.</strong>
+            <span class="lede">Point an agent at Carol's account.</span>
+            Meridian holds her account and Alice's. Carol runs her own
+            authorization server, her own signing key, her own identity
+            provider — <strong>she is not a tenant of Alice's</strong>.
           </td>
         </tr>
 
         <tr class="term">
-          <td class="num">3</td>
+          <td class="num">2</td>
           <td class="act">
             <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask RESOURCE=carol Q="What is in Carol's portfolio?" SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 2 · Transactions</span>
-            <span class="lede">Now it wants her transaction history.</span>
-            That is a different tier. Letting it see her holdings gave it no access to this.
+            <span class="chip tier">Tier 1 · Holdings</span>
+            <span class="lede">Read the challenge line out loud.</span>
+            It names <code>carol-as.uma.lab</code>. Nothing in the agent picked
+            that — <strong>the resource published which authority speaks for
+            it</strong>, which is the only reason an owner gets to choose one
+            at all.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">4</td>
+          <td class="num">3</td>
           <td class="act">
-            <span class="where">Portal</span>
+            <span class="where">Carol's portal</span>
             <span class="click"><span class="btn approve">Approve</span></span>
           </td>
           <td class="say">
             <span class="chip held">Held for her</span>
-            <span class="lede">It stops again, and this is the last time.</span>
-            She approves each tier once. <strong>Tell them to watch what happens when it asks for the same thing again.</strong>
+            <span class="lede">Carol allows it: SCHD, IEFA, TLT.</span>
+            Her holdings, from her vault, under terms she wrote. Alice has no
+            part in this and never hears about it.
           </td>
         </tr>
 
         <tr class="term">
-          <td class="num">5</td>
-          <td class="act">
-            <span class="where">Terminal — same question again</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
-          </td>
-          <td class="say">
-            <span class="chip through">Through · no approval</span>
-            <span class="lede">Nothing stopped. Nobody approved this one.</span>
-            Same question as before. Her terms already covered it, so it went straight through while she was away. <strong>The portal never moved.</strong>
-          </td>
-        </tr>
-
-        <tr class="term">
-          <td class="num">6</td>
+          <td class="num">4</td>
           <td class="act">
             <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 3 · Trade execution</span>
-            <span class="lede">Now it wants to sell her shares.</span>
-            She marked this tier ask-me, so it stops and waits for her. The agent just sees a slow tool call.
+            <span class="lede">Same agent, same key, same tool — different owner.</span>
+            The only thing that changed is whose resource is being asked about.
+            This time the challenge names <code>alice-as.uma.lab</code>.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">7</td>
+          <td class="num">5</td>
           <td class="act">
-            <span class="where">Portal</span>
+            <span class="where">Alice's portal</span>
             <span class="click"><span class="btn deny">Deny</span></span>
           </td>
           <td class="say">
             <span class="chip refused">Refused</span>
-            <span class="lede">She says no, and the trade does not happen.</span>
-            The agent stops there. It has no leftover token to retry with.
+            <span class="lede">Alice refuses the identical request.</span>
+            <strong>They disagreed, and nothing had to reconcile them.</strong>
+            No owner sits above them, neither authority was told what the other
+            decided, and no part of the system had to hold both answers at
+            once. Add a third owner, or a thousandth, the same way.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">8</td>
+          <td class="num">6</td>
           <td class="act">
-            <span class="where">Portal</span>
+            <span class="where">Both portals</span>
             <span class="click">Settings → Security → <span class="btn plain">Agent Authorization</span></span>
           </td>
           <td class="say">
-            <span class="lede">Everything is recorded on her side.</span>
-            Each agent, what it promised, what it touched, and what she approved or refused. <strong>Click Revoke</strong> if they ask what happens next.
+            <span class="lede">Two ledgers, and neither mentions the other.</span>
+            Carol's records a grant she allowed. Alice's records a refusal she
+            made. <strong>Same agent in both, and each account of it is only
+            its own owner's.</strong>
           </td>
         </tr>
-
-      
         </tbody>
       </table>
     </div>

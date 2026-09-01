@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Alice to Bob Demo Card</title>
+<title>Her Own Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -353,8 +353,8 @@
 
 <div class="wrap">
   <header class="masthead">
-    <h1>Alice to Bob Demo Card</h1>
-    <p class="standfirst">Three questions to Bob's agent. Watch Alice's side, not the agent's.</p>
+    <h1>Her Own Agent</h1>
+    <p class="standfirst">One rule, one tier, two agents. Hers goes through without waking her; one that is not hers is asked anyway.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -437,7 +437,7 @@ make kagent</code></div>
       </table>
     </div>
 
-    <p class="setup-after">Then open <strong>https://portal.uma.lab</strong> on the right screen, log in as <strong>alice / alice-demo</strong>, and start the run-through. A cluster this fresh already has zero connections, so there is nothing to clear.</p>
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> on the right and log in as <strong>alice / alice-demo</strong>.</p>
 
     <div class="afters">
       <div class="after">
@@ -476,7 +476,7 @@ make kagent MODEL=openai</code></div>
   <hr class="rule">
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Terminal on the left, her portal on the right. One question gets asked twice, on purpose.</p>
+    <p class="run-note">The whole card turns on a contrast. Steps 4 and 5 are the same tier under the same rule, so run them back to back and let the room hear the difference.</p>
 
     <div class="table-scroll">
       <table>
@@ -493,9 +493,6 @@ make kagent MODEL=openai</code></div>
           </tr>
         </thead>
         <tbody>
-
-
-
         <tr class="term">
           <td class="num">0</td>
           <td class="act">
@@ -503,34 +500,44 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
           </td>
           <td class="say">
-            <span class="lede">Display the status of the entire lab</span>
-            Every containers status 
+            <span class="lede">Show the whole lab first.</span>
+            Note that <code>sterling-vance</code> is Bob's namespace and
+            <code>alice</code> is hers. By the end, an agent in each will have
+            asked her authority for the same thing.
           </td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">1</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
+            <span class="where">Her portal</span>
+            <span class="click">Settings → Security → Agent Authorization → Operators</span>
+            <div class="cmdwrap"><code class="cmd">https://alice-agent.uma.lab</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 1 · Holdings summary</span>
-            <span class="lede">Bob's agent is about to ask for Alice's holdings.</span>
-            This is stock kagent. Nobody changed it, and it has never heard of UMA. All it sees is three MCP tools.
+            <span class="lede">Alice claims an origin as hers.</span>
+            This is half a decision and the portal treats it as half.
+            <strong>Anybody may point an agent at her origin</strong> — a
+            metadata document only proves it came from the URL it names. The
+            other half is that <strong>only she can put a key in her
+            directory</strong>, and her authority checks for both.
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">2</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Badge shows 1 → <span class="btn approve">Approve</span></span>
+            <span class="where">Her portal</span>
+            <span class="click">My Terms → Trade execution → add rule</span>
+            <div class="cmdwrap"><code class="cmd">When:  the agent is one of mine
+Then:  allow without asking me</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stopped. Alice has never met this agent.</span>
-            Nothing happens until she says yes. Approve, and the holdings come back on the left. <strong>What she granted covers that one call and nothing else.</strong>
+            <span class="lede">One rule, on the tier she cares most about.</span>
+            <strong>The rule names no agent.</strong> It does not list a key, a
+            vendor or a product — only that the thing asking is hers. She is
+            describing a relationship, and anything that enters or leaves it
+            is covered without her editing this again.
           </td>
         </tr>
 
@@ -538,80 +545,78 @@ make kagent MODEL=openai</code></div>
           <td class="num">3</td>
           <td class="act">
             <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
+            <div class="cmdwrap"><code class="cmd">make kagent RESOURCE=hers</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 2 · Transactions</span>
-            <span class="lede">Now it wants her transaction history.</span>
-            That is a different tier. Letting it see her holdings gave it no access to this.
+            <span class="lede">Bring up an agent she operates.</span>
+            As it starts, the adapter publishes its signing key in her
+            directory and names her origin as its client id — the second half
+            from step 1, done the only way it can be done.
           </td>
         </tr>
 
-        <tr class="port">
+        <tr class="term">
           <td class="num">4</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn approve">Approve</span></span>
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask RESOURCE=hers Q="Sell 200 shares of my AAPL position." SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stops again, and this is the last time.</span>
-            She approves each tier once. <strong>Tell them to watch what happens when it asks for the same thing again.</strong>
+            <span class="chip through">Through · no approval</span>
+            <span class="lede">The trade goes through and she is never asked.</span>
+            <strong>Watch the right screen while this runs and say what is not
+            happening.</strong> Her portal does not move. No badge, no queue,
+            no tap. The next step is the same rule and the same tier, so make
+            them notice this one.
           </td>
         </tr>
 
         <tr class="term">
           <td class="num">5</td>
           <td class="act">
-            <span class="where">Terminal — same question again</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
-          </td>
-          <td class="say">
-            <span class="chip through">Through · no approval</span>
-            <span class="lede">Nothing stopped. Nobody approved this one.</span>
-            Same question as before. Her terms already covered it, so it went straight through while she was away. <strong>The portal never moved.</strong>
-          </td>
-        </tr>
-
-        <tr class="term">
-          <td class="num">6</td>
-          <td class="act">
             <span class="where">Terminal</span>
             <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
           </td>
           <td class="say">
             <span class="chip tier">Tier 3 · Trade execution</span>
-            <span class="lede">Now it wants to sell her shares.</span>
-            She marked this tier ask-me, so it stops and waits for her. The agent just sees a slow tool call.
+            <span class="lede">Now Bob's agent asks for exactly the same thing.</span>
+            It is attested too — a real operator, a published key, a signed
+            request. It is simply <strong>not hers</strong>, so her rule does
+            not reach it and the request stops.
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">6</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click"><span class="btn approve">Approve</span> or <span class="btn deny">Deny</span></span>
+          </td>
+          <td class="say">
+            <span class="chip held">Held for her</span>
+            <span class="lede">She is asked, exactly like anybody else.</span>
+            Either answer makes the point, so take whichever the room wants.
+            <strong>Being hers bought less friction and no more access.</strong>
+            Her tier is the ceiling in both directions; the only thing that
+            moved was whether she had to be woken.
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">7</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn deny">Deny</span></span>
+            <span class="where">Her portal</span>
+            <span class="click">Operators → <span class="btn plain">Disclaim</span></span>
           </td>
           <td class="say">
-            <span class="chip refused">Refused</span>
-            <span class="lede">She says no, and the trade does not happen.</span>
-            The agent stops there. It has no leftover token to retry with.
+            <span class="chip refused">Taken back</span>
+            <span class="lede">She un-claims the origin, then re-run step 4.</span>
+            Her own agent is asked now, like a stranger, with no change to the
+            agent at all. <strong>What made it hers was her say-so, and it was
+            hers to withdraw</strong> — which is the difference between a
+            relationship and a credential.
           </td>
         </tr>
-
-        <tr class="port">
-          <td class="num">8</td>
-          <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Settings → Security → <span class="btn plain">Agent Authorization</span></span>
-          </td>
-          <td class="say">
-            <span class="lede">Everything is recorded on her side.</span>
-            Each agent, what it promised, what it touched, and what she approved or refused. <strong>Click Revoke</strong> if they ask what happens next.
-          </td>
-        </tr>
-
-      
         </tbody>
       </table>
     </div>

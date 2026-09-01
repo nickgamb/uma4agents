@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Alice to Bob Demo Card</title>
+<title>Her Personal AI Answers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -353,8 +353,8 @@
 
 <div class="wrap">
   <header class="masthead">
-    <h1>Alice to Bob Demo Card</h1>
-    <p class="standfirst">Three questions to Bob's agent. Watch Alice's side, not the agent's.</p>
+    <h1>Her Personal AI Answers</h1>
+    <p class="standfirst">Kwaai's pAI-OS, holding her key and answering from standing consent — until the one thing it has no way to ask her about.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -437,7 +437,7 @@ make kagent</code></div>
       </table>
     </div>
 
-    <p class="setup-after">Then open <strong>https://portal.uma.lab</strong> on the right screen, log in as <strong>alice / alice-demo</strong>, and start the run-through. A cluster this fresh already has zero connections, so there is nothing to clear.</p>
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> on the right and log in as <strong>alice / alice-demo</strong>. Leave it on her pending queue — half this demo is about what never lands there.</p>
 
     <div class="afters">
       <div class="after">
@@ -476,7 +476,7 @@ make kagent MODEL=openai</code></div>
   <hr class="rule">
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Terminal on the left, her portal on the right. One question gets asked twice, on purpose.</p>
+    <p class="run-note">Her portal stays on screen throughout, and for most of this demo nothing lands in it. Point at the empty queue — that is the result.</p>
 
     <div class="table-scroll">
       <table>
@@ -493,9 +493,6 @@ make kagent MODEL=openai</code></div>
           </tr>
         </thead>
         <tbody>
-
-
-
         <tr class="term">
           <td class="num">0</td>
           <td class="act">
@@ -503,8 +500,10 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
           </td>
           <td class="say">
-            <span class="lede">Display the status of the entire lab</span>
-            Every containers status 
+            <span class="lede">Show the whole lab first.</span>
+            <code>paios</code> sits in <strong>her</strong> namespace, beside
+            her authority and her portal — not in Bob's, and not in Meridian's.
+            It is another way of reaching her, not another way around her.
           </td>
         </tr>
 
@@ -515,22 +514,25 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 1 · Holdings summary</span>
-            <span class="lede">Bob's agent is about to ask for Alice's holdings.</span>
-            This is stock kagent. Nobody changed it, and it has never heard of UMA. All it sees is three MCP tools.
+            <span class="chip held">Held for her</span>
+            <span class="lede">Start with the ordinary shape: she is asked.</span>
+            Approve it in her portal. Do this first so the room has seen a
+            normal request land before it stops landing.
           </td>
         </tr>
 
-        <tr class="port">
+        <tr class="term">
           <td class="num">2</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Badge shows 1 → <span class="btn approve">Approve</span></span>
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-paios</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stopped. Alice has never met this agent.</span>
-            Nothing happens until she says yes. Approve, and the holdings come back on the left. <strong>What she granted covers that one call and nothing else.</strong>
+            <span class="lede">Her personal AI starts answering.</span>
+            Kwaai's pAI-OS, running our ability, holding her key. It
+            authenticates to her authority with an RFC 9421 signature rather
+            than a browser session — <strong>it is her, arriving a different
+            way</strong>, and her policy still decides.
           </td>
         </tr>
 
@@ -541,48 +543,58 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 2 · Transactions</span>
-            <span class="lede">Now it wants her transaction history.</span>
-            That is a different tier. Letting it see her holdings gave it no access to this.
+            <span class="chip through">Through · no approval</span>
+            <span class="lede">Answered in seconds, and her portal never moves.</span>
+            <strong>Point at the empty queue on the right.</strong> The log
+            still prints <em>Alice has been asked</em> — she was — and the
+            answer came back from standing consent she gave ahead of time. She
+            is asleep, and this is what "she is not woken" looks like from the
+            other side.
           </td>
         </tr>
 
-        <tr class="port">
+        <tr class="term">
           <td class="num">4</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn approve">Approve</span></span>
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stops again, and this is the last time.</span>
-            She approves each tier once. <strong>Tell them to watch what happens when it asks for the same thing again.</strong>
+            <span class="chip refused">Refused</span>
+            <span class="lede">The trade is refused, not answered and not held.</span>
+            Her AI has no channel to wake her, so it will not guess on her
+            behalf: it records <em>no channel to her</em> and stops.
+            <strong>Standing consent is not a stand-in for her.</strong> The
+            surface that cannot ask her is the surface that says no.
           </td>
         </tr>
 
         <tr class="term">
           <td class="num">5</td>
           <td class="act">
-            <span class="where">Terminal — same question again</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-paios-down</code></div>
           </td>
           <td class="say">
-            <span class="chip through">Through · no approval</span>
-            <span class="lede">Nothing stopped. Nobody approved this one.</span>
-            Same question as before. Her terms already covered it, so it went straight through while she was away. <strong>The portal never moved.</strong>
+            <span class="lede">Hand the decisions back.</span>
+            Nothing is rebuilt and nothing is lost. Her portal is the surface
+            again.
           </td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">6</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
+            <span class="where">Portal</span>
+            <span class="click"><span class="btn approve">Approve</span> or <span class="btn deny">Deny</span></span>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 3 · Trade execution</span>
-            <span class="lede">Now it wants to sell her shares.</span>
-            She marked this tier ask-me, so it stops and waits for her. The agent just sees a slow tool call.
+            <span class="chip held">Held for her</span>
+            <span class="lede">Run step 4 again — now it waits for her.</span>
+            Same protocol, same tier, same request. A different surface is
+            answering, and the one that can reach her is the one allowed to
+            decide this. <strong>Both surfaces doing the part each can do</strong>,
+            and neither pretending to be the other.
           </td>
         </tr>
 
@@ -590,28 +602,16 @@ make kagent MODEL=openai</code></div>
           <td class="num">7</td>
           <td class="act">
             <span class="where">Portal</span>
-            <span class="click"><span class="btn deny">Deny</span></span>
-          </td>
-          <td class="say">
-            <span class="chip refused">Refused</span>
-            <span class="lede">She says no, and the trade does not happen.</span>
-            The agent stops there. It has no leftover token to retry with.
-          </td>
-        </tr>
-
-        <tr class="port">
-          <td class="num">8</td>
-          <td class="act">
-            <span class="where">Portal</span>
             <span class="click">Settings → Security → <span class="btn plain">Agent Authorization</span></span>
           </td>
           <td class="say">
-            <span class="lede">Everything is recorded on her side.</span>
-            Each agent, what it promised, what it touched, and what she approved or refused. <strong>Click Revoke</strong> if they ask what happens next.
+            <span class="lede">One ledger, both surfaces.</span>
+            The grant her AI made and the one she made herself sit in the same
+            record, against the same agent, correlated to the same
+            negotiation. <strong>Her ledger does not distinguish them, and it
+            should not</strong> — both were her.
           </td>
         </tr>
-
-      
         </tbody>
       </table>
     </div>

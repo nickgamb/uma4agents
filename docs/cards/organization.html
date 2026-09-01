@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Alice to Bob Demo Card</title>
+<title>The Firm's Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -353,8 +353,8 @@
 
 <div class="wrap">
   <header class="masthead">
-    <h1>Alice to Bob Demo Card</h1>
-    <p class="standfirst">Three questions to Bob's agent. Watch Alice's side, not the agent's.</p>
+    <h1>The Firm's Book</h1>
+    <p class="standfirst">Northwind shares part of its book with Alice under a role. She administers it at her own authority, and only for as long as she is a member.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -364,8 +364,8 @@
     </div>
     <div class="screen right">
       <span class="side">Right screen</span>
-      <span class="what">Alice's portal</span>
-      <span class="detail">https://portal.uma.lab</span>
+      <span class="what">Her portal + the console</span>
+      <span class="detail">portal.uma.lab · org-console.uma.lab</span>
     </div>
   </section>
   <section class="setup">
@@ -437,7 +437,7 @@ make kagent</code></div>
       </table>
     </div>
 
-    <p class="setup-after">Then open <strong>https://portal.uma.lab</strong> on the right screen, log in as <strong>alice / alice-demo</strong>, and start the run-through. A cluster this fresh already has zero connections, so there is nothing to clear.</p>
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> (<strong>alice / alice-demo</strong>) and the administrator's console at <strong>https://org-console.uma.lab</strong> (<strong>dana / dana-demo</strong>).</p>
 
     <div class="afters">
       <div class="after">
@@ -476,7 +476,7 @@ make kagent MODEL=openai</code></div>
   <hr class="rule">
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Terminal on the left, her portal on the right. One question gets asked twice, on purpose.</p>
+    <p class="run-note">Her portal and the firm's console, side by side. Step 1 is what brings the resource into existence, so it cannot be skipped or pre-baked.</p>
 
     <div class="table-scroll">
       <table>
@@ -493,9 +493,6 @@ make kagent MODEL=openai</code></div>
           </tr>
         </thead>
         <tbody>
-
-
-
         <tr class="term">
           <td class="num">0</td>
           <td class="act">
@@ -503,34 +500,42 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
           </td>
           <td class="say">
-            <span class="lede">Display the status of the entire lab</span>
-            Every containers status 
+            <span class="lede">Show the whole lab first.</span>
+            <code>northwind</code> is the firm: an authority and a console of
+            its own, in its own namespace. It is not above her authority in
+            <code>alice</code> — by the end you will have shown that it cannot
+            answer for her.
           </td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">1</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
+            <span class="where">Her portal</span>
+            <span class="click">Agent Access → Organization</span>
+            <div class="cmdwrap"><code class="cmd">Enrolment code:  NW-7K2F-QX</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 1 · Holdings summary</span>
-            <span class="lede">Bob's agent is about to ask for Alice's holdings.</span>
-            This is stock kagent. Nobody changed it, and it has never heard of UMA. All it sees is three MCP tools.
+            <span class="lede">Alice joins Northwind, and has to agree to do it.</span>
+            The preview shows what the role would give her and what the firm
+            would require. Her authority <strong>refuses a join without the
+            tick</strong> and records what she agreed to, because this changes
+            the bargain rather than a setting.
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">2</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Badge shows 1 → <span class="btn approve">Approve</span></span>
+            <span class="where">Her portal</span>
+            <span class="click">Agent Access → Organization</span>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stopped. Alice has never met this agent.</span>
-            Nothing happens until she says yes. Approve, and the holdings come back on the left. <strong>What she granted covers that one call and nothing else.</strong>
+            <span class="chip through">Joining grants something</span>
+            <span class="lede">The firm's book is now in her authority, marked shared.</span>
+            It was not there a minute ago. <strong>She administers it; she
+            does not own it</strong> — and her portal says which, because the
+            difference decides what happens when she leaves.
           </td>
         </tr>
 
@@ -538,80 +543,80 @@ make kagent MODEL=openai</code></div>
           <td class="num">3</td>
           <td class="act">
             <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
+            <div class="cmdwrap"><code class="cmd">make kagent RESOURCE=shared</code></div>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 2 · Transactions</span>
-            <span class="lede">Now it wants her transaction history.</span>
-            That is a different tier. Letting it see her holdings gave it no access to this.
+            <span class="lede">Point an agent at the firm's book.</span>
+            <strong>That resource did not exist until step 1.</strong> Its
+            published metadata names <em>her</em> authority, not Northwind's:
+            the firm holds the book and enforces the charter, and still cannot
+            answer a request about it.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask RESOURCE=shared Q="What is in the firm's book?" SIM=0</code></div>
+          </td>
+          <td class="say">
+            <span class="chip tier">Shared · analyst role</span>
+            <span class="lede">It stops — and it stops at her portal.</span>
+            A request about the firm's asset, waiting on a member's decision,
+            at the member's own authorization server.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">4</td>
+          <td class="num">5</td>
           <td class="act">
-            <span class="where">Portal</span>
+            <span class="where">Her portal</span>
             <span class="click"><span class="btn approve">Approve</span></span>
           </td>
           <td class="say">
             <span class="chip held">Held for her</span>
-            <span class="lede">It stops again, and this is the last time.</span>
-            She approves each tier once. <strong>Tell them to watch what happens when it asks for the same thing again.</strong>
+            <span class="lede">She allows it: NWCF, NWEQ, TLT, VNQ.</span>
+            The firm's book — <strong>not her portfolio</strong>. Her own
+            account was never in scope for this agent, and the role is what
+            drew that line.
           </td>
         </tr>
 
-        <tr class="term">
-          <td class="num">5</td>
-          <td class="act">
-            <span class="where">Terminal — same question again</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
-          </td>
-          <td class="say">
-            <span class="chip through">Through · no approval</span>
-            <span class="lede">Nothing stopped. Nobody approved this one.</span>
-            Same question as before. Her terms already covered it, so it went straight through while she was away. <strong>The portal never moved.</strong>
-          </td>
-        </tr>
-
-        <tr class="term">
+        <tr class="port">
           <td class="num">6</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
+            <span class="where">The console</span>
+            <span class="click">Groups · Charter → Rules</span>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 3 · Trade execution</span>
-            <span class="lede">Now it wants to sell her shares.</span>
-            She marked this tier ask-me, so it stops and waits for her. The agent just sees a slow tool call.
+            <span class="lede">The charter's two halves, on two pages.</span>
+            <strong>Groups</strong> is what a member gets and agrees to;
+            saving one publishes a charter version, because it changes the
+            bargain. <strong>Charter → Rules</strong> is what the firm
+            enforces operationally, in Rego, and it can only refuse or
+            interrupt — never grant, and never answer for her. The test for
+            which page a rule belongs on: <em>would a member have to agree to
+            it again?</em>
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">7</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn deny">Deny</span></span>
+            <span class="where">Her portal</span>
+            <span class="click">Organization → <span class="btn plain">Leave</span></span>
           </td>
           <td class="say">
-            <span class="chip refused">Refused</span>
-            <span class="lede">She says no, and the trade does not happen.</span>
-            The agent stops there. It has no leftover token to retry with.
+            <span class="chip refused">Taken back</span>
+            <span class="lede">Run step 4 again: refused, and the resource is gone.</span>
+            <strong>Leaving takes back exactly what joining gave</strong>, and
+            nothing of hers goes with it — her own account, her tiers and her
+            ledger are untouched. What the firm shared was never hers to keep,
+            which is the whole difference between a resource of hers and a
+            resource of theirs.
           </td>
         </tr>
-
-        <tr class="port">
-          <td class="num">8</td>
-          <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Settings → Security → <span class="btn plain">Agent Authorization</span></span>
-          </td>
-          <td class="say">
-            <span class="lede">Everything is recorded on her side.</span>
-            Each agent, what it promised, what it touched, and what she approved or refused. <strong>Click Revoke</strong> if they ask what happens next.
-          </td>
-        </tr>
-
-      
         </tbody>
       </table>
     </div>

@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Alice to Bob Demo Card</title>
+<title>Two Owners, One Account</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -353,8 +353,8 @@
 
 <div class="wrap">
   <header class="masthead">
-    <h1>Alice to Bob Demo Card</h1>
-    <p class="standfirst">Three questions to Bob's agent. Watch Alice's side, not the agent's.</p>
+    <h1>Two Owners, One Account</h1>
+    <p class="standfirst">An account Alice and Carol hold together. Ask its agent a question and watch neither of them be able to answer it alone.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -364,8 +364,8 @@
     </div>
     <div class="screen right">
       <span class="side">Right screen</span>
-      <span class="what">Alice's portal</span>
-      <span class="detail">https://portal.uma.lab</span>
+      <span class="what">Two portals</span>
+      <span class="detail">portal.uma.lab · carol-portal.uma.lab</span>
     </div>
   </section>
   <section class="setup">
@@ -437,7 +437,7 @@ make kagent</code></div>
       </table>
     </div>
 
-    <p class="setup-after">Then open <strong>https://portal.uma.lab</strong> on the right screen, log in as <strong>alice / alice-demo</strong>, and start the run-through. A cluster this fresh already has zero connections, so there is nothing to clear.</p>
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> (<strong>alice / alice-demo</strong>) and <strong>https://carol-portal.uma.lab</strong> (<strong>carol / carol-demo</strong>) side by side on the right screen.</p>
 
     <div class="afters">
       <div class="after">
@@ -476,7 +476,7 @@ make kagent MODEL=openai</code></div>
   <hr class="rule">
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Terminal on the left, her portal on the right. One question gets asked twice, on purpose.</p>
+    <p class="run-note">Two portals on the right, not one. Steps 1 to 3 are the two of them agreeing to hold something together — do them live, they are half the point.</p>
 
     <div class="table-scroll">
       <table>
@@ -493,9 +493,6 @@ make kagent MODEL=openai</code></div>
           </tr>
         </thead>
         <tbody>
-
-
-
         <tr class="term">
           <td class="num">0</td>
           <td class="act">
@@ -503,115 +500,157 @@ make kagent MODEL=openai</code></div>
             <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
           </td>
           <td class="say">
-            <span class="lede">Display the status of the entire lab</span>
-            Every containers status 
+            <span class="lede">Show the whole lab first.</span>
+            Every party in its own namespace. Point out <code>tally</code>: it
+            is its own party, it owns nothing, and it is about to be the thing
+            neither owner has to trust.
           </td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">1</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
+            <span class="where">Alice's portal</span>
+            <span class="click">Agent Access → Joint accounts</span>
+            <div class="cmdwrap"><code class="cmd">Where it is counted:  https://joint-tally.uma.lab
+Account:              meridian-joint</code></div>
+            <span class="click">→ <span class="btn plain">See what this commits you to</span></span>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 1 · Holdings summary</span>
-            <span class="lede">Bob's agent is about to ask for Alice's holdings.</span>
-            This is stock kagent. Nobody changed it, and it has never heard of UMA. All it sees is three MCP tools.
+            <span class="lede">She reads the deal before she agrees to it.</span>
+            It names <strong>Carol</strong> as the other holder and says
+            <em>"Every holder has to allow a request. Any one of you can stop
+            it."</em> Tick the box and <strong>Join</strong>. Her authority
+            refuses a join without that tick, and records what she agreed to.
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">2</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Badge shows 1 → <span class="btn approve">Approve</span></span>
+            <span class="where">Carol's portal</span>
+            <span class="click">Agent Access → Joint accounts</span>
+            <div class="cmdwrap"><code class="cmd">Where it is counted:  https://joint-tally.uma.lab
+Account:              meridian-joint</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stopped. Alice has never met this agent.</span>
-            Nothing happens until she says yes. Approve, and the holdings come back on the left. <strong>What she granted covers that one call and nothing else.</strong>
-          </td>
-        </tr>
-
-        <tr class="term">
-          <td class="num">3</td>
-          <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
-          </td>
-          <td class="say">
-            <span class="chip tier">Tier 2 · Transactions</span>
-            <span class="lede">Now it wants her transaction history.</span>
-            That is a different tier. Letting it see her holdings gave it no access to this.
+            <span class="lede">Carol does the same at her own authority.</span>
+            Two people, two authorities, one account. <strong>Neither was
+            enrolled by the other naming her</strong> — being a co-owner is
+            something you agree to, not something done to you.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">4</td>
+          <td class="num">3</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn approve">Approve</span></span>
+            <span class="where">Both portals</span>
+            <span class="click">My Terms → new tier</span>
+            <div class="cmdwrap"><code class="cmd">ALICE                              CAROL
+Name it:      Joint - Alice        Joint - Carol
+Governs:      meridian-joint       meridian-joint
+Expires after: 3600                900
+Prohibited:   model-training       resale-to-third-parties</code></div>
           </td>
           <td class="say">
-            <span class="chip held">Held for her</span>
-            <span class="lede">It stops again, and this is the last time.</span>
-            She approves each tier once. <strong>Tell them to watch what happens when it asks for the same thing again.</strong>
+            <span class="lede">Each writes her own terms, at her own authority.</span>
+            Alice is looser on every field on purpose, so that
+            <strong>every narrowing you see in step 7 came from Carol</strong>.
+            Terms over something held jointly get a tier of their own — one
+            edit here would change what the other holder's agents are held to.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent RESOURCE=joint</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">Point Bob's agent at the joint account.</span>
+            Nothing about the agent is joint-aware. The resource publishes its
+            own authority, so <strong>it finds out it needs two people by
+            asking</strong>, not by being configured.
           </td>
         </tr>
 
         <tr class="term">
           <td class="num">5</td>
           <td class="act">
-            <span class="where">Terminal — same question again</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Show me her transaction history and cost basis." SIM=0</code></div>
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask RESOURCE=joint Q="What is in the joint account?" SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="chip through">Through · no approval</span>
-            <span class="lede">Nothing stopped. Nobody approved this one.</span>
-            Same question as before. Her terms already covered it, so it went straight through while she was away. <strong>The portal never moved.</strong>
+            <span class="chip tier">Held jointly · all of 2</span>
+            <span class="lede">It stops, and two portals light up.</span>
+            One question, asked of one agent, has become a decision waiting on
+            two different people at two different authorities.
           </td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">6</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
+            <span class="where">Alice's portal</span>
+            <span class="click"><span class="btn approve">Approve</span></span>
           </td>
           <td class="say">
-            <span class="chip tier">Tier 3 · Trade execution</span>
-            <span class="lede">Now it wants to sell her shares.</span>
-            She marked this tier ask-me, so it stops and waits for her. The agent just sees a slow tool call.
+            <span class="chip held">One of two</span>
+            <span class="lede">Alice says yes and nothing happens.</span>
+            Let it sit for a beat. The terminal is still waiting.
+            <strong>One holder is not a decision</strong>, and there is no
+            majority to round up to.
           </td>
         </tr>
 
         <tr class="port">
           <td class="num">7</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click"><span class="btn deny">Deny</span></span>
+            <span class="where">Carol's portal</span>
+            <span class="click"><span class="btn approve">Approve</span></span>
           </td>
           <td class="say">
-            <span class="chip refused">Refused</span>
-            <span class="lede">She says no, and the trade does not happen.</span>
-            The agent stops there. It has no leftover token to retry with.
+            <span class="chip through">Both · granted</span>
+            <span class="lede">Now it completes: VTSAX, VBTLX, MMDA.</span>
+            Read the folded document out of the log —
+            <strong>900 seconds</strong> (Carol's, the shorter),
+            <strong>positions:read only</strong> (all they both offer), and
+            <strong>both prohibitions</strong>. One agreement, made of two
+            people's terms. The grant carries a signed verdict from each, and
+            the gateway re-ran the count itself before letting it through — so
+            a tally that invented a yes dies at the door.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">8</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask RESOURCE=joint Q="Sell 400 shares of VTSAX from the joint account." SIM=0</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">Now ask it to move their money.</span>
+            Both are asked again. Nothing was carried over from last time —
+            the previous grant was spent.
           </td>
         </tr>
 
         <tr class="port">
-          <td class="num">8</td>
+          <td class="num">9</td>
           <td class="act">
-            <span class="where">Portal</span>
-            <span class="click">Settings → Security → <span class="btn plain">Agent Authorization</span></span>
+            <span class="where">Carol's portal</span>
+            <span class="click"><span class="btn deny">Deny</span></span>
           </td>
           <td class="say">
-            <span class="lede">Everything is recorded on her side.</span>
-            Each agent, what it promised, what it touched, and what she approved or refused. <strong>Click Revoke</strong> if they ask what happens next.
+            <span class="chip refused">Refused</span>
+            <span class="lede">Carol refuses, and it is over immediately.</span>
+            <strong>Alice is never asked.</strong> Under a mandate that needs
+            everybody, one refusal settles it and nobody waits for the rest —
+            which is also why the tally cannot stall a decision by sitting on
+            it.
           </td>
         </tr>
-
-      
         </tbody>
       </table>
     </div>
