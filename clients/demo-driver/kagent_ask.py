@@ -32,6 +32,26 @@ QUESTION = os.environ.get("KAGENT_QUESTION", "What is in Alice's portfolio?")
 # person is at her portal, which is the only way to show that the wait is real.
 SIM = os.environ.get("KAGENT_SIM", "1") != "0"
 
+# How long the requesting side keeps checking, and how often. The owner may be
+# asleep, and nothing here holds a connection open while she is.
+#
+# Unhurried on purpose. Checking is cheap — the adapter resumes the request she
+# is already deciding rather than opening another one — but a check that fails
+# to resume falls back to negotiating, and *that* spends a slice of the
+# attention budget her authority keeps per agent. Asking every few seconds is
+# how a well-meaning agent turns into the thing she throttles.
+POLL_FOR_S = int(os.environ.get("KAGENT_POLL_FOR", "1800"))
+POLL_EVERY_S = int(os.environ.get("KAGENT_POLL_EVERY", "45"))
+
+
+def _is_pending(body: dict) -> bool:
+    """Did the agent come back still waiting on her?
+
+    Read off the adapter's own word rather than the model's prose, which
+    varies with the model and cannot be relied on.
+    """
+    return "PENDING" in json.dumps(body).upper()
+
 
 def say(msg: str) -> None:
     print(f"   {msg}", flush=True)
@@ -109,19 +129,46 @@ def main() -> int:
     if not SIM:
         say("[alice] nobody is answering for her — decide it in her portal.")
 
-    payload = {
-        "jsonrpc": "2.0", "id": uuid.uuid4().hex, "method": "message/send",
-        "params": {"message": {
-            "role": "user", "messageId": uuid.uuid4().hex,
-            "parts": [{"kind": "text", "text": QUESTION}],
-        }},
-    }
-    with httpx.Client(timeout=420.0) as c:
-        r = c.post(A2A, json=payload)
-        if r.status_code >= 400:
-            print(f"FAIL: the agent could not be reached: {r.status_code} {r.text[:200]}")
+    def send() -> dict | int:
+        payload = {
+            "jsonrpc": "2.0", "id": uuid.uuid4().hex, "method": "message/send",
+            "params": {"message": {
+                "role": "user", "messageId": uuid.uuid4().hex,
+                "parts": [{"kind": "text", "text": QUESTION}],
+            }},
+        }
+        with httpx.Client(timeout=420.0) as c:
+            r = c.post(A2A, json=payload)
+            if r.status_code >= 400:
+                print(f"FAIL: the agent could not be reached: "
+                      f"{r.status_code} {r.text[:200]}")
+                return r.status_code
+            return r.json()
+
+    # Ask, and keep asking while the answer is "she has not decided yet".
+    #
+    # The wait belongs to the owner, not to a socket: the adapter hands a pend
+    # back as a result so nothing has to hold a connection open across it, and
+    # what closes the loop is somebody asking again. A capable model does that
+    # by itself when a tool says PENDING; a small one says something reassuring
+    # and stops, which looks identical to a refusal and is not one. So the
+    # asking side polls too, and the demo works either way.
+    #
+    # Each attempt resumes the same pend at her authority rather than opening a
+    # second one, so she sees one request no matter how many times it is
+    # checked.
+    deadline = time.time() + POLL_FOR_S
+    attempt = 0
+    while True:
+        attempt += 1
+        body = send()
+        if isinstance(body, int):
             return 1
-        body = r.json()
+        if SIM or not _is_pending(body) or time.time() > deadline:
+            break
+        say(f"[pending] she has not answered yet — asking again "
+            f"(attempt {attempt + 1})")
+        time.sleep(POLL_EVERY_S)
 
     if approving is not None:
         approving.set()

@@ -80,6 +80,12 @@ spec:
             # is the shim's documented fallback, not a special case for kagent.
             - name: UMA4A_STANDING_MAX_EXPIRES
               value: "604800"
+            # Short, because the caller polls. Every second spent holding here
+            # is a second of somebody else's deadline — the framework's own
+            # HTTP client, in kagent's case — and the wait does not belong to
+            # any of them. Check, say "not yet", come back.
+            - name: UMA4A_PEND_HANDBACK
+              value: "5"
             - name: PYTHONPATH
               value: /shim/lib
             - name: PYTHONUNBUFFERED

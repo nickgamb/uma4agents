@@ -51,6 +51,7 @@ from mcp.shared.exceptions import MCPError
 from pydantic import BaseModel
 
 from uma4a_grant import (
+    GRANT_TYPE,
     AgentKeys,
     DiscoveryMismatch,
     GrantDenied,
@@ -75,6 +76,14 @@ TRANSPORT = os.environ.get("UMA4A_SHIM_TRANSPORT", "stdio")
 SHIM_HOST = os.environ.get("UMA4A_SHIM_HOST", "127.0.0.1")
 SHIM_PORT = int(os.environ.get("UMA4A_SHIM_PORT", "9030"))
 AGENT_ISSUER = os.environ.get("UMA4A_AGENT_ISSUER")
+# The operator this agent belongs to. Setting it publishes the signing key in
+# that operator's key directory and names it as the agent's client id — the two
+# halves an owner's authority checks before it will call an agent hers.
+#
+# Pointing at an origin she has claimed is what makes this *her* agent rather
+# than one that merely says so: anybody may name her origin, and only she can
+# put a key in her directory.
+PUBLISH_TO = os.environ.get("UMA4A_PUBLISH_TO")
 PERSON_TOKEN = os.environ.get("UMA4A_PERSON_TOKEN")
 AUTHORITY = httpx.URL(GATEWAY).host
 MCP_PATH = httpx.URL(GATEWAY).path
@@ -107,7 +116,15 @@ def bootstrap_identity() -> AgentKeys:
     Identified: the persisted key becomes the stable key, a fresh session
     key signs everything, and the issuer's aa-agent+jwt binds them."""
     if not AGENT_ISSUER:
-        return AgentKeys.load_or_create(KEYSTORE)
+        k = AgentKeys.load_or_create(KEYSTORE)
+        if PUBLISH_TO:
+            with httpx.Client(verify=CACERT, timeout=30.0) as client:
+                k.client_id = f"{PUBLISH_TO}/agent.json"
+                k.signature_agent = k.publish(client, PUBLISH_TO)
+            log(f"published this agent's key at {PUBLISH_TO}"
+                if k.signature_agent else
+                f"could not reach {PUBLISH_TO} — running unattributed")
+        return k
     from uma4a_enroll import enroll
 
     k = AgentKeys.load_or_create_identified(KEYSTORE)
@@ -157,6 +174,31 @@ class KeepWaiting(BaseModel):
 # Short on purpose: the point is that a pend is a protocol state to be
 # *rendered*, not a call to be held open.
 PEND_HANDBACK_S = int(os.environ.get("UMA4A_PEND_HANDBACK", 15))
+
+
+class PendingHandback(Exception):
+    """The owner has not decided, and this client cannot be asked to wait.
+
+    Raised instead of holding the call open. A client that can render a wait
+    gets an elicitation; one that cannot — an autonomous agent, a framework,
+    anything without a person attached to the connection — gets a tool result
+    that says "not yet, ask again", which is a thing a model can act on.
+    """
+
+    def __init__(self, as_uri: str, ticket: str) -> None:
+        super().__init__("the owner has not decided yet")
+        self.as_uri, self.ticket = as_uri, ticket
+
+
+# Pends this shim is holding for a client that polls, keyed by the call they
+# belong to. The owner may take all night; what must survive that is the
+# *ticket*, so the next call resumes her one decision rather than asking her a
+# second time.
+OUTSTANDING: dict[str, dict] = {}
+
+
+def pend_key(tool: str, args: dict) -> str:
+    return f"{tool}:{json.dumps(args or {}, sort_keys=True)}"
 
 
 class Upstream:
@@ -268,7 +310,63 @@ class Upstream:
             return data["as_uri"], data["ticket"]
         return None
 
+    async def resume(self, held: dict) -> str | None | str:
+        """Poll a pend this shim is already holding.
+
+        Returns the RPT once she has allowed it, the string "pending" while
+        she has not answered, and None if the ticket is no longer usable.
+        Presenting the ticket she is already deciding costs nothing against
+        her attention budget: it is the same request, asked once.
+        """
+        try:
+            r = await self.client.post(
+                f"{held['as_uri']}/token",
+                data={"grant_type": GRANT_TYPE, "ticket": held["ticket"]})
+            body = r.json()
+        except Exception as exc:                                # noqa: BLE001
+            log(f"could not poll the held ticket: {type(exc).__name__}")
+            return None
+        if body.get("error") == "request_submitted":
+            # The AS rotates the ticket on every poll; keep the current one or
+            # the next check is presenting something already spent.
+            held["ticket"] = body.get("ticket", held["ticket"])
+            log("still waiting on her — the same request, not a new one")
+            return "pending"
+        if "access_token" in body:
+            log("she answered the request that was already waiting")
+            if body.get("receipt"):
+                store_receipt(body["receipt"])
+            return body["access_token"]
+        log(f"the held request ended: {body.get('error', 'unknown')}")
+        return None
+
     async def call_tool(self, ctx: Context, tool: str, args: dict,
+                        operation: dict | None = None,
+                        reason: str | None = None) -> str:
+        """The tool call, with a pend rendered as an answer rather than a wait.
+
+        A pend is a normal state of this protocol, not an error and not a hang.
+        For a client with a person on it that is an elicitation; for one
+        without, it is this — a result that says the owner has not decided yet
+        and the call should be made again. Which means the owner can take all
+        night, and nothing between here and her has to hold a socket open for
+        it.
+        """
+        try:
+            return await self._call_tool(ctx, tool, args, operation=operation,
+                                         reason=reason)
+        except PendingHandback as pend:
+            return (
+                "PENDING — the resource owner has not decided this yet.\n"
+                "This is normal and is not an error. She has been asked, the "
+                "request is holding at her authorization server, and she may "
+                "take minutes or hours.\n"
+                "Call this same tool again, with the same arguments, to check "
+                "whether she has answered. Do not change the request and do "
+                "not give up after one attempt."
+            )
+
+    async def _call_tool(self, ctx: Context, tool: str, args: dict,
                         operation: dict | None = None,
                         reason: str | None = None) -> str:
         mission = MISSION
@@ -284,8 +382,42 @@ class Upstream:
         else:
             challenge = self._jsonrpc_challenge(payload)
 
+        # Before negotiating anything, see whether this exact call is already
+        # waiting on her. Re-asking would open a *second* request and spend
+        # another slice of her attention budget — her authority counts those,
+        # and it is right to: an agent that asks five times has asked five
+        # times, however politely each one was worded.
+        key = pend_key(tool, params.get("arguments") or {})
+        held = OUTSTANDING.get(key)
+        if held is not None:
+            resumed = await self.resume(held)
+            if resumed == "pending":
+                raise PendingHandback(held["as_uri"], held["ticket"])
+            if resumed is not None:
+                OUTSTANDING.pop(key, None)
+                headers = signed_headers("POST", AUTHORITY, MCP_PATH, resumed, keys)
+                r, payload = await self.request("tools/call", params,
+                                                headers=headers)
+                if r.status_code == 200 and not (payload or {}).get("error"):
+                    try:
+                        return payload["result"]["content"][0]["text"]
+                    except (KeyError, IndexError, TypeError):
+                        return json.dumps(payload)
+            else:
+                # The ticket died rather than being decided. Fall through and
+                # negotiate again — that does cost her a slot, and it is the
+                # honest thing to spend one on.
+                OUTSTANDING.pop(key, None)
+                log("the held ticket is no longer valid; negotiating afresh")
+
         if challenge is not None:
             as_uri, ticket = challenge
+            # Deliberately *not* re-presenting the ticket the last attempt
+            # was holding: the AS rotates it per poll and rejects a stale one
+            # with invalid_grant. The fresh challenge is the right way back in
+            # — the request is identified by this agent's key and the
+            # operation it is asking for, so a retry rejoins the decision
+            # already in front of her rather than starting a second one.
             log(f"challenged by {as_uri}; negotiating")
             prm = await self.resource_metadata()
             if prm is not None:
@@ -309,14 +441,20 @@ class Upstream:
             async def still_waiting(pend: dict) -> bool:
                 return await keep_waiting(ctx, tool, pend)
 
-            rpt = await run_grant_async(
-                self.client, as_uri, ticket, keys, approve,
-                operation=operation, reason=reason, mission=mission,
-                on_status=log,
-                on_receipt=store_receipt,
-                max_wait_s=PEND_HANDBACK_S,
-                on_pending=still_waiting,
-            )
+            key = pend_key(tool, params.get("arguments") or {})
+            try:
+                rpt = await run_grant_async(
+                    self.client, as_uri, ticket, keys, approve,
+                    operation=operation, reason=reason, mission=mission,
+                    on_status=log,
+                    on_receipt=store_receipt,
+                    max_wait_s=PEND_HANDBACK_S,
+                    on_pending=still_waiting,
+                )
+            except PendingHandback as pend:
+                OUTSTANDING[key] = {"as_uri": pend.as_uri, "ticket": pend.ticket}
+                raise
+            OUTSTANDING.pop(key, None)
             headers = signed_headers("POST", AUTHORITY, MCP_PATH, rpt, keys)
             r, payload = await self.request("tools/call", params, headers=headers)
 
@@ -365,8 +503,14 @@ async def keep_waiting(ctx: Context, tool: str, pend: dict) -> bool:
     try:
         result = await ctx.elicit(message=message, schema=KeepWaiting)
     except MCPError:
-        log("client cannot render the pend; continuing to hold the call open")
-        return True
+        # Holding the call open was the old fallback, and it is wrong for
+        # exactly the clients that hit it: an agent framework has no person on
+        # the connection to ask, and something upstream — its own HTTP client,
+        # a gateway, a controller — gives up long before the owner wakes.
+        # Hand the pend back as a result instead, with the ticket, so the
+        # agent can poll and she can take as long as she likes.
+        log("client cannot render the pend; handing it back to be polled")
+        raise PendingHandback(pend["as_uri"], pend["ticket"])
     if result.action == "accept" and result.data:
         return result.data.keep_waiting
     log("requesting side stopped waiting")

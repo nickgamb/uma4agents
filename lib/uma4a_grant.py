@@ -605,6 +605,12 @@ async def run_grant_async(
                 "as_uri": as_uri,
                 "interval": body.get("interval", 3),
                 "waited_s": max_wait_s,
+                # The live ticket, so a caller that hands the wait back to its
+                # own client can come back to *this* pend later instead of
+                # starting a second one. Without it the only way to retry is a
+                # fresh negotiation, which asks the owner the same question
+                # twice and leaves the first one orphaned in her queue.
+                "ticket": body["ticket"],
             }):
                 raise GrantDenied("the requesting side stopped waiting for the owner")
             deadline = time.time() + max_wait_s
