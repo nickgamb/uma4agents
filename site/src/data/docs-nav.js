@@ -94,6 +94,18 @@ const nav = {
       ],
     },
     {
+      group: "Lab demonstrations",
+      pages: [
+        { title: "Lab demonstrations", to: "/docs/guides/demos/" },
+        { title: "Alice to Bob", to: "/docs/guides/demo-alice-to-bob/" },
+        { title: "Two owners, one account", to: "/docs/guides/demo-joint-account/" },
+        { title: "Two owners, two authorities", to: "/docs/guides/demo-two-authorities/" },
+        { title: "Her own agent", to: "/docs/guides/demo-her-own-agent/" },
+        { title: "Her personal AI", to: "/docs/guides/demo-personal-ai/" },
+        { title: "The firm's book", to: "/docs/guides/demo-the-firms-book/" },
+      ],
+    },
+    {
       group: "Build the grant",
       pages: [
         { title: "Choose an enforcement point", to: "/docs/guides/enforcement-point/" },

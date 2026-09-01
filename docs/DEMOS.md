@@ -56,9 +56,13 @@ That is not a conflict to fix; it is what "she is not woken" looks like from
 the other side. `make paios-down` puts the requests back in front of her.
 
 What her personal AI does *not* answer is anything on an ask-me tier, because
-pAI-OS gives an ability no channel to reach her. Those pend, and her portal is
-still where she answers them. So the honest version of the second demo is:
-**both surfaces, doing the part each can do.**
+pAI-OS gives an ability no channel to reach her. It **refuses** those rather
+than holding them — the ability logs `denied — no channel to her` and the
+negotiation ends. A refusal it can justify is the safe answer when the one
+thing it cannot do is ask; a pend nobody can resolve would be worse. Run
+`make paios-down` and the same request waits for her portal instead. So the
+honest version of the second demo is: **both surfaces, doing the part each
+can do**, and neither pretending to be the other.
 
 ## An agent framework nobody modified
 
@@ -101,6 +105,35 @@ Full detail is in [KAGENT.md](KAGENT.md).
 there is no compose shape for it. What *does* run in compose is the part that
 matters — the adapter, and an unmodified MCP client using it (`make adapter`,
 `make adapter-check`).
+
+## Doing it live, with a person deciding
+
+Every check above answers for the owner, because a check has to. Each one also
+has a **demo** beside it that does not: the ticket is held, the log is followed
+rather than printed at the end, and somebody decides in a portal while the room
+watches. Nothing else differs — same driver, same beats, same ledger.
+
+```bash
+make k8s-demo ACT=tier1        # first contact, held for her
+make k8s-demo ACT=tier3        # the ask-me tier; approve or deny it
+make k8s-joint-demo            # both holders, in two portals
+make k8s-multi-owner-demo      # two authorities; try disagreeing
+make k8s-first-party-demo      # her agent and Bob's, under one rule
+make kagent-ask Q="..." SIM=0  # the same, asked by kagent
+```
+
+The wait is the demonstration, so these follow the Job's log instead of
+`run_job`'s wait-then-print: a pend and a hang look identical in an empty
+terminal. They also hold the ticket for fifteen minutes rather than two, which
+is the difference between "the loop should have finished" and "she is reading
+it on the other screen".
+
+Each uses a fresh agent key per run, so the agent is always a stranger and the
+request always reaches her — `make k8s-reset` is for rewinding her ledger, not
+for making the demo work twice.
+
+There is a run card for each of these under [cards/](cards/), with the commands,
+the clicks and what to say at each beat.
 
 ## Switching between them
 
@@ -155,7 +188,8 @@ would have to agree to it again. [ORG.md](ORG.md).
 ## Two owners, neither above the other
 
 ```bash
-make joint-check
+make joint-check               # the suite, answering for both of them
+make k8s-joint-demo            # the same account, with both of them deciding
 ```
 
 Meridian holds an account for Alice and Carol together. Neither of them can

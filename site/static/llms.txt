@@ -49,6 +49,13 @@ UMA 2.0. Listed in reading order.
 - [Guides · The roles you must fill](https://u4a.ai/docs/guides/roles.md): Six roles, what each one has to be able to do, and how to judge whether something in your stack can do it.
 - [Guides · Run the lab](https://u4a.ai/docs/guides/run-the-lab.md): A three-node deployment with one command, then the sequence that shows an owner deciding while she is the only one who can.
 - [Guides · Try it with Okta](https://u4a.ai/docs/guides/okta-cross-app-access.md): Register an AI agent, point it at an authorization server that is not Okta's, and watch an enterprise assertion and an owner's terms settle two halves of one request.
+- [Guides · Lab demonstrations](https://u4a.ai/docs/guides/demos.md): Six run sheets for demonstrating the lab to a room — what to type, what to click, and what is worth saying while it happens.
+- [Guides · Demo: Alice to Bob](https://u4a.ai/docs/guides/demo-alice-to-bob.md): Three questions to an agent nobody modified, and an owner deciding each one from her own portal.
+- [Guides · Demo: two owners, one account](https://u4a.ai/docs/guides/demo-joint-account.md): Two people join a mandate, write their own terms, and watch an agent be unable to get past either of them.
+- [Guides · Demo: two owners, two authorities](https://u4a.ai/docs/guides/demo-two-authorities.md): One agent, one key, two owners — opposite answers, and nothing anywhere reconciling them.
+- [Guides · Demo: her own agent](https://u4a.ai/docs/guides/demo-her-own-agent.md): One rule, one tier, two agents — hers goes through without waking her, and one that is not hers is asked anyway.
+- [Guides · Demo: her personal AI](https://u4a.ai/docs/guides/demo-personal-ai.md): Kwaai's pAI-OS holding her key and answering from standing consent — and refusing the one thing it has no way to ask her about.
+- [Guides · Demo: the firm's book](https://u4a.ai/docs/guides/demo-the-firms-book.md): Northwind shares part of its book with a member under a role — she administers it at her own authority, and only while she is a member.
 - [Guides · Choose an enforcement point](https://u4a.ai/docs/guides/enforcement-point.md): What the component that refuses has to be able to do, the two shapes it can take, and how to keep one implementation behind both.
 - [Guides · Issue the challenge](https://u4a.ai/docs/guides/challenge.md): Turning a refusal into the start of a negotiation — what the challenge carries, and the check that stops it being redirected.
 - [Guides · Dictate terms, take an agreement](https://u4a.ai/docs/guides/terms.md): How the owner's side proffers the conditions of access, what a signed echo has to prove, and the checks that stop an agent agreeing to something weaker.
