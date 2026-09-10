@@ -1,0 +1,727 @@
+<meta charset="utf-8">
+<title>Sub-agent Grants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ground:      #f0f0ea;
+    --surface:     #ffffff;
+    --surface-2:   #f6f6f1;
+    --line:        #d9d9d0;
+    --line-soft:   #e6e6de;
+    --ink:         #16171a;
+    --ink-mid:     #4a4d54;
+    --ink-dim:     #6f737b;
+    --lime:        #6f8410;
+    --lime-chip:   #eaf2c4;
+    --teal:        #3d6d81;
+    --teal-chip:   #dcecf2;
+    --amber:       #8a6316;
+    --amber-chip:  #f7e6c4;
+    --coral:       #b0442a;
+    --coral-chip:  #f7ddd5;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:     #0a0b0d;
+      --surface:    #121317;
+      --surface-2:  #16181d;
+      --line:       #24262c;
+      --line-soft:  #1c1e23;
+      --ink:        #ffffff;
+      --ink-mid:    #a9aeb6;
+      --ink-dim:    #757b83;
+      --lime:       #bcdb2c;
+      --lime-chip:  #262c10;
+      --teal:       #8cc2d4;
+      --teal-chip:  #16262c;
+      --amber:      #f2b955;
+      --amber-chip: #2e2413;
+      --coral:      #e8836b;
+      --coral-chip: #2e1a15;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:     #0a0b0d;
+    --surface:    #121317;
+    --surface-2:  #16181d;
+    --line:       #24262c;
+    --line-soft:  #1c1e23;
+    --ink:        #ffffff;
+    --ink-mid:    #a9aeb6;
+    --ink-dim:    #757b83;
+    --lime:       #bcdb2c;
+    --lime-chip:  #262c10;
+    --teal:       #8cc2d4;
+    --teal-chip:  #16262c;
+    --amber:      #f2b955;
+    --amber-chip: #2e2413;
+    --coral:      #e8836b;
+    --coral-chip: #2e1a15;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 40px 24px 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 10px; }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(30px, 4.6vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 17px;
+    color: var(--ink-mid);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  /* ---- screens ---- */
+  .screens { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .screens { grid-template-columns: 1fr; } }
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .screen .side {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .screen.left  { border-top: 2px solid var(--lime); }
+  .screen.right { border-top: 2px solid var(--teal); }
+  .screen.left  .side { color: var(--lime); }
+  .screen.right .side { color: var(--teal); }
+  .screen .what { font-size: 16px; font-weight: 600; }
+  .screen .detail { font-size: 13.5px; color: var(--ink-dim); font-family: var(--mono); }
+
+  /* ---- section headers ---- */
+  .setup, .runthrough { display: flex; flex-direction: column; gap: 10px; }
+  .setup h2, .runthrough h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0;
+  }
+  .setup-note, .run-note { margin: 0 0 4px; font-size: 14.5px; color: var(--ink-mid); max-width: 70ch; }
+  .setup-after { margin: 12px 0 0; font-size: 14.5px; color: var(--ink-mid); max-width: 78ch; }
+  .setup-after strong { color: var(--ink); }
+  .afters { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; align-items: start; }
+  .after {
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .after-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .after p { margin: 0; font-size: 14px; color: var(--ink-mid); }
+  .after .cmdwrap { margin: 3px 0 4px; }
+  .after code.cmd { font-size: 12px; }
+  .models-block {
+    margin-top: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .models { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 14px 18px; align-items: start; }
+  .model { display: flex; flex-direction: column; gap: 7px; }
+  .model-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--lime);
+  }
+  .model .cmdwrap { margin: 0; }
+  .after p strong { color: var(--ink); font-weight: 600; }
+  .after code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+  .rule { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
+  .setup-table tbody td { padding-top: 15px; padding-bottom: 15px; }
+
+  /* ---- table ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 880px; table-layout: fixed; }
+  col.c-num { width: 62px; }
+  col.c-act { width: 44%; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-align: left;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody td { padding: 17px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.num {
+    font-family: var(--mono);
+    font-size: 19px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding-right: 0;
+    line-height: 1.2;
+  }
+  tr.term td.num { color: var(--lime); }
+  tr.port td.num { color: var(--teal); }
+
+  .where {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  tr.term .where { color: var(--lime); }
+  tr.port .where { color: var(--teal); }
+  .where::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 1px;
+    background: currentColor;
+    flex: none;
+  }
+
+  .cmdwrap { position: relative; display: flex; flex-direction: column; }
+  code.cmd {
+    display: block;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-left: 2px solid var(--lime);
+    border-radius: 2px;
+    padding: 10px 58px 10px 12px;
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  .copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 4px 7px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 120ms ease, border-color 120ms ease;
+  }
+  .copy:hover { color: var(--lime); border-color: var(--lime); }
+  .copy:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  .copy.done { color: var(--lime); border-color: var(--lime); }
+
+  .click {
+    font-size: 16.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 4px 11px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+  .btn.approve { color: var(--teal);  background: var(--teal-chip);  border-color: var(--teal); }
+  .btn.deny    { color: var(--coral); background: var(--coral-chip); border-color: var(--coral); }
+  .btn.plain   { color: var(--ink-mid); background: var(--surface-2); border-color: var(--line); }
+
+  .say { font-size: 15px; color: var(--ink-mid); }
+  .say strong { color: var(--ink); font-weight: 600; }
+  .say .lede { color: var(--ink); font-weight: 600; display: block; margin-bottom: 3px; }
+
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    margin-bottom: 8px;
+  }
+  .chip.held    { color: var(--amber); background: var(--amber-chip); }
+  .chip.refused { color: var(--coral); background: var(--coral-chip); }
+  .chip.through { color: var(--lime);  background: var(--lime-chip); }
+  .chip.tier    { color: var(--ink-dim); background: var(--surface-2); border: 1px solid var(--line-soft); }
+
+  /* ---- callouts ---- */
+  .note {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 3px;
+    background: var(--surface);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .note.warn { border-left-color: var(--coral); }
+  .note h3 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--amber);
+  }
+  .note.warn h3 { color: var(--coral); }
+  .note p { margin: 0; font-size: 14.5px; color: var(--ink-mid); max-width: 74ch; }
+  .note p strong { color: var(--ink); font-weight: 600; }
+  .note code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .cols { grid-template-columns: 1fr; } }
+
+  a { color: var(--teal); }
+  a:focus-visible, td:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Sub-agent Grants</h1>
+    <p class="standfirst">An agent spawns workers. None of them carry its key, and each one is authorized on its own.</p>
+  </header>
+  <section class="screens">
+    <div class="screen left">
+      <span class="side">Left screen</span>
+      <span class="what">Terminal</span>
+      <span class="detail">~/Documents/Github/uma4agents</span>
+    </div>
+    <div class="screen right">
+      <span class="side">Right screen</span>
+      <span class="what">Alice's portal</span>
+      <span class="detail">https://portal.uma.lab</span>
+    </div>
+  </section>
+  <section class="setup">
+    <h2>Pre-demo setup</h2>
+    <p class="setup-note">From cold to ready. Four commands on a Mac, two in a Codespace, about 20 minutes.</p>
+
+    <div class="table-scroll">
+      <table>
+        <colgroup>
+          <col class="c-num">
+          <col class="c-act">
+          <col class="c-say">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Run this</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+
+        <tr class="term">
+          <td class="num">1</td>
+          <td class="act">
+            <span class="where">Once per machine</span>
+            <div class="cmdwrap"><code class="cmd">brew install kind helm
+make dns-setup</code></div>
+          </td>
+          <td class="say">
+            Points your OS resolver at the lab's DNS so <strong>*.uma.lab</strong> works in a browser. One sudo. <strong>Skip both in a Codespace</strong> — it uses <code>/etc/hosts</code> instead.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="num">2</td>
+          <td class="act">
+            <span class="where">Build the lab</span>
+            <div class="cmdwrap"><code class="cmd">make kind-up</code></div>
+          </td>
+          <td class="say">
+            Three-node kind cluster, Istio ambient, kgateway, cert-manager, CloudNativePG, and every party in its own namespace. <strong>~13 minutes cold.</strong> If the compose stack is running it will stop you — both want :443 and :53, so run <code>make down</code> and try again.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="num">3</td>
+          <td class="act">
+            <span class="where">Trust the CA</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-trust-ca
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain /tmp/u4a-k8s-ca.pem</code></div>
+          </td>
+          <td class="say">
+            cert-manager issues the lab CA inside the cluster; this trusts it locally so the portals load with no warning. <strong>Re-run after every <code>kind-up</code></strong> — a new cluster means a new CA. In a Codespace run <code>make codespaces-web</code> instead.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Bring up the agent</span>
+            <div class="cmdwrap"><code class="cmd">export ANTHROPIC_API_KEY=sk-ant-...
+make kagent</code></div>
+          </td>
+          <td class="say">
+            kagent's controller, the U4A adapter in Bob's namespace, and a model for the agent to think with. Your key goes into a Kubernetes Secret and nowhere else. See <strong>Switching the model</strong> below for the other providers.
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> on the right and log in as <strong>alice / alice-demo</strong>.</p>
+
+    <div class="afters">
+      <div class="after">
+        <span class="after-label">In a Codespace</span>
+        <p>Only steps <strong>2</strong> and <strong>4</strong>. No resolver to edit, no CA to trust. <code>kind-up</code> publishes the portal for you; to republish it later run <code>make codespaces-web</code></p>
+      </div>
+      <div class="after">
+        <span class="after-label">Running it again</span>
+        <p><code>make k8s-reset</code> rewinds her ledger. The demos use a fresh agent key each run, so most of them repeat without it.</p>
+      </div>
+    </div>
+
+    <div class="models-block">
+      <span class="after-label">Switching the model</span>
+      <div class="models">
+        <div class="model">
+          <span class="model-label">Another provider key</span>
+          <div class="cmdwrap"><code class="cmd">export ANTHROPIC_API_KEY=sk-ant-...
+make kagent</code></div>
+          <div class="cmdwrap"><code class="cmd">export OPENAI_API_KEY=sk-...
+make kagent MODEL=openai</code></div>
+        </div>
+        <div class="model">
+          <span class="model-label">Another model</span>
+          <div class="cmdwrap"><code class="cmd">ANTHROPIC_MODEL=claude-sonnet-5 make kagent</code></div>
+          <div class="cmdwrap"><code class="cmd">OPENAI_MODEL=gpt-4o make kagent MODEL=openai</code></div>
+        </div>
+        <div class="model">
+          <span class="model-label">A model in the cluster instead</span>
+          <div class="cmdwrap"><code class="cmd">make kagent MODEL=ollama</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+  <section class="runthrough">
+    <h2>The run-through</h2>
+    <p class="run-note">Steps 3 and 5 are the two the room came for: a worker nobody approved going straight through, and one press taking the whole fleet away. Everything else is there so those two land.</p>
+
+    <div class="table-scroll">
+      <table>
+        <colgroup>
+          <col class="c-num">
+          <col class="c-act">
+          <col class="c-say">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Do this</th>
+            <th>Say this</th>
+          </tr>
+        </thead>
+        <tbody>
+
+        <tr class="term">
+          <td class="num">0</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-status</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">Show the whole lab first.</span>
+            <code>sterling-vance</code> is Bob's namespace. Everything that
+            happens in it today is <strong>one firm's agents talking to each
+            other</strong> — and none of it changes what Alice's authority,
+            over in <code>alice</code>, will agree to.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">1</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-subagent-demo</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">An orchestrator asks for her transaction history.</span>
+            It stops. She has never met it, so nothing happens until she says
+            so — the same first contact as any other agent. <strong>Watch the
+            badge on the right.</strong>
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">2</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">Approve — twice</span>
+          </td>
+          <td class="say">
+            <span class="lede">She admits it, then approves the tier.</span>
+            Two taps, and this is the <strong>only</strong> place in the whole
+            demo she is asked about this fleet. Everything after this is what
+            those two taps did and did not buy.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">3</td>
+          <td class="act">
+            <span class="where">Terminal — watch it</span>
+            <span class="click">the log says <em>admitted · introduced by</em></span>
+          </td>
+          <td class="say">
+            <span class="lede">It spawns a worker, and the worker gets in without waking her.</span>
+            <strong>Point at the right screen and say what is not happening.</strong>
+            No badge, no queue, no tap. Then say the part that matters:
+            <strong>the worker did not get the parent's token.</strong> It has
+            its own key, it agreed to her terms itself, and it holds a grant of
+            its own that she can take away on its own.
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">Settings → Security → Agent Authorization</span>
+          </td>
+          <td class="say">
+            <span class="lede">One row per agent, and each says who introduced it.</span>
+            <strong>Not one blurred row.</strong> She can see the fleet, and
+            she could revoke any single worker without touching the rest.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">5</td>
+          <td class="act">
+            <span class="where">Terminal — watch it</span>
+            <span class="click">the log says <em>asked</em></span>
+          </td>
+          <td class="say">
+            <span class="lede">A worker asks to trade, and it stops.</span>
+            Nobody in this fleet has ever been approved to trade, so it waits
+            for her exactly as the orchestrator would have.
+            <strong>The ceiling is not something she configured — it is what a
+            tier is.</strong>
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">6</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">Approve</span>
+          </td>
+          <td class="say">
+            <span class="lede">She approves the worker, and the orchestrator inherits it.</span>
+            The next thing the <strong>parent</strong> asks to trade goes
+            straight through. <strong>She said yes to the fleet, not to a
+            key</strong> — and it ran upward, from the worker to the agent that
+            spawned it, because they are one relationship.
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">7</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">Revoke, on the orchestrator</span>
+          </td>
+          <td class="say">
+            <span class="lede">The toast says how many workers went with it.</span>
+            <strong>One press.</strong> Their grants stop on the next call, not
+            when they expire, because the enforcement point asks her authority
+            every single time. And its sponsor cannot let a revoked worker back
+            in — otherwise Revoke would be a suggestion.
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="runthrough">
+    <h2>If they ask</h2>
+    <div class="table-scroll">
+      <table>
+        <colgroup>
+          <col class="c-act">
+          <col class="c-say">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>They say</th>
+            <th>You say</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr class="term">
+          <td class="act"><span class="where">"So it's delegation."</span></td>
+          <td class="say">
+            No — nothing is passed down. The parent states a fact about a key
+            and confers nothing. <strong>Her authority decides what that fact is
+            worth</strong>, and the worker negotiates for itself.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">"What stops a worker spawning workers?"</span></td>
+          <td class="say">
+            An agent that was itself introduced may not introduce. <strong>The
+            authority graph is one level deep</strong>, whatever the task graph
+            does. That is a check, not a hope.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">"Can they just spawn a thousand?"</span></td>
+          <td class="say">
+            There is a hard fan-out ceiling, and sub-agents count against her
+            attention budget like anybody else. She can also say <strong>ask me
+            about every sub-agent, every time</strong> — that is one of the
+            three things her terms can say here.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">"Who says it's really a sub-agent?"</span></td>
+          <td class="say">
+            Her authority checks it, and never takes the claim's word. Both keys
+            have to be published by <strong>one operator, in a directory the
+            agents cannot write to</strong>. For an agent with a real identity
+            it is better still: its own issuer names the parent, in AAuth's
+            <code>act</code> claim.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">"Does this work with our stack?"</span></td>
+          <td class="say">
+            The lab runs stock kagent over A2A, unmodified. Nothing in the
+            agent framework knows what any of this is —
+            <strong>the enforcement happens at the resource, not in the agent.</strong>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+<script>
+  (function () {
+    function copy(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).catch(fallback);
+      }
+      return fallback();
+
+      function fallback() {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        try { document.execCommand("copy"); } catch (e) { /* selection is still there to copy by hand */ }
+        document.body.removeChild(ta);
+        return Promise.resolve();
+      }
+    }
+
+    document.querySelectorAll(".cmdwrap").forEach(function (wrap) {
+      var code = wrap.querySelector("code.cmd");
+      if (!code) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copy";
+      btn.textContent = "Copy";
+      btn.setAttribute("aria-label", "Copy command to clipboard");
+      btn.addEventListener("click", function () {
+        copy(code.textContent.trim()).then(function () {
+          btn.textContent = "Copied";
+          btn.classList.add("done");
+          setTimeout(function () {
+            btn.textContent = "Copy";
+            btn.classList.remove("done");
+          }, 1400);
+        });
+      });
+      wrap.appendChild(btn);
+    });
+  })();
+</script>
