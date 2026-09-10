@@ -422,6 +422,15 @@ rules-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		python lib/test_policy.py
 
+## introduction-test: sub-agent introductions — what one agent may say about
+## another, and every reason the owner's authority refuses to act on it. Mints
+## with the client helper and verifies with the server module, so the two
+## sides are checked against each other. Needs nothing running.
+.PHONY: introduction-test
+introduction-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q 'pyjwt[crypto]' httpx && python lib/test_introduction.py"
+
 ## org-test: the organization's ceiling — what it may do to a member's terms,
 ## and what it may never touch. Unit tests over the algebra and the charter
 ## validator; needs nothing running.

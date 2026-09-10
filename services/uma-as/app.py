@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import assurance
+import introduction
 import joint
 import org
 import uma4a_joint
@@ -281,6 +282,10 @@ app = FastAPI(title="uma-as")
 # How much the requesting side may write about itself. Small on purpose: this
 # is a sentence for a person to read in an approval dialog, not a document.
 MAX_REASON = int(os.environ.get("UMA_AS_MAX_REASON", "512"))
+# How many live sub-agents one introducing agent may have. A hard ceiling
+# rather than a policy rule, because the rule that governs sub-agents is hers
+# to write and this has to hold whether or not she has written one.
+SUBAGENT_FANOUT = int(os.environ.get("UMA_AS_SUBAGENT_FANOUT", "3"))
 
 # How far back a rule about an agent's recent behaviour looks. One window for
 # all of them, so a rule reads "recently" and the deployment says how long that
@@ -2880,6 +2885,12 @@ def contract_identity(claim_token_b64: str,
         if directory := header.get("signature_agent"):
             identity["operator_attested"] = operator_published_key(
                 client_id, directory, signer_jwk)
+            # Kept so a later check can ask the *same* document about a
+            # *different* key. Without it the directory URL is discarded here
+            # and there is no way to establish that two agents were published
+            # by one operator rather than by two that merely agree.
+            identity["operator_directory"] = directory
+            identity["operator_client_id"] = client_id
 
     key = OKPAlgorithm.from_jwk(json.dumps(signer_jwk))
     contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=audience)
@@ -2950,6 +2961,24 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
         # Normalised down to the two fields AAuth's own header carries, so a
         # citation with extra baggage cannot use her ledger as storage.
         contract["mission"] = {"approver": approver, "s256": digest}
+
+    # A sibling agent's introduction of this one, verified as far as the
+    # document itself goes. Whether the introducing key means anything to this
+    # owner needs her connections, so it is settled later in `introduction_ok`
+    # — keeping this function a pure check of the document, which is what lets
+    # the contract path be tested with no store.
+    if (intro := contract.get("introduction")) is not None:
+        try:
+            contract["introduction"] = introduction.verify_claim(
+                intro, jwk_thumbprint(signer_jwk), ISSUER)
+        except introduction.Refused as exc:
+            # A malformed or misdirected introduction is a bad request, not a
+            # silent downgrade: the agent sent something it meant to be
+            # honoured, and swallowing it would leave it guessing why it was
+            # asked to wait. Refusals that are *about the owner's state*
+            # rather than the document behave differently — see
+            # `introduction_ok`.
+            raise ValueError(str(exc))
 
     contract["_identity"] = identity
     return contract, signer_jwk

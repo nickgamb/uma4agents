@@ -170,6 +170,19 @@ class AgentKeys:
             claims = jwt.decode(self.agent_token, options={"verify_signature": False})
             sub, host = claims.get("sub", ""), urlparse(claims.get("iss", "")).netloc
             return sub if sub.endswith(f"@{host}") else f"{sub}@{host}"
+        return self.thumbprint()
+
+    def thumbprint(self) -> str:
+        """RFC 7638 thumbprint of the signing key, always.
+
+        Separate from `connection_handle` because the two answer different
+        questions. The handle is *who the owner files this agent under*, and
+        for an identified agent that is its issuer-qualified subject. The
+        thumbprint is *which key signed this*, and an introduction binds to
+        that — the child's key is the thing the parent is vouching for, and
+        the only thing the owner's authority can check against the JWS in
+        front of it.
+        """
         jwk = self.public_jwk()
         canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
                                separators=(",", ":"), sort_keys=True)
@@ -236,10 +249,55 @@ def validate_resource_metadata(doc: dict, resource_url: str,
     return doc
 
 
+# A parent agent's statement that another key belongs to a sibling it is
+# putting forward. Not a grant and not a token: it carries no scope, no tier
+# and no authority, and presenting one gets an agent nothing except the
+# chance to negotiate for itself.
+INTRODUCTION_TYP = "u4a-introduction-v1+jws"
+
+
+def sign_introduction(keys: AgentKeys, child_jkt: str, as_uri: str,
+                      ttl: int = 300) -> str:
+    """Sign an introduction for a sub-agent, as the introducing agent.
+
+    The claims deliberately say nothing about *who is introducing*. An `iss`
+    naming the parent would be a field the owner's authority must either
+    ignore or believe, and believing it would let any agent nominate another
+    agent's handle as its own sponsor. So the parent's identity is carried
+    only where it can be checked: the public key in the JWS header, which
+    verifies the signature and re-derives to a handle the authority already
+    holds. Everything the claims contain is scoped to the one child.
+
+    `aud` pins the introduction to a single authorization server, so one
+    obtained for Alice's is not replayable at Carol's. `exp` is short because
+    an introduction is cheap to re-mint and its whole lifetime is the window
+    in which a leaked copy is worth anything — though a copy is worth little
+    on its own, since only the holder of the child's key can use it.
+    """
+    now = int(time.time())
+    claims = {
+        "sub": child_jkt,
+        "aud": as_uri,
+        "iat": now,
+        "exp": now + ttl,
+        "jti": f"int_{hashlib.sha256(f'{child_jkt}{now}'.encode()).hexdigest()[:12]}",
+    }
+    headers = {"typ": INTRODUCTION_TYP, "kid": keys.keyid,
+               "jwk": keys.public_jwk()}
+    # An identified parent is filed under its issuer-qualified subject rather
+    # than its key, so the authority needs the token to work out which
+    # connection this is. The key stays in the header regardless — it is what
+    # verifies this signature, and the authority checks the two agree.
+    if keys.agent_token:
+        headers["agent_token"] = keys.agent_token
+    return jwt.encode(claims, keys.key, algorithm="EdDSA", headers=headers)
+
+
 def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
                   operation: dict | None = None,
                   reason: str | None = None,
-                  mission: dict | None = None) -> str:
+                  mission: dict | None = None,
+                  introduction: str | None = None) -> str:
     """Echo the proffered template, signed — the agreement half of the
     MyTerms exchange. Weakening any field is caught by the AS; this client
     doesn't try.
@@ -272,6 +330,12 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     # `AAuth-Mission` request header already uses.
     if mission:
         contract["mission"] = mission
+    # A sibling agent's introduction, signed by that sibling over *this*
+    # agent's key. It rides the child's own contract because the child is the
+    # one asking: there is no second request, no borrowed token, and the
+    # contract underneath is signed by the child's key like any other.
+    if introduction:
+        contract["introduction"] = introduction
     headers = {"typ": "myterms-agreement-v1+jws", "kid": keys.keyid}
     if keys.agent_token:
         headers["agent_token"] = keys.agent_token
@@ -405,6 +469,7 @@ def run_grant(
     operation: dict | None = None,
     reason: str | None = None,
     mission: dict | None = None,
+    introduction: str | None = None,
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
@@ -452,7 +517,8 @@ def run_grant(
                                          "ticket": body["ticket"],
                                          "decline": "true"})
             raise TermsRejected(template["template_id"])
-        claim = sign_contract(template, keys, as_uri, operation, reason, mission)
+        claim = sign_contract(template, keys, as_uri, operation, reason, mission,
+                              introduction)
         on_status("agreement signed, committing")
         r = client.post(
             token_url,
@@ -530,6 +596,7 @@ async def run_grant_async(
     operation: dict | None = None,
     reason: str | None = None,
     mission: dict | None = None,
+    introduction: str | None = None,
     on_status: Callable[[str], None] = lambda s: None,
     on_receipt: Callable[[str], None] = lambda r: None,
     max_wait_s: int = 120,
@@ -580,7 +647,8 @@ async def run_grant_async(
                                                "ticket": body["ticket"],
                                                "decline": "true"})
             raise TermsRejected(template["template_id"])
-        claim = sign_contract(template, keys, as_uri, operation, reason, mission)
+        claim = sign_contract(template, keys, as_uri, operation, reason, mission,
+                              introduction)
         r = await client.post(
             token_url,
             data={
