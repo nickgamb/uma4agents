@@ -2442,7 +2442,7 @@ async def first_party_fact(owner: str, identity: dict, axes: dict) -> bool:
     return origin is not None and origin in await st(owner).owned_operators()
 
 
-async def introduction_ok(owner: str, intro: dict, identity: dict,
+async def introduction_ok(owner: str, intro: dict | None, identity: dict,
                           child_prior: dict | None) -> tuple[str | None, str]:
     """Whether an introduction is honoured, and by whom.
 
@@ -2457,6 +2457,29 @@ async def introduction_ok(owner: str, intro: dict, identity: dict,
     agent *she* holds a live connection with and personally approved, and
     whether one operator published both keys.
     """
+    # An identified agent's issuer may name the agent that spawned it, in
+    # AAuth's own `act` claim. When it does, that is the introduction: the
+    # issuer has signed the lineage, so there is nothing for a sibling agent
+    # to assert and no second document to carry. Both agents being under one
+    # issuer is what "the same operator published both" means here, and it is
+    # a stronger form of it — the issuer is the operator's signing authority
+    # rather than a directory it publishes.
+    if not intro and (act := identity.get("act")):
+        parent_handle = connection_handle(
+            {"level": "identified", "iss": identity["iss"], "sub": act["sub"]}, {})
+        parent_conn = await st(owner).connection(parent_handle)
+        try:
+            introduction.admit(parent_conn, child_prior, True,
+                               await st(owner).count_children(parent_handle)
+                               if parent_conn is not None else 0,
+                               SUBAGENT_FANOUT)
+        except introduction.Refused as exc:
+            return None, str(exc)
+        return parent_handle, ""
+
+    if not intro:
+        return None, "no lineage was offered"
+
     parent_jwk = intro["parent_jwk"]
 
     # Which connection the introducing key belongs to. An identified agent is
@@ -2987,6 +3010,19 @@ def contract_identity(claim_token_b64: str,
         signer_jwk = agent_claims["cnf"]["jwk"]
         identity = {"level": "identified", "iss": agent_claims["iss"],
                     "sub": agent_claims.get("sub")}
+        # RFC 8693's actor claim, as AAuth uses it: the entity that requested
+        # this. On an agent token it names the agent that spawned this one.
+        #
+        # Read rather than invented. AAuth already nests `act` to record a
+        # delegation chain, and its agent token is explicitly extensible —
+        # "agent servers MAY include additional claims". So an identified
+        # agent's lineage arrives in the credential it already carries,
+        # asserted by the issuer that signs that credential rather than by a
+        # sibling agent. That is a better attestation than anything the
+        # requesting side could construct for itself.
+        if isinstance(act := agent_claims.get("act"), dict):
+            if isinstance(act.get("sub"), str) and act["sub"]:
+                identity["act"] = {"sub": act["sub"]}
     else:
         raise ValueError("contract JWS must carry jwk or agent_token in its header")
 
@@ -3650,9 +3686,18 @@ async def token(request: Request) -> JSONResponse:
     # it inherits nothing: `tiers_approved` starts empty, every tier applies
     # its own rules, and the child negotiates under its own key.
     introduced_conn, introduced_by = None, None
-    if needs_connection and isinstance(contract.get("introduction"), dict):
+    offered = (contract.get("introduction")
+               if isinstance(contract.get("introduction"), dict) else None)
+    # Two ways to arrive with a lineage, and the second is the one to prefer
+    # where it is available. A pseudonymous agent has no issuer to speak for
+    # it, so a sibling signs an introduction over its key. An identified agent
+    # already carries a credential its issuer signed, and AAuth's `act` claim
+    # is where that issuer names the agent this one was spawned by — no second
+    # document, no new format, and asserted by the operator's own signing
+    # authority rather than by another agent.
+    if needs_connection and (offered or contract["_identity"].get("act")):
         introduced_by, why_not = await introduction_ok(
-            rec["owner"], contract["introduction"], contract["_identity"], conn)
+            rec["owner"], offered, contract["_identity"], conn)
         if introduced_by:
             introduced_conn = introduced_connection(
                 handle, contract["_identity"], introduced_by, conn)
