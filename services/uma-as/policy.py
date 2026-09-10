@@ -329,6 +329,22 @@ OBSERVED_CONDITIONS = {
     "standing.denials_above",   # :<n>, denials in the window
     "standing.tiers_above",     # :<n>, distinct tiers reached in the window
     "standing.calls_above",     # :<n>, calls actually made in the window
+    # An agent another agent put forward, rather than one she met directly.
+    # Observed and not relaxing, and the distinction is the whole design:
+    # this is here so she can say *ask me about sub-agents*, never so a
+    # sub-agent can be waved through for having a sponsor.
+    "standing.introduced",
+    # Whether anyone in this agent's lineage has been personally approved at
+    # this tier. Its use is to *narrow* the ask she already has — "ask me the
+    # first time, unless I have already said yes to this fleet here" — which
+    # is a restriction that fires less often, not a relaxation.
+    #
+    # It could not honestly be a relaxing condition. Which agents join a
+    # lineage is chosen by the operator running them, and a relaxing fact must
+    # be one the requesting side had no hand in producing. Written this way
+    # the requesting side can only ever cause the ask to *remain*, and the
+    # rule the tier already carries is what does the asking.
+    "standing.lineage_new_at_tier",
 }
 
 STANDING_CONDITIONS = RELAXING_CONDITIONS | OBSERVED_CONDITIONS
@@ -395,6 +411,15 @@ VOCABULARY = [
      "label": "it has never been granted at this tier before"},
     {"condition": "standing.revoked_before", "takes": None,
      "label": "I have revoked this agent before"},
+    # Her portal renders these labels to her verbatim, so they are the actual
+    # claim the system makes about what happened. "Introduced by" is the true
+    # one: another agent put this one forward. Nothing was delegated to it and
+    # nothing acts on anyone's behalf.
+    {"condition": "standing.introduced", "takes": None,
+     "label": "it was introduced by another agent"},
+    {"condition": "standing.lineage_new_at_tier", "takes": None,
+     "label": "I have approved nothing at this tier for this agent or the "
+              "ones it works with"},
     {"condition": "standing.age_below", "takes": "duration",
      "label": "I have known this agent for less than"},
     {"condition": "standing.first_party", "takes": None,
@@ -506,6 +531,13 @@ def _matches(condition: str, facts: dict) -> bool:
         return bool(standing.get("first_party"))
     if name == "standing.first_at_tier":
         return standing["first_at_tier"]
+    if name == "standing.introduced":
+        return bool(standing.get("introduced"))
+    if name == "standing.lineage_new_at_tier":
+        # Absent on facts assembled before this existed, and the safe reading
+        # of "no lineage information" is that nothing has been approved — an
+        # ask that fires rather than one that silently stops firing.
+        return standing.get("lineage_new_at_tier", True)
     if name == "standing.approved_at_tier":
         return tier_id in (standing.get("approved_tiers") or [])
     if name == "standing.never_revoked":

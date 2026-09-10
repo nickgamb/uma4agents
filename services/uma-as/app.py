@@ -2442,9 +2442,99 @@ async def first_party_fact(owner: str, identity: dict, axes: dict) -> bool:
     return origin is not None and origin in await st(owner).owned_operators()
 
 
+async def introduction_ok(owner: str, intro: dict, identity: dict,
+                          child_prior: dict | None) -> tuple[str | None, str]:
+    """Whether an introduction is honoured, and by whom.
+
+    Returns (introducing handle, "") when it is, or (None, reason) when it is
+    not. A refusal here is never fatal to the request: the agent falls back to
+    being a stranger and is introduced to the owner the ordinary way, which is
+    exactly what would have happened with no introduction at all. That is the
+    safe direction, and it is why this returns a reason rather than raising.
+
+    The document was already checked by `verify_contract`. What is settled
+    here is the half that needs her store: whether the introducing key is an
+    agent *she* holds a live connection with and personally approved, and
+    whether one operator published both keys.
+    """
+    parent_jwk = intro["parent_jwk"]
+
+    # Which connection the introducing key belongs to. An identified agent is
+    # filed under its issuer-qualified subject rather than its key, so its
+    # token is what resolves the handle — and the token's bound key has to be
+    # the key that signed the introduction, or an agent could present someone
+    # else's token beside its own key.
+    if token := intro.get("agent_token"):
+        try:
+            claims = verify_agent_token(token)
+        except Exception as exc:
+            return None, f"the introducing agent's token did not verify: {exc}"
+        if jwk_thumbprint(claims["cnf"]["jwk"]) != jwk_thumbprint(parent_jwk):
+            return None, ("the introducing agent's token is bound to a "
+                          "different key than the one that signed")
+        parent_handle = connection_handle(
+            {"level": "identified", "iss": claims["iss"],
+             "sub": claims.get("sub")}, parent_jwk)
+    else:
+        parent_handle = jwk_thumbprint(parent_jwk)
+
+    parent_conn = await st(owner).connection(parent_handle)
+
+    # One operator, publishing both keys, in a directory it controls and
+    # neither agent does. `contract_identity` already established that the
+    # child's key is in that document; this asks the same document about the
+    # introducing key. Same directory and same client id, so an agent cannot
+    # point at a second directory of its own and attest to its own sibling.
+    same_operator = False
+    directory, client_id = (identity.get("operator_directory"),
+                            identity.get("operator_client_id"))
+    if identity.get("operator_attested") and directory and client_id:
+        same_operator = operator_published_key(client_id, directory, parent_jwk)
+
+    live_children = (await st(owner).count_children(parent_handle)
+                     if parent_conn is not None else 0)
+    try:
+        introduction.admit(parent_conn, child_prior, same_operator,
+                           live_children, SUBAGENT_FANOUT)
+    except introduction.Refused as exc:
+        return None, str(exc)
+    return parent_handle, ""
+
+
+def introduced_connection(handle: str, identity: dict, parent_handle: str,
+                          prior: dict | None) -> dict:
+    """The record for an agent admitted on an introduction.
+
+    Mirrors the one `pending_poll` writes when she accepts an agent herself,
+    with two differences that are the whole feature. `parent_handle` records
+    who put it forward, which is what makes the lineage readable and what the
+    revocation cascade walks. And `tiers_approved` starts empty and is only
+    ever written when she answers a pend in person — an introduction admits an
+    agent, it does not approve anything for it.
+
+    `revocations` is carried forward from any prior record for the same key,
+    because `put_connection` replaces wholly and that count exists precisely
+    so an agent cannot clear its history by arriving again.
+    """
+    return {
+        "handle": handle,
+        "identity": identity,
+        "label": identity.get("client_metadata", {}).get("client_name")
+                 or "introduced agent",
+        "status": "active",
+        "parent_handle": parent_handle,
+        "first_seen": utcstamp(),
+        "last_access": None,
+        "tiers_granted": [],
+        "tiers_approved": [],
+        "revocations": int((prior or {}).get("revocations", 0)),
+    }
+
+
 def standing_facts(conn: dict | None, tier_id: str,
                    trajectory: dict | None = None,
-                   first_party: bool = False) -> dict:
+                   first_party: bool = False,
+                   lineage_approved: list[str] | None = None) -> dict:
     """What Alice's own authority has seen of this agent.
 
     Kept apart from assurance because only these may relax a requirement —
@@ -2452,14 +2542,23 @@ def standing_facts(conn: dict | None, tier_id: str,
     hand in producing. `age_seconds` is None when she has never met it, which
     the conditions read as "younger than everything, older than nothing".
 
-    `trajectory` and `first_party` are read by the caller and passed in, so
-    `policy.evaluate` stays a pure function of a dict and can be tested with
-    no store at all.
+    `trajectory`, `first_party` and `lineage_approved` are read by the caller
+    and passed in, so `policy.evaluate` stays a pure function of a dict and
+    can be tested with no store at all.
+
+    `introduced` and `lineage_new_at_tier` are derived from the connection
+    record rather than from the contract that carried the introduction. That
+    is deliberate: the joint path assembles facts without ever seeing a
+    contract claim, so a claim-derived fact would read False there — and a
+    rule she wrote to be *asked* about sub-agents would silently fail to fire
+    on exactly the resources that are half somebody else's.
     """
     trajectory = trajectory or {"denials": 0, "tiers": []}
+    lineage = list(lineage_approved or [])
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
                 "first_party": first_party,
+                "introduced": False, "lineage_new_at_tier": True,
                 "approved_tiers": [], "trajectory": trajectory,
                 "revocations": int((conn or {}).get("revocations", 0))}
     age = None
@@ -2478,10 +2577,34 @@ def standing_facts(conn: dict | None, tier_id: str,
         # What Alice decided. Only these may lower a requirement, so they are
         # kept apart from the line above even though both are her side's.
         "approved_tiers": list(conn.get("tiers_approved") or []),
+        # Whether this agent was put forward by another rather than met
+        # directly, and whether anyone in its lineage has been approved here.
+        # The second is what lets her ask once per fleet instead of once per
+        # agent — and it reads both ways, so a tier a sub-agent earned is one
+        # the agent that introduced it stops being asked about.
+        "introduced": bool(conn.get("parent_handle")),
+        "lineage_new_at_tier": tier_id not in (
+            lineage or conn.get("tiers_approved") or []),
         "revocations": int(conn.get("revocations", 0)),
         # What it has been doing lately. Restrictions only — see policy.py.
         "trajectory": trajectory,
     }
+
+
+async def lineage_facts(owner: str, conn: dict | None) -> list[str]:
+    """Tiers the owner personally approved across this agent's lineage.
+
+    A connection with no lineage answers with its own approvals, so the
+    caller never has to branch on whether an agent was introduced. Reads the
+    record rather than any claim, so it holds on every path that assembles
+    facts — including the joint one, which never sees a contract.
+    """
+    if conn is None or conn.get("status") != "active":
+        return []
+    root = conn.get("parent_handle") or conn.get("handle")
+    if not root:
+        return list(conn.get("tiers_approved") or [])
+    return await st(owner).lineage_approvals(root)
 
 
 async def trajectory_facts(owner: str, handle: str) -> dict:
@@ -3236,7 +3359,8 @@ async def joint_verdict(request: Request) -> dict:
         "assurance": axes,
         "standing": standing_facts(
             conn, tier_id, await trajectory_facts(owner, handle),
-            await first_party_fact(owner, identity, axes)),
+            await first_party_fact(owner, identity, axes),
+            await lineage_facts(owner, conn)),
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
@@ -3514,6 +3638,36 @@ async def token(request: Request) -> JSONResponse:
     conn = await st(rec["owner"]).connection(handle)
     needs_connection = conn is None or conn["status"] != "active"
 
+    # An agent put forward by one she already deals with. Decided here, where
+    # the answer is needed, but **not written here** — four refusal paths lie
+    # between this point and the grant, and persisting now would leave a live
+    # connection behind for an agent that was turned away, permanently
+    # disarming every `standing.none` rule she has written for it. The record
+    # is built in memory, used for facts, and stored further down only once
+    # the request is actually going to reach her or reach a grant.
+    #
+    # What this skips is being introduced from nothing. It is not a grant and
+    # it inherits nothing: `tiers_approved` starts empty, every tier applies
+    # its own rules, and the child negotiates under its own key.
+    introduced_conn, introduced_by = None, None
+    if needs_connection and isinstance(contract.get("introduction"), dict):
+        introduced_by, why_not = await introduction_ok(
+            rec["owner"], contract["introduction"], contract["_identity"], conn)
+        if introduced_by:
+            introduced_conn = introduced_connection(
+                handle, contract["_identity"], introduced_by, conn)
+            conn, needs_connection = introduced_conn, False
+            event("connection.introduced", corr=family, handle=handle,
+                  by=introduced_by)
+        else:
+            # Falls back to first contact, which is what would have happened
+            # with no introduction at all. Recorded on the negotiation so her
+            # pending dialog can say why she is being asked about an agent
+            # that arrived claiming a sponsor.
+            rec["introduction_refused"] = why_not
+            event("connection.introduction_refused", corr=family,
+                  handle=handle, because=why_not)
+
     # What her authority can establish about this agent, and what she has
     # herself seen of it. Kept apart on purpose — see `assurance.py`.
     # An operator she has shut out. Blocking is a *restriction*, so it can rest
@@ -3565,7 +3719,8 @@ async def token(request: Request) -> JSONResponse:
         "assurance": axes,
         "standing": standing_facts(
             conn, rec["tier"], await trajectory_facts(rec["owner"], handle),
-            await first_party_fact(rec["owner"], contract["_identity"], axes)),
+            await first_party_fact(rec["owner"], contract["_identity"], axes),
+            await lineage_facts(rec["owner"], conn)),
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
@@ -3625,12 +3780,20 @@ async def token(request: Request) -> JSONResponse:
     # agent whose named operator published its key queues against other
     # attributable agents only, where a flood has somebody's name on it. See
     # policy.py.
-    if needs_connection:
+    #
+    # An introduced agent is counted too, and its *operation* pends are
+    # counted with it. It skipped the relationship question, not the queue
+    # discipline — without this, one approved agent could put an unbounded
+    # number of questions in front of her, because the only thing that ever
+    # bounded them was the connection pend it no longer makes.
+    if needs_connection or introduced_conn is not None:
+        counted = (("connection", "operation") if introduced_conn is not None
+                   else ("connection",))
         lane = policy.pend_lane(axes)
         budget = policy.pend_budget(lane)
         waiting = sum(
             1 for p in await st(rec["owner"]).pending_negotiations()
-            if p.get("pending_kind") == "connection" and p["family"] != family
+            if p.get("pending_kind") in counted and p["family"] != family
             and policy.pend_lane(p.get("assurance") or {}) == lane)
         if waiting >= budget:
             event("policy.evaluated", corr=family, result="attention-budget",
@@ -3641,6 +3804,18 @@ async def token(request: Request) -> JSONResponse:
                  "error_description": "the owner is not accepting new agent "
                                       "requests at the moment; try later"},
                 status_code=429)
+
+    # Past every gate that can still refuse, so this is the first point at
+    # which the agent is certainly either getting a grant or reaching her
+    # queue. One creation site, and it runs before the pend branch so that
+    # `note_tier_grant` and `note_tier_approval` below have a row to write to
+    # — without one they are silent no-ops and `standing.first_at_tier` would
+    # stay true forever, asking her again at the same tier every time.
+    if introduced_conn is not None:
+        await st(rec["owner"]).put_connection(introduced_conn)
+        await ledger_add(rec["owner"], "connected", family,
+                         {"identity": contract["_identity"],
+                          "introduced_by": introduced_by}, handle=handle)
 
     if needs_connection or needs_operation_approval:
         kind = "connection" if needs_connection else "operation"

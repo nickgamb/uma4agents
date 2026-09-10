@@ -34,6 +34,7 @@ def facts(*, binding=1, provenance=0, accountability=0,
           active=False, age=None, first_at_tier=True, approved_tiers=(),
           revocations=0, denials=0, tiers_seen=(), expires_in=0,
           max_expires_in=3600, reason=None, mission=None,
+          introduced=False, lineage_new_at_tier=True,
           tier_id="tier1") -> dict:
     return {
         "assurance": {"binding": binding, "provenance": provenance,
@@ -42,6 +43,8 @@ def facts(*, binding=1, provenance=0, accountability=0,
                      "first_at_tier": first_at_tier,
                      "approved_tiers": list(approved_tiers),
                      "revocations": revocations,
+                     "introduced": introduced,
+                     "lineage_new_at_tier": lineage_new_at_tier,
                      # Read from her ledger by the caller and handed in, which
                      # is what keeps `evaluate` testable with no store at all.
                      "trajectory": {"denials": denials,
@@ -132,6 +135,10 @@ for condition in ("assurance.accountability_below:1", "assurance.provenance_belo
                   # her own records, but a record of what this *server* did.
                   # Relaxing on it lets one automatic grant justify the next.
                   "standing.first_at_tier", "standing.none",
+                  # Which agents join a lineage is the operator's choice, so
+                  # neither of these may ever widen access — they exist to
+                  # narrow an ask she already has, or to add one.
+                  "standing.introduced", "standing.lineage_new_at_tier",
                   "standing.revoked_before", "standing.age_below:30d"):
     try:
         policy.validate_rules([{"when": [condition], "then": "auto"}])
@@ -365,6 +372,68 @@ check("transactions ask on first use at that tier",
 check("holdings stay quiet for an accountable, established agent",
       policy.evaluate(d["tier1"], facts(active=True, accountability=1,
                                         first_at_tier=False))[0] == policy.AUTO)
+
+# --- sub-agents: the three things she can say ---------------------------------
+#
+# Approval belongs to the lineage rather than to one connection, and which of
+# those three sentences applies is hers to write per tier. These assert the
+# verdicts each one actually produces, because the postures are expressed in
+# rule combinations rather than in a setting — if `evaluate`'s precedence ever
+# changed, two of these would silently invert.
+
+per_agent = {"ask_me": False,
+             "rules": [{"when": ["standing.first_at_tier"], "then": "ask"}]}
+lineage = {"ask_me": False,
+           "rules": [{"when": ["standing.first_at_tier",
+                               "standing.lineage_new_at_tier"], "then": "ask"}]}
+always_ask = {"ask_me": False,
+              "rules": [{"when": ["standing.first_at_tier"], "then": "ask"},
+                        {"when": ["standing.introduced"], "then": "ask"}]}
+
+for name, tier in (("per-agent", per_agent), ("lineage-wide", lineage),
+                   ("always-ask", always_ask)):
+    policy.validate_rules(tier["rules"])
+check("all three sub-agent postures are storable", True)
+
+# 1 · Per-agent. The default, and it does not care about lineage at all.
+check("per-agent: a sub-agent is asked about even when its lineage was approved",
+      policy.evaluate(per_agent, facts(active=True, accountability=2,
+                                       introduced=True, first_at_tier=True,
+                                       lineage_new_at_tier=False))[0] == policy.ASK)
+
+# 2 · Lineage-wide. The ask narrows to fleets she has not yet said yes to.
+check("lineage-wide: a sub-agent of an approved lineage goes through",
+      policy.evaluate(lineage, facts(active=True, accountability=2,
+                                     introduced=True, first_at_tier=True,
+                                     lineage_new_at_tier=False))[0] == policy.AUTO)
+check("lineage-wide: a tier the lineage never reached still asks",
+      policy.evaluate(lineage, facts(active=True, accountability=2,
+                                     introduced=True, first_at_tier=True,
+                                     lineage_new_at_tier=True))[0] == policy.ASK)
+# The direction that inverts the usual model: the parent benefits from what
+# its sub-agent earned, and it is the same rule doing it.
+check("lineage-wide: the introducing agent inherits what a sub-agent earned",
+      policy.evaluate(lineage, facts(active=True, accountability=2,
+                                     introduced=False, first_at_tier=True,
+                                     lineage_new_at_tier=False))[0] == policy.AUTO)
+
+# 3 · Always ask. Restrictions win, so this outranks the narrowing above.
+check("always-ask: a sub-agent is asked about however established its lineage",
+      policy.evaluate(always_ask, facts(active=True, accountability=2,
+                                        introduced=True, first_at_tier=False,
+                                        lineage_new_at_tier=False))[0] == policy.ASK)
+check("always-ask: an agent she met directly is unaffected",
+      policy.evaluate(always_ask, facts(active=True, accountability=2,
+                                        introduced=False, first_at_tier=False,
+                                        lineage_new_at_tier=False))[0] == policy.AUTO)
+
+# The ceiling, which is not configurable: an ask-me tier still asks. A lineage
+# rule cannot lower a baseline, only narrow a rule.
+check("no sub-agent rule lowers an ask-me tier",
+      policy.evaluate({"ask_me": True, "rules": lineage["rules"]},
+                      facts(active=True, accountability=2, introduced=True,
+                            lineage_new_at_tier=False))[0] == policy.ASK)
+
 
 # --- her attention has a floor and a ceiling -----------------------------------
 
