@@ -402,7 +402,12 @@ async function renderConnections(target) {
   target.innerHTML = operatorPanel(operators) + `<div class="card pad-lg"><table>
     <thead><tr><th>Agent</th><th>Identity</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${conns.map(c => `<tr>
-      <td><div class="tick"><div class="badge2">🤖</div><div class="nm">${esc(c.label)}</div></div></td>
+      <td><div class="tick"><div class="badge2">🤖</div><div>
+        <div class="nm">${esc(c.label)}</div>
+        ${c.parent_handle ? `<div class="cell-sub">introduced by
+          <a href="#" onclick="trajectory('${esc(c.parent_handle)}');return false"
+            >${esc(c.parent_handle.slice(0, 14))}…</a></div>` : ""}
+      </div></div></td>
       <td>${esc(c.identity?.level || "—")}</td>
       <td class="thumb"><a href="#" onclick="trajectory('${esc(c.handle)}');return false"
         title="Everything this agent has asked for, and what you decided"
@@ -449,7 +454,14 @@ window.operatorAction = async (action, origin) => {
 
 window.revoke = async (handle) => {
   const res = await api(`/api/agent/connections/${encodeURIComponent(handle)}/revoke`, { method: "POST" });
-  toast("Agent revoked", `${res.rpts_deactivated} active grant(s) deactivated`, "warn");
+  // An agent that introduced others takes them with it. Reported the way an
+  // operator block reports its cascade: she pressed one button, and she
+  // should be told everything that button did.
+  const kids = res.connections_revoked
+    ? `, and ${res.connections_revoked} sub-agent(s) it introduced`
+    : "";
+  toast("Agent revoked",
+    `${res.rpts_deactivated} active grant(s) deactivated${kids}`, "warn");
   renderConnections($("#aaBody"));
 };
 

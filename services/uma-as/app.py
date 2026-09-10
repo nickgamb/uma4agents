@@ -4935,14 +4935,37 @@ async def revoke_connection_for(owner: str, handle: str,
     killed = await st(owner).revoke_connection(handle)
     if killed is None:
         raise HTTPException(status_code=404, detail="unknown connection")
-    event("connection.revoked", handle=handle, rpts_deactivated=killed,
+
+    # Then the agents this one introduced. The parent is revoked *first* so a
+    # negotiation arriving mid-cascade cannot find it still active and be
+    # admitted as a new sub-agent behind us.
+    #
+    # There is no recursion to do: an agent that was itself introduced may not
+    # introduce another, so a lineage is one level deep by construction. The
+    # cascade needs no action per link for a second reason as well — the
+    # enforcement point introspects at this server on every call, so a
+    # sub-agent's live grants stop working on its next call whether or not
+    # anyone tells it.
+    children, child_tokens = 0, 0
+    for conn in await st(owner).connections():
+        if conn.get("parent_handle") != handle or conn.get("status") != "active":
+            continue
+        child_killed = await st(owner).revoke_connection(conn["handle"])
+        if child_killed is not None:
+            children, child_tokens = children + 1, child_tokens + child_killed
+
+    event("connection.revoked", handle=handle,
+          rpts_deactivated=killed + child_tokens, connections_revoked=children,
           by=(actor or {}).get("admin") or owner)
     await ledger_add(owner, "revoked", "-",
-                     {"rpts_deactivated": killed,
+                     {"rpts_deactivated": killed + child_tokens,
+                      **({"connections_revoked": children} if children else {}),
                       **({"by": actor} if actor else {})}, handle=handle)
     await owner_notify(owner, {"type": "decided", "family": "-",
                                "decision": "revoked", "by": actor})
-    return {"handle": handle, "status": "revoked", "rpts_deactivated": killed}
+    return {"handle": handle, "status": "revoked",
+            "rpts_deactivated": killed + child_tokens,
+            "connections_revoked": children}
 
 
 @app.get("/owner/ledger")
