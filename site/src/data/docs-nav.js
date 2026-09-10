@@ -63,6 +63,7 @@ const nav = {
         { title: "Many owners, one resource server", to: "/docs/overview/multi-owner/" },
         { title: "Shared ownership", to: "/docs/overview/shared-ownership/" },
         { title: "Joint ownership", to: "/docs/overview/joint-ownership/" },
+        { title: "Sub-agent grants", to: "/docs/overview/subagent-grants/" },
         { title: "Cross App Access", to: "/docs/overview/cross-app-access/" },
       ],
     },
@@ -103,6 +104,7 @@ const nav = {
         { title: "Her own agent", to: "/docs/guides/demo-her-own-agent/" },
         { title: "Her personal AI", to: "/docs/guides/demo-personal-ai/" },
         { title: "The firm's book", to: "/docs/guides/demo-the-firms-book/" },
+        { title: "Sub-agent grants", to: "/docs/guides/demo-subagent-grants/" },
       ],
     },
     {

@@ -119,6 +119,7 @@ make k8s-demo ACT=tier3        # the ask-me tier; approve or deny it
 make k8s-joint-demo            # both holders, in two portals
 make k8s-multi-owner-demo      # two authorities; try disagreeing
 make k8s-first-party-demo      # her agent and Bob's, under one rule
+make k8s-subagent-demo         # an orchestrator and its workers
 make kagent-ask Q="..." SIM=0  # the same, asked by kagent
 ```
 

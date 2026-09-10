@@ -39,6 +39,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · Many owners, one resource server](https://u4a.ai/docs/overview/multi-owner.md): A firm holds many people's accounts, and each of them may name a different authorization server — including one the firm was never configured against.
 - [Overview · Shared ownership](https://u4a.ai/docs/overview/shared-ownership.md): A firm owns a book, shares parts of it with the people who work on it, and sets policy over it that none of them can waive — while each of them still administers access under her own authority.
 - [Overview · Joint ownership](https://u4a.ai/docs/overview/joint-ownership.md): Two people hold an account together and neither can release it alone. What counts the votes owns nothing, decides nothing, and does not have to be trusted.
+- [Overview · Sub-agent grants](https://u4a.ai/docs/overview/subagent-grants.md): An agent spawns workers. None of them carry its key, none of them inherit its access, and each one is authorized on its own terms.
 - [Overview · Cross App Access](https://u4a.ai/docs/overview/cross-app-access.md): An enterprise identity provider says which employee and which application. The owner's authority says what may be done, on whose terms. Neither can answer the other's question.
 - [Overview · Compared to UMA 2.0](https://u4a.ai/docs/overview/compare-uma.md): What this profile keeps, what it changes, and why each change was necessary rather than preferred.
 - [Overview · Compared to OAuth 2.0 and GNAP](https://u4a.ai/docs/overview/compare-oauth-gnap.md): OAuth, CIBA-style asynchronous authorization and GNAP can all carry a negotiation. None of them, on its own, puts the deciding party anywhere but the service.
@@ -56,6 +57,7 @@ UMA 2.0. Listed in reading order.
 - [Guides · Demo: her own agent](https://u4a.ai/docs/guides/demo-her-own-agent.md): One rule, one tier, two agents — hers goes through without waking her, and one that is not hers is asked anyway.
 - [Guides · Demo: her personal AI](https://u4a.ai/docs/guides/demo-personal-ai.md): pAI-OS holding her key and answering from standing consent, until the one thing it has no way to ask her about.
 - [Guides · Demo: the firm's book](https://u4a.ai/docs/guides/demo-the-firms-book.md): Northwind shares part of its book with a member under a role — she administers it at her own authority, and only while she is a member.
+- [Guides · Demo: sub-agent grants](https://u4a.ai/docs/guides/demo-subagent-grants.md): An agent spawns workers, and each one is authorized on its own — until one press takes the whole fleet away.
 - [Guides · Choose an enforcement point](https://u4a.ai/docs/guides/enforcement-point.md): What the component that refuses has to be able to do, the two shapes it can take, and how to keep one implementation behind both.
 - [Guides · Issue the challenge](https://u4a.ai/docs/guides/challenge.md): Turning a refusal into the start of a negotiation — what the challenge carries, and the check that stops it being redirected.
 - [Guides · Dictate terms, take an agreement](https://u4a.ai/docs/guides/terms.md): How the owner's side proffers the conditions of access, what a signed echo has to prove, and the checks that stop an agent agreeing to something weaker.
@@ -78,6 +80,7 @@ UMA 2.0. Listed in reading order.
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [September 10 2026 · v2026.09.4](https://u4a.ai/changelog.md): Authorization server: sub-agent grants. An agent holding a connection may introduce a sibling, which skips first contact and then negotiates its own terms under its own key for its own grant. Nothing is passed down and nothing is inherited.
 - [September 1 2026 · v2026.09.3](https://u4a.ai/changelog.md): Docs: the Lab demonstrations pages carry everything the run cards do — the setup, where to sign in, the Codespace and re-run notes, and how to switch model provider — with every command in a copyable block.
 - [September 1 2026 · v2026.09.2](https://u4a.ai/changelog.md): Docs: `make kagent` was still described as the local no-account path in `KAGENT.md`, `DEMOS.md`, `KUBERNETES.md` and the Run the lab guide after the default became a hosted model, and `kagent.sh` pinned an Anthropic model two releases behind the one the demo cards name.
 - [September 1 2026 · v2026.09.1](https://u4a.ai/changelog.md): Demos: a run sheet per use case, in `docs/cards/` and under Guides → [Lab demonstrations](/docs/guides/demos/). Each one is driven by asking an agent a question and then deciding as the owner, rather than by running a check.
@@ -89,7 +92,6 @@ most days.
 - [August 25 2026 · v2026.08.21](https://u4a.ai/changelog.md): Joint ownership: a resource can have several owners of equal standing, none of whom can decide alone. A published mandate names who is entitled to be counted, at what weight and how many it takes; each owner's authority signs a verdict bound to one negotiation and one agreement; a tally collects them.
 - [August 25 2026 · v2026.08.20](https://u4a.ai/changelog.md): Organization: an organization can own resources, share them with members under a role, and set policy over them. Each member administers access through her own authorization server and her own terms. New `org-authority` service.
 - [August 23 2026 · v2026.08.19](https://u4a.ai/changelog.md): Authorization server: one resource server can hold many people's accounts, each governed by an authorization server of her own. Every owner-scoped artifact carries its owner: the ticket, the grant, the resource id, the terms template and the RFC 9728 document.
-- [August 21 2026 · v2026.08.18](https://u4a.ai/changelog.md): kagent: `make kagent-ask Q=…` asks your own question instead of a hardcoded one, and `SIM=0` lets a person answer the request rather than the check answering it.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts

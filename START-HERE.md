@@ -247,6 +247,7 @@ Alice's own accounts.
 
 ```bash
 make k8s-first-party-check
+make k8s-subagent-check
 ```
 
 Watch what does **not** happen. There is no shortcut. Her agent is challenged,
@@ -472,6 +473,9 @@ case — what to type, what to click, and what is worth saying while it happens:
   asking two owners, who answer differently
 - **[Her own agent](docs/cards/first-party.html)** — being hers buys less
   friction and no more access
+- **[Sub-agent grants](docs/cards/subagent-grants.html)** — an agent spawns
+  workers, and each one is authorized on its own rather than on the parent's
+  token
 - **[Her personal AI](docs/cards/personal-ai.html)** — standing consent
   answering, and refusing what it cannot ask her about
 - **[The firm's book](docs/cards/organization.html)** — a resource that is hers
@@ -494,6 +498,9 @@ case — what to type, what to click, and what is worth saying while it happens:
   owners of equal standing, and a party that counts without being trusted
 - **[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** — many owners of one resource
   server, and how one of them brings an authority nobody provisioned
+- **[docs/SUBAGENTS.md](docs/SUBAGENTS.md)** — sub-agent grants: an
+  orchestrator's workers, each authorized on its own rather than on a token
+  passed down
 - **[docs/KUBERNETES.md](docs/KUBERNETES.md)** — the same walkthrough with
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where

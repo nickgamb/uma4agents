@@ -122,6 +122,7 @@ then deciding as the owner.
 | [Two owners, one account](docs/cards/joint-ownership.html) | A jointly held account neither owner can release alone |
 | [Two owners, two authorities](docs/cards/multi-owner.html) | One agent asking two owners, who answer differently |
 | [Her own agent](docs/cards/first-party.html) | Being hers buys less friction and no more access |
+| [Sub-agent grants](docs/cards/subagent-grants.html) | An agent spawns workers; none carry its key and each is authorized on its own |
 | [Her personal AI](docs/cards/personal-ai.html) | Standing consent answering, and refusing what it cannot ask her about |
 | [The firm's book](docs/cards/organization.html) | A resource that is hers to administer only while she is a member |
 
@@ -256,6 +257,7 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make shim-test` | Drive the shim under a scripted MCP client (both approval paths, and the pend) |
 | `make embedded-check` | Run the whole grant with the resource enforcing itself — no gateway in the path |
 | `make first-party-check` | The degenerate case: an agent Alice activated herself, run through the same grant |
+| `make subagent-check` | An orchestrator's workers: admitted on an introduction, each with its own grant, all dying with the agent that introduced them |
 | `make intent-check` | Whose intent the grant carries: her terms, the agent's stated errand, the record that names it |
 | `make sig-test` | Unit-test the RFC 9421 profile |
 | `make store-test` | Race 32 callers at each single-use artifact, on both storage backends |

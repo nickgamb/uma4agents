@@ -21,3 +21,4 @@ reference architecture explores. [Run the lab](/docs/guides/run-the-lab/) first.
 | [Her own agent](/docs/guides/demo-her-own-agent/) | Being hers buys less friction and no more access. |
 | [Her personal AI](/docs/guides/demo-personal-ai/) | Standing consent answering, and refusing what it cannot ask her about. |
 | [The firm's book](/docs/guides/demo-the-firms-book/) | A resource that is hers to administer only while she is a member. |
+| [Sub-agent grants](/docs/guides/demo-subagent-grants/) | An agent spawns workers, and each one is authorized on its own. |

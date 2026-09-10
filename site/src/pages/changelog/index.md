@@ -20,6 +20,26 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 10 2026
+
+### v2026.09.4
+
+#### New
+
+- **Authorization server:** sub-agent grants. An agent holding a connection may introduce a sibling, which skips first contact and then negotiates its own terms under its own key for its own grant. Nothing is passed down and nothing is inherited.
+- **Authorization server:** two ways to prove a lineage — a compact JWS signed by the introducing agent over the newcomer's key, or RFC 8693's `act` claim in a verified `aa-agent+jwt`, which is where AAuth already names the entity a request was made on behalf of.
+- **Authorization server:** an agent's approval at a tier is read across its lineage, in both directions, so a tier a sub-agent earns is one the agent that introduced it stops being asked about.
+- **Authorization server:** `standing.introduced` and `standing.lineage_new_at_tier`, both observed conditions. They give an owner three postures per tier — ask about every agent, ask once per fleet, or always ask about sub-agents — without either being able to widen access.
+- **Authorization server:** revoking a connection revokes the ones it introduced, in the same action, and reports the count.
+- **Authorization server:** `UMA_AS_SUBAGENT_FANOUT` caps how many live sub-agents one agent may have. Sub-agents also count against the owner's attention budget, and their per-operation pends count with them.
+- **Store:** `lineage_approvals` and `count_children` on both backends, with an index on the parent handle.
+- **Portal:** the connections table names the agent that introduced each one, and the revoke toast reports the sub-agents that went with it.
+- **Docs:** `docs/SUBAGENTS.md`, a run card, a Lab demonstrations page, an overview page and a flow diagram.
+
+#### Bug fixes
+
+- **Kubernetes:** `agent-keys.py` skipped provisioning entirely when the Secret already existed, so an agent added to the list was never given a key and was left an assurance level below where it should be, with nothing logging a reason. It now adds missing agents by JSON Patch, and names given after `--rotate` get a fresh key each apply.
+
 ## September 1 2026
 
 ### v2026.09.3
