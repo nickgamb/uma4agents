@@ -1,0 +1,127 @@
+<svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- subagent-grants — an orchestrator's workers, each authorized on its own.
+       For sharing outside the project; assumes no U4A knowledge.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bcdb2c"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="760" fill="#0a0b0d"/>
+
+  <g transform="translate(40 26) scale(0.53125)">
+    <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="15" fill="#0a0b0d" stroke="#8cc2d4" stroke-width="2.8"/>
+    <g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 17 L11 33 A5.75 5.75 0 0 0 22.5 33 L22.5 17" stroke="#ffffff"/>
+      <path d="M34.5 17 L26.25 31 L37.75 31 M34.5 17 L34.5 39" stroke="#bcdb2c"/>
+      <path d="M41.5 39 L47.25 17 L53 39 M43.5 31.5 L51 31.5" stroke="#ffffff"/>
+    </g>
+    <path d="M20 46.5 L44 46.5" fill="none" stroke="#8cc2d4" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+  <text x="88" y="40" fill="#ffffff" font-size="17" font-weight="650">Sub-agents: each one gets its own grant</text>
+  <text x="88" y="59" fill="#a9aeb6" font-size="12.5">An agent spawns workers. None of them carry its key, and none of them inherit its access.</text>
+
+  <!-- ============================ THE WRONG WAY ============================ -->
+  <g>
+    <rect x="40" y="92" width="530" height="188" rx="10" fill="#121317" stroke="#3a2a28" stroke-width="1.6"/>
+    <text x="62" y="122" fill="#e8836b" font-size="13" font-weight="650">The usual shortcut</text>
+    <text x="62" y="144" fill="#a9aeb6" font-size="12">The parent hands its token down to each worker it spawns.</text>
+
+    <rect x="62" y="164" width="120" height="46" rx="8" fill="#0a0b0d" stroke="#5e8fa3" stroke-width="1.4"/>
+    <text x="122" y="192" fill="#ffffff" font-size="12.5" text-anchor="middle">Parent agent</text>
+
+    <line x1="182" y1="187" x2="252" y2="187" stroke="#e8836b" stroke-width="1.8" marker-end="url(#r)"/>
+    <text x="217" y="178" fill="#e8836b" font-size="11" text-anchor="middle">its token</text>
+
+    <rect x="252" y="164" width="106" height="46" rx="8" fill="#0a0b0d" stroke="#3a2a28" stroke-width="1.4"/>
+    <text x="305" y="192" fill="#a9aeb6" font-size="12.5" text-anchor="middle">Worker</text>
+    <rect x="372" y="164" width="106" height="46" rx="8" fill="#0a0b0d" stroke="#3a2a28" stroke-width="1.4"/>
+    <text x="425" y="192" fill="#a9aeb6" font-size="12.5" text-anchor="middle">Worker</text>
+
+    <text x="62" y="240" fill="#e8836b" font-size="12">Every worker now *is* the parent. The owner cannot tell them apart,</text>
+    <text x="62" y="258" fill="#e8836b" font-size="12">cannot revoke one, and never agreed to any of them.</text>
+  </g>
+
+  <!-- ============================= THE OWNER ============================== -->
+  <g>
+    <rect x="630" y="92" width="530" height="188" rx="10" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+    <text x="652" y="122" fill="#ffffff" font-size="13" font-weight="650">What this does instead</text>
+    <text x="652" y="146" fill="#bcdb2c" font-size="12.5">Nothing is handed down.</text>
+    <text x="652" y="170" fill="#a9aeb6" font-size="12">A worker arrives with its own key and a signed statement</text>
+    <text x="652" y="188" fill="#a9aeb6" font-size="12">that it is a spawn of an agent the owner already deals with.</text>
+    <text x="652" y="212" fill="#a9aeb6" font-size="12">Her authority checks that statement itself, then the worker</text>
+    <text x="652" y="230" fill="#a9aeb6" font-size="12">negotiates its own terms and gets its own grant.</text>
+    <text x="652" y="258" fill="#8cc2d4" font-size="12">What it skips is being introduced from nothing — not the rules.</text>
+  </g>
+
+  <!-- ============================== THE FLOW ============================== -->
+  <text x="40" y="322" fill="#ffffff" font-size="14" font-weight="650">How a worker gets in</text>
+
+  <!-- lanes -->
+  <g>
+    <rect x="40" y="344" width="230" height="52" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.6"/>
+    <text x="155" y="368" fill="#ffffff" font-size="13" font-weight="650" text-anchor="middle">Parent agent</text>
+    <text x="155" y="386" fill="#757b83" font-size="11" text-anchor="middle">approved by Alice earlier</text>
+
+    <rect x="330" y="344" width="230" height="52" rx="9" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+    <text x="445" y="368" fill="#ffffff" font-size="13" font-weight="650" text-anchor="middle">Worker it spawns</text>
+    <text x="445" y="386" fill="#757b83" font-size="11" text-anchor="middle">its own key, never the parent’s</text>
+
+    <rect x="620" y="344" width="230" height="52" rx="9" fill="#121317" stroke="#bcdb2c" stroke-width="1.6"/>
+    <text x="735" y="368" fill="#ffffff" font-size="13" font-weight="650" text-anchor="middle">Alice’s authority</text>
+    <text x="735" y="386" fill="#757b83" font-size="11" text-anchor="middle">the only thing that decides</text>
+
+    <rect x="910" y="344" width="250" height="52" rx="9" fill="#121317" stroke="#24262c" stroke-width="1.6"/>
+    <text x="1035" y="368" fill="#ffffff" font-size="13" font-weight="650" text-anchor="middle">Where her data lives</text>
+    <text x="1035" y="386" fill="#757b83" font-size="11" text-anchor="middle">checks every call with her</text>
+  </g>
+
+  <!-- beat 1 -->
+  <circle cx="52" cy="440" r="11" fill="#8cc2d4"/>
+  <text x="52" y="445" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">1</text>
+  <line x1="272" y1="440" x2="328" y2="440" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="74" y="436" fill="#ffffff" font-size="12.5">The parent signs a note about the worker’s key.</text>
+  <text x="74" y="454" fill="#757b83" font-size="11.5">It confers nothing: no tier, no scope, no access of its own.</text>
+
+  <!-- beat 2 -->
+  <circle cx="52" cy="502" r="11" fill="#8cc2d4"/>
+  <text x="52" y="507" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">2</text>
+  <line x1="562" y1="502" x2="618" y2="502" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="74" y="498" fill="#ffffff" font-size="12.5">The worker asks for something, carrying that note.</text>
+  <text x="74" y="516" fill="#757b83" font-size="11.5">Signed with its own key. The note names that key and no other.</text>
+
+  <!-- beat 3 -->
+  <circle cx="52" cy="564" r="11" fill="#bcdb2c"/>
+  <text x="52" y="569" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">3</text>
+  <text x="74" y="560" fill="#ffffff" font-size="12.5">Her authority checks the note against its own records.</text>
+  <text x="74" y="578" fill="#757b83" font-size="11.5">Is the signer an agent she approved in person? Same operator? Not revoked?</text>
+  <rect x="620" y="540" width="230" height="46" rx="8" fill="#0a0b0d" stroke="#bcdb2c" stroke-width="1.4"/>
+  <text x="735" y="560" fill="#bcdb2c" font-size="11.5" text-anchor="middle">checks it herself —</text>
+  <text x="735" y="577" fill="#bcdb2c" font-size="11.5" text-anchor="middle">believes nothing it is told</text>
+
+  <!-- beat 4 -->
+  <circle cx="52" cy="628" r="11" fill="#bcdb2c"/>
+  <text x="52" y="633" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">4</text>
+  <line x1="618" y1="628" x2="562" y2="628" stroke="#bcdb2c" stroke-width="1.8" marker-end="url(#g)"/>
+  <line x1="852" y1="628" x2="908" y2="628" stroke="#bcdb2c" stroke-width="1.8" marker-end="url(#g)"/>
+  <text x="74" y="624" fill="#ffffff" font-size="12.5">The worker negotiates its own terms and gets its own grant.</text>
+  <text x="74" y="642" fill="#757b83" font-size="11.5">A tier her fleet has never reached still stops and waits for her.</text>
+
+  <!-- the two properties -->
+  <g>
+    <rect x="40" y="672" width="555" height="62" rx="9" fill="#121317" stroke="#24262c" stroke-width="1.4"/>
+    <text x="62" y="697" fill="#bcdb2c" font-size="12.5" font-weight="650">She decides how much this buys</text>
+    <text x="62" y="718" fill="#a9aeb6" font-size="11.5">Ask about every worker · ask once per fleet · ask about sub-agents always.</text>
+
+    <rect x="620" y="672" width="540" height="62" rx="9" fill="#121317" stroke="#3a2a28" stroke-width="1.4"/>
+    <text x="642" y="697" fill="#e8836b" font-size="12.5" font-weight="650">Revoking the parent kills the workers</text>
+    <text x="642" y="718" fill="#a9aeb6" font-size="11.5">One action. Their live grants stop on the next call, not at expiry.</text>
+  </g>
+</svg>
