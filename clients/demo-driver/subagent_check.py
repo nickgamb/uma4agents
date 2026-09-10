@@ -127,12 +127,19 @@ def get_rules(client) -> dict:
     that edits her policy has to put back what was there, not what it assumes
     was there.
     """
-    rows = client.get(f"{AS_PUBLIC}/owner/policies", headers=hdrs(client),
-                      timeout=15.0).json()
-    if isinstance(rows, dict):
-        rows = rows.get("tiers") or list(rows.values())
-    return {t["id"]: (list(t.get("rules") or []), bool(t.get("ask_me")))
-            for t in rows if t.get("id")}
+    doc = client.get(f"{AS_PUBLIC}/owner/policies", headers=hdrs(client),
+                     timeout=15.0).json()
+    # The endpoint answers with a map keyed by tier id, and the tier objects
+    # carry no id of their own — so the key is the only place the id exists.
+    # Reading it as a list of objects with an `id` yields an empty mapping,
+    # the restore loop below iterates nothing, and the run reports that it put
+    # her rules back while leaving every edit in place. It did exactly that
+    # once.
+    rows = doc.get("tiers") if isinstance(doc.get("tiers"), dict) else doc
+    if not isinstance(rows, dict):
+        raise ValueError(f"unexpected /owner/policies shape: {type(rows).__name__}")
+    return {tid: (list(t.get("rules") or []), bool(t.get("ask_me")))
+            for tid, t in rows.items() if isinstance(t, dict)}
 
 
 def connections(client) -> dict:
@@ -419,6 +426,13 @@ if __name__ == "__main__":
             ORIGINAL = get_rules(c)
         except Exception as exc:                               # noqa: BLE001
             raise SystemExit(f"could not read her policy to restore it later: {exc}")
+        # Refuse to start rather than run with nothing to restore. An empty
+        # mapping here is not "she has no tiers" — it is this function having
+        # failed to parse, and the cost of finding out afterwards is her policy
+        # left as the check left it.
+        if not ORIGINAL:
+            raise SystemExit("read no tiers from /owner/policies; refusing to "
+                             "edit a policy this run could not put back")
     try:
         code = main()
     finally:
@@ -428,5 +442,6 @@ if __name__ == "__main__":
                     set_rules(c, tier, rules, ask_me=ask_me)
                 except Exception:                              # noqa: BLE001
                     pass
-        print("   (her rules have been put back as they were)")
+        print(f"   (her rules on {', '.join(sorted(ORIGINAL))} have been put "
+              f"back as they were)")
     raise SystemExit(code)
