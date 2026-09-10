@@ -91,6 +91,7 @@ const nav = {
       pages: [
         { title: "The roles you must fill", to: "/docs/guides/roles/" },
         { title: "Run the lab", to: "/docs/guides/run-the-lab/" },
+        { title: "Put U4A in front of something you did not write", to: "/docs/guides/adopt-in-front/" },
         { title: "Try it with Okta", to: "/docs/guides/okta-cross-app-access/" },
       ],
     },

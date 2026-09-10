@@ -42,6 +42,12 @@ release within that month. One entry per release.
 - **Docs:** the revocation page states how long revocation actually takes, and separates the part that lands on the agent's next call from the enforcement point's caches of organization membership (10s), joint mandates (30s) and published keys (300s), which had gone unmentioned on a page claiming atomicity.
 - **Docs:** the architecture page says how its absences are proved, and links the eleven-assertion suite — eight of them refusals — that asserts them from the requesting party's own namespace.
 
+#### New
+
+- **Enforcement point:** a sidecar mode. Setting `UMA_PEP_UPSTREAM` turns the enforcement point from a gateway callout into a reverse proxy that authorizes and then forwards, so U4A can be put in front of an MCP server whose author cannot change it. The verdict comes from the same code path as the callout. The agent's `Authorization` header is not forwarded upstream.
+- **Integrations:** `integrations/` — the vendor-neutral contract for putting U4A in front of an existing resource, a worked n8n example with an importable workflow template and a compose file, and `conformance.py`, which asserts the four obligations from outside including that the upstream is not reachable around the enforcement point.
+- **Docs:** a guide, *Put U4A in front of something you did not write*.
+
 #### Bug fixes
 
 - **Kubernetes:** `agent-keys.py` skipped provisioning entirely when the Secret already existed, so an agent added to the list was never given a key and was left an assurance level below where it should be, with nothing logging a reason. It now adds missing agents by JSON Patch, and names given after `--rotate` get a fresh key each apply.

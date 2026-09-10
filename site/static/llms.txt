@@ -49,6 +49,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · FAQ](https://u4a.ai/docs/overview/faq.md): The questions that come up first, answered directly, including the ones where the answer is that this does not do that.
 - [Guides · The roles you must fill](https://u4a.ai/docs/guides/roles.md): Six roles, what each one has to be able to do, and how to judge whether something in your stack can do it.
 - [Guides · Run the lab](https://u4a.ai/docs/guides/run-the-lab.md): A three-node deployment with one command, then the sequence that shows an owner deciding while she is the only one who can.
+- [Guides · Put U4A in front of something you did not write](https://u4a.ai/docs/guides/adopt-in-front.md): Most resources worth protecting cannot be modified. The enforcement point runs as a sidecar, answers the protocol, and forwards what it allows.
 - [Guides · Try it with Okta](https://u4a.ai/docs/guides/okta-cross-app-access.md): Register an AI agent, point it at an authorization server that is not Okta's, and watch an enterprise assertion and an owner's terms settle two halves of one request.
 - [Guides · Lab demonstrations](https://u4a.ai/docs/guides/demos.md): Walk through each use case the reference architecture explores, locally or in a Codespace.
 - [Guides · Demo: Alice to Bob](https://u4a.ai/docs/guides/demo-alice-to-bob.md): Three questions to an agent nobody modified, and an owner deciding each one from her own portal.
