@@ -616,7 +616,7 @@ make kagent MODEL=openai</code></div>
   </section>
 
   <section class="runthrough">
-    <h2>If they ask</h2>
+    <h2>FAQs</h2>
     <div class="table-scroll">
       <table>
         <colgroup>
@@ -625,52 +625,77 @@ make kagent MODEL=openai</code></div>
         </colgroup>
         <thead>
           <tr>
-            <th>They say</th>
-            <th>You say</th>
+            <th>Question</th>
+            <th>Answer</th>
           </tr>
         </thead>
         <tbody>
         <tr class="term">
-          <td class="act"><span class="where">"So it's delegation."</span></td>
+          <td class="act"><span class="where">Is this delegation?</span></td>
           <td class="say">
-            No — nothing is passed down. The parent states a fact about a key
-            and confers nothing. <strong>Her authority decides what that fact is
-            worth</strong>, and the worker negotiates for itself.
+            No. Nothing is passed down. The parent signs a statement naming the
+            sub-agent's key and confers nothing by doing so &mdash; no tier, no
+            scope, no access of its own. The owner's authority decides what that
+            statement is worth, and the sub-agent negotiates its own terms under
+            its own key.
           </td>
         </tr>
         <tr class="term">
-          <td class="act"><span class="where">"What stops a worker spawning workers?"</span></td>
+          <td class="act"><span class="where">What stops a sub-agent spawning its own sub-agents?</span></td>
           <td class="say">
-            An agent that was itself introduced may not introduce. <strong>The
-            authority graph is one level deep</strong>, whatever the task graph
-            does. That is a check, not a hope.
+            An agent that was itself introduced may not introduce another. The
+            authority graph is one level deep however deep the task graph goes.
+            It is an explicit check rather than an emergent property: once the
+            owner approves a sub-agent at any tier, it would otherwise qualify
+            as a sponsor.
           </td>
         </tr>
         <tr class="term">
-          <td class="act"><span class="where">"Can they just spawn a thousand?"</span></td>
+          <td class="act"><span class="where">Can an operator spawn a thousand of them?</span></td>
           <td class="say">
-            There is a hard fan-out ceiling, and sub-agents count against her
-            attention budget like anybody else. She can also say <strong>ask me
-            about every sub-agent, every time</strong> — that is one of the
-            three things her terms can say here.
+            There is a hard fan-out ceiling per agent, and sub-agents count
+            against the owner's attention budget like anybody else. Skipping
+            first contact skips the introduction, not the queue. She can also
+            say <strong>ask me about every sub-agent, every time</strong>, which
+            is one of the three postures her terms can take here.
           </td>
         </tr>
         <tr class="term">
-          <td class="act"><span class="where">"Who says it's really a sub-agent?"</span></td>
+          <td class="act"><span class="where">Who says it is really a sub-agent?</span></td>
           <td class="say">
-            Her authority checks it, and never takes the claim's word. Both keys
-            have to be published by <strong>one operator, in a directory the
-            agents cannot write to</strong>. For an agent with a real identity
-            it is better still: its own issuer names the parent, in AAuth's
+            Her authority checks, and never takes the claim's word for it. The
+            signing key has to resolve to an agent she approved in person, and
+            both keys have to be published by one operator in a directory the
+            agents cannot write to. An agent with a verified identity has a
+            better route still: its own issuer names the parent, in AAuth's
             <code>act</code> claim.
           </td>
         </tr>
         <tr class="term">
-          <td class="act"><span class="where">"Does this work with our stack?"</span></td>
+          <td class="act"><span class="where">What happens to sub-agents when the parent is revoked?</span></td>
           <td class="say">
-            The lab runs stock kagent over A2A, unmodified. Nothing in the
-            agent framework knows what any of this is —
-            <strong>the enforcement happens at the resource, not in the agent.</strong>
+            They are revoked in the same action, and their live grants stop
+            working on the next call rather than at expiry &mdash; the
+            enforcement point checks with her authority every time. A revoked
+            agent cannot be re-introduced by its sponsor either; it goes back
+            through first contact like anyone else.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">Does a sub-agent inherit what the parent could do?</span></td>
+          <td class="say">
+            It inherits nothing. Approval belongs to the lineage rather than to
+            one key, so each agent stays separately visible, separately
+            revocable and separately bounded &mdash; and a tier the lineage has
+            never reached still stops and waits for her.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="act"><span class="where">Does this need changes to our agent framework?</span></td>
+          <td class="say">
+            No. The lab runs stock kagent over A2A, unmodified, and nothing in
+            the framework knows this profile exists. Enforcement happens at the
+            resource, not inside the agent.
           </td>
         </tr>
         </tbody>

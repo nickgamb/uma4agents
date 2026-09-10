@@ -151,26 +151,42 @@ expire, because the enforcement point asks her authority every single time. And
 its sponsor cannot let a revoked worker back in — otherwise Revoke would be a
 suggestion.
 
-## If they ask
+## FAQs
 
-**"So it's delegation."** No — nothing is passed down. The parent states a fact
-about a key and confers nothing. Her authority decides what that fact is worth,
-and the worker negotiates for itself.
+**Is this delegation?** No. Nothing is passed down. The parent signs a statement
+naming the sub-agent's key and confers nothing by doing so — no tier, no scope,
+no access of its own. The owner's authority decides what that statement is
+worth, and the sub-agent negotiates its own terms under its own key.
 
-**"What stops a worker spawning workers?"** An agent that was itself introduced
-may not introduce. The authority graph is one level deep, whatever the task
-graph does. That is a check, not a hope.
+**What stops a sub-agent spawning its own sub-agents?** An agent that was itself
+introduced may not introduce another. The authority graph is one level deep
+however deep the task graph goes. It is an explicit check rather than an
+emergent property: once the owner approves a sub-agent at any tier, it would
+otherwise qualify as a sponsor.
 
-**"Can they just spawn a thousand?"** There is a hard fan-out ceiling, and
-sub-agents count against her attention budget like anybody else. She can also
-say *ask me about every sub-agent, every time* — one of the three things her
-terms can say here.
+**Can an operator spawn a thousand of them?** There is a hard fan-out ceiling
+per agent, and sub-agents count against the owner's attention budget like
+anybody else. Skipping first contact skips the introduction, not the queue. She
+can also say *ask me about every sub-agent, every time*, which is one of the
+three postures her terms can take here.
 
-**"Who says it's really a sub-agent?"** Her authority checks it, and never takes
-the claim's word. Both keys have to be published by one operator, in a directory
-the agents cannot write to. For an agent with a real identity it is better
+**Who says it is really a sub-agent?** Her authority checks, and never takes the
+claim's word for it. The signing key has to resolve to an agent she approved in
+person, and both keys have to be published by one operator in a directory the
+agents cannot write to. An agent with a verified identity has a better route
 still: its own issuer names the parent, in AAuth's `act` claim.
 
-**"Does this work with our stack?"** The lab runs stock kagent over A2A,
-unmodified. Nothing in the agent framework knows what any of this is — the
-enforcement happens at the resource, not in the agent.
+**What happens to sub-agents when the parent is revoked?** They are revoked in
+the same action, and their live grants stop working on the next call rather than
+at expiry — the enforcement point checks with her authority every time. A
+revoked agent cannot be re-introduced by its sponsor either; it goes back
+through first contact like anyone else.
+
+**Does a sub-agent inherit what the parent could do?** It inherits nothing.
+Approval belongs to the lineage rather than to one key, so each agent stays
+separately visible, separately revocable and separately bounded — and a tier the
+lineage has never reached still stops and waits for her.
+
+**Does this need changes to our agent framework?** No. The lab runs stock kagent
+over A2A, unmodified, and nothing in the framework knows this profile exists.
+Enforcement happens at the resource, not inside the agent.

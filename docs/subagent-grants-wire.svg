@@ -1,0 +1,144 @@
+<svg viewBox="0 0 1240 1030" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- subagent-grants-wire — the sequence, and what is actually on the wire
+       at each beat. Companion to subagent-grants.svg, which is the shape.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f2b955"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+  </defs>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+    .k { fill: #9cdcfe; } .s { fill: #ce9178; } .n { fill: #b5cea8; }
+    .c { fill: #6a9955; } .p { fill: #d4d4d4; } .kw { fill: #c586c0; }
+    .ok { fill: #bcdb2c; }
+  </style>
+
+  <rect width="1240" height="1030" fill="#0a0b0d"/>
+  <text x="40" y="46" fill="#ffffff" font-size="19" font-weight="650">Sub-agent grants</text>
+  <text x="40" y="70" fill="#a9aeb6" font-size="13">Bob's agent spawns a helper. Nothing is handed down — and here is what is actually on the wire.</text>
+
+  <!-- ═══════════════ 1 ═══════════════ -->
+  <line x1="64" y1="140" x2="64" y2="248" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="120" r="15" fill="#8cc2d4"/>
+  <text x="64" y="125" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">1</text>
+  <rect x="96" y="98" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="122" fill="#ffffff" font-size="13.5" font-weight="650">Bob's agent asks for Alice's holdings</text>
+  <text x="116" y="142" fill="#757b83" font-size="11.5">no grant → 401 → she approves → tier 1 granted</text>
+
+  <rect x="600" y="94" width="600" height="112" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="94" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="110" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="106" r="3.5" fill="#e8836b"/><circle cx="628" cy="106" r="3.5" fill="#f2b955"/><circle cx="640" cy="106" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="110" fill="#757b83" font-size="10.5" class="mono">beat 1 · the challenge</text>
+  <text x="616" y="140" class="mono kw">HTTP/1.1 401 Unauthorized</text>
+  <text x="616" y="157" class="mono"><tspan class="k">WWW-Authenticate:</tspan> <tspan class="p">UMA</tspan> <tspan class="k">as_uri</tspan><tspan class="p">=</tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="174" class="mono"><tspan class="p">  </tspan><tspan class="k">ticket</tspan><tspan class="p">=</tspan><tspan class="s">"tkt_3pFEwIvawFN7"</tspan><tspan class="p">,</tspan> <tspan class="k">scope</tspan><tspan class="p">=</tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="191" class="mono"><tspan class="p">  </tspan><tspan class="k">resource_metadata</tspan><tspan class="p">=</tspan><tspan class="s">"…/oauth-protected-resource"</tspan></text>
+
+  <!-- ═══════════════ 2 ═══════════════ -->
+  <circle cx="64" cy="268" r="15" fill="#8cc2d4"/>
+  <text x="64" y="273" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">2</text>
+  <line x1="64" y1="288" x2="64" y2="424" stroke="#24262c" stroke-width="2"/>
+  <rect x="96" y="246" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="270" fill="#ffffff" font-size="13.5" font-weight="650">It spawns a sub-agent for part of the job</text>
+  <text x="116" y="290" fill="#757b83" font-size="11.5">its own key · its own contract · carries an introduction</text>
+
+  <rect x="600" y="228" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="228" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="244" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="240" r="3.5" fill="#e8836b"/><circle cx="628" cy="240" r="3.5" fill="#f2b955"/><circle cx="640" cy="240" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="244" fill="#757b83" font-size="10.5" class="mono">the introduction · signed by the parent</text>
+  <text x="616" y="274" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"u4a-introduction-v1+jws"</tspan><tspan class="p">, </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…} }</tspan></text>
+  <text x="616" y="291" class="mono"><tspan class="p">{</tspan></text>
+  <text x="616" y="308" class="mono"><tspan class="p">  </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:8f2c…"</tspan><tspan class="p">,</tspan>   <tspan class="c">// the sub-agent's key</tspan></text>
+  <text x="616" y="325" class="mono"><tspan class="p">  </tspan><tspan class="k">"aud"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="342" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757538120</tspan></text>
+  <text x="616" y="359" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// no tier, no scope, no token. it confers nothing</tspan></text>
+
+  <!-- ═══════════════ 3 ═══════════════ -->
+  <circle cx="64" cy="444" r="15" fill="#8cc2d4"/>
+  <text x="64" y="449" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">3</text>
+  <line x1="64" y1="464" x2="64" y2="600" stroke="#24262c" stroke-width="2"/>
+  <rect x="96" y="422" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="446" fill="#ffffff" font-size="13.5" font-weight="650">Her authority checks it against her records</text>
+  <text x="116" y="466" fill="#757b83" font-size="11.5">never the claim's word · any ✗ falls back to first contact</text>
+
+  <rect x="600" y="404" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="404" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="420" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="416" r="3.5" fill="#e8836b"/><circle cx="628" cy="416" r="3.5" fill="#f2b955"/><circle cx="640" cy="416" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="420" fill="#757b83" font-size="10.5" class="mono">what she looks up · connection jkt:41ab…</text>
+  <text x="616" y="450" class="mono"><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"active"</tspan></text>
+  <text x="616" y="467" class="mono"><tspan class="k">"tiers_approved"</tspan><tspan class="p">: [</tspan><tspan class="s">"tier1"</tspan><tspan class="p">]</tspan></text>
+  <text x="616" y="484" class="mono"><tspan class="k">"parent_handle"</tspan><tspan class="p">: </tspan><tspan class="kw">null</tspan></text>
+  <text x="616" y="501" class="mono"><tspan class="p">operator directory holds both keys</tspan></text>
+  <text x="616" y="518" class="mono"><tspan class="p">no revoked record for </tspan><tspan class="s">jkt:8f2c…</tspan></text>
+  <text x="616" y="535" class="mono"><tspan class="p">live sub-agents </tspan><tspan class="n">1</tspan><tspan class="p"> of </tspan><tspan class="n">3</tspan><tspan class="p"> allowed</tspan></text>
+  <text x="930" y="450" class="mono ok">✓</text>
+  <text x="930" y="467" class="mono ok">✓</text>
+  <text x="930" y="484" class="mono ok">✓</text>
+  <text x="930" y="501" class="mono ok">✓</text>
+  <text x="930" y="518" class="mono ok">✓</text>
+  <text x="930" y="535" class="mono ok">✓</text>
+  <text x="952" y="467" class="mono c">she approved it in person</text>
+  <text x="952" y="484" class="mono c">not itself a sub-agent</text>
+
+  <!-- ═══════════════ 4 ═══════════════ -->
+  <circle cx="64" cy="620" r="15" fill="#bcdb2c"/>
+  <text x="64" y="625" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">4</text>
+  <line x1="64" y1="640" x2="64" y2="796" stroke="#24262c" stroke-width="2"/>
+  <rect x="96" y="598" width="452" height="60" rx="9" fill="#121317" stroke="#bcdb2c" stroke-width="1.6"/>
+  <text x="116" y="622" fill="#bcdb2c" font-size="13.5" font-weight="650">Admitted — and it gets its own grant</text>
+  <text x="116" y="642" fill="#757b83" font-size="11.5">no second first contact · negotiates its own terms</text>
+
+  <rect x="600" y="580" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="580" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="596" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="592" r="3.5" fill="#e8836b"/><circle cx="628" cy="592" r="3.5" fill="#f2b955"/><circle cx="640" cy="592" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="596" fill="#757b83" font-size="10.5" class="mono">the sub-agent's RPT · aa-auth+jwt</text>
+  <text x="616" y="626" class="mono"><tspan class="p">{</tspan></text>
+  <text x="616" y="643" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="660" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p">} },</tspan>  <tspan class="c">// ITS key, not the parent's</tspan></text>
+  <text x="616" y="677" class="mono"><tspan class="p">  </tspan><tspan class="k">"scope"</tspan><tspan class="p">: </tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="694" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757541600</tspan></text>
+  <text x="616" y="711" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// separately spendable, separately revocable</tspan></text>
+
+  <!-- ═══════════════ 5 ═══════════════ -->
+  <circle cx="64" cy="816" r="15" fill="#f2b955"/>
+  <text x="64" y="821" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">5</text>
+  <line x1="64" y1="836" x2="64" y2="912" stroke="#24262c" stroke-width="2"/>
+  <rect x="96" y="794" width="452" height="60" rx="9" fill="#121317" stroke="#6b5320" stroke-width="1.6"/>
+  <text x="116" y="818" fill="#f2b955" font-size="13.5" font-weight="650">It asks to trade — and Alice is asked</text>
+  <text x="116" y="838" fill="#757b83" font-size="11.5">nobody in this lineage was ever approved at tier 3</text>
+
+  <rect x="600" y="786" width="600" height="78" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="786" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="802" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="798" r="3.5" fill="#e8836b"/><circle cx="628" cy="798" r="3.5" fill="#f2b955"/><circle cx="640" cy="798" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="802" fill="#757b83" font-size="10.5" class="mono">the ceiling · not configurable away</text>
+  <text x="616" y="832" class="mono"><tspan class="p">{ </tspan><tspan class="k">"error"</tspan><tspan class="p">: </tspan><tspan class="s">"request_submitted"</tspan><tspan class="p">, </tspan><tspan class="k">"ticket"</tspan><tspan class="p">: </tspan><tspan class="s">"tkt_9dLm…"</tspan><tspan class="p"> }</tspan></text>
+  <text x="616" y="849" class="mono"><tspan class="c">// held at her portal — same as it would be for the parent</tspan></text>
+
+  <!-- ═══════════════ 6 ═══════════════ -->
+  <circle cx="64" cy="932" r="15" fill="#e8836b"/>
+  <text x="64" y="937" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">6</text>
+  <rect x="96" y="910" width="452" height="60" rx="9" fill="#121317" stroke="#7a3b2c" stroke-width="1.6"/>
+  <text x="116" y="934" fill="#e8836b" font-size="13.5" font-weight="650">She revokes the parent</text>
+  <text x="116" y="954" fill="#757b83" font-size="11.5">sub-agents go with it · grants fail on the next call</text>
+
+  <rect x="600" y="894" width="600" height="95" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="894" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="910" width="600" height="8" fill="#232529"/>
+  <circle cx="616" cy="906" r="3.5" fill="#e8836b"/><circle cx="628" cy="906" r="3.5" fill="#f2b955"/><circle cx="640" cy="906" r="3.5" fill="#bcdb2c"/>
+  <text x="656" y="910" fill="#757b83" font-size="10.5" class="mono">one press · POST /owner/connections/jkt:41ab…/revoke</text>
+  <text x="616" y="940" class="mono"><tspan class="p">{ </tspan><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"revoked"</tspan><tspan class="p">,</tspan></text>
+  <text x="616" y="957" class="mono"><tspan class="p">  </tspan><tspan class="k">"connections_revoked"</tspan><tspan class="p">: </tspan><tspan class="n">3</tspan><tspan class="p">, </tspan><tspan class="k">"rpts_deactivated"</tspan><tspan class="p">: </tspan><tspan class="n">5</tspan><tspan class="p"> }</tspan></text>
+  <text x="616" y="974" class="mono"><tspan class="c">// no action per link — the PEP asks her authority every call</tspan></text>
+</svg>

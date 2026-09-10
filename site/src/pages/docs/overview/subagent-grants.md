@@ -30,13 +30,24 @@ its own key, for its own grant.
 
 The task graph can be as deep as you like. The authority graph is flat.
 
-![Four beats. The parent signs a note naming the worker's key, which confers no
-access of its own. The worker asks for something, signing with its own key and
-carrying that note. Alice's authority checks the note against her own records
-rather than believing it — is the signer an agent she approved in person, from
-the same operator, not revoked. The worker then negotiates its own terms and
-receives its own grant, and a tier her fleet has never reached still stops and
-waits for her.](/img/docs/subagent-grants.svg)
+![Bob's domain holds the parent agent, the sub-agent, and the operator key
+directory that publishes both their keys where neither agent can write to it.
+Alice's domain holds her authorization server and her portal. The parent signs
+an introduction naming the sub-agent's key, which confers no tier or scope — or
+the operator's AAuth agent server names the parent in the sub-agent's `act`
+claim instead; the
+sub-agent sends its own contract carrying it; her authority checks it against
+her own records and returns a grant bound to the sub-agent's own key; revoking
+the parent takes its sub-agents with it in the same action.](/img/docs/subagent-grants.svg)
+
+The same sequence, with what is actually on the wire at each beat:
+
+![Six numbered steps, each beside an editor window showing the real message: the
+401 UMA challenge naming her authority and a ticket, the introduction's JWS
+claims, the connection record her authority looks up, the sub-agent's own RPT
+with cnf bound to its own key rather than the parent's, the pend it gets when it
+reaches a tier the lineage never had, and the revoke response carrying the
+cascade counts.](/img/docs/subagent-grants-wire.svg)
 
 ## What the worker skips
 

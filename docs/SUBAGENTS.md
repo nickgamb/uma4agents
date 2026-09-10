@@ -18,7 +18,21 @@ its own key, for its own grant.
 
 **The task graph can be as deep as you like. The authority graph is flat.**
 
-![The flow, four beats](subagent-grants.svg)
+![Bob's domain holds the parent agent, the sub-agent and the operator key
+directory that publishes both their keys, and the AAuth agent server that can
+name the parent in the sub-agent's `act` claim instead. Alice's domain holds her
+authorization
+server and her portal. The sub-agent sends its own contract carrying it; her authority checks it
+against her own records and returns a grant bound to the sub-agent's own key;
+revoking the parent takes its sub-agents with it.](subagent-grants.svg)
+
+The same sequence, with what is actually on the wire at each beat:
+
+![Six numbered steps, each beside an editor window showing the real message: the
+401 UMA challenge, the introduction's JWS claims, the connection record her
+authority looks up, the sub-agent's own RPT with cnf bound to its own key, the
+pend when it reaches a tier the lineage never had, and the revoke response
+carrying the cascade counts.](subagent-grants-wire.svg)
 
 Run it: `make subagent-check`, or `make k8s-subagent-check` in the cluster.
 
