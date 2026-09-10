@@ -25,9 +25,13 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
-    # get to check, create to make. Deliberately no update or delete: this
-    # job must never be able to replace a key that already exists.
-    verbs: ["get", "create"]
+    # get to check, create to make, patch to extend. Deliberately no update
+    # and no delete: those replace or remove the whole Secret, and this job
+    # must never be able to rotate a key that already exists. patch is here
+    # so a newly named agent can be added to a Secret that already exists —
+    # the script sends a JSON Patch of `add` operations for absent fields
+    # only, so no existing private key is ever named by the request.
+    verbs: ["get", "create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -71,12 +75,29 @@ spec:
         - name: keygen
           image: localhost:5001/u4a/uma-as:dev
           imagePullPolicy: Always
-          # Two agents, because the checks need two that the operator can
-          # vouch for and they must not be the same agent — a returning key
-          # already has standing, and "a newcomer she can name" would not be
-          # a newcomer.
+          # `attested` and `newcomer` because the checks need two the operator
+          # can vouch for and they must not be the same agent — a returning key
+          # already has standing, and "a newcomer she can name" would not be a
+          # newcomer.
+          #
+          # The rest are an orchestrator and its workers. A fleet has to be
+          # provisioned rather than self-published for the reason this whole
+          # script exists: an agent that can put its own key in the directory
+          # is attesting to itself, and "the same operator published both keys"
+          # is the one half of an introduction the requesting side must not be
+          # able to manufacture.
+          # `lead` is long-lived: an owner's standing is keyed by the key,
+          # so an orchestrator that keeps its relationship keeps its key.
+          # Everything after `--rotate` is a worker spawned for one job and
+          # gets a fresh key each time the lab is applied — which is what a
+          # real orchestrator does, and what lets a check that revokes a
+          # worker run more than once. Revocation is permanent by design; the
+          # agent that comes back is a different agent.
           command: ["python3", "/script/agent-keys.py", "agent-published-key",
-                    "attested", "newcomer"]
+                    "attested", "newcomer", "lead",
+                    "--rotate",
+                    "worker-a", "worker-b", "worker-c",
+                    "outsider", "bystander", "grandchild"]
           env:
             - name: POD_NAMESPACE
               valueFrom: { fieldRef: { fieldPath: metadata.namespace } }

@@ -1,0 +1,93 @@
+# Sub-agents, in the cluster: an orchestrator's workers, each with its own key
+# and its own grant.
+#
+# Runs from Bob's namespace like every other check, which is part of what it
+# proves — a fleet of his agents reaches her authority over the same seam,
+# through the same gateway, and gets no shortcut for being numerous. Worth
+# running here as well as under compose for a specific reason: the lineage
+# reads and the revocation cascade are store-backed, and this is the shape
+# where the two backends run different SQL.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: subagent-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: subagent-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: subagent-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/subagent_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_ALICE_OPERATOR
+              value: https://alice-agent.uma.lab
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+            # Flipped to "0" by `make k8s-subagent-demo`, where she decides
+            # rather than a background approver.
+            - name: UMA4A_SIMULATE_OWNER
+              value: "1"
+            # Must match UMA_AS_MAX_REASON on the uma-as Deployment: a check
+            # that sends one byte over a cap the server does not enforce fails
+            # for the wrong cause.
+            - name: UMA_AS_MAX_REASON
+              value: "512"
+            # Present only in the replicated shape, where the operator serves a
+            # provisioned document and registering a key at runtime is refused.
+            # It matters more here than anywhere else: "one operator published
+            # both keys" is the half of an introduction the requesting side
+            # must not be able to manufacture, and a self-published directory
+            # is exactly an agent attesting to itself.
+            - name: UMA4A_PUBLISHED_KEYS
+              value: /published
+            # Must match UMA_AS_SUBAGENT_FANOUT on the uma-as Deployment: a
+            # check counting to a number the server does not enforce fails for
+            # the wrong cause.
+            - name: UMA_AS_SUBAGENT_FANOUT
+              value: "3"
+          volumeMounts:
+            - { name: driver, mountPath: /driver/subagent_check.py, subPath: subagent_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: published, mountPath: /published, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: published
+          secret:
+            secretName: agent-published-key
+            items:
+              - { key: lead-ed25519.pem, path: lead-ed25519.pem }
+              - { key: worker-a-ed25519.pem, path: worker-a-ed25519.pem }
+              - { key: worker-b-ed25519.pem, path: worker-b-ed25519.pem }
+              - { key: worker-c-ed25519.pem, path: worker-c-ed25519.pem }
+              - { key: outsider-ed25519.pem, path: outsider-ed25519.pem }
+              - { key: bystander-ed25519.pem, path: bystander-ed25519.pem }
+              - { key: grandchild-ed25519.pem, path: grandchild-ed25519.pem }
+        - name: keys
+          emptyDir: {}

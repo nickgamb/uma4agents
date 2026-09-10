@@ -241,6 +241,41 @@ k8s-policy-test:
 k8s-assurance-check:
 	$(call run_job,assurance-check,cat $(K8S)/base/jobs/assurance-check.yaml,420s)
 
+## k8s-subagent-check: an orchestrator's workers, each with its own key and
+## its own grant. Admission without a second first contact, the tier ceiling
+## she cannot configure away, and revoking the agent that introduced them.
+## Run here as well as under compose: the lineage reads and the revocation
+## cascade are store-backed, and this is where the SQL differs.
+.PHONY: k8s-subagent-check
+k8s-subagent-check: k8s-spawn-keys
+	$(call run_job,subagent-check,cat $(K8S)/base/jobs/subagent-check.yaml,420s)
+
+# Fresh keys for the workers this check spawns, and a directory that serves
+# them. Needed every run rather than once: the check ends by revoking a
+# worker, revocation is permanent on purpose, and an agent whose key was
+# revoked must never be re-admitted on an introduction. A worker that comes
+# back is a different worker, which is exactly what a fresh key means.
+.PHONY: k8s-spawn-keys
+k8s-spawn-keys:
+	@kubectl -n $(NS_AGENT) delete job agent-keygen --ignore-not-found >/dev/null 2>&1
+	@kubectl create configmap agent-keys-script -n $(NS_AGENT) \
+		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
+		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@kubectl apply -f $(K8S)/base/sterling-vance/keys.yaml >/dev/null
+	@until kubectl -n $(NS_AGENT) get job agent-keygen \
+		-o jsonpath='{.status.conditions[*].type}' 2>/dev/null \
+		| grep -qE "Complete|Failed"; do sleep 2; done
+	@kubectl -n $(NS_AGENT) logs job/agent-keygen --tail=2 2>/dev/null || true
+	@kubectl -n $(NS_AGENT) rollout restart deploy/agent-operator >/dev/null
+	@kubectl -n $(NS_AGENT) rollout status deploy/agent-operator --timeout=180s >/dev/null
+
+## k8s-subagent-demo: the same run, with her deciding. She admits the first
+## agent, chooses what she wants said about its workers, and revokes the lot
+## with one press.
+.PHONY: k8s-subagent-demo
+k8s-subagent-demo: k8s-spawn-keys
+	$(call run_live_job,subagent-demo,sed -e '/UMA4A_SIMULATE_OWNER/{n;s|"1"|"0"|;}' -e 's|subagent-check|subagent-demo|g' $(K8S)/base/jobs/subagent-check.yaml)
+
 ## k8s-first-party-check: the degenerate case — an agent Alice activated
 ## herself. Same seam, same gateway, no shortcut for being hers. Run here as
 ## well as under compose: the claimed-origin list is store-backed, and the two
