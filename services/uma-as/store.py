@@ -168,7 +168,18 @@ class OwnerStore(Protocol):
 
     async def connection(self, handle: str) -> dict | None: ...
 
-    async def put_connection(self, conn: dict) -> None: ...
+    async def put_connection(self, conn: dict) -> None:
+        """Write a connection record. **Replaces it wholly.**
+
+        Every caller must therefore carry forward what it does not mean to
+        change — `tiers_granted`, `tiers_approved`, `first_seen` and above all
+        `revocations`, which exists precisely so that an agent cannot clear
+        its record by being introduced again.
+
+        `parent_handle` is the introducing connection, or absent for an agent
+        the owner met directly. It is what makes a lineage readable, and it is
+        never set on a connection that reached her through first contact.
+        """
 
     async def connections(self) -> list[dict]: ...
 
@@ -192,6 +203,33 @@ class OwnerStore(Protocol):
         The two are separate because only this one may relax a rule. Relaxing
         on what the server granted would be circular: that grant may itself
         have been automatic, so one automatic grant would justify the next.
+        """
+
+    async def lineage_approvals(self, root: str) -> list[str]:
+        """Every tier the owner personally approved for a connection *and its
+        live sub-agents*, as one set.
+
+        A sub-agent is a separate connection with its own key and its own
+        grants; what it is not is a separate relationship. When she is asked
+        about an agent she has already met the fleet of, the question is
+        whether *this fleet* has been approved at this tier — so the answer
+        has to be readable across the whole lineage rather than one row.
+
+        Flows both ways by construction: approving a sub-agent at a tier the
+        parent never reached puts that tier in the same set, so the parent
+        stops being asked about it too. A tier nobody in the lineage has been
+        approved for is absent, which is the case that still asks her.
+
+        Revoked members are excluded, so revoking the one member that earned a
+        tier drops the lineage back to asking there.
+        """
+
+    async def count_children(self, handle: str) -> int:
+        """How many live sub-agents this connection has introduced.
+
+        A method rather than a filter over `connections()` because it runs on
+        every token request that carries an introduction, and the caller-side
+        version deserializes every row the owner has to answer it.
         """
 
     async def revoke_connection(self, handle: str) -> int | None:

@@ -394,6 +394,25 @@ class PostgresOwnerStore:
             "SET conn = jsonb_set(conn, '{last_access}', to_jsonb($2::text)) "
             "WHERE handle = $1 AND owner = $3", handle, when, self._o)
 
+    async def lineage_approvals(self, root: str) -> list[str]:
+        # The root and its live children in one statement. `jsonb_array_elements_text`
+        # unnests each row's approved tiers so the union happens in the
+        # database rather than by reading every record back.
+        rows = await self._pool.fetch(
+            "SELECT DISTINCT t.tier FROM connections c, "
+            "     jsonb_array_elements_text(c.conn -> 'tiers_approved') AS t(tier) "
+            "WHERE c.owner = $2 AND c.conn ->> 'status' = 'active' "
+            "  AND (c.handle = $1 OR c.conn ->> 'parent_handle' = $1)",
+            root, self._o)
+        return [r["tier"] for r in rows]
+
+    async def count_children(self, handle: str) -> int:
+        row = await self._pool.fetchrow(
+            "SELECT count(*) AS n FROM connections "
+            "WHERE owner = $2 AND conn ->> 'parent_handle' = $1 "
+            "  AND conn ->> 'status' = 'active'", handle, self._o)
+        return int(row["n"]) if row else 0
+
     async def note_tier_grant(self, handle: str, tier_id: str) -> None:
         # Append-if-absent in one statement, so two replicas granting at the
         # same tier concurrently cannot lose each other's write.

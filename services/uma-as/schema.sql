@@ -101,6 +101,15 @@ CREATE TABLE IF NOT EXISTS connections (
     PRIMARY KEY (owner, handle)
 );
 
+-- A sub-agent's record names the connection that introduced it. Revoking an
+-- agent revokes the ones it introduced, and deciding about a sub-agent reads
+-- what the owner approved across the whole lineage; both walk this way, on
+-- every token request rather than occasionally, so it is an index and not a
+-- scan.
+CREATE INDEX IF NOT EXISTS connections_by_parent
+    ON connections (owner, (conn ->> 'parent_handle'))
+    WHERE conn ->> 'parent_handle' IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS resource_servers (
     owner     text NOT NULL,
     client_id text NOT NULL,

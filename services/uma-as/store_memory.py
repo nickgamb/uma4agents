@@ -168,6 +168,22 @@ class MemoryOwnerStore:
             if tier_id not in conn.setdefault("tiers_approved", []):
                 conn["tiers_approved"].append(tier_id)
 
+    async def lineage_approvals(self, root: str) -> list[str]:
+        tiers: list[str] = []
+        for conn in self._connections.values():
+            member = conn["handle"] == root or conn.get("parent_handle") == root
+            if not member or conn.get("status") != "active":
+                continue
+            for tier_id in conn.get("tiers_approved") or []:
+                if tier_id not in tiers:
+                    tiers.append(tier_id)
+        return tiers
+
+    async def count_children(self, handle: str) -> int:
+        return sum(1 for c in self._connections.values()
+                   if c.get("parent_handle") == handle
+                   and c.get("status") == "active")
+
     async def revoke_connection(self, handle: str) -> int | None:
         conn = self._connections.get(handle)
         if conn is None:

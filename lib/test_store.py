@@ -342,6 +342,58 @@ async def test_tier_grants_and_approvals_are_kept_apart(store) -> None:
     await store.note_tier_grant("jkt:never-seen", "tier1")   # must not raise
 
 
+async def test_a_lineage_pools_what_she_approved(store) -> None:
+    """Approval belongs to the lineage, not to one connection.
+
+    A sub-agent is a separate connection with its own key and its own grants,
+    but not a separate relationship. So the tiers she approved read across the
+    whole fleet — and both ways: a tier earned by a sub-agent is a tier the
+    parent stops being asked about.
+    """
+    def member(handle: str, parent: str | None = None) -> dict:
+        return {"handle": handle, "status": "active", "parent_handle": parent,
+                "first_seen": "2026-09-01T00:00:00Z",
+                "identity": {"level": "pseudonymous"},
+                "label": "test", "last_access": None,
+                "tiers_granted": [], "tiers_approved": [], "revocations": 0}
+
+    await store.put_connection(member("jkt:root"))
+    await store.put_connection(member("jkt:kid-a", "jkt:root"))
+    await store.put_connection(member("jkt:kid-b", "jkt:root"))
+    await store.put_connection(member("jkt:unrelated"))
+
+    await store.note_tier_approval("jkt:root", "tier2")
+    await store.note_tier_approval("jkt:unrelated", "tier3")
+
+    check("lineage: an unrelated agent's approval is not pooled",
+          sorted(await store.lineage_approvals("jkt:root")) == ["tier2"],
+          f"got {await store.lineage_approvals('jkt:root')!r}")
+
+    # The direction that inverts the usual model: the *child* earns it.
+    await store.note_tier_approval("jkt:kid-a", "tier3")
+    check("lineage: what a sub-agent earned reaches the whole lineage",
+          sorted(await store.lineage_approvals("jkt:root")) == ["tier2", "tier3"],
+          f"got {await store.lineage_approvals('jkt:root')!r}")
+
+    check("lineage: fan-out counts live sub-agents",
+          await store.count_children("jkt:root") == 2,
+          f"got {await store.count_children('jkt:root')}")
+
+    # Revoking the member that earned a tier drops the lineage back to asking
+    # there, which is the only answer consistent with revocation meaning
+    # anything.
+    await store.revoke_connection("jkt:kid-a")
+    check("lineage: revoking the member that earned a tier withdraws it",
+          sorted(await store.lineage_approvals("jkt:root")) == ["tier2"],
+          f"got {await store.lineage_approvals('jkt:root')!r}")
+    check("lineage: a revoked sub-agent no longer counts against fan-out",
+          await store.count_children("jkt:root") == 1,
+          f"got {await store.count_children('jkt:root')}")
+    check("lineage: an agent with no lineage reads its own approvals",
+          sorted(await store.lineage_approvals("jkt:unrelated")) == ["tier3"],
+          f"got {await store.lineage_approvals('jkt:unrelated')!r}")
+
+
 async def test_revocations_survive_reconnection(store) -> None:
     """`standing.never_revoked` is worth nothing if an agent can clear its
     record by asking a second time, so the count is kept by the store."""
@@ -547,6 +599,7 @@ TESTS = [
     test_terms_versions_are_immutable,
     test_tier_edits_bump_the_version,
     test_tier_grants_and_approvals_are_kept_apart,
+    test_a_lineage_pools_what_she_approved,
     test_revocations_survive_reconnection,
     test_tiers_can_be_added_and_removed,
     test_blocked_operators_round_trip,
