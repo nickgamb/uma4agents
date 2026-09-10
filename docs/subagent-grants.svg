@@ -151,55 +151,55 @@
     <text x="900" y="915" fill="#757b83" font-size="13" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">get_transactions</text>
     <text x="1115" y="915" fill="#757b83" font-size="13" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">execute_trade</text>
 
-    <text x="138" y="998" fill="#757b83" font-size="11" class="mono">1 · proving the lineage — two ways</text>
-    <text x="102" y="1032" class="mono c">// 1a · pseudonymous: the parent signs</text>
-    <text x="102" y="1050" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"u4a-introduction-v1+jws"</tspan><tspan class="p">,</tspan></text>
-    <text x="102" y="1068" class="mono"><tspan class="p">  </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …the parent's key… } }</tspan></text>
-    <text x="102" y="1086" class="mono"><tspan class="p">{ </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:8f2c…"</tspan><tspan class="p">,</tspan></text>
-    <text x="102" y="1104" class="mono"><tspan class="p">  </tspan><tspan class="k">"aud"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
-    <text x="102" y="1122" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757538120</tspan><tspan class="p"> }</tspan></text>
-    <text x="102" y="1156" class="mono c">// 1b · identified: its issuer says so</text>
-    <text x="102" y="1174" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"aa-agent+jwt"</tspan><tspan class="p">, … }</tspan></text>
-    <text x="102" y="1192" class="mono"><tspan class="p">{ </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://ps.uma.lab"</tspan><tspan class="p">,</tspan></text>
-    <text x="102" y="1210" class="mono"><tspan class="p">  </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"worker-7@ps.uma.lab"</tspan><tspan class="p">,</tspan></text>
-    <text x="102" y="1228" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p"> } },</tspan></text>
-    <text x="102" y="1246" class="mono"><tspan class="p">  </tspan><tspan class="kw">"act"</tspan><tspan class="p">: { </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"lead-1@ps.uma.lab"</tspan><tspan class="p"> } }</tspan></text>
-    <text x="102" y="1272" class="mono c">// RFC 8693 act, as AAuth already uses it —</text>
-    <text x="102" y="1288" class="mono c">// the operator's issuer asserts the lineage</text>
+    <text xml:space="preserve" x="138" y="998" fill="#757b83" font-size="11" class="mono">1 · proving the lineage — two ways</text>
+    <text xml:space="preserve" x="102" y="1032" class="mono c">// 1a · pseudonymous: the parent signs</text>
+    <text xml:space="preserve" x="102" y="1050" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"u4a-introduction-v1+jws"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="102" y="1068" class="mono"><tspan class="p">  </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …the parent's key… } }</tspan></text>
+    <text xml:space="preserve" x="102" y="1086" class="mono"><tspan class="p">{ </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:8f2c…"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="102" y="1104" class="mono"><tspan class="p">  </tspan><tspan class="k">"aud"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="102" y="1122" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757538120</tspan><tspan class="p"> }</tspan></text>
+    <text xml:space="preserve" x="102" y="1156" class="mono c">// 1b · identified: its issuer says so</text>
+    <text xml:space="preserve" x="102" y="1174" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"aa-agent+jwt"</tspan><tspan class="p">, … }</tspan></text>
+    <text xml:space="preserve" x="102" y="1192" class="mono"><tspan class="p">{ </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://ps.uma.lab"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="102" y="1210" class="mono"><tspan class="p">  </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"worker-7@ps.uma.lab"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="102" y="1228" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p"> } },</tspan></text>
+    <text xml:space="preserve" x="102" y="1246" class="mono"><tspan class="p">  </tspan><tspan class="kw">"act"</tspan><tspan class="p">: { </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"lead-1@ps.uma.lab"</tspan><tspan class="p"> } }</tspan></text>
+    <text xml:space="preserve" x="102" y="1272" class="mono c">// RFC 8693 act, as AAuth already uses it —</text>
+    <text xml:space="preserve" x="102" y="1288" class="mono c">// the operator's issuer asserts the lineage</text>
 
-    <text x="688" y="998" fill="#757b83" font-size="11" class="mono">2 · what her authority looks up</text>
-    <text x="652" y="1032" class="mono c">// the sponsor's connection, in her store</text>
-    <text x="652" y="1056" class="mono"><tspan class="k">"handle"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:41ab…"</tspan></text>
-    <text x="652" y="1074" class="mono"><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"active"</tspan></text>
-    <text x="652" y="1092" class="mono"><tspan class="k">"tiers_approved"</tspan><tspan class="p">: [</tspan><tspan class="s">"tier1"</tspan><tspan class="p">]</tspan></text>
-    <text x="652" y="1110" class="mono"><tspan class="k">"parent_handle"</tspan><tspan class="p">: </tspan><tspan class="kw">null</tspan></text>
-    <text x="1090" y="1074" class="mono ok">✓</text>
-    <text x="1090" y="1092" class="mono ok">✓</text>
-    <text x="1090" y="1110" class="mono ok">✓</text>
-    <text x="652" y="1144" class="mono p">one operator published both keys</text>
-    <text x="652" y="1162" class="mono p">no revoked record for jkt:8f2c…</text>
-    <text x="652" y="1180" class="mono p">live sub-agents 1 of 3 allowed</text>
-    <text x="1090" y="1144" class="mono ok">✓</text>
-    <text x="1090" y="1162" class="mono ok">✓</text>
-    <text x="1090" y="1180" class="mono ok">✓</text>
-    <text x="652" y="1214" class="mono c">// on the act path the issuer is the</text>
-    <text x="652" y="1232" class="mono c">// operator, so "one operator" is stronger:</text>
-    <text x="652" y="1250" class="mono c">// one issuer signed both credentials.</text>
-    <text x="652" y="1280" class="mono c">// any ✗ and it is a stranger again.</text>
+    <text xml:space="preserve" x="688" y="998" fill="#757b83" font-size="11" class="mono">2 · what her authority looks up</text>
+    <text xml:space="preserve" x="652" y="1032" class="mono c">// the sponsor's connection, in her store</text>
+    <text xml:space="preserve" x="652" y="1056" class="mono"><tspan class="k">"handle"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:41ab…"</tspan></text>
+    <text xml:space="preserve" x="652" y="1074" class="mono"><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"active"</tspan></text>
+    <text xml:space="preserve" x="652" y="1092" class="mono"><tspan class="k">"tiers_approved"</tspan><tspan class="p">: [</tspan><tspan class="s">"tier1"</tspan><tspan class="p">]</tspan></text>
+    <text xml:space="preserve" x="652" y="1110" class="mono"><tspan class="k">"parent_handle"</tspan><tspan class="p">: </tspan><tspan class="kw">null</tspan></text>
+    <text xml:space="preserve" x="1090" y="1074" class="mono ok">✓</text>
+    <text xml:space="preserve" x="1090" y="1092" class="mono ok">✓</text>
+    <text xml:space="preserve" x="1090" y="1110" class="mono ok">✓</text>
+    <text xml:space="preserve" x="652" y="1144" class="mono p">one operator published both keys</text>
+    <text xml:space="preserve" x="652" y="1162" class="mono p">no revoked record for jkt:8f2c…</text>
+    <text xml:space="preserve" x="652" y="1180" class="mono p">live sub-agents 1 of 3 allowed</text>
+    <text xml:space="preserve" x="1090" y="1144" class="mono ok">✓</text>
+    <text xml:space="preserve" x="1090" y="1162" class="mono ok">✓</text>
+    <text xml:space="preserve" x="1090" y="1180" class="mono ok">✓</text>
+    <text xml:space="preserve" x="652" y="1214" class="mono c">// on the act path the issuer is the</text>
+    <text xml:space="preserve" x="652" y="1232" class="mono c">// operator, so "one operator" is stronger:</text>
+    <text xml:space="preserve" x="652" y="1250" class="mono c">// one issuer signed both credentials.</text>
+    <text xml:space="preserve" x="652" y="1280" class="mono c">// any ✗ and it is a stranger again.</text>
 
-    <text x="1238" y="998" fill="#757b83" font-size="11" class="mono">3 · the sub-agent's own grant</text>
-    <text x="1202" y="1032" class="mono"><tspan class="p">{</tspan></text>
-    <text x="1202" y="1050" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
-    <text x="1202" y="1068" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p"> } },</tspan></text>
-    <text x="1202" y="1086" class="mono"><tspan class="p">  </tspan><tspan class="k">"scope"</tspan><tspan class="p">: </tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
-    <text x="1202" y="1104" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757541600</tspan></text>
-    <text x="1202" y="1122" class="mono"><tspan class="p">}</tspan></text>
-    <text x="1202" y="1152" class="mono c">// cnf is the SUB-AGENT's key.</text>
-    <text x="1202" y="1170" class="mono c">// the parent's grant is untouched,</text>
-    <text x="1202" y="1188" class="mono c">// and nothing was inherited.</text>
-    <text x="1202" y="1222" class="mono c">// 4 · revoking the parent:</text>
-    <text x="1202" y="1244" class="mono"><tspan class="p">{ </tspan><tspan class="k">"connections_revoked"</tspan><tspan class="p">: </tspan><tspan class="n">3</tspan><tspan class="p">,</tspan></text>
-    <text x="1202" y="1262" class="mono"><tspan class="p">  </tspan><tspan class="k">"rpts_deactivated"</tspan><tspan class="p">: </tspan><tspan class="n">5</tspan><tspan class="p"> }</tspan></text>
-    <text x="1202" y="1288" class="mono c">// their grants fail on the next call</text>
+    <text xml:space="preserve" x="1238" y="998" fill="#757b83" font-size="11" class="mono">3 · the sub-agent's own grant</text>
+    <text xml:space="preserve" x="1202" y="1032" class="mono"><tspan class="p">{</tspan></text>
+    <text xml:space="preserve" x="1202" y="1050" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="1202" y="1068" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: { …</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p"> } },</tspan></text>
+    <text xml:space="preserve" x="1202" y="1086" class="mono"><tspan class="p">  </tspan><tspan class="k">"scope"</tspan><tspan class="p">: </tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="1202" y="1104" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757541600</tspan></text>
+    <text xml:space="preserve" x="1202" y="1122" class="mono"><tspan class="p">}</tspan></text>
+    <text xml:space="preserve" x="1202" y="1152" class="mono c">// cnf is the SUB-AGENT's key.</text>
+    <text xml:space="preserve" x="1202" y="1170" class="mono c">// the parent's grant is untouched,</text>
+    <text xml:space="preserve" x="1202" y="1188" class="mono c">// and nothing was inherited.</text>
+    <text xml:space="preserve" x="1202" y="1222" class="mono c">// 4 · revoking the parent:</text>
+    <text xml:space="preserve" x="1202" y="1244" class="mono"><tspan class="p">{ </tspan><tspan class="k">"connections_revoked"</tspan><tspan class="p">: </tspan><tspan class="n">3</tspan><tspan class="p">,</tspan></text>
+    <text xml:space="preserve" x="1202" y="1262" class="mono"><tspan class="p">  </tspan><tspan class="k">"rpts_deactivated"</tspan><tspan class="p">: </tspan><tspan class="n">5</tspan><tspan class="p"> }</tspan></text>
+    <text xml:space="preserve" x="1202" y="1288" class="mono c">// their grants fail on the next call</text>
   </g>
 </svg>

@@ -36,11 +36,11 @@
   <rect x="600" y="94" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="110" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="106" r="3.5" fill="#e8836b"/><circle cx="628" cy="106" r="3.5" fill="#f2b955"/><circle cx="640" cy="106" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="110" fill="#757b83" font-size="10.5" class="mono">beat 1 · the challenge</text>
-  <text x="616" y="140" class="mono kw">HTTP/1.1 401 Unauthorized</text>
-  <text x="616" y="157" class="mono"><tspan class="k">WWW-Authenticate:</tspan> <tspan class="p">UMA</tspan> <tspan class="k">as_uri</tspan><tspan class="p">=</tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="174" class="mono"><tspan class="p">  </tspan><tspan class="k">ticket</tspan><tspan class="p">=</tspan><tspan class="s">"tkt_3pFEwIvawFN7"</tspan><tspan class="p">,</tspan> <tspan class="k">scope</tspan><tspan class="p">=</tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="191" class="mono"><tspan class="p">  </tspan><tspan class="k">resource_metadata</tspan><tspan class="p">=</tspan><tspan class="s">"…/oauth-protected-resource"</tspan></text>
+  <text xml:space="preserve" x="656" y="110" fill="#757b83" font-size="10.5" class="mono">beat 1 · the challenge</text>
+  <text xml:space="preserve" x="616" y="140" class="mono kw">HTTP/1.1 401 Unauthorized</text>
+  <text xml:space="preserve" x="616" y="157" class="mono"><tspan class="k">WWW-Authenticate:</tspan> <tspan class="p">UMA</tspan> <tspan class="k">as_uri</tspan><tspan class="p">=</tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="174" class="mono"><tspan class="p">  </tspan><tspan class="k">ticket</tspan><tspan class="p">=</tspan><tspan class="s">"tkt_3pFEwIvawFN7"</tspan><tspan class="p">,</tspan> <tspan class="k">scope</tspan><tspan class="p">=</tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="191" class="mono"><tspan class="p">  </tspan><tspan class="k">resource_metadata</tspan><tspan class="p">=</tspan><tspan class="s">"…/oauth-protected-resource"</tspan></text>
 
   <!-- ═══════════════ 2 ═══════════════ -->
   <circle cx="64" cy="268" r="15" fill="#8cc2d4"/>
@@ -54,13 +54,13 @@
   <rect x="600" y="228" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="244" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="240" r="3.5" fill="#e8836b"/><circle cx="628" cy="240" r="3.5" fill="#f2b955"/><circle cx="640" cy="240" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="244" fill="#757b83" font-size="10.5" class="mono">the introduction · signed by the parent</text>
-  <text x="616" y="274" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"u4a-introduction-v1+jws"</tspan><tspan class="p">, </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…} }</tspan></text>
-  <text x="616" y="291" class="mono"><tspan class="p">{</tspan></text>
-  <text x="616" y="308" class="mono"><tspan class="p">  </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:8f2c…"</tspan><tspan class="p">,</tspan>   <tspan class="c">// the sub-agent's key</tspan></text>
-  <text x="616" y="325" class="mono"><tspan class="p">  </tspan><tspan class="k">"aud"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="342" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757538120</tspan></text>
-  <text x="616" y="359" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// no tier, no scope, no token. it confers nothing</tspan></text>
+  <text xml:space="preserve" x="656" y="244" fill="#757b83" font-size="10.5" class="mono">the introduction · signed by the parent</text>
+  <text xml:space="preserve" x="616" y="274" class="mono"><tspan class="p">{ </tspan><tspan class="k">"typ"</tspan><tspan class="p">: </tspan><tspan class="s">"u4a-introduction-v1+jws"</tspan><tspan class="p">, </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…} }</tspan></text>
+  <text xml:space="preserve" x="616" y="291" class="mono"><tspan class="p">{</tspan></text>
+  <text xml:space="preserve" x="616" y="308" class="mono"><tspan class="p">  </tspan><tspan class="k">"sub"</tspan><tspan class="p">: </tspan><tspan class="s">"jkt:8f2c…"</tspan><tspan class="p">,</tspan>   <tspan class="c">// the sub-agent's key</tspan></text>
+  <text xml:space="preserve" x="616" y="325" class="mono"><tspan class="p">  </tspan><tspan class="k">"aud"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="342" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757538120</tspan></text>
+  <text xml:space="preserve" x="616" y="359" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// no tier, no scope, no token. it confers nothing</tspan></text>
 
   <!-- ═══════════════ 3 ═══════════════ -->
   <circle cx="64" cy="444" r="15" fill="#8cc2d4"/>
@@ -74,21 +74,21 @@
   <rect x="600" y="404" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="420" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="416" r="3.5" fill="#e8836b"/><circle cx="628" cy="416" r="3.5" fill="#f2b955"/><circle cx="640" cy="416" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="420" fill="#757b83" font-size="10.5" class="mono">what she looks up · connection jkt:41ab…</text>
-  <text x="616" y="450" class="mono"><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"active"</tspan></text>
-  <text x="616" y="467" class="mono"><tspan class="k">"tiers_approved"</tspan><tspan class="p">: [</tspan><tspan class="s">"tier1"</tspan><tspan class="p">]</tspan></text>
-  <text x="616" y="484" class="mono"><tspan class="k">"parent_handle"</tspan><tspan class="p">: </tspan><tspan class="kw">null</tspan></text>
-  <text x="616" y="501" class="mono"><tspan class="p">operator directory holds both keys</tspan></text>
-  <text x="616" y="518" class="mono"><tspan class="p">no revoked record for </tspan><tspan class="s">jkt:8f2c…</tspan></text>
-  <text x="616" y="535" class="mono"><tspan class="p">live sub-agents </tspan><tspan class="n">1</tspan><tspan class="p"> of </tspan><tspan class="n">3</tspan><tspan class="p"> allowed</tspan></text>
-  <text x="930" y="450" class="mono ok">✓</text>
-  <text x="930" y="467" class="mono ok">✓</text>
-  <text x="930" y="484" class="mono ok">✓</text>
-  <text x="930" y="501" class="mono ok">✓</text>
-  <text x="930" y="518" class="mono ok">✓</text>
-  <text x="930" y="535" class="mono ok">✓</text>
-  <text x="952" y="467" class="mono c">she approved it in person</text>
-  <text x="952" y="484" class="mono c">not itself a sub-agent</text>
+  <text xml:space="preserve" x="656" y="420" fill="#757b83" font-size="10.5" class="mono">what she looks up · connection jkt:41ab…</text>
+  <text xml:space="preserve" x="616" y="450" class="mono"><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"active"</tspan></text>
+  <text xml:space="preserve" x="616" y="467" class="mono"><tspan class="k">"tiers_approved"</tspan><tspan class="p">: [</tspan><tspan class="s">"tier1"</tspan><tspan class="p">]</tspan></text>
+  <text xml:space="preserve" x="616" y="484" class="mono"><tspan class="k">"parent_handle"</tspan><tspan class="p">: </tspan><tspan class="kw">null</tspan></text>
+  <text xml:space="preserve" x="616" y="501" class="mono"><tspan class="p">operator directory holds both keys</tspan></text>
+  <text xml:space="preserve" x="616" y="518" class="mono"><tspan class="p">no revoked record for </tspan><tspan class="s">jkt:8f2c…</tspan></text>
+  <text xml:space="preserve" x="616" y="535" class="mono"><tspan class="p">live sub-agents </tspan><tspan class="n">1</tspan><tspan class="p"> of </tspan><tspan class="n">3</tspan><tspan class="p"> allowed</tspan></text>
+  <text xml:space="preserve" x="930" y="450" class="mono ok">✓</text>
+  <text xml:space="preserve" x="930" y="467" class="mono ok">✓</text>
+  <text xml:space="preserve" x="930" y="484" class="mono ok">✓</text>
+  <text xml:space="preserve" x="930" y="501" class="mono ok">✓</text>
+  <text xml:space="preserve" x="930" y="518" class="mono ok">✓</text>
+  <text xml:space="preserve" x="930" y="535" class="mono ok">✓</text>
+  <text xml:space="preserve" x="952" y="467" class="mono c">she approved it in person</text>
+  <text xml:space="preserve" x="952" y="484" class="mono c">not itself a sub-agent</text>
 
   <!-- ═══════════════ 4 ═══════════════ -->
   <circle cx="64" cy="620" r="15" fill="#bcdb2c"/>
@@ -102,13 +102,13 @@
   <rect x="600" y="580" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="596" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="592" r="3.5" fill="#e8836b"/><circle cx="628" cy="592" r="3.5" fill="#f2b955"/><circle cx="640" cy="592" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="596" fill="#757b83" font-size="10.5" class="mono">the sub-agent's RPT · aa-auth+jwt</text>
-  <text x="616" y="626" class="mono"><tspan class="p">{</tspan></text>
-  <text x="616" y="643" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="660" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p">} },</tspan>  <tspan class="c">// ITS key, not the parent's</tspan></text>
-  <text x="616" y="677" class="mono"><tspan class="p">  </tspan><tspan class="k">"scope"</tspan><tspan class="p">: </tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="694" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757541600</tspan></text>
-  <text x="616" y="711" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// separately spendable, separately revocable</tspan></text>
+  <text xml:space="preserve" x="656" y="596" fill="#757b83" font-size="10.5" class="mono">the sub-agent's RPT · aa-auth+jwt</text>
+  <text xml:space="preserve" x="616" y="626" class="mono"><tspan class="p">{</tspan></text>
+  <text xml:space="preserve" x="616" y="643" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="660" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p">} },</tspan>  <tspan class="c">// ITS key, not the parent's</tspan></text>
+  <text xml:space="preserve" x="616" y="677" class="mono"><tspan class="p">  </tspan><tspan class="k">"scope"</tspan><tspan class="p">: </tspan><tspan class="s">"positions:read"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="694" class="mono"><tspan class="p">  </tspan><tspan class="k">"exp"</tspan><tspan class="p">: </tspan><tspan class="n">1757541600</tspan></text>
+  <text xml:space="preserve" x="616" y="711" class="mono"><tspan class="p">}</tspan>  <tspan class="c">// separately spendable, separately revocable</tspan></text>
 
   <!-- ═══════════════ 5 ═══════════════ -->
   <circle cx="64" cy="816" r="15" fill="#f2b955"/>
@@ -122,9 +122,9 @@
   <rect x="600" y="786" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="802" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="798" r="3.5" fill="#e8836b"/><circle cx="628" cy="798" r="3.5" fill="#f2b955"/><circle cx="640" cy="798" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="802" fill="#757b83" font-size="10.5" class="mono">the ceiling · not configurable away</text>
-  <text x="616" y="832" class="mono"><tspan class="p">{ </tspan><tspan class="k">"error"</tspan><tspan class="p">: </tspan><tspan class="s">"request_submitted"</tspan><tspan class="p">, </tspan><tspan class="k">"ticket"</tspan><tspan class="p">: </tspan><tspan class="s">"tkt_9dLm…"</tspan><tspan class="p"> }</tspan></text>
-  <text x="616" y="849" class="mono"><tspan class="c">// held at her portal — same as it would be for the parent</tspan></text>
+  <text xml:space="preserve" x="656" y="802" fill="#757b83" font-size="10.5" class="mono">the ceiling · not configurable away</text>
+  <text xml:space="preserve" x="616" y="832" class="mono"><tspan class="p">{ </tspan><tspan class="k">"error"</tspan><tspan class="p">: </tspan><tspan class="s">"request_submitted"</tspan><tspan class="p">, </tspan><tspan class="k">"ticket"</tspan><tspan class="p">: </tspan><tspan class="s">"tkt_9dLm…"</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="616" y="849" class="mono"><tspan class="c">// held at her portal — same as it would be for the parent</tspan></text>
 
   <!-- ═══════════════ 6 ═══════════════ -->
   <circle cx="64" cy="932" r="15" fill="#e8836b"/>
@@ -137,8 +137,8 @@
   <rect x="600" y="894" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="910" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="906" r="3.5" fill="#e8836b"/><circle cx="628" cy="906" r="3.5" fill="#f2b955"/><circle cx="640" cy="906" r="3.5" fill="#bcdb2c"/>
-  <text x="656" y="910" fill="#757b83" font-size="10.5" class="mono">one press · POST /owner/connections/jkt:41ab…/revoke</text>
-  <text x="616" y="940" class="mono"><tspan class="p">{ </tspan><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"revoked"</tspan><tspan class="p">,</tspan></text>
-  <text x="616" y="957" class="mono"><tspan class="p">  </tspan><tspan class="k">"connections_revoked"</tspan><tspan class="p">: </tspan><tspan class="n">3</tspan><tspan class="p">, </tspan><tspan class="k">"rpts_deactivated"</tspan><tspan class="p">: </tspan><tspan class="n">5</tspan><tspan class="p"> }</tspan></text>
-  <text x="616" y="974" class="mono"><tspan class="c">// no action per link — the PEP asks her authority every call</tspan></text>
+  <text xml:space="preserve" x="656" y="910" fill="#757b83" font-size="10.5" class="mono">one press · POST /owner/connections/jkt:41ab…/revoke</text>
+  <text xml:space="preserve" x="616" y="940" class="mono"><tspan class="p">{ </tspan><tspan class="k">"status"</tspan><tspan class="p">: </tspan><tspan class="s">"revoked"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="957" class="mono"><tspan class="p">  </tspan><tspan class="k">"connections_revoked"</tspan><tspan class="p">: </tspan><tspan class="n">3</tspan><tspan class="p">, </tspan><tspan class="k">"rpts_deactivated"</tspan><tspan class="p">: </tspan><tspan class="n">5</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="616" y="974" class="mono"><tspan class="c">// no action per link — the PEP asks her authority every call</tspan></text>
 </svg>
