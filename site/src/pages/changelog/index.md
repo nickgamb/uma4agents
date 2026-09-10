@@ -36,6 +36,12 @@ release within that month. One entry per release.
 - **Portal:** the connections table names the agent that introduced each one, and the revoke toast reports the sub-agents that went with it.
 - **Docs:** `docs/SUBAGENTS.md`, a run card, a Lab demonstrations page, an overview page and a flow diagram.
 
+#### Enhancements
+
+- **Docs:** the events reference publishes the ledger's row shape and all twenty-three entry kinds, with the fields each one's `entry` carries. Only the five-item projection her portal renders had been documented.
+- **Docs:** the revocation page states how long revocation actually takes, and separates the part that lands on the agent's next call from the enforcement point's caches of organization membership (10s), joint mandates (30s) and published keys (300s), which had gone unmentioned on a page claiming atomicity.
+- **Docs:** the architecture page says how its absences are proved, and links the eleven-assertion suite — eight of them refusals — that asserts them from the requesting party's own namespace.
+
 #### Bug fixes
 
 - **Kubernetes:** `agent-keys.py` skipped provisioning entirely when the Secret already existed, so an agent added to the list was never given a key and was left an assurance level below where it should be, with nothing logging a reason. It now adds missing agents by JSON Patch, and names given after `--rotate` get a fresh key each apply.

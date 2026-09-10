@@ -115,3 +115,34 @@ across regions, or across more than one authorization server, and it becomes a
 distributed-systems problem this profile does not itself solve. What it gives
 you is a revocation that is atomic within one authority, which is the part the
 protocol can be responsible for.
+
+### How long it actually takes
+
+"The instant it commits" is true of the thing revocation is usually about — a
+connection, and the grants issued under it — and it is worth being precise
+about why, and about what it is not true of.
+
+**A revoked connection or grant: the next call.** The enforcement point does
+not decide anything locally. It introspects the grant at the authority on every
+call, and a grant whose connection is no longer active fails there. So a
+revocation lands on the next call the agent makes, whenever that is, rather
+than at the grant's expiry. This is also the ceiling on how long a grant can be
+useful at all: an RPT is capped at one hour regardless of what the tier's terms
+say.
+
+**Two things the enforcement point does cache, and for how long.** Both are
+inputs it can read without asking about a specific grant, and both are cached
+to keep a per-call round trip off the hot path:
+
+| Cached | Default | Effect when it changes |
+|---|---|---|
+| Organization membership and role | 10s | A role change or a removal can take up to that long to bite |
+| A joint account's mandate | 30s | A change to who counts, or at what weight, takes up to that long |
+| An owner's authority's published keys | 300s | A key rotation is not visible until it lapses |
+
+So an owner revoking an agent sees it stop on the agent's next call. An
+administrator removing somebody from a role, or a co-owner changing a mandate,
+is working against a window measured in seconds. The windows are configurable
+(`UMA_PEP_MEMBERSHIP_TTL_S`, `UMA_PEP_MANDATE_TTL_S`), and the reason they exist
+at all is that they only ever affect *how soon a tightening applies* — the grant
+itself is never cached, so no cache can keep a withdrawn authority alive.

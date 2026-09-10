@@ -91,3 +91,29 @@ implementation.
 No shared secret between the resource server and the authorization server. No
 static owner credential. No path by which the resource server can read the
 owner's policy. Those absences are the architecture; the rest is arrangement.
+
+## How the absences are proved
+
+An absence is a claim like any other, and it is the kind that quietly stops
+being true. So the lab asserts them from the outside, in a suite that runs
+**from the requesting party's own namespace**:
+
+```bash
+make k8s-policy-test
+```
+
+Eleven assertions, and eight of them are refusals. From where Bob's agent runs,
+it cannot reach the owner's authorization server, her policy, her portal, her
+database, the identity provider, another owner's authority, another owner's
+policy, or either vault behind the gateway.
+
+The sharpest pair is two assertions against the same port on the same workload:
+the enforcement point **can** read her published keys, because it must verify
+what she signed, and **cannot** read her policy. That is the whole
+cross-principal argument reduced to something a test can fail on — an
+enforcement point that enforces a policy it is refused permission to read.
+
+A suite that only proves the allows would pass on a cluster with no policy at
+all, which is why these are written the way they are. What each assertion
+covers and what to expect is in [Run the
+lab](/docs/guides/run-the-lab/#prove-it-works).

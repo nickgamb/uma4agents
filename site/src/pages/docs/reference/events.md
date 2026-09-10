@@ -128,6 +128,67 @@ The rightmost column is the negotiation family. Three rows of a single story sit
 apart in time and are joined by that id, which is what makes the ledger
 answerable rather than merely chronological.
 
+## The row, and every kind of entry
+
+The projection above is the part of the ledger her portal puts in front of her.
+It is not all of it. The table holds one row per entry, append-only — nothing
+here is ever updated or deleted, which is what makes a later reading of it
+worth anything:
+
+| Field | Meaning |
+|---|---|
+| `seq` | Insertion order, and the only total order there is |
+| `owner` | Whose ledger this row belongs to. Every read is partitioned by it |
+| `kind` | Which of the entries below this is |
+| `family` | The negotiation this belongs to, or `-` for something outside one |
+| `ts` | When it was written, in UTC |
+| `handle` | The agent it is about. A column rather than a field inside `entry`, so one agent's whole trajectory is an index lookup. `NULL` where there is no agent — a resource server's registration being revoked, or a decision taken before an agent was named |
+| `entry` | The rest, as JSON. Its shape depends on the kind |
+
+Twenty-three kinds are written. Grouped by what they are about:
+
+**The grant loop**
+
+| Kind | Written when | `entry` carries |
+|---|---|---|
+| `promised` | An agent signs her terms and the contract is accepted | the tier, purpose, prohibited actions, expiry, agreement hash, terms URI, and the proposed operation, stated reason and cited mission where the contract carried them |
+| `approved` / `denied` | She answers a pend | the tier, and `by` when an organization administrator answered instead of her |
+| `connected` | An agent becomes a standing connection | its identity, and `introduced_by` when another agent put it forward |
+| `touched` | A call is actually allowed at the resource | what was reached |
+| `relaxed` | A rule she wrote lowered a requirement | the rule that fired |
+| `refused` | Her policy, a blocked operator, or the attention budget ended it | the tier and the reasons |
+| `identity_refused` | The agent's credential did not verify | why |
+| `revoked` | A connection, an operator or a resource server registration is withdrawn | `rpts_deactivated`, plus `connections_revoked` for a cascade, the operator for an operator block, and `by` for an administrator |
+
+**Her operators**
+
+| Kind | Written when | `entry` carries |
+|---|---|---|
+| `claimed` / `disclaimed` | She names an origin as hers, or stops | the origin |
+
+**An organization she belongs to**
+
+| Kind | Written when | `entry` carries |
+|---|---|---|
+| `org_joined` / `org_left` | She joins or leaves | the organization and the charter version she agreed to |
+| `org_declined` | She was offered a role and did not take it | the organization |
+| `org_role` | Her role changes | the role |
+| `org_clamped` | The charter tightened terms she had written | which of her fields moved |
+| `org_acted` | An administrator acted on her behalf | what, and which administrator |
+| `org_refused` | The charter refused a request her own policy would have allowed | the reasons, organization and charter version |
+| `break_glass` | An administrator used the emergency path | the justification |
+
+**A resource she holds with somebody else**
+
+| Kind | Written when | `entry` carries |
+|---|---|---|
+| `joint_joined` / `joint_left` | She joins or leaves a jointly held account | the account |
+| `joint_allowed` / `joint_refused` | Her half of a joint decision | the account, the resource, and the reasons for a refusal |
+
+The kinds that are refusals are worth naming as a set: `refused`,
+`org_refused`, `joint_refused` and `identity_refused`. A record that only shows
+what was allowed cannot answer the question people actually bring to it.
+
 ## Reading it in the lab
 
 ```bash
