@@ -291,11 +291,20 @@ def main() -> int:
             import time as _t
 
             def loop() -> None:
+                # One listing, read and then answered. Listing twice — once
+                # to read, once inside decide_all to approve — leaves a gap a
+                # pend can arrive in and be approved unread, which three
+                # replicas behind an edge make wide enough to hit.
+                hdrs = owner_hdrs(client)
                 for _ in range(40):
-                    for p in pending(client):
+                    items = pending(client)
+                    for p in items:
                         if p.get("reason"):
                             seen["reason"] = p["reason"]
-                    if decide_all(client, "approved"):
+                        client.post(f"{AS_PUBLIC}/owner/pending/{p['family']}/decision",
+                                    json={"decision": "approved"}, headers=hdrs,
+                                    timeout=15.0)
+                    if items:
                         return
                     _t.sleep(0.5)
 

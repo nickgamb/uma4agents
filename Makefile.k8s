@@ -163,6 +163,7 @@ k8s-wait:
 # nothing needs host DNS, a trusted certificate, or sudo, and the checks
 # reach Alice's resources the only way Bob's side can.
 define run_job
+	@$(K8S)/scripts/job-configmaps.sh
 	@kubectl -n $(NS_AGENT) delete job $(1) --ignore-not-found >/dev/null 2>&1
 	@$(2) | kubectl apply -f - >/dev/null
 	@# Polled rather than `kubectl wait`, because wait keeps only the *last*
