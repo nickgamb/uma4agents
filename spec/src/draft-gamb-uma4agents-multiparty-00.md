@@ -78,11 +78,16 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-policy-00
 informative:
   PP2PI:
-    title: "Julie Adams: Use Case for Co-Administration of Health Records"
+    title: "Solving Data Sharing Challenges with UMA: The Julie Adams Healthcare Use Case from PP2PI"
     author:
-      - org: Kantara Initiative, Privacy and Public Policy Interest Group
-    date: 2021
-    target: https://kantarainitiative.org/
+      - ins: N. Lush
+        name: Nancy Lush
+        role: editor
+      - org: Kantara Initiative User-Managed Access Work Group
+    date: 2023-03
+    seriesinfo:
+      Kantara: Editors' Draft Report
+    target: https://kantara.atlassian.net/wiki/spaces/uma/pages/4850258/Notes+drafts+and+WIP
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

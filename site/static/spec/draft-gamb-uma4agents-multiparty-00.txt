@@ -800,9 +800,12 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 7.2.  Informative References
 
-   [PP2PI]    Kantara Initiative, Privacy and Public Policy Interest
-              Group, "Julie Adams: Use Case for Co-Administration of
-              Health Records", 2021, <https://kantarainitiative.org/>.
+   [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
+              Work Group, "Solving Data Sharing Challenges with UMA: The
+              Julie Adams Healthcare Use Case from PP2PI",
+              Kantara Editors' Draft Report, March 2023,
+              <https://kantara.atlassian.net/wiki/spaces/uma/
+              pages/4850258/Notes+drafts+and+WIP>.
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
@@ -830,9 +833,6 @@ Appendix A.  Implementation Status
    terms, first-party-only refusing a third party's agent, the
    organization's scoped view, administrator decisions not counting as
    the member's, break-glass, and leaving.
-
-
-
 
 
 

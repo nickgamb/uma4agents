@@ -24,8 +24,8 @@ it is whichever member of staff that part of the book was shared with.
 
 UMA has had a name for her role since 2015: **resource rights administrator**,
 the party who administers access to resources she does not necessarily own.
-The Kantara UMA Work Group's 2022 report on the Julie Adams healthcare use
-case calls the general shape **delegation of control** and lays out the four
+The Kantara UMA Work Group's editors' draft report on the Julie Adams healthcare
+use case calls the general shape **delegation of control** and lays out the four
 states it can be in. What neither has had is a mechanism.
 
 ![Shared ownership in seven beats. One resource server holds three owners of record: Alice's account, Carol's account, and Northwind Capital's book. The firm shares its book with Alice under a role that grants two resources and sets delegation to first-party-only, so the book appears in her authorization server as something she administers rather than owns. She writes the terms an agent must accept and the charter's ceiling is clamped into that same document. Bob's agent asks for the book and is refused — not by her terms but by the organization's engine, because somebody else operates it. An agent she operates herself makes the identical request and is granted. Two columns then list what the organization can do — see and shut out the agents that touch its book, answer requests about its own resources, break the glass under a clause she was shown — against what it cannot: see the agents that touch her own accounts, read her policy, widen anything, or act as her. Leaving takes back the access and leaves every narrowing in place.](/img/docs/shared-ownership.gif)

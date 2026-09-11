@@ -10,11 +10,10 @@ it is whichever member of staff that part of the book was shared with.
 
 UMA has had a name for her role since 2015: **resource rights administrator**,
 the party who administers access to resources she does not necessarily own.
-The Kantara UMA Work Group's report *Patient-Centric Data Sharing with UMA:
-The Julie Adams Healthcare Use Case from the Protecting Privacy to Promote
-Interoperability Work Group* (v1.0, 2022 — eds. Nancy Lush, Alec Laws, Eve
-Maler) calls the general shape **delegation of control** and lays out the four
-states it can be in. What neither has had is a mechanism. This is the
+The Kantara UMA Work Group's editors' draft report *Solving Data Sharing
+Challenges with UMA: The Julie Adams Healthcare Use Case from PP2PI* (ed. Nancy
+Lush, with Alec Laws and Eve Maler; v0.1, March 2023) calls the general shape
+**delegation of control** and lays out the four states it can be in. What neither has had is a mechanism. This is the
 mechanism.
 
 Run it:
