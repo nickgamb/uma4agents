@@ -1420,7 +1420,10 @@ further negotiation might change from one it cannot.<a href="#section-abstract-2
                 <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-oauth-token-introspection-r" class="internal xref">OAuth Token Introspection Response Registration</a></p>
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-oauth-token-introspection-r" class="internal xref">OAuth Token Introspection Response Registration</a></p>
 </li>
             </ul>
 </li>
@@ -1797,9 +1800,14 @@ fresh challenge.<a href="#section-5-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-5.1-1">Introspection <span class="bcp14">MUST NOT</span> consume a single-use token. Consumption is a separate
 operation, taken by the enforcement point as the last step of enforcement, as
-<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 8.2. An authorization server <span class="bcp14">MUST</span> offer that operation, and
-it <span class="bcp14">MUST</span> report to its caller whether that caller was the one that consumed the
-token.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 8.2. An authorization server <span class="bcp14">MUST</span> offer that operation at
+the URL it advertises as <code>consume_endpoint</code> in its metadata, <span class="bcp14">MUST</span> require the
+protection API access token on it as on introspection, and it <span class="bcp14">MUST</span> report to
+its caller whether that caller was the one that consumed the token.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">The request carries the token as introspection does; the response is a JSON
+object with a <code>consumed</code> member. <code>true</code> means this caller spent the token;
+<code>false</code> means it was already spent, or was not a single-use token, and <span class="bcp14">MUST</span> be
+accompanied by an <code>error</code> member saying which.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1937,22 +1945,22 @@ Metadata" registry established by <span>[<a href="#RFC9728" class="cite xref">RF
 </dl>
 </section>
 </div>
-<div id="oauth-token-introspection-response-registration">
+<div id="oauth-authorization-server-metadata-registration">
 <section id="section-9.2">
-        <h3 id="name-oauth-token-introspection-r">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-oauth-token-introspection-r" class="section-name selfRef">OAuth Token Introspection Response Registration</a>
+        <h3 id="name-oauth-authorization-server-">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata Registration</a>
         </h3>
-<p id="section-9.2-1">IANA is asked to register the following in the "OAuth Token Introspection
-Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2-1">IANA is asked to register the following in the "OAuth Authorization Server
+Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-9.2-2">
-          <dt id="section-9.2-2.1">Name:</dt>
+          <dt id="section-9.2-2.1">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-9.2-2.2">
-            <p id="section-9.2-2.2.1"><code>error</code><a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-9.2-2.2.1"><code>consume_endpoint</code><a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.2-2.3">Description:</dt>
+<dt id="section-9.2-2.3">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-9.2-2.4">
-            <p id="section-9.2-2.4.1">Why an inactive token is inactive; see <a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-9.2-2.4.1">URL of the operation that spends a single-use requesting party token<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.2-2.5">Change Controller:</dt>
@@ -1962,7 +1970,38 @@ Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RF
           <dd class="break"></dd>
 <dt id="section-9.2-2.7">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-9.2-2.8">
-            <p id="section-9.2-2.8.1"><a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.2-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-9.2-2.8.1"><a href="#non-consuming" class="auto internal xref">Section 5.1</a> of this document<a href="#section-9.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="oauth-token-introspection-response-registration">
+<section id="section-9.3">
+        <h3 id="name-oauth-token-introspection-r">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-oauth-token-introspection-r" class="section-name selfRef">OAuth Token Introspection Response Registration</a>
+        </h3>
+<p id="section-9.3-1">IANA is asked to register the following in the "OAuth Token Introspection
+Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.3-2">
+          <dt id="section-9.3-2.1">Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-2.2">
+            <p id="section-9.3-2.2.1"><code>error</code><a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.3-2.3">Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-2.4">
+            <p id="section-9.3-2.4.1">Why an inactive token is inactive; see <a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.3-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-2.6">
+            <p id="section-9.3-2.6.1">IETF<a href="#section-9.3-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.3-2.7">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-2.8">
+            <p id="section-9.3-2.8.1"><a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.3-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1996,6 +2035,10 @@ Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RF
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9421">[RFC9421]</dt>
         <dd>

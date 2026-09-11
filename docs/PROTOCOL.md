@@ -4,7 +4,10 @@ The API of `services/uma-as`, which is both the demo's authorization server and
 the reference implementation of the core grant semantics, plus the enforcement
 `services/uma-pep` runs behind the gateway. Grounded in the UMA 2.0 Grant and
 Federated Authorization specifications and the AAuth draft; see
-[ARCHITECTURE.md](ARCHITECTURE.md) for the system view.
+[ARCHITECTURE.md](ARCHITECTURE.md) for the system view. The normative statement
+of what is described here is the [specification set](../spec/README.md); this
+document is the implementation's own account, and where the two differ the
+drafts are what a conforming implementation follows.
 
 Design rule: **stay inside UMA 2.0's wire surface wherever it already fits**
 (`WWW-Authenticate: UMA`, the `uma-ticket` grant, `need_info`,

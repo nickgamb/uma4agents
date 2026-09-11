@@ -1670,7 +1670,9 @@ appear in all capitals, as shown here.<a href="#section-1.5-1" class="pilcrow">�
 <p id="section-1.5-3">The notation <code>s256(x)</code> denotes the string <code>"s256:"</code> followed by the base64url
 encoding, without padding, of the SHA-256 digest of the octets <code>x</code>.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 <p id="section-1.5-4">The notation <code>jkt(k)</code> denotes the string <code>"jkt:"</code> followed by the JWK Thumbprint
-<span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the JSON Web Key <code>k</code>.<a href="#section-1.5-4" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the JSON Web Key <code>k</code>. The value after the prefix is the same
+thumbprint DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> carries in its <code>jkt</code> confirmation method; the prefix
+marks it as a handle rather than a confirmation.<a href="#section-1.5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

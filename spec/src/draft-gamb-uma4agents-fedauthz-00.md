@@ -21,6 +21,7 @@ author:
     organization: Venn Factory
 normative:
   RFC6749:
+  RFC8414:
   RFC7662:
   RFC9421:
   RFC9530:
@@ -347,9 +348,15 @@ An extension MAY define further values. {{U4AMultiParty}} defines
 
 Introspection MUST NOT consume a single-use token. Consumption is a separate
 operation, taken by the enforcement point as the last step of enforcement, as
-{{U4ACore}} Section 8.2. An authorization server MUST offer that operation, and
-it MUST report to its caller whether that caller was the one that consumed the
-token.
+{{U4ACore}} Section 8.2. An authorization server MUST offer that operation at
+the URL it advertises as `consume_endpoint` in its metadata, MUST require the
+protection API access token on it as on introspection, and it MUST report to
+its caller whether that caller was the one that consumed the token.
+
+The request carries the token as introspection does; the response is a JSON
+object with a `consumed` member. `true` means this caller spent the token;
+`false` means it was already spent, or was not a single-use token, and MUST be
+accompanied by an `error` member saying which.
 
 # Reporting Allowed Access {#audit}
 
@@ -438,6 +445,23 @@ Change Controller:
 
 Specification Document(s):
 : {{protected-layer}} of this document
+
+## OAuth Authorization Server Metadata Registration
+
+IANA is asked to register the following in the "OAuth Authorization Server
+Metadata" registry established by {{RFC8414}}.
+
+Metadata Name:
+: `consume_endpoint`
+
+Metadata Description:
+: URL of the operation that spends a single-use requesting party token
+
+Change Controller:
+: IETF
+
+Specification Document(s):
+: {{non-consuming}} of this document
 
 ## OAuth Token Introspection Response Registration
 

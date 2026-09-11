@@ -188,6 +188,7 @@ async def configuration() -> dict:
         "token_endpoint": f"{ISSUER}/token",
         "permission_endpoint": f"{ISSUER}/perm",
         "introspection_endpoint": f"{ISSUER}/introspect",
+        "consume_endpoint": f"{ISSUER}/consume",
         # What makes this not an ordinary authorization server, said out
         # loud. A relying party finding this field is being told the thing it
         # most needs to know: the party at this endpoint decides nothing, and

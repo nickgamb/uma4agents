@@ -183,15 +183,14 @@ prohibited:
 proffered_by:
 : REQUIRED. The issuer identifier of the authorization server that proffers them.
 
-A terms document MAY carry any other member. Two are defined here:
+A terms document MAY carry any other member; a member this document does not
+define is an undertaking the requesting side signs, not a control the
+enforcement point applies. One member is defined here:
 
 per_operation:
 : OPTIONAL. Boolean. Where `true`, a grant under these terms is bound to one
   operation and spent once, as {{U4ACore}} Section 7.2, and the agreement MUST
   name the operation proposed.
-
-constraints:
-: OPTIONAL. An object narrowing what the scope reaches.
 
 ## Versions Are Immutable {#immutable}
 

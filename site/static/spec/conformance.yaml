@@ -296,10 +296,14 @@ draft-gamb-uma4agents-fedauthz-00:
     verified: check
     targets: [embedded-check]
     asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
-  - text: "An authorization server MUST offer that operation, and it MUST report to its caller whether that caller was the one that consumed the token."
+  - text: "An authorization server MUST offer that operation at the URL it advertises as consume_endpoint in its metadata"
     verified: check
-    targets: [store-test]
-    asserts: ["rpt: exactly one of %d burns wins", "rpt: a later burn still loses"]
+    targets: [store-test, smoke-test]
+    asserts: ["rpt: exactly one of %d burns wins", "rpt: a later burn still loses", "advertised formats: OK"]
+  - text: "The request carries the token as introspection does; the response is a JSON object with a consumed member."
+    verified: check
+    targets: [store-test, embedded-check]
+    asserts: ["rpt: a later burn still loses", "and spent, it cannot be spent again"]
   - text: "An enforcement point MUST NOT be told, and MUST NOT report, the identity handle of the requesting agent."
     verified: check
     targets: [store-test, intent-check]

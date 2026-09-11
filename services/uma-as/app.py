@@ -414,6 +414,7 @@ async def discovery() -> dict:
         "token_endpoint": f"{ISSUER}/token",
         "permission_endpoint": f"{ISSUER}/perm",
         "introspection_endpoint": f"{ISSUER}/introspect",
+        "consume_endpoint": f"{ISSUER}/consume",
         "jwks_uri": f"{ISSUER}/jwks",
         "terms_endpoint": f"{ISSUER}/terms",
         "response_types_supported": [],

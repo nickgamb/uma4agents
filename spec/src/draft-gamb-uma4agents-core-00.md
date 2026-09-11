@@ -263,7 +263,9 @@ The notation `s256(x)` denotes the string `"s256:"` followed by the base64url
 encoding, without padding, of the SHA-256 digest of the octets `x`.
 
 The notation `jkt(k)` denotes the string `"jkt:"` followed by the JWK Thumbprint
-{{RFC7638}} of the JSON Web Key `k`.
+{{RFC7638}} of the JSON Web Key `k`. The value after the prefix is the same
+thumbprint DPoP {{RFC9449}} carries in its `jkt` confirmation method; the prefix
+marks it as a handle rather than a confirmation.
 
 # Authorization Server Metadata
 

@@ -31,6 +31,11 @@ URI, and the authorization server advertises the ones it implements in
 The drafts are in Internet-Draft form. Whether they go to the datatracker is a
 separate decision, and nothing in them depends on it.
 
+One term differs between the drafts and these pages. What the lab and every
+page here calls a **tier** — a group of resources with one terms document,
+one ask-me switch and its rules — the drafts call a **policy unit**, so that
+the word carries no suggestion of rank. They are the same object.
+
 ## What each one carries
 
 **Core** narrows UMA 2.0 in one place and extends it in several: the challenge

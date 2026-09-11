@@ -363,6 +363,8 @@ smoke-test:
 		| grep -q 'client_credentials' \
 		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
 		| grep -q 'urn:ietf:params:oauth:token-type:id-jag' \
+		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
+		| grep -q 'consume_endpoint' \
 		&& echo "  advertised formats: OK" || echo "  advertised formats: FAIL"
 	@echo "==> uma-as JWKS..."
 	@$(CURL) https://alice-as.uma.lab/jwks | grep -q Ed25519 && echo "  jwks: OK" || echo "  jwks: FAIL"
