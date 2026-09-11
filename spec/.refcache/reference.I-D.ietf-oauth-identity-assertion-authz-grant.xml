@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-oauth-identity-assertion-authz-grant" target="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">
+   <front>
+      <title>Identity Assertion JWT Authorization Grant</title>
+      <author initials="A." surname="Parecki" fullname="Aaron Parecki">
+         <organization>Okta</organization>
+      </author>
+      <author initials="K." surname="McGuinness" fullname="Karl McGuinness">
+         <organization>Independent</organization>
+      </author>
+      <author initials="B." surname="Campbell" fullname="Brian Campbell">
+         <organization>Ping Identity</organization>
+      </author>
+      <date month="May" day="21" year="2026" />
+      <abstract>
+	 <t>   This specification provides a mechanism for an application to use an
+   identity assertion to obtain an access token for a third-party API by
+   coordinating through an identity provider that the downstream
+   Resource Authorization Server already trusts for single sign-on
+   (SSO), using Token Exchange [RFC8693] and JWT Profile for OAuth 2.0
+   Authorization Grants [RFC7523].  This pattern is informally referred
+   to as Cross-App Access (XAA).
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-identity-assertion-authz-grant-04" />
+   
+</reference>

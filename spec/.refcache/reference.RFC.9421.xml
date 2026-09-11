@@ -1,0 +1,14 @@
+<reference anchor="RFC9421" target="https://www.rfc-editor.org/info/rfc9421">
+  <front>
+    <title>HTTP Message Signatures</title>
+    <author fullname="A. Backman" initials="A." role="editor" surname="Backman"/>
+    <author fullname="J. Richer" initials="J." role="editor" surname="Richer"/>
+    <author fullname="M. Sporny" initials="M." surname="Sporny"/>
+    <date month="February" year="2024"/>
+    <abstract>
+      <t>This document describes a mechanism for creating, encoding, and verifying digital signatures or message authentication codes over components of an HTTP message. This mechanism supports use cases where the full HTTP message may not be known to the signer and where the message may be transformed (e.g., by intermediaries) before reaching the verifier. This document also describes a means for requesting that a signature be applied to a subsequent HTTP message in an ongoing HTTP exchange.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="9421"/>
+  <seriesInfo name="DOI" value="10.17487/RFC9421"/>
+</reference>

@@ -1,0 +1,14 @@
+<reference anchor="RFC9396" target="https://www.rfc-editor.org/info/rfc9396">
+  <front>
+    <title>OAuth 2.0 Rich Authorization Requests</title>
+    <author fullname="T. Lodderstedt" initials="T." surname="Lodderstedt"/>
+    <author fullname="J. Richer" initials="J." surname="Richer"/>
+    <author fullname="B. Campbell" initials="B." surname="Campbell"/>
+    <date month="May" year="2023"/>
+    <abstract>
+      <t>This document specifies a new parameter authorization_details that is used to carry fine-grained authorization data in OAuth messages.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="9396"/>
+  <seriesInfo name="DOI" value="10.17487/RFC9396"/>
+</reference>

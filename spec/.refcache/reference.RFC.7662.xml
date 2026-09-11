@@ -1,0 +1,12 @@
+<reference anchor="RFC7662" target="https://www.rfc-editor.org/info/rfc7662">
+  <front>
+    <title>OAuth 2.0 Token Introspection</title>
+    <author fullname="J. Richer" initials="J." role="editor" surname="Richer"/>
+    <date month="October" year="2015"/>
+    <abstract>
+      <t>This specification defines a method for a protected resource to query an OAuth 2.0 authorization server to determine the active state of an OAuth 2.0 token and to determine meta-information about this token. OAuth 2.0 deployments can use this method to convey information about the authorization context of the token from the authorization server to the protected resource.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="7662"/>
+  <seriesInfo name="DOI" value="10.17487/RFC7662"/>
+</reference>

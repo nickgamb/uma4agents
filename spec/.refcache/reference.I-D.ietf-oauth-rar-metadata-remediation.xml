@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-oauth-rar-metadata-remediation" target="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00">
+   <front>
+      <title>OAuth 2.0 RAR Metadata and Error Remediation</title>
+      <author initials="Y." surname="Zehavi" fullname="Yaron Zehavi">
+         <organization>Raiffeisen Bank International</organization>
+      </author>
+      <date month="August" day="23" year="2026" />
+      <abstract>
+	 <t>   OAuth 2.0 Rich Authorization Requests (RAR) [RFC9396] standardizes
+   the exchange and processing of authorization details but does not
+   define metadata for describing authorization details types.
+
+   In addition, no interoperable guidance is offered to clients, to
+   remediate failures by resource servers due to insufficient
+   authorization details.
+
+   This document addresses this interoperability challenge, allowing
+   clients to dynamically discover metadata instead of relying on out-
+   of-band agreements, as well as standardizes failure signaling
+   including interoperable remediation when insufficient authorization
+   details are the cause of failure.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-rar-metadata-remediation-00" />
+   
+</reference>

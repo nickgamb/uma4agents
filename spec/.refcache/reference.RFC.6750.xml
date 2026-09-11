@@ -1,0 +1,13 @@
+<reference anchor="RFC6750" target="https://www.rfc-editor.org/info/rfc6750">
+  <front>
+    <title>The OAuth 2.0 Authorization Framework: Bearer Token Usage</title>
+    <author fullname="M. Jones" initials="M." surname="Jones"/>
+    <author fullname="D. Hardt" initials="D." surname="Hardt"/>
+    <date month="October" year="2012"/>
+    <abstract>
+      <t>This specification describes how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. Any party in possession of a bearer token (a "bearer") can use it to get access to the associated resources (without demonstrating possession of a cryptographic key). To prevent misuse, bearer tokens need to be protected from disclosure in storage and in transport. [STANDARDS-TRACK]</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="6750"/>
+  <seriesInfo name="DOI" value="10.17487/RFC6750"/>
+</reference>

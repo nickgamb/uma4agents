@@ -1,0 +1,16 @@
+<reference anchor="RFC8693" target="https://www.rfc-editor.org/info/rfc8693">
+  <front>
+    <title>OAuth 2.0 Token Exchange</title>
+    <author fullname="M. Jones" initials="M." surname="Jones"/>
+    <author fullname="A. Nadalin" initials="A." surname="Nadalin"/>
+    <author fullname="B. Campbell" initials="B." role="editor" surname="Campbell"/>
+    <author fullname="J. Bradley" initials="J." surname="Bradley"/>
+    <author fullname="C. Mortimore" initials="C." surname="Mortimore"/>
+    <date month="January" year="2020"/>
+    <abstract>
+      <t>This specification defines a protocol for an HTTP- and JSON-based Security Token Service (STS) by defining how to request and obtain security tokens from OAuth 2.0 authorization servers, including security tokens employing impersonation and delegation.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="8693"/>
+  <seriesInfo name="DOI" value="10.17487/RFC8693"/>
+</reference>

@@ -1,0 +1,14 @@
+<reference anchor="RFC8414" target="https://www.rfc-editor.org/info/rfc8414">
+  <front>
+    <title>OAuth 2.0 Authorization Server Metadata</title>
+    <author fullname="M. Jones" initials="M." surname="Jones"/>
+    <author fullname="N. Sakimura" initials="N." surname="Sakimura"/>
+    <author fullname="J. Bradley" initials="J." surname="Bradley"/>
+    <date month="June" year="2018"/>
+    <abstract>
+      <t>This specification defines a metadata format that an OAuth 2.0 client can use to obtain the information needed to interact with an OAuth 2.0 authorization server, including its endpoint locations and authorization server capabilities.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="8414"/>
+  <seriesInfo name="DOI" value="10.17487/RFC8414"/>
+</reference>

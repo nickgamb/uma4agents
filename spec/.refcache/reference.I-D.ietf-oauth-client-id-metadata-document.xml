@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-oauth-client-id-metadata-document" target="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02">
+   <front>
+      <title>OAuth Client ID Metadata Document</title>
+      <author initials="A." surname="Parecki" fullname="Aaron Parecki">
+         <organization>Okta</organization>
+      </author>
+      <author initials="E." surname="Smith" fullname="Emelia Smith">
+         </author>
+      <date month="July" day="6" year="2026" />
+      <abstract>
+	 <t>   This specification defines a mechanism through which an OAuth client
+   can identify itself to authorization servers, without prior dynamic
+   client registration or other existing registration.  This is through
+   the usage of a URL as a client_id in an OAuth flow, where the URL
+   refers to a document containing the necessary client metadata,
+   enabling the authorization server to fetch the metadata about the
+   client as needed.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-client-id-metadata-document-02" />
+   
+</reference>

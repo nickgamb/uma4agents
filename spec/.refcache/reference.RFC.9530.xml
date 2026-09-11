@@ -1,0 +1,14 @@
+<reference anchor="RFC9530" target="https://www.rfc-editor.org/info/rfc9530">
+  <front>
+    <title>Digest Fields</title>
+    <author fullname="R. Polli" initials="R." surname="Polli"/>
+    <author fullname="L. Pardue" initials="L." surname="Pardue"/>
+    <date month="February" year="2024"/>
+    <abstract>
+      <t>This document defines HTTP fields that support integrity digests. The Content-Digest field can be used for the integrity of HTTP message content. The Repr-Digest field can be used for the integrity of HTTP representations. Want-Content-Digest and Want-Repr-Digest can be used to indicate a sender's interest and preferences for receiving the respective Integrity fields.</t>
+      <t>This document obsoletes RFC 3230 and the Digest and Want-Digest HTTP fields.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="9530"/>
+  <seriesInfo name="DOI" value="10.17487/RFC9530"/>
+</reference>

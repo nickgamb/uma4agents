@@ -504,3 +504,24 @@ embedded-check:
 # The Kubernetes shape of the lab: same source, deployed the way it would
 # actually run. `make up` above stays the fast path.
 include Makefile.k8s
+
+## spec: render the Internet-Draft set from spec/src into site/static/spec.
+## kramdown-rfc turns the Markdown into xml2rfc v3 XML, xml2rfc turns that into
+## the .txt and .html a draft is actually read as. The reference cache in
+## spec/.refcache is committed, so a render reaches no network and two people
+## building the same source get the same bytes.
+.PHONY: spec
+spec:
+	@docker build -q -t u4a-spec:local spec/ >/dev/null
+	@mkdir -p site/static/spec
+	@docker run --rm -v "$(PWD)/spec":/spec -v "$(PWD)/site/static/spec":/out \
+		u4a-spec:local bash /spec/render.sh
+
+## spec-check: the requirements register — every normative statement in the
+## drafts is mapped to the check that proves it, and every check named exists.
+## A specification that asserts a behaviour should name what verifies it; this
+## is that discipline, made to fail the build.
+.PHONY: spec-check
+spec-check: spec
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q pyyaml && python spec/check_conformance.py"
