@@ -3,7 +3,11 @@
 **Status: proposal.** A draft for the `modelcontextprotocol/ext-auth`
 extension track, written from a working implementation rather than from
 first principles. Not adopted, not submitted; published here so the shape can
-be argued over against running code.
+be argued over against running code. It is not the MCP binding of the U4A
+profile — that is
+[draft-gamb-uma4agents-mcp-00](../site/static/spec/draft-gamb-uma4agents-mcp-00.txt),
+which specifies what this profile does over MCP as it stands. This document
+asks MCP for the three things that binding cannot do without.
 
 Each addition below exists because the build hit the gap, and each cites the
 part of MCP 2026-07-28 that makes it necessary.
@@ -122,7 +126,7 @@ consuming poll means one lost response bricks the negotiation.
 
 ## Relationship to RAR metadata / SEP-2643
 
-`draft-zehavi-oauth-rar-metadata` and SEP-2643 solve the neighbouring problem:
+`draft-ietf-oauth-rar-metadata-remediation` and SEP-2643 solve the neighbouring problem:
 when a call fails for want of authority, the resource returns machine-readable
 guidance rather than leaving the client to build a step-up request from
 documentation. The two efforts compose, and the addition needed is small.

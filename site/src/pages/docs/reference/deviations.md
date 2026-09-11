@@ -18,6 +18,9 @@ explicit extension.
 
 Everything not listed here is intended to be stock UMA 2.0 or stock AAuth.
 
+Each entry names where the [specification set](/docs/reference/specification/)
+states it normatively. The numbering is the one Core §11 uses.
+
 ## 1. Terms proffered inside `required_claims`
 
 **Baseline.** The authorization server names acceptable claim *formats*.
@@ -30,6 +33,8 @@ counter-signed receipt returned on grant.
 privacy to agentic access. It descends directly from UMA's own 2010 Requesting
 Party Policy claim. Both sides end up holding identical dually-signed records.
 
+**Specified in.** [Owner-Proffered Terms §3–5](/spec/draft-gamb-uma4agents-terms-00.html#proffering)
+
 ## 2. Proof-of-possession RPT
 
 **Baseline.** A bearer RPT; permissions visible only through introspection.
@@ -41,6 +46,8 @@ the `permissions` array as a claim.
 picks it up. Carrying `permissions` inline lets an enforcement point see scope
 without a round trip; introspection remains the authority on liveness.
 
+**Specified in.** [Core §7.1](/spec/draft-gamb-uma4agents-core-00.html#rpt)
+
 ## 3. `operation` and `single_use` claims
 
 **Baseline.** Per-permission scopes and expiry only.
@@ -49,6 +56,8 @@ without a round trip; introspection remains the authority on liveness.
 
 **Why.** Approving one action must not become authorizing a class of actions.
 Classic UMA scopes authorize classes.
+
+**Specified in.** [Core §7.2](/spec/draft-gamb-uma4agents-core-00.html#operation-binding)
 
 ## 4. Owner push notification on `request_submitted`
 
@@ -59,6 +68,8 @@ owner's surface.
 
 **Why.** The agent era's consent surface, and the day-one handshake. The 2010
 out-of-band consent wireframes finally have an interlocutor that exists.
+
+**Specified in.** [Core §4.2 and §9](/spec/draft-gamb-uma4agents-core-00.html#connections)
 
 ## 5. Standing connection keyed by an identity handle
 
@@ -73,6 +84,8 @@ consent in one ledger. The identity-level split is not cosmetic: identified
 agents rotate session keys, so a thumbprint-keyed connection forgets an enrolled
 agent every session. That bit the build.
 
+**Specified in.** [Core §9](/spec/draft-gamb-uma4agents-core-00.html#connections)
+
 ## 6. Public structural discovery in two binding encodings
 
 **Baseline.** RFC 9728 and AAuth resource metadata both predate this. UMA's
@@ -85,6 +98,8 @@ challenge, and clients corroborating `as_uri` against published
 **Why.** The encodings are stock. Composing them with the UMA challenge — so it
 gains a TLS-anchored second witness — and sharing one protected instance layer
 beneath both is the extension.
+
+**Specified in.** [Core §3.4, and Federated Authorization for Agents §2.1](/spec/draft-gamb-uma4agents-core-00.html#corroboration)
 
 ## 7. `owner_resources_endpoint` and the protected listing
 
@@ -99,6 +114,8 @@ unauthenticated URI is a leak the old push registration never had. It also
 enables declarative registration. Classic push remains conformant and is
 preserved on the `legacy/rreg-baseline` branch.
 
+**Specified in.** [Federated Authorization for Agents §2.2 and §3](/spec/draft-gamb-uma4agents-fedauthz-00.html#protected-layer)
+
 ## 8. Challenge specified as parameters
 
 **Baseline.** UMA 2.0 mandates the `WWW-Authenticate` header.
@@ -112,6 +129,8 @@ the header excludes exactly the resource-side frameworks most likely to adopt
 this. Both encodings run here against one authorization server, and one client
 reads both.
 
+**Specified in.** [Core §3.1, and the MCP binding §3](/spec/draft-gamb-uma4agents-core-00.html#challenge-parameters)
+
 ## 9. Enforcement obligations hosted by either party's component
 
 **Baseline.** FedAuthz names the obligations, not their host.
@@ -120,6 +139,8 @@ reads both.
 
 **Why.** The enforcement point is a role, not a product. Two conformant hosts on
 one stack means the claim is measured rather than argued.
+
+**Specified in.** [Core §8.1](/spec/draft-gamb-uma4agents-core-00.html#obligations)
 
 ## 10. Consumption ordering made normative
 
@@ -134,6 +155,8 @@ reason, and `connection_revoked` is terminal.
 approval the owner just gave. And a bare `{"active": false}` sends a revoked
 agent round a negotiation whose outcome is already settled.
 
+**Specified in.** [Core §8.2–8.4, and Federated Authorization for Agents §6](/spec/draft-gamb-uma4agents-core-00.html#ordering)
+
 ## 11. Requesting-agent identity metadata
 
 **Baseline.** The agent is its key, or its issuer's token.
@@ -147,6 +170,8 @@ able to say something true about it. Neither ever becomes an authorization
 input. The verifying key is always the RPT's `cnf`, and the connection handle is
 unchanged.
 
+**Specified in.** [Core §5.2](/spec/draft-gamb-uma4agents-core-00.html#descriptive-metadata)
+
 ## 12. Structured remediation in the challenge
 
 **Baseline.** UMA's challenge carries `as_uri` and `ticket` only.
@@ -155,13 +180,58 @@ unchanged.
 carrying RFC 9396 `authorization_details` and an `authorization_reference`, with
 `authorization_server` and `ticket` inside it.
 
-**Why.** A superset of `draft-zehavi-oauth-rar-metadata` rather than a rival: the
+**Why.** A superset of `draft-ietf-oauth-rar-metadata-remediation` rather than a rival: the
 same remediation payload, plus the two parameters that let a party who is not the
 caller decide. The same JSON rides the JSON-RPC encoding byte for byte, which
 demonstrates that the payload is portable and only the envelope is
 binding-specific.
 
-## 13. A cap on the owner's pending queue
+**Specified in.** [Core §3.3](/spec/draft-gamb-uma4agents-core-00.html#remediation)
+
+## 13. A resource server introduces itself by its origin
+
+**Baseline.** FedAuthz §1.4 requires the protection API token to be issued
+with the resource owner's authorization, and says nothing about how the
+resource server comes to be a client of the authorization server at all.
+
+**Here.** `POST /rs/register`: the resource server signs the request (RFC
+9421) with a key published at the origin of the resource it claims to serve.
+The authority fetches that resource's own RFC 9728 document, checks that it
+claims *this* resource, that its `jwks_uri` is same-origin, and that it names
+*this* authorization server, and verifies the signature against the keys it
+publishes. Success is `202 pending`: the owner approves it from her registry
+before any PAT is issued, and `/token` then accepts the same signature in
+place of a client secret.
+
+**Why.** Where one operator runs both sides, a provisioned secret models the
+gap adequately. It does not when the authority is the owner's, because nobody
+is in a position to configure both ends. Trusting control of the origin adds
+no party the protocol did not already depend on — it is the address the
+challenge pointed at. Unreachable is refused: here the document *is* the
+credential, and a credential that cannot be fetched has not been presented.
+
+**Specified in.** [Federated Authorization for Agents §4](/spec/draft-gamb-uma4agents-fedauthz-00.html#establishment)
+
+## 14. Every owner-scoped artifact carries its owner
+
+**Baseline.** One authorization server per protected resource, with the owner
+implicit in the deployment.
+
+**Here.** The ticket resolves only at the authority that minted it; the RPT
+carries an `owner` claim; resource ids and terms `template_id`s are namespaced
+by owner; and the RFC 9728 document is per-owner, at `/mcp/<owner>`, naming
+*her* `authorization_servers`.
+
+**Why.** Two owners of one resource server can name two different authorities,
+which is the difference between multi-tenancy and an authority that is hers.
+The specification states it as one testable sentence: *the authorization
+server named in the challenge is the owner's choice, and two owners of one
+resource server may name two different ones.* The store enforces it
+structurally rather than by parameter.
+
+**Specified in.** [Core §11](/spec/draft-gamb-uma4agents-core-00.html#owner-scoped)
+
+## 15. A cap on the owner's pending queue
 
 **Baseline.** UMA 2.0 defines `request_submitted` and has no opinion about how
 many of them a resource owner can be made to hold at once.
@@ -179,7 +249,9 @@ you want to admit is a stranger too on first contact, so a single queue defends
 continuity and leaves onboarding undefended. See
 [the owner's attention](/docs/overview/attention/).
 
-## 14. Owner-side blocking at operator granularity
+**Specified in.** [Owner Policy, Assurance and Attention §6](/spec/draft-gamb-uma4agents-policy-00.html#attention)
+
+## 16. Owner-side blocking at operator granularity
 
 **Baseline.** UMA 2.0 has no notion of the party operating a requesting agent,
 and so nothing to revoke at that level.
@@ -195,7 +267,52 @@ claim: an agent that misstates its operator only refuses itself. It does not
 stop the same party returning anonymously, which is why the lanes matter more
 than the block.
 
-## 15. A layer above the resource owner
+**Specified in.** [Owner Policy, Assurance and Attention §7](/spec/draft-gamb-uma4agents-policy-00.html#operators)
+
+## 17. Assurance may only tighten; only her decisions may relax
+
+**Baseline.** UMA 2.0 has no vocabulary for what the authorization server may
+know about a requesting party before the owner has met it, nor for what may
+lower a requirement.
+
+**Here.** Every condition a rule may name is classed as *relaxing* or
+*observed*. A rule whose effect is `auto` may name only relaxing conditions —
+the owner personally approved this agent here, she has never revoked it, she
+has known it longer than a stated time, or it is one she activated herself.
+Assurance is three independent axes, derived from checks that ran, with no
+composite score. The rule is enforced when a policy is *saved*, so the mistake
+cannot be stored.
+
+**Why.** The party being decided about supplies most of the evidence. A rule
+that widens on that evidence is a rule the agent can satisfy by producing it.
+And "we have granted here before" may record an automatic grant, so relaxing on
+it would let one automatic grant justify the next.
+
+**Specified in.** [Owner Policy, Assurance and Attention §3–5](/spec/draft-gamb-uma4agents-policy-00.html#asymmetry)
+
+## 18. An agent may introduce a sibling
+
+**Baseline.** UMA 2.0 has no object between "a stranger" and "the same
+client", and no notion of one requesting party standing for another.
+
+**Here.** An agent holding a connection signs a short introduction naming the
+newcomer's key (`u4a-introduction-v1+jws`), or its issuer names the lineage in
+an RFC 8693 `act` claim. The newcomer skips first contact and then negotiates
+its own terms under its own key for its own grant. Her authority verifies the
+introducer against her own active connections, requires a tier she approved in
+person, refuses an agent that was itself introduced, and requires one operator
+to have published both keys. Approval pools across the lineage in both
+directions; revoking the introducer revokes the introduced.
+
+**Why.** The usual answer is to pass the parent's token down, which makes the
+workers indistinguishable from the parent in the owner's records, individually
+unrevocable, and never something she agreed to. Keeping the authority graph
+one level deep while the task graph nests means every agent is separately
+visible, separately revocable and separately bounded.
+
+**Specified in.** [Agent Lineage](/spec/draft-gamb-uma4agents-lineage-00.html#admission)
+
+## 19. A layer above the resource owner
 
 **Baseline.** UMA 2.0 has one deciding party per resource. The
 *resource rights administrator* is named in the terminology and given no wire
@@ -230,7 +347,9 @@ challenge, the ticket, `need_info`, the agreement and the RPT are the same on
 a shared resource as on a personal one — a requesting agent cannot tell the
 difference, and does not need to.
 
-## 16. Several owners of equal standing over one resource
+**Specified in.** [Multi-Party Authorization, Part I](/spec/draft-gamb-uma4agents-multiparty-00.html#organization)
+
+## 20. Several owners of equal standing over one resource
 
 **Baseline.** UMA 2.0 has exactly one authorization server per protected
 resource. There is no object for "these parties must both agree", and no way
@@ -263,9 +382,30 @@ collect verdicts — a claim the requesting party gathers is a claim it can
 decline to gather, and a refusal has to reach the decision point without the
 cooperation of the party it refuses.
 
-## 17. An enterprise identity assertion as a claim, not as a grant
+**Specified in.** [Multi-Party Authorization, Part II](/spec/draft-gamb-uma4agents-multiparty-00.html#joint)
 
-**Baseline.** Cross App Access
+## 21. The owner's own credential
+
+**Baseline.** UMA 2.0 says nothing about how the resource owner authenticates
+to her own authorization server; in its deployments the server belonged to a
+service that already had a session with her.
+
+**Here.** `UMA_AS_OWNER_AUTH` names one or both of an OIDC access token from
+her designated provider and an RFC 9421 signature from a device key she
+enrolled, with a required body digest on any request carrying one. Each is
+independently sufficient and independently revocable; neither is a fallback
+for the other; no static owner credential exists.
+
+**Why.** The second form is what lets her authority be reached by something
+she runs — a personal agent on her own device — without a browser session and
+without an identity provider in the path. It is the requesting agent's
+message-signature profile, pointed the other way.
+
+**Specified in.** [Core §10](/spec/draft-gamb-uma4agents-core-00.html#owner-authentication)
+
+## Not a deviation: an enterprise identity assertion as a claim
+
+**What it departs from.** Cross App Access
 ([`draft-ietf-oauth-identity-assertion-authz-grant`](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/))
 has the client present an ID-JAG at the resource authorization server as
 `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` with `assertion=…`,
@@ -296,6 +436,8 @@ is unmodified — ordinary RFC 8693 token exchange with the draft's parameters
 and `typ: oauth-id-jag+jwt` on the result. An enterprise's existing provider
 needs no knowledge of this profile, and the assertion it mints is the one the
 draft describes. See [cross app access](/docs/overview/cross-app-access/).
+
+This is stock UMA claims-gathering, one claim per beat, with the ticket rotating. The departure is from the Cross App Access draft's `jwt-bearer` exchange, not from UMA, which is why it is listed here and not numbered. See [Core §4.1](/spec/draft-gamb-uma4agents-core-00.html#claim-token-formats).
 
 ## Security properties these depend on
 

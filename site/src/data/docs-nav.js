@@ -148,6 +148,7 @@ const nav = {
     {
       group: "For spec authors",
       pages: [
+        { title: "The specification set", to: "/docs/reference/specification/" },
         { title: "Deviations from UMA 2.0", to: "/docs/reference/deviations/" },
         { title: "Findings", to: "/docs/reference/findings/" },
       ],

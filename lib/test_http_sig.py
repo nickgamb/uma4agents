@@ -117,6 +117,30 @@ must_fail("and one dated far in the future is too",
           lambda: verify(**A, signature_input=_future["Signature-Input"],
                          signature=_future["Signature"], public_key=pub))
 
+# The authority is the verifier's, from configuration. A signature over the
+# same request against a different authority is a signature over a different
+# request, and a verifier that read the authority off the wire could be
+# handed one that matches.
+must_fail("a signature over another authority is rejected",
+          lambda: verify(method="POST", authority="other.example", path="/mcp",
+                         authorization="PoP TOKEN",
+                         signature_input=h["Signature-Input"],
+                         signature=h["Signature"], public_key=pub))
+
+# Covering the body is two obligations: the header in the base, and the header
+# recomputed from the bytes. A verifier told to require the digest refuses a
+# request that carries none, or the signer that omits it escapes the check.
+_body = b'{"decision": "approved"}'
+hb = sign(**A, key=k, keyid="agent-1", body=_body)
+ok("a body-bound signature verifies with its digest",
+   lambda: verify(**A, signature_input=hb["Signature-Input"],
+                  signature=hb["Signature"], public_key=pub, body=_body,
+                  require_digest=True, digest_header=hb["Content-Digest"]))
+must_fail("a body without its digest is refused where one is required",
+          lambda: verify(**A, signature_input=h["Signature-Input"],
+                         signature=h["Signature"], public_key=pub, body=_body,
+                         require_digest=True, digest_header=None))
+
 must_fail("a tampered body-bound header is rejected",
           lambda: verify(method="POST", authority="gateway.uma.lab", path="/mcp",
                          authorization="PoP DIFFERENT",

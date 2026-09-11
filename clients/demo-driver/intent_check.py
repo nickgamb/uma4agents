@@ -505,6 +505,41 @@ def main() -> int:
         say("two of her trade prohibitions are refused; the rest are undertakings")
 
         # ---------------------------------------------------------------
+        print("\n== One terms document, three representations, one receipt ==")
+        # ---------------------------------------------------------------
+        # A terms URI resolves to the same terms as JSON for a program, as
+        # plain language for a person, and as JSON-LD for a rights engine —
+        # one URI, so the human-readable statement and the machine-readable
+        # one cannot drift apart. And the grant hands back a receipt
+        # countersigned by her authority that embeds the very agreement the
+        # agent signed, so both sides hold one record.
+        turi = f"{AS_PUBLIC}/terms/{t1['template_id']}"
+        as_json = client.get(turi, headers={"accept": "application/json"}, timeout=15.0)
+        as_html = client.get(turi, headers={"accept": "text/html"}, timeout=15.0)
+        as_ld = client.get(turi, params={"format": "jsonld"}, timeout=15.0)
+        check("the terms document is served as JSON, as HTML and as JSON-LD at one URI",
+              as_json.headers.get("content-type", "").startswith("application/json")
+              and as_html.headers.get("content-type", "").startswith("text/html")
+              and as_ld.headers.get("content-type", "").startswith("application/ld+json")
+              and as_json.json()["purpose"] in as_html.text,
+              f"{as_json.headers.get('content-type')} / "
+              f"{as_html.headers.get('content-type')} / {as_ld.headers.get('content-type')}")
+        held = {}
+        ch = challenge_for(client, "get_positions", {})
+        run_grant(client, ch.as_uri, ch.ticket, stated, lambda t: True,
+                  on_receipt=lambda r: held.setdefault("jws", r), max_wait_s=25)
+        rjws = held.get("jws") or ""
+        rhead = json.loads(base64.urlsafe_b64decode(rjws.split(".")[0] + "==")) if rjws else {}
+        rbody = json.loads(base64.urlsafe_b64decode(rjws.split(".")[1] + "==")) if rjws else {}
+        check("the grant returns a receipt countersigned by her authority",
+              rhead.get("typ") == "myterms-receipt+jws" and rbody.get("iss") == ch.as_uri,
+              f"typ={rhead.get('typ')} iss={rbody.get('iss')}")
+        check("and the receipt embeds the agreement the agent signed",
+              isinstance(rbody.get("agreement_jws"), str) and rbody["agreement_jws"].count(".") == 2
+              and rbody.get("agreement", "").startswith("s256:")
+              and rbody.get("terms_uri", "").startswith(f"{AS_PUBLIC}/terms/"))
+
+        # ---------------------------------------------------------------
         print("\n== And policy can read it, naming no agent ==")
         # ---------------------------------------------------------------
         tier_id = f"intentcheck{RUN}"

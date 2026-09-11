@@ -498,6 +498,9 @@ case — what to type, what to click, and what is worth saying while it happens:
   owners of equal standing, and a party that counts without being trusted
 - **[docs/MULTI-OWNER.md](docs/MULTI-OWNER.md)** — many owners of one resource
   server, and how one of them brings an authority nobody provisioned
+- **[spec/README.md](spec/README.md)** — the specification set: seven
+  Internet-Drafts profiling and extending UMA 2.0, rendered from `spec/src`,
+  with every normative requirement mapped to the check that proves it.
 - **[docs/SUBAGENTS.md](docs/SUBAGENTS.md)** — sub-agent grants: an
   orchestrator's workers, each authorized on its own rather than on a token
   passed down

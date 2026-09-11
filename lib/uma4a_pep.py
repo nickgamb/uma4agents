@@ -145,7 +145,7 @@ class Decision:
     as_uri: str | None = None
     resource_metadata: str | None = None
     scopes: list[str] | None = None
-    # draft-zehavi-oauth-rar-metadata: what authority was missing, in RAR
+    # draft-ietf-oauth-rar-metadata-remediation: what authority was missing, in RAR
     # terms, plus its content-addressed id.
     authorization_details: list[dict] | None = None
     authorization_reference: str | None = None
@@ -845,7 +845,7 @@ class Enforcer:
         """What authority was missing, as an RFC 9396 authorization_details
         array, built from the failed request.
 
-        Same vocabulary draft-zehavi-oauth-rar-metadata uses for step-up
+        Same vocabulary draft-ietf-oauth-rar-metadata-remediation uses for step-up
         remediation. Emitting it costs nothing — the resource id and scopes
         are already known — and it means a client that implements that draft
         can read most of a UMA challenge without knowing UMA. It also gives a

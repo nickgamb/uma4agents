@@ -70,6 +70,8 @@ shows a fragment. Correlate by family, not by process.
 | `owner.notified` | The pending item reaches her surface |
 | `owner.decision` | She approves or denies |
 | `connection.approved` | A standing relationship is recorded |
+| `connection.introduced` | An agent is admitted on another agent's introduction, without a first-contact question |
+| `connection.introduction_refused` | An introduction did not apply; the agent falls back to first contact, and the reason is recorded |
 | `connection.revoked` | She revokes one |
 | `policy.updated` | She edits a tier |
 | `policy.created` | She adds terms of her own |

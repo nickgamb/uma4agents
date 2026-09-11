@@ -19,7 +19,7 @@ again.](joint-ownership.gif)
 make joint-check
 ```
 
-Expect **29 passed, 0 failed** across six processes.
+Expect **37 passed, 0 failed** across six processes.
 
 ## What is actually new
 

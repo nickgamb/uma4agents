@@ -77,9 +77,12 @@ array. The lab configures exactly one. Owners who each brought their own
 authorization server is the general case, and this deployment does not
 demonstrate it.
 
-## What we are asking for
+## What the specification says
 
 The changes above are not local preferences. Each is written up as a
 [recommendation](/docs/reference/findings/) with the problem it solves and the
-code that demonstrates it, because the useful output of a proof of concept is a
-list of things the specification could say.
+code that demonstrates it, and each is now stated normatively in the
+[specification set](/docs/reference/specification/): the terms artifact in
+Owner-Proffered Terms, the proof-of-possession token and the challenge
+parameters in the Core profile, pull registration in Federated Authorization
+for Agents.

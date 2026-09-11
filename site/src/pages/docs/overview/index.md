@@ -80,8 +80,10 @@ endpoints, the events, and the exact places this profile departs from UMA 2.0.
 
 ## What this is not
 
-It is not a product, and it is not a specification. It is a proof of concept
-built alongside [Eve Maler](https://www.linkedin.com/in/evemaler/) to find out
-which parts of UMA survive contact with agents, and
-[the findings](/docs/reference/findings/) are the deliverable. Where the lab
-does something a production system would not, the page says so.
+It is not a product. It is a proof of concept built alongside
+[Eve Maler](https://www.linkedin.com/in/evemaler/) to find out which parts of
+UMA survive contact with agents. [The findings](/docs/reference/findings/) are
+what it produced, and the [specification set](/docs/reference/specification/)
+— seven Internet-Drafts profiling and extending UMA 2.0 — is what the findings
+were for. Where the lab does something a production system would not, the page
+says so.

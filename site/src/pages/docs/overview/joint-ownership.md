@@ -200,6 +200,6 @@ joint ownership would not be adoptable.
 make joint-check
 ```
 
-**29 assertions across six processes.** The sharpest is the forgery: a grant
+**37 assertions across six processes.** The sharpest is the forgery: a grant
 with one verdict replaced by a signature nobody's authority made, refused at
 the enforcement point rather than believed.

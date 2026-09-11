@@ -28,7 +28,7 @@ disk):
 | `make kind-up`, cold | **13 minutes** |
 | Memory in use once up | 6.3 GB of 15 |
 | Disk in use once up | 13 GB of 32 |
-| `make k8s-smoke-test` | 13 passed, 0 failed |
+| `make k8s-smoke-test` | 14 passed, 0 failed |
 | `make k8s-policy-test` | 11 passed, 0 failed |
 
 That machine is a 2× tier, so it spends the monthly Codespaces allowance at
@@ -90,7 +90,7 @@ copies it into every namespace.
 ### 2. Prove it works
 
 ```bash
-make k8s-smoke-test             # expect 13 passed, 0 failed
+make k8s-smoke-test             # expect 14 passed, 0 failed
 ```
 
 **Notice** the last three checks. They are the ones compose cannot ask: all

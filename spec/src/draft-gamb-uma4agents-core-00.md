@@ -767,6 +767,32 @@ construct. What is added is that the relationship is visible to the owner and
 revocable by her individually, rather than being state the authorization server
 keeps for its own convenience.
 
+# The Owner's Own Credential {#owner-authentication}
+
+{{UMAGrant}} says nothing about how the resource owner authenticates to her own
+authorization server, because in its deployments the authorization server
+belonged to a service that already had a session with her. Here it is hers,
+and the question has to be answered.
+
+An authorization server MUST accept at least one of the following as the
+owner's credential on every owner-facing operation, and MAY accept both:
+
+- an access token from an identity provider the owner has designated, verified
+  against that provider's published keys;
+- an {{RFC9421}} signature over the request from a key the owner enrolled, under
+  the profile of {{signature-profile}}, with the `Content-Digest` requirement of
+  {{content-digest}} on any request carrying a body.
+
+Each accepted credential MUST be independently sufficient and independently
+revocable, and MUST NOT be a fallback for another. An authorization server MUST
+NOT hold a static owner credential of its own.
+
+The second form is what lets the owner's authority be reached by something she
+runs — a personal agent on her own device — without a browser session and
+without an identity provider in the path. It is the same message-signature
+profile the requesting agent uses, pointed the other way. Every handler MUST act
+on the owner the credential proved rather than on one the request named.
+
 # Owner-Scoped Artifacts {#owner-scoped}
 
 A resource server serves resources belonging to more than one owner, and each of
@@ -831,6 +857,7 @@ intended to be stock UMA 2.0.
 | 18 | An agent holding a connection may introduce a sibling, which then negotiates its own grant | No object between "a stranger" and "the same client" | {{U4ALineage}} |
 | 19 | A layer above the resource owner that may only narrow | The resource rights administrator is named and given no wire surface | {{U4AMultiParty}} |
 | 20 | Several owners of equal standing, with signed verdicts carried in the grant | Exactly one authorization server per protected resource | {{U4AMultiParty}} |
+| 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient | Silent on how the owner authenticates | {{owner-authentication}} |
 {: title="Departures from UMA 2.0."}
 
 # Security Considerations

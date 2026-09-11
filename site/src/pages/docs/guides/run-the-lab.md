@@ -56,7 +56,7 @@ protocol: `make init && make up`. It runs the same code without a cluster.
 make k8s-smoke-test
 ```
 
-Expect **13 passed, 0 failed**. Fewer usually means something is still
+Expect **14 passed, 0 failed**. Fewer usually means something is still
 settling — wait a minute and run it again.
 
 ```bash

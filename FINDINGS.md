@@ -55,6 +55,39 @@ carries the parts, but the agent-era *use* deserves normative naming:
 
 ## Recommendations to the working group
 
+Each recommendation below is now stated normatively in one of the seven
+Internet-Drafts in [`spec/`](spec/README.md). The map:
+
+| Rec | Draft, section |
+|---|---|
+| 1 | Core, throughout; the enforcement-point note is Core §8.1 |
+| 2 | Owner-Proffered Terms |
+| 3 | Core §4.2 and §9 |
+| 4 | Core §6 and §7.1 |
+| 5 | Federated Authorization for Agents §3 |
+| 6 | Core §1.3; the MCP binding is one document, others named |
+| 7 | Core §3.1 |
+| 8 | MCP binding §5; the ask of MCP stays in docs/ext-auth-third-party-authorization.md |
+| 9 | Core §8.3 |
+| 10 | Core §10 |
+| 11 | Core §6.2 |
+| 12 | Core §5.1–5.2 |
+| 13 | Owner Policy, Assurance and Attention §4 |
+| 14 | Owner Policy, Assurance and Attention §6 |
+| 15 | Owner-Proffered Terms §4.3 |
+| 16 | Owner-Proffered Terms, Security Considerations |
+| 17 | Owner-Proffered Terms §4.3; Core §13.3 |
+| 18 | Owner Policy, Assurance and Attention §8 |
+| 19 | Owner Policy, Assurance and Attention, Security Considerations |
+| 20 | Owner Policy, Assurance and Attention §5 |
+| 21 | Federated Authorization for Agents §4 |
+| 22 | Core §11 |
+| 23 | Core §8.3, and the atomicity test in Owner Policy, Security Considerations |
+| 24 | Core §11 |
+| 25 | Multi-Party Authorization, Part I |
+| 26 | Multi-Party Authorization, Part II |
+
+
 **1. A core "UMA for agents" grant spec, transport-agnostic.**
 Carry forward the party model (owner, requesting party, and — reviving the
 2010 term — *requesting agent*), the ticket/negotiation loop, offline grants,

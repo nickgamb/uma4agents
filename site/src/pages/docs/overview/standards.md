@@ -53,8 +53,8 @@ service offering conditions.
 | Specification | Supplies | Where it appears |
 |---|---|---|
 | [AAuth](https://github.com/dickhardt/AAuth) | Verifiable agent identity, bound to a session key | The identified path |
-| Web Bot Auth | A directory where an operator publishes its agents' keys | Display and discovery only |
-| Client ID Metadata Documents | A client described by URL rather than pre-registration | Display only |
+| [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-webbotauth-registry/) | A directory where an operator publishes its agents' keys | Display and discovery only |
+| [Client ID Metadata Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | A client described by URL rather than pre-registration | Display only |
 
 All three are consumed as inputs. None becomes an authorization input — see
 [identity is not authorization](/docs/overview/identity/).
@@ -96,9 +96,11 @@ text, so the copyright grant is not engaged.
 
 Section 4 of the grant specification asks that a profile or extension be given
 a uniquely identifying URI, and that an authorization server supporting one
-advertise that URI in its `uma_profiles_supported` metadata. U4A does not do
-this yet. What such a URI would name is already written down, in the
-[deviations register](/docs/reference/deviations/).
+advertise that URI in its `uma_profiles_supported` metadata. Each document in
+the [specification set](/docs/reference/specification/) has one —
+`https://u4a.ai/spec/core/1.0` and its siblings — and the authorization server
+advertises every one it implements at `/.well-known/uma2-configuration`.
+`make smoke-test` asserts it.
 
 The RFCs above are cited under the IETF Trust Legal Provisions. IEEE 7012 is
 cited by section and is not redistributed here. Full attribution for every

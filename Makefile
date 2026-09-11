@@ -352,6 +352,7 @@ smoke-test:
 		&& echo "  DNS: OK" || echo "  DNS: not configured (browser use needs 'make dns-setup'; smoke tests don't)"
 	@echo "==> uma-as discovery..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma4agents-configuration | grep -q token_endpoint \
+		&& $(CURL) https://alice-as.uma.lab/.well-known/uma4agents-configuration | grep -q terms_endpoint \
 		&& echo "  uma-as: OK" || echo "  uma-as: FAIL"
 	@echo "==> ... at UMA 2.0's well-known path, naming the profile it implements..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
@@ -388,6 +389,16 @@ smoke-test:
 		echo "==> ext_authz denial body reaches the client verbatim..."; \
 		echo "$$RESP" | grep -q 'uma_challenge' \
 		&& echo "  ext_authz body passthrough: OK" || echo "  ext_authz body passthrough: FAIL"
+	@echo "==> A truncated authorization body fails closed, by name..."
+	@docker compose exec -T uma-pep python -c "\
+	import urllib.request, json; \
+	req = urllib.request.Request('http://127.0.0.1:9002/check/mcp', method='POST', \
+		data=b'{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":1,\"params\":{\"name\":\"exec', \
+		headers={'content-type': 'application/json', 'x-envoy-auth-partial-body': 'true'}); \
+	import urllib.error; \
+	code, body = 0, b''; \
+	exec('try:\n    urllib.request.urlopen(req)\nexcept urllib.error.HTTPError as e:\n    code, body = e.code, e.read()'); \
+	print('  truncated body: OK' if code == 413 and b'request_body_too_large' in body else '  truncated body: FAIL (%s %s)' % (code, body[:120]))"
 	@echo "==> Alice's portal..."
 	@$(CURL) https://portal.uma.lab/health | grep -q ok && echo "  portal: OK" || echo "  portal: FAIL"
 	@echo "==> and the other owner's, which is the same image..."
@@ -431,6 +442,13 @@ shim-test:
 sig-test:
 	@docker run --rm -v "$(PWD)/lib:/u4a/lib:ro" python:3.12-slim \
 		sh -c "pip install -q cryptography && python /u4a/lib/test_http_sig.py"
+
+## pep-test: what the enforcement point refuses before it asks anybody, and
+## that the challenge is one object under two envelopes. Needs nothing running.
+.PHONY: pep-test
+pep-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q 'pyjwt[crypto]' httpx cryptography && python lib/test_pep.py"
 
 ## rules-test: her agent rules — what may tighten, what may relax, what wins.
 ## Named apart from `k8s-policy-test`, which proves the *mesh* denies: these
