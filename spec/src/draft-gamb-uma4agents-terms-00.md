@@ -389,6 +389,20 @@ agreement_jws:
 family:
 : REQUIRED. The negotiation this receipt completes.
 
+~~~ json
+{
+  "iss": "https://alice-as.example",
+  "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+  "iat": 1789430010,
+  "family": "fam_8f3aQ2Xc",
+  "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+  "template_id": "alice/advisor/v2",
+  "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
+}
+~~~
+{: title="A receipt's claims."}
+
 Embedding the whole agreement rather than a reference to it is what makes the two
 records identical: the owner's side retains it with her decision record and the
 requesting side retains the receipt, and neither has to ask the other for the

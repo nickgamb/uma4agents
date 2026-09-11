@@ -141,6 +141,11 @@ must_fail("a body without its digest is refused where one is required",
                          signature=h["Signature"], public_key=pub, body=_body,
                          require_digest=True, digest_header=None))
 
+must_fail("another signature label is rejected",
+          lambda: verify(**A, signature_input=h["Signature-Input"].replace("sig1=", "sig2=", 1),
+                         signature=h["Signature"].replace("sig1=", "sig2=", 1),
+                         public_key=pub))
+
 must_fail("a tampered body-bound header is rejected",
           lambda: verify(method="POST", authority="gateway.uma.lab", path="/mcp",
                          authorization="PoP DIFFERENT",

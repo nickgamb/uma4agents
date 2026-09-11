@@ -250,7 +250,60 @@ def load_or_create_key() -> Ed25519PrivateKey:
 
 
 SIGNING_KEY = load_or_create_key()
-KID = "uma-as-1"
+KID = os.environ.get("UMA_AS_KID", "uma-as-1")
+_VERIFICATION_KEYS: dict | None = None
+
+
+def verification_keys() -> dict:
+    """Every key a token this server issued may carry the kid of: the current
+    signing key, and the keys retired before it.
+
+    Rotation is: the new key becomes UMA_AS_SIGNING_KEY under a new
+    UMA_AS_KID, and the old one moves to UMA_AS_PREVIOUS_KEYS. Every grant,
+    receipt and PAT the old key signed stays verifiable for as long as it is
+    listed, because the set this server publishes at /jwks and the set it
+    verifies with are the same set — and a verifier that fetched the old set
+    learns the new one by refetching on a kid it does not hold.
+
+    Previous keys are PEM, private or public; a private key is reduced to
+    its public half and never signs again. Kids come from
+    UMA_AS_PREVIOUS_KIDS in the same order, or from the key where absent.
+    Built on first use rather than at import, after everything it needs is
+    defined.
+    """
+    global _VERIFICATION_KEYS
+    if _VERIFICATION_KEYS is not None:
+        return _VERIFICATION_KEYS
+    from cryptography.hazmat.primitives.serialization import (
+        load_pem_private_key, load_pem_public_key)
+
+    keys = {KID: SIGNING_KEY.public_key()}
+    paths = [p.strip() for p in os.environ.get("UMA_AS_PREVIOUS_KEYS", "").split(",")
+             if p.strip()]
+    kids = [k.strip() for k in os.environ.get("UMA_AS_PREVIOUS_KIDS", "").split(",")]
+    for i, path in enumerate(paths):
+        with open(path, "rb") as fh:
+            pem = fh.read()
+        try:
+            public = load_pem_private_key(pem, password=None).public_key()
+        except ValueError:
+            public = load_pem_public_key(pem)
+        kid = kids[i] if i < len(kids) and kids[i] else jwk_thumbprint(
+            json.loads(OKPAlgorithm.to_jwk(public)))
+        keys[kid] = public
+    _VERIFICATION_KEYS = keys
+    return keys
+
+
+def own_public_key(token: str):
+    """The key to verify one of this server's own tokens with, chosen by the
+    kid it carries. A token naming no kid, or one this server never held,
+    is verified against the current key and fails there if it is not ours."""
+    try:
+        kid = jwt.get_unverified_header(token).get("kid")
+    except jwt.InvalidTokenError:
+        kid = None
+    return verification_keys().get(kid, SIGNING_KEY.public_key())
 
 app = FastAPI(title="uma-as")
 
@@ -389,9 +442,12 @@ async def health_registry() -> JSONResponse:
 
 @app.get("/jwks")
 async def jwks() -> dict:
-    jwk = json.loads(OKPAlgorithm.to_jwk(SIGNING_KEY.public_key()))
-    jwk.update({"kid": KID, "use": "sig"})
-    return {"keys": [jwk]}
+    keys = []
+    for kid, public in verification_keys().items():
+        jwk = json.loads(OKPAlgorithm.to_jwk(public))
+        jwk.update({"kid": kid, "use": "sig"})
+        keys.append(jwk)
+    return {"keys": keys}
 
 
 @app.get("/.well-known/uma2-configuration")
@@ -417,6 +473,7 @@ async def discovery() -> dict:
         "consume_endpoint": f"{ISSUER}/consume",
         "jwks_uri": f"{ISSUER}/jwks",
         "terms_endpoint": f"{ISSUER}/terms",
+        "owner_endpoint": f"{ISSUER}/owner",
         "response_types_supported": [],
         "grant_types_supported": [
             "urn:ietf:params:oauth:grant-type:uma-ticket",
@@ -671,7 +728,8 @@ async def require_pat(request: Request) -> str:
     owner it serves, so the token is what says whose resources this call is
     about; there is no other signal on a Protection API request."""
     try:
-        claims = jwt.decode(_bearer(request), SIGNING_KEY.public_key(),
+        token = _bearer(request)
+        claims = jwt.decode(token, own_public_key(token),
                             algorithms=["EdDSA"], issuer=ISSUER,
                             options={"verify_aud": False})
     except jwt.InvalidTokenError as exc:
@@ -1104,7 +1162,7 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
     try:
         claims = jwt.decode(
             token,
-            SIGNING_KEY.public_key(),
+            own_public_key(token),
             algorithms=["EdDSA"],
             issuer=ISSUER,
             options={"verify_aud": False},

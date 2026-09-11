@@ -29,6 +29,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, embedded-check, pep-test]
     asserts: ["gateway challenge: OK", "the remediation object names the authorization server and the ticket", "the header carries every required parameter"]
+  - text: "An enforcement point MUST name the document for the resource identifier the request was made to"
+    verified: check
+    targets: [ts-agent-check]
+    asserts: ["the resource's metadata names the authorization server the challenge did"]
   - text: "A binding of this profile MUST define how these parameters are carried, and MUST carry all of those marked REQUIRED."
     verified: binding
     because: "a requirement on binding documents; draft-gamb-uma4agents-mcp-00 section 3 is the one written, and embedded-check runs it"
@@ -830,3 +834,91 @@ draft-gamb-uma4agents-terms-00:
     verified: check
     targets: [multi-owner-check]
     asserts: ["terms template ids name their owner", "and an agent holding no token can dereference them"]
+
+draft-gamb-uma4agents-owner-00:
+  - text: "MUST advertise the base URL of the owner's API in its metadata"
+    verified: check
+    targets: [smoke-test]
+    asserts: ["advertised formats: OK"]
+  - text: "Every operation MUST require the owner's credential as [U4ACore] Section 10, and MUST act on the owner that credential proved"
+    verified: check
+    targets: [fixture, multi-owner-check]
+    asserts: ["owner request signed by a key she did not enrol: 401", "and no negotiation over one owner's resources reaches another's record"]
+  - text: "with the authorization component covering the empty string when no Authorization header is sent, and MUST cover a Content-Digest"
+    verified: check
+    targets: [kwaai-check, fixture]
+    asserts: ["a body the signature never covered: 401", "a decision body changed after signing: 401", "owner request signed by a key she did not enrol: 401"]
+  - text: "Each element MUST carry:"
+    verified: check
+    targets: [intent-check, assurance-check]
+    asserts: ["her approval dialog shows the agent's own words", "and it is waiting for her, in its own lane"]
+  - text: "reason MUST be carried verbatim, unescaped and unparsed"
+    verified: check
+    targets: [intent-check]
+    asserts: ["markup in a reason is stored verbatim, to be escaped on render", "her approval dialog shows the agent's own words"]
+  - text: "The authorization server MUST record the decision in one indivisible step that reports whether this call was the one that decided it"
+    verified: check
+    targets: [store-test]
+    asserts: ["decision: exactly one of %d taps is recorded", "decision: a denial after an approval is refused"]
+  - text: "the decision MUST be recorded as theirs"
+    verified: check
+    targets: [org-check]
+    asserts: ["and his approval is NOT recorded as one of hers", "her record says which of them it was"]
+  - text: "An origin MUST use the https scheme; a claim of anything else MUST be refused."
+    verified: check
+    targets: [first-party-check]
+    asserts: ["an https origin is required"]
+  - text: "A stored client secret MUST NOT be returned."
+    verified: check
+    targets: [store-test]
+    asserts: ["registration: it carries no secret to fall back on"]
+  - text: "The server MUST refuse a unit over a resource it does not protect, over a resource another unit already governs"
+    verified: check
+    targets: [rules-test, first-party-check]
+    asserts: ["she can write a tier of her own", "a rule relaxing on what the agent showed is still unstorable"]
+  - text: "Resources are fixed by registration and MUST NOT be editable here."
+    verified: check
+    targets: [store-test]
+    asserts: ["policy: an owner edit produces a new template version", "policy: the edit is readable back"]
+  - text: "Every edit MUST produce a new terms version"
+    verified: check
+    targets: [store-test, org-check]
+    asserts: ["policy: an owner edit produces a new template version", "and the charter's prohibitions are added to them"]
+  - text: "Published terms versions MUST NOT be deleted with it."
+    verified: check
+    targets: [store-test]
+    asserts: ["terms: a published version cannot be rewritten"]
+  - text: "On a replicated authorization server the subscription MUST be a property of the shared state"
+    verified: check
+    targets: [store-test]
+    asserts: ["events: a published event reaches a subscriber"]
+  - text: "POST /organization enrols her and MUST be refused without"
+    verified: check
+    targets: [org-check]
+    asserts: ["standing authority over her agents is not a button press"]
+  - text: "POST /joint agrees to it and MUST be refused without"
+    verified: check
+    targets: [joint-check]
+    asserts: ["joining without agreeing is refused"]
+
+draft-gamb-uma4agents-aauth-00:
+  - text: "The authorization server MUST:"
+    verified: check
+    targets: [flow-check, k8s-smoke-test, smoke-test]
+    asserts: ["expected two identity levels", "the identity authority is discoverable", "person-server: OK"]
+  - text: "The connection handle is the credential's sub, qualified by the host of its iss as sub@host, and MUST NOT be derived from the key."
+    verified: check
+    targets: [flow-check]
+    asserts: ["expected two identity levels"]
+  - text: "The signature label MUST be sig1."
+    verified: check
+    targets: [sig-test]
+    asserts: ["another signature label is rejected"]
+  - text: "The alg parameter MUST be ed25519, and every key this binding mints or verifies is an Ed25519 key in OKP form"
+    verified: check
+    targets: [sig-test, smoke-test]
+    asserts: ["baseline round trip", "jwks: OK"]
+  - text: "Both documents MUST be generated from one registry of the resource's operations."
+    verified: check
+    targets: [smoke-test]
+    asserts: ["resource metadata (alice): OK", "aauth-resource: OK"]

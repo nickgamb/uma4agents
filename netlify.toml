@@ -76,6 +76,16 @@
   status = 302
 
 [[redirects]]
+  from = "/spec/owner/1.0"
+  to = "/spec/draft-gamb-uma4agents-owner-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/aauth/1.0"
+  to = "/spec/draft-gamb-uma4agents-aauth-00.html"
+  status = 302
+
+[[redirects]]
   from = "/spec"
   to = "/docs/reference/specification/"
   status = 301

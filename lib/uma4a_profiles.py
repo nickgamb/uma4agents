@@ -16,11 +16,17 @@ FEDAUTHZ = "https://u4a.ai/spec/fedauthz/1.0"
 POLICY = "https://u4a.ai/spec/policy/1.0"
 LINEAGE = "https://u4a.ai/spec/lineage/1.0"
 MULTIPARTY = "https://u4a.ai/spec/multiparty/1.0"
+OWNER = "https://u4a.ai/spec/owner/1.0"
 MCP = "https://u4a.ai/spec/mcp/1.0"
+AAUTH = "https://u4a.ai/spec/aauth/1.0"
 
 # What the reference authorization server implements: the three required
 # documents and every optional extension.
-AUTHORIZATION_SERVER = [CORE, TERMS, FEDAUTHZ, POLICY, LINEAGE, MULTIPARTY]
+AUTHORIZATION_SERVER = [CORE, TERMS, FEDAUTHZ, POLICY, LINEAGE, MULTIPARTY, OWNER,
+                        AAUTH]
+
+# The bindings are advertised too: an agent reading the list learns which
+# transports and credentials the authority behind it speaks.
 
 # What a tally implements. It speaks the core surface to a requesting agent,
 # proffers folded terms, and is the counting party of the multi-party
@@ -35,5 +41,7 @@ DRAFTS = {
     POLICY: "draft-gamb-uma4agents-policy-00",
     LINEAGE: "draft-gamb-uma4agents-lineage-00",
     MULTIPARTY: "draft-gamb-uma4agents-multiparty-00",
+    OWNER: "draft-gamb-uma4agents-owner-00",
     MCP: "draft-gamb-uma4agents-mcp-00",
+    AAUTH: "draft-gamb-uma4agents-aauth-00",
 }

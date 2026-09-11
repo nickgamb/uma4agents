@@ -129,6 +129,19 @@ services:
       # A signature proves a holder, not an owner, so the device key names
       # whose it is.
       UMA_AS_OWNER_KEY_OWNER: alice
+      # The signing key and its kid, and the keys retired before it. Left at
+      # their defaults except by `make rotation-check`, which rotates and
+      # restores in one run.
+      UMA_AS_SIGNING_KEY: ${UMA_AS_SIGNING_KEY:-/keys/uma-as-ed25519.pem}
+      UMA_AS_KID: ${UMA_AS_KID:-uma-as-1}
+      UMA_AS_PREVIOUS_KEYS: ${UMA_AS_PREVIOUS_KEYS:-}
+      UMA_AS_PREVIOUS_KIDS: ${UMA_AS_PREVIOUS_KIDS:-}
+      # In-memory by default, which is enough for one process. A check that
+      # recreates this container under live grants runs it on the `pg`
+      # service below instead, since a recreate empties a memory store and
+      # would report as a key failure what is only a restart.
+      UMA_AS_STORE: ${UMA_AS_STORE:-memory}
+      UMA_AS_DATABASE_URL: ${UMA_AS_DATABASE_URL:-}
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
@@ -1058,6 +1071,62 @@ services:
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys
     working_dir: /driver
+    profiles: ["test"]
+
+  # A database for the checks that need the authorization server to survive
+  # a recreate. Not part of the default stack; the cluster shape runs Postgres
+  # always, and this is the same store on one machine.
+  pg:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: u4a
+      POSTGRES_PASSWORD: u4a
+      POSTGRES_DB: u4a
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U u4a -q"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: ["test"]
+
+  # Signing-key rotation: a grant issued before the authority rotated its key
+  # still spends afterwards, one issued after spends too, and the resource
+  # server accepts a pull signed with the new key. Two phases around a
+  # recreate of uma-as that `make rotation-check` performs.
+  rotation-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/rotation_check.py "$$@"
+      - --
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./clients/demo-driver/rotation_check.py:/driver/rotation_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    working_dir: /driver
+    profiles: ["test"]
+
+  # A second requesting agent, in TypeScript, sharing no code with the Python
+  # one. Built and run on the Node version the site pins.
+  ts-agent-check:
+    image: node:20.15.0
+    entrypoint:
+      - /bin/bash
+      - -c
+      - cd /agent && npm ci --no-audit --no-fund >/dev/null && npm run build >/dev/null && npm run check
+    environment:
+      NODE_EXTRA_CA_CERTS: /driver/rootCA.pem
+      UMA4A_CA_BUNDLE: /driver/rootCA.pem
+      UMA4A_KEYS: /driver/keys
+    volumes:
+      - ./clients/ts-agent:/agent
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
     profiles: ["test"]
 
   # Headless verification of the agent-shim under a scripted MCP client.

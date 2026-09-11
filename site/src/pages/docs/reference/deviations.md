@@ -19,7 +19,7 @@ explicit extension.
 Everything not listed here is intended to be stock UMA 2.0 or stock AAuth.
 
 Each entry names where the [specification set](/docs/reference/specification/)
-states it normatively. The numbering is the one Core §11 uses.
+states it normatively. The numbering is the one Core §11 uses; entries 1–22 are that table.
 
 ## 1. Terms proffered inside `required_claims`
 
@@ -402,6 +402,25 @@ without an identity provider in the path. It is the requesting agent's
 message-signature profile, pointed the other way.
 
 **Specified in.** [Core §10](/spec/draft-gamb-uma4agents-core-00.html#owner-authentication)
+
+## 22. The owner's API
+
+**Baseline.** UMA 2.0 has no surface for the resource owner. Her decisions
+arrive through whatever the deployment built.
+
+**Here.** `owner_endpoint` in the authorization server's metadata, and under it
+the queue and its decisions, her connections and the operators behind them,
+her resource servers, her policy units and terms, the vocabulary her rules may
+use, the record, an event stream, and the owner's side of the organization and
+joint arrangements. Every operation takes the credential of #21 and acts on
+the owner it proved.
+
+**Why.** When the authorization server is hers, the surface is what makes it
+hers. A portal, a command line and a personal AI holding her device key are
+three clients of one server here; a surface only one vendor's portal can reach
+is a server only that vendor operates.
+
+**Specified in.** [The Resource Owner's API](/spec/draft-gamb-uma4agents-owner-00.html)
 
 ## Not a deviation: an enterprise identity assertion as a claim
 

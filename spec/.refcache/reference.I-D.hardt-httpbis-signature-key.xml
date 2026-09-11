@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.hardt-httpbis-signature-key" target="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-08">
+   <front>
+      <title>HTTP Signature Keys</title>
+      <author initials="D." surname="Hardt" fullname="Dick Hardt">
+         <organization>Hellō</organization>
+      </author>
+      <author initials="T." surname="Meunier" fullname="Thibault Meunier">
+         <organization>Cloudflare</organization>
+      </author>
+      <date month="August" day="5" year="2026" />
+      <abstract>
+	 <t>   This document defines five HTTP header fields for use with HTTP
+   Message Signatures as defined in RFC 9421.  The Signature-Key request
+   header distributes public keys used to verify signatures, with eight
+   initial key distribution schemes: pseudonymous inline keys (hwk),
+   self-issued key delegation via JWK Thumbprint JWTs (jkt-jwt),
+   identified signers with JWKS URI discovery (jwks_uri), direct JWKS
+   fetch (jwks), JWT-based delegation (jwt), self-issued JWTs (self-
+   jwt), X.509 certificate chains (x509), and references to previously
+   cached assertions (cached).  The Accept-Signature-Scheme and Accept-
+   Signature-Alg response headers state the schemes and algorithms a
+   server accepts, so a client can select both before it signs.  The
+   Signature-Error response header provides structured error information
+   when signature verification fails, and the Signature-Key-Cache
+   response header issues a cache identifier by which a caller can
+   reference a previously presented assertion instead of resending it.
+   Together, these mechanisms enable flexible trust models ranging from
+   privacy-preserving pseudonymous verification to horizontally-scalable
+   delegated authentication and PKI-based identity chains.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-hardt-httpbis-signature-key-08" />
+   
+</reference>

@@ -180,6 +180,7 @@ async def jwks_endpoint() -> dict:
     return jwks()
 
 
+@app.get("/.well-known/uma2-configuration")
 @app.get("/.well-known/uma4agents-configuration")
 async def configuration() -> dict:
     return {

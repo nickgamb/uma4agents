@@ -26,12 +26,20 @@ REGISTER = ROOT / "spec/conformance.yaml"
 KEYWORDS = re.compile(r"\b(MUST NOT|MUST|SHALL NOT|SHALL)\b")
 
 
-def sentences(txt: str):
-    """Normative sentences from a rendered draft, with page furniture removed."""
+def cleaned(txt: str) -> str:
+    """The body of a rendered draft with page furniture removed."""
     body = txt.split("\n1.  Introduction", 1)[1]           # past the TOC
     body = body.split("\nAuthors' Addresses", 1)[0]
-    body = re.sub(r"\n\S.*\[Page \d+\]\n", "\n", body)      # footers
-    body = re.sub(r"\nInternet-Draft .*\d{4}\n", "\n", body)  # headers
+    # A page break lands wherever it lands, including inside a paragraph;
+    # the footer, the header and the blank lines around them become one
+    # newline so a sentence split across pages is read as one sentence.
+    body = re.sub(r"[\n\f]+\S[^\n]*\[Page \d+\][\n\f]+(?:Internet-Draft[^\n]*[\n\f]+)?", "\n", body)
+    return body
+
+
+def sentences(txt: str):
+    """Normative sentences from a rendered draft."""
+    body = cleaned(txt)
     out = []
     for para in re.split(r"\n\s*\n", body):
         flat = " ".join(para.split())
@@ -55,7 +63,7 @@ def assertion_text():
     globs = ["lib/test_*.py", "clients/demo-driver/*.py", "clients/agent-shim/*.py",
              "clients/owner-cli/*.py", "k8s/base/jobs/*.yaml", "k8s/scripts/*",
              "Makefile", "Makefile.k8s", "integrations/*.py", "integrations/*/*.py",
-             "kwaai/*.py"]
+             "kwaai/*.py", "clients/ts-agent/src/*.ts"]
     parts = []
     for g in globs:
         for f in ROOT.glob(g):
@@ -85,7 +93,7 @@ def main() -> int:
         if not path.exists():
             problems.append(f"{draft}: not rendered — run make spec"); continue
         txt = path.read_text()
-        flat = normalise(txt)
+        flat = normalise(cleaned(txt))
         found = sentences(txt)
         total += len(found)
         quoted = []

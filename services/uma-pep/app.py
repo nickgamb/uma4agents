@@ -18,6 +18,7 @@ What is specific to this host:
 - Rendering verdicts as HTTP.
 """
 
+from dataclasses import replace
 import json
 import logging
 import os
@@ -674,6 +675,15 @@ async def check(request: Request, rest: str = "") -> Response:
         # Beat 1 at an HTTP hop: 401 plus the UMA challenge, naming the
         # metadata document so the client can corroborate as_uri (RFC 9728
         # 5.1) instead of trusting this header.
+        #
+        # The document named is the one for the URL the request was made to,
+        # formed as RFC 9728 section 3 forms it. The enforcer behind an alias
+        # is the owner's, and her document claims her canonical path; a client
+        # that follows the pointer from a call to the alias is required by
+        # RFC 9728 section 3.3 to reject that document, and a client written
+        # from the specification did.
+        d = replace(d, resource_metadata=(
+            f"{PUBLIC_BASE}/.well-known/oauth-protected-resource{original_path}"))
         return deny(d.status, {"error": d.error},
                     {"WWW-Authenticate": enforcer.www_authenticate(d)})
     body_out = {"error": d.error}
@@ -970,10 +980,17 @@ async def pep_jwks() -> dict:
 _AS_KEYS_CACHE: dict[str, dict] = {}
 
 
-async def as_verification_keys(owner: str = None) -> list:
+async def as_verification_keys(owner: str = None, refresh: bool = False) -> list:
+    """The owner's authorization server's published keys, cached.
+
+    `refresh` forces a fetch: a signature that fails against the cached set
+    may have been made with a key published since, which is what rotation
+    looks like from here, and the fix is to look again rather than refuse
+    for the life of the cache.
+    """
     _, as_internal = authority_for(owner or OWNER)
     entry = _AS_KEYS_CACHE.setdefault(as_internal, {"expires": 0.0, "keys": []})
-    if entry["expires"] < time.time():
+    if refresh or entry["expires"] < time.time():
         async with httpx.AsyncClient() as client:
             r = await client.get(f"{as_internal}/jwks", timeout=5.0)
             r.raise_for_status()
@@ -990,16 +1007,20 @@ async def _require_as_signature(request: Request, who: str,
     of her authorization server's signing key.
     """
     last_error = "no signature"
-    for jwk_dict in await as_verification_keys(who):
-        try:
-            verify(method=request.method, authority=EXPECTED_AUTHORITY,
-                   path=path, authorization="",
-                   signature_input=request.headers.get("signature-input", ""),
-                   signature=request.headers.get("signature", ""),
-                   public_key=OKPAlgorithm.from_jwk(json.dumps(jwk_dict)))
-            return None
-        except VerifyError as exc:
-            last_error = str(exc)
+    # Twice at most: once against the cached set, and once more against a
+    # freshly fetched one, so a key the authority rotated to since the last
+    # fetch is accepted on the first request that uses it.
+    for refresh in (False, True):
+        for jwk_dict in await as_verification_keys(who, refresh=refresh):
+            try:
+                verify(method=request.method, authority=EXPECTED_AUTHORITY,
+                       path=path, authorization="",
+                       signature_input=request.headers.get("signature-input", ""),
+                       signature=request.headers.get("signature", ""),
+                       public_key=OKPAlgorithm.from_jwk(json.dumps(jwk_dict)))
+                return None
+            except VerifyError as exc:
+                last_error = str(exc)
     event("owner_resources.denied", reason=last_error, owner=who)
     return deny(401, {"error": "invalid_signature",
                       "error_description": "this listing is served only to "

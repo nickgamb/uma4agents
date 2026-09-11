@@ -1801,10 +1801,28 @@ response.<a href="#section-5-1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-4">Embedding the whole agreement rather than a reference to it is what makes the two
+<span id="name-a-receipts-claims"></span><figure id="figure-3">
+        <div class="lang-json sourcecode" id="section-5-4.1">
+<pre>
+{
+  "iss": "https://alice-as.example",
+  "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+  "iat": 1789430010,
+  "family": "fam_8f3aQ2Xc",
+  "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+  "template_id": "alice/advisor/v2",
+  "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
+}
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-a-receipts-claims" class="selfRef">A receipt's claims.</a>
+        </figcaption></figure>
+<p id="section-5-5">Embedding the whole agreement rather than a reference to it is what makes the two
 records identical: the owner's side retains it with her decision record and the
 requesting side retains the receipt, and neither has to ask the other for the
-half it is missing. This satisfies <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Sections 5.2.2 and 5.4.4.<a href="#section-5-4" class="pilcrow">¶</a></p>
+half it is missing. This satisfies <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Sections 5.2.2 and 5.4.4.<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="declining">

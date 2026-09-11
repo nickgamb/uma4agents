@@ -1,0 +1,616 @@
+
+
+
+
+Network Working Group                                            N. Gamb
+Internet-Draft                                            MindGarden LLC
+Intended status: Standards Track                                E. Maler
+Expires: 15 March 2027                                      Venn Factory
+                                                       11 September 2026
+
+
+       The Resource Owner's API for User-Managed Access (UMA) 2.0
+                     draft-gamb-uma4agents-owner-00
+
+Abstract
+
+   This document specifies the interface a resource owner uses to
+   operate her own User-Managed Access (UMA) 2.0 authorization server:
+   to answer the requests that wait on her, to see and end her
+   relationships with requesting agents and with the operators behind
+   them, to write the policy and terms her server decides from, and to
+   read the record of what it did.
+
+   UMA 2.0 leaves this surface to the deployment, which was right when
+   the authorization server belonged to a service she had a session
+   with.  When the server is hers, the surface is what makes it hers: it
+   is how a portal, a command line, or a personal agent running on her
+   own device acts for her, and a surface only one vendor's portal can
+   reach is a server only that vendor operates.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 March 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 1]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Relationship to the Set . . . . . . . . . . . . . . . . .   3
+     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
+   2.  Discovery and Authentication  . . . . . . . . . . . . . . . .   3
+   3.  The Queue . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.1.  Listing . . . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.2.  Deciding  . . . . . . . . . . . . . . . . . . . . . . . .   5
+   4.  Relationships . . . . . . . . . . . . . . . . . . . . . . . .   5
+     4.1.  Agents  . . . . . . . . . . . . . . . . . . . . . . . . .   5
+     4.2.  Operators . . . . . . . . . . . . . . . . . . . . . . . .   5
+     4.3.  Resource Servers  . . . . . . . . . . . . . . . . . . . .   6
+   5.  Policy  . . . . . . . . . . . . . . . . . . . . . . . . . . .   6
+     5.1.  Resources . . . . . . . . . . . . . . . . . . . . . . . .   6
+     5.2.  Units and Terms . . . . . . . . . . . . . . . . . . . . .   6
+     5.3.  Vocabulary  . . . . . . . . . . . . . . . . . . . . . . .   7
+   6.  The Record  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   7.  Arrangements  . . . . . . . . . . . . . . . . . . . . . . . .   7
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .   8
+     8.1.  The Credential Proves the Owner . . . . . . . . . . . . .   8
+     8.2.  Bodies Are Covered  . . . . . . . . . . . . . . . . . . .   8
+     8.3.  The Queue Is Read by Whoever Is Entitled to Decide  . . .   8
+     8.4.  Revocation Reports Its Reach  . . . . . . . . . . . . . .   8
+   9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
+     10.1.  OAuth Authorization Server Metadata Registration . . . .   9
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .   9
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  10
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  11
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  11
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 2]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+1.  Introduction
+
+   Every requirement in the rest of this set is placed on the
+   authorization server, the enforcement point, or the requesting agent.
+   The one party they serve has no wire surface of her own in UMA 2.0
+   [UMAGrant].  The owner's decisions arrive through whatever the
+   deployment built.
+
+   That was adequate while the authorization server was operated by a
+   service the owner already had an account with.  [U4ACore] Section 11
+   makes the server the owner's choice, and [U4ACore] Section 10
+   specifies how she authenticates to it — including with a key she
+   holds, so that software she runs can act for her with nobody else in
+   the path.  This document is the rest of that: what such software can
+   ask her server to do.
+
+   The reference implementation [U4ALAB] has three clients of this
+   surface — a browser portal, a command-line tool, and a personal AI
+   holding her device key — and one server behind them.
+
+1.1.  Relationship to the Set
+
+   This document is an OPTIONAL extension of [U4ACore] and depends on
+   [U4ATerms] and [U4APolicy].  Its identifying URI is
+   https://u4a.ai/spec/owner/1.0.
+
+1.2.  Notational Conventions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.  Discovery and Authentication
+
+   An authorization server implementing this document MUST advertise the
+   base URL of the owner's API in its metadata [RFC8414]:
+
+   owner_endpoint:  REQUIRED.  The URL under which the operations of
+      this document are served.
+
+   Every operation below is relative to owner_endpoint.  Every operation
+   MUST require the owner's credential as [U4ACore] Section 10, and MUST
+   act on the owner that credential proved rather than on any owner the
+   request names.
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 3]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   Where the credential is an [RFC9421] signature, the signature base is
+   the one [U4ACore] Section 6.1 specifies, with the authorization
+   component covering the empty string when no Authorization header is
+   sent, and MUST cover a Content-Digest [RFC9530] on every request that
+   carries a body.  The operations that carry a body are the ones that
+   decide something; a body that can be altered under a valid signature
+   turns an approval into a refusal without leaving a mark.
+
+   Request and response bodies are JSON.  An error is reported with a
+   4xx status and a JSON object whose detail member is a sentence the
+   owner can be shown.
+
+3.  The Queue
+
+3.1.  Listing
+
+   GET /pending returns the requests waiting on the owner, as an array.
+   Each element MUST carry:
+
+   family:  The negotiation identifier ([U4APolicy] Section 8.1).
+
+   kind:  connection or operation ([U4ACore] Section 4.2).
+
+   tier:  The policy unit the request falls under.
+
+   purpose, prohibited:  From the terms the requesting side signed.
+
+   operation, reason, mission:  What the requesting side authored in its
+      agreement, where it did ([U4ATerms] Section 4.3). reason MUST be
+      carried verbatim, unescaped and unparsed; it is the one field here
+      the counterparty wrote, and a surface SHOULD render it as text.
+
+   identity:  The verified identity record: its level, and what was
+      resolved about the operator, as [U4ACore] Section 5.
+
+   assurance, assurance_notes:  The axes of [U4APolicy] Section 4.1, and
+      one sentence per axis saying what was checked, so that a surface
+      has the sentence to show beside the level.
+
+   because:  The rule conditions that caused the request to wait, where
+      a rule did.
+
+   handle:  The requesting agent's connection handle, or null before
+      first contact.
+
+   organization:  Where a layer above the owner had a say
+      ([U4AMultiParty]), what it said, separately from her own rules.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 4]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+3.2.  Deciding
+
+   POST /pending/{family}/decision with a body {"decision": "approved"}
+   or {"decision": "denied"} answers one request.
+
+   The authorization server MUST record the decision in one indivisible
+   step that reports whether this call was the one that decided it, as
+   [U4ACore] Section 8.3; a second answer to a decided request MUST be
+   refused with 404.  Two portals open on the same request are two
+   callers, and the tap that lands second must not be recorded as a
+   second decision.
+
+   Where the credential proves someone acting for the owner rather than
+   the owner ([U4AMultiParty] Section 2.7), the decision MUST be
+   recorded as theirs.
+
+4.  Relationships
+
+4.1.  Agents
+
+   GET /connections returns every standing connection ([U4ACore]
+   Section 9), each carrying its handle, identity, label, status,
+   first_seen, last_access, the policy units the owner personally
+   approved it at, the units it has been granted at, its revocation
+   count, and where another agent introduced it, that agent's handle.
+
+   POST /connections/{handle}/revoke ends one.  The response carries
+   rpts_deactivated — how many live grants the revocation invalidated in
+   the same step — and connections_revoked, how many connections the
+   revoked one had introduced and which ended with it.  Both numbers are
+   the owner's evidence that the revocation reached everything it should
+   have.
+
+4.2.  Operators
+
+   GET /operators returns every operator the owner's server has met,
+   assembled from her connections rather than kept as a registry: each
+   with its origin, a display name, how many agents of its she has
+   connections with and how many are active, whether it is blocked and
+   since when, and whether it is mine — one she has claimed as her own —
+   and since when.
+
+   POST /operators/block and POST /operators/unblock, with a body
+   {"origin": "https://…"}, are the operations of [U4APolicy] Section 7.
+   The block response carries connections_revoked and rpts_deactivated.
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 5]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   POST /operators/claim and POST /operators/disclaim, with the same
+   body, are the operations of [U4APolicy] Section 5.  An origin MUST
+   use the https scheme; a claim of anything else MUST be refused.
+
+4.3.  Resource Servers
+
+   GET /resource-servers returns every resource server that holds, or
+   has asked for, protection API access in the owner's name
+   ([U4AFedAuthz] Section 4): its client_id, name, resource_uri, status
+   of pending, active or revoked, how it authenticates, and when it
+   registered.  A stored client secret MUST NOT be returned.
+
+   POST /resource-servers/decision with {"client_id": …, "decision":
+   "approved"} or "revoked" answers a registration or withdraws one.
+   The client_id travels in the body because a resource server
+   registered by its origin is identified by an https URL, which
+   survives neither a path segment nor a proxy that normalises a doubled
+   slash.
+
+5.  Policy
+
+5.1.  Resources
+
+   GET /resources returns every resource the owner's server protects,
+   joined with the policy unit governing it: _id, name, type,
+   resource_scopes, the unit's identifier and name, its ask_me, and how
+   the resource was registered.  A resource an organization shares with
+   her rather than one she owns carries shared_by naming the
+   organization, since the two are not the same thing and the difference
+   decides what happens when she leaves.
+
+5.2.  Units and Terms
+
+   GET /policies returns the owner's policy units keyed by identifier,
+   each in the shape [U4APolicy] Section 2 describes, with the terms
+   document currently proffered for it ([U4ATerms] Section 2).
+
+   POST /policies creates a unit from a body carrying id, name,
+   resources, ask_me, rules and terms.  The server MUST refuse a unit
+   over a resource it does not protect, over a resource another unit
+   already governs, or whose rules fail the validation of [U4APolicy]
+   Section 3, and MUST say which in detail.
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 6]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   PUT /policies/{id} edits one: ask_me, rules, and the purpose,
+   expires_in, prohibited and scope of its terms.  Resources are fixed
+   by registration and MUST NOT be editable here.  Every edit MUST
+   produce a new terms version ([U4ATerms] Section 2.1); the response
+   carries the unit as stored, and where a layer above the owner
+   narrowed what she wrote, a clamped array of sentences saying what
+   moved ([U4AMultiParty] Section 2.4).
+
+   DELETE /policies/{id} removes one.  Its resources become ungoverned,
+   which is denied ([U4APolicy] Section 2); the response names them.
+   Published terms versions MUST NOT be deleted with it.
+
+5.3.  Vocabulary
+
+   GET /policy-vocabulary returns the conditions a rule may name, as an
+   array of objects each carrying condition (the name, with its level
+   where the condition is one sentence per level), takes (duration,
+   count or null), label (the sentence shown to the owner), and
+   may_relax.  This is the publication [U4APolicy] Section 3.6 requires;
+   a surface that offers the owner a condition it does not list will
+   compose a rule the server refuses.
+
+6.  The Record
+
+   GET /ledger returns the record of [U4APolicy] Section 8, oldest
+   first.  With ?handle= it returns one agent's part of it: every
+   promise that agent made, every decision about it, and everything it
+   touched, in order.
+
+   GET /events is a server-sent event stream [SSE] carrying a message
+   for each thing that happens that the owner may want to act on: a
+   request arriving to wait on her, a decision landing, a resource
+   server introducing itself, an organization or a co-holder changing
+   something.  The event name is the message's type.  On a replicated
+   authorization server the subscription MUST be a property of the
+   shared state rather than of the process serving the stream, since the
+   decision the owner is waiting for may be produced by any replica.
+
+7.  Arrangements
+
+   Where an authorization server implements [U4AMultiParty], the owner's
+   side of it is served here.
+
+   GET /organization says whether she administers resources for anyone,
+   and under what charter version, with the ceiling as it currently
+   binds each of her units — and, where she is not a member, whether an
+   invitation is waiting on her.  POST /organization/preview with
+   {"code": …} returns what a code would commit her to and what it would
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 7]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   change about terms she has already written, without doing it.  POST
+   /organization enrols her and MUST be refused without "agreed": true
+   in the body.  POST /organization/decline records a refused
+   invitation.  DELETE /organization leaves.
+
+   POST /joint/preview with {"tally": …, "account": …} returns a mandate
+   and what agreeing would mean for her terms; POST /joint agrees to it
+   and MUST be refused without "agreed": true; GET /joint lists the
+   accounts she holds jointly; DELETE /joint/{account} stops.
+
+   Both joins are refused without explicit agreement for the reason
+   [U4AMultiParty] gives: each hands another party standing authority
+   over her agents, and that is not something to acquire by forgetting
+   to say no.
+
+8.  Security Considerations
+
+8.1.  The Credential Proves the Owner
+
+   Every operation acts on the owner the credential proved.  An
+   implementation that lets a request name its owner, and checks the
+   credential only for validity, has built a surface where one owner's
+   valid key answers another owner's questions.
+
+8.2.  Bodies Are Covered
+
+   See Section 2.  The four base components of [U4ACore] Section 6.1 say
+   who is asking and what they are asking of; the word in the body of
+   Section 3.2 is the entire meaning of the request.
+
+8.3.  The Queue Is Read by Whoever Is Entitled to Decide
+
+   Section 3.1 is the same list whether the owner or an administrator
+   acting for her reads it, filtered for the administrator to what their
+   charter claims.  An administrator who saw a different set of pending
+   requests from the person they co-administer with would be looking at
+   a different system.
+
+8.4.  Revocation Reports Its Reach
+
+   Section 4.1 returns counts rather than success.  A revocation that
+   reports rpts_deactivated: 0 against an agent the owner believes is
+   active is information she needs, and a bare 200 would have hidden it.
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 8]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+9.  Privacy Considerations
+
+   This surface exposes, to the owner and to nobody else, everything her
+   authorization server knows about the agents that have approached her.
+   The reason an agent stated is shown to her verbatim, which is why
+   Section 3.1 requires it be rendered as text: it is the one field on
+   this surface that the counterparty authored.
+
+   An organization's view of the same data is not this surface; it is
+   the scoped view of [U4AMultiParty] Section 2.6, and the scoping is
+   applied by the owner's server before it answers.
+
+10.  IANA Considerations
+
+10.1.  OAuth Authorization Server Metadata Registration
+
+   IANA is asked to register the following in the "OAuth Authorization
+   Server Metadata" registry established by [RFC8414].
+
+   Metadata Name:  owner_endpoint
+
+   Metadata Description:  URL of the resource owner's API
+
+   Change Controller:  IETF
+
+   Specification Document(s):  Section 2 of this document
+
+11.  References
+
+11.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC9421]  Backman, A., Ed., Richer, J., Ed., and M. Sporny, "HTTP
+              Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
+              February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 9]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   [RFC9530]  Polli, R. and L. Pardue, "Digest Fields", RFC 9530,
+              DOI 10.17487/RFC9530, February 2024,
+              <https://www.rfc-editor.org/rfc/rfc9530>.
+
+   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
+              Profile for Autonomous Agents", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-core-00>.
+
+   [U4APolicy]
+              Gamb, N. and E. Maler, "Owner Policy, Assurance and
+              Attention for User-Managed Access (UMA) 2.0", Work in
+              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
+              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-policy-00>.
+
+   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-terms-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-terms-00>.
+
+   [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
+              Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
+              Kantara Recommendation, 7 January 2018,
+              <https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-
+              grant-2.0.html>.
+
+11.2.  Informative References
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
+
+   [SSE]      WHATWG, "Server-Sent Events", 2026,
+              <https://html.spec.whatwg.org/multipage/server-sent-
+              events.html>.
+
+   [U4AFedAuthz]
+              Gamb, N. and E. Maler, "Federated Authorization for
+              Autonomous Agents", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-fedauthz-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-fedauthz-00>.
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 10]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
+
+   [U4AMultiParty]
+              Gamb, N. and E. Maler, "Multi-Party Authorization for
+              User-Managed Access (UMA) 2.0", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-multiparty-00>.
+
+Appendix A.  Implementation Status
+
+   This section records the status of known implementations in the sense
+   of [RFC7942], and is to be removed before publication as an RFC.
+
+   The reference implementation [U4ALAB] serves this surface from its
+   authorization server and has three clients of it: a browser portal
+   authenticating with an OpenID Connect session, a command-line tool
+   and a personal AI each authenticating with the owner's enrolled key.
+   Every operation is exercised by the checks that drive those clients;
+   the two-caller property of Section 3.2 is tested with thirty-two
+   concurrent callers against both store backends.
+
+Acknowledgments
+
+   The 2010 UMA wireframes for out-of-band consent described this
+   surface before there was an interlocutor to put on the other end of
+   it.
+
+Authors' Addresses
+
+   Nick Gamb
+   MindGarden LLC
+   Email: nickgamb@gmail.com
+
+
+   Eve Maler
+   Venn Factory
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 11]

@@ -1,0 +1,16 @@
+{
+  "name": "uma4a-ts-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A requesting agent for the UMA 2.0 profile for autonomous agents, in TypeScript, sharing no code with the Python one.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "node dist/check.js"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.10",
+    "typescript": "5.5.4"
+  }
+}

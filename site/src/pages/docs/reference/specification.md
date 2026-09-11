@@ -2,7 +2,7 @@
 templateKey: doc
 title: The specification set
 seoTitle: "UMA 2.0 for Agents — the specification set"
-description: Seven Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, written from this lab, with every requirement mapped to the check that proves it.
+description: Nine Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, written from this lab, with every requirement mapped to the check that proves it.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -13,8 +13,9 @@ next:
 ---
 
 What this lab found is written as a set of Internet-Drafts. Three are required
-to implement together and constitute the profile; three are optional
-extensions; one is a binding to a concrete transport. Each has an identifying
+to implement together and constitute the profile; four are optional
+extensions; two are bindings, one to a transport and one to an agent identity
+layer. Each has an identifying
 URI, and the authorization server advertises the ones it implements in
 `uma_profiles_supported`, as UMA 2.0 Grant §4 asks.
 
@@ -26,7 +27,9 @@ URI, and the authorization server advertises the ones it implements in
 | [policy](/spec/draft-gamb-uma4agents-policy-00.html) ([txt](/spec/draft-gamb-uma4agents-policy-00.txt)) | Owner Policy, Assurance and Attention | Optional | `https://u4a.ai/spec/policy/1.0` |
 | [lineage](/spec/draft-gamb-uma4agents-lineage-00.html) ([txt](/spec/draft-gamb-uma4agents-lineage-00.txt)) | Agent Lineage | Optional | `https://u4a.ai/spec/lineage/1.0` |
 | [multiparty](/spec/draft-gamb-uma4agents-multiparty-00.html) ([txt](/spec/draft-gamb-uma4agents-multiparty-00.txt)) | Multi-Party Authorization | Optional | `https://u4a.ai/spec/multiparty/1.0` |
-| [mcp](/spec/draft-gamb-uma4agents-mcp-00.html) ([txt](/spec/draft-gamb-uma4agents-mcp-00.txt)) | Model Context Protocol Binding | One binding of several | `https://u4a.ai/spec/mcp/1.0` |
+| [owner](/spec/draft-gamb-uma4agents-owner-00.html) ([txt](/spec/draft-gamb-uma4agents-owner-00.txt)) | The Resource Owner's API | Optional | `https://u4a.ai/spec/owner/1.0` |
+| [mcp](/spec/draft-gamb-uma4agents-mcp-00.html) ([txt](/spec/draft-gamb-uma4agents-mcp-00.txt)) | Model Context Protocol Binding | Binding | `https://u4a.ai/spec/mcp/1.0` |
+| [aauth](/spec/draft-gamb-uma4agents-aauth-00.html) ([txt](/spec/draft-gamb-uma4agents-aauth-00.txt)) | AAuth Binding | Binding | `https://u4a.ai/spec/aauth/1.0` |
 
 The drafts are in Internet-Draft form. Whether they go to the datatracker is a
 separate decision, and nothing in them depends on it.
@@ -73,6 +76,17 @@ explicit check; revocation cascades.
 layer above the owner that may only narrow, and owners of equal standing whose
 signed verdicts travel in the grant and are re-verified at the enforcement
 point.
+
+**The Owner's API** is the surface through which her portal, a command line or
+her own agent operate her authorization server: the queue and its decisions,
+her relationships with agents, operators and resource servers, her policy and
+terms, and the record. Left to the deployment by UMA 2.0; specified here so
+that software she runs can act for her against any conforming server.
+
+**The AAuth binding** makes AAuth's agent credential the identified-agent
+credential, its signature conventions the proof of possession, its
+authorization token the grant, and its resource metadata a second encoding of
+the same structural facts.
 
 **The MCP binding** says how the challenge parameters travel over MCP in both
 hosting shapes, how a client discovers before its first call that it must

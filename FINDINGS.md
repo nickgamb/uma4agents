@@ -65,11 +65,11 @@ Internet-Drafts in [`spec/`](spec/README.md). The map:
 | 3 | Core §4.2 and §9 |
 | 4 | Core §6 and §7.1 |
 | 5 | Federated Authorization for Agents §3 |
-| 6 | Core §1.3; the MCP binding is one document, others named |
+| 6 | Core §1.3; the AAuth and MCP bindings are each a document |
 | 7 | Core §3.1 |
 | 8 | MCP binding §5; the ask of MCP stays in docs/ext-auth-third-party-authorization.md |
 | 9 | Core §8.3 |
-| 10 | Core §10 |
+| 10 | Core §10; the Owner's API |
 | 11 | Core §6.2 |
 | 12 | Core §5.1–5.2 |
 | 13 | Owner Policy, Assurance and Attention §4 |

@@ -354,7 +354,7 @@ def main() -> int:                                            # noqa: C901
               any("Any one of you can stop it" in s for s in doc["summary"]),
               f"{doc.get('summary')}")
         check("the tally says it is not an ordinary authority",
-              c.get(f"{TALLY}/.well-known/uma4agents-configuration",
+              c.get(f"{TALLY}/.well-known/uma2-configuration",
                     timeout=15.0).json().get("u4a_tally") is True)
 
         print("\n-- 2. joining is agreed to, and nobody is enrolled by naming her --")

@@ -365,6 +365,8 @@ smoke-test:
 		| grep -q 'urn:ietf:params:oauth:token-type:id-jag' \
 		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
 		| grep -q 'consume_endpoint' \
+		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
+		| grep -q 'owner_endpoint' \
 		&& echo "  advertised formats: OK" || echo "  advertised formats: FAIL"
 	@echo "==> uma-as JWKS..."
 	@$(CURL) https://alice-as.uma.lab/jwks | grep -q Ed25519 && echo "  jwks: OK" || echo "  jwks: FAIL"
@@ -513,6 +515,47 @@ store-test:
 	docker network rm u4a-storetest >/dev/null 2>&1 || true; \
 	exit $$status
 
+## ts-agent-check: the four beats from a second implementation. A requesting
+## agent in TypeScript, sharing no code with the Python client, discovers,
+## corroborates, signs the terms, waits for her, spends the grant and is
+## refused where it should be. Two implementations meeting on the wire is the
+## evidence a specification needs and a single client cannot give.
+.PHONY: ts-agent-check
+ts-agent-check:
+	docker compose --profile test run --rm ts-agent-check
+
+## rotation-check: the authority rotates its signing key under live grants.
+# A grant issued before the rotation still spends, one issued after spends
+# too, both kids are published, and the resource server accepts a pull signed
+# with the new key without waiting out its key cache. Restores the original
+# key afterwards; grants issued under the interim key do not survive the
+# restore, which is the point of a check and not of a deployment.
+ROTATION_PG = UMA_AS_STORE=postgres UMA_AS_DATABASE_URL=postgres://u4a:u4a@pg:5432/u4a
+.PHONY: rotation-check
+rotation-check:
+	docker compose --profile test up -d --wait pg
+	$(ROTATION_PG) docker compose up -d --force-recreate uma-as
+	@until docker compose exec -T uma-as python -c \
+		"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/health')" >/dev/null 2>&1; \
+		do sleep 2; done
+	docker compose --profile test run --rm rotation-check --phase before
+	@docker compose exec -T uma-as python -c "\
+	from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; \
+	from cryptography.hazmat.primitives import serialization as s; \
+	open('/keys/uma-as-2.pem','wb').write(Ed25519PrivateKey.generate().private_bytes( \
+		s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()))"
+	$(ROTATION_PG) UMA_AS_SIGNING_KEY=/keys/uma-as-2.pem UMA_AS_KID=uma-as-2 \
+	UMA_AS_PREVIOUS_KEYS=/keys/uma-as-ed25519.pem UMA_AS_PREVIOUS_KIDS=uma-as-1 \
+		docker compose up -d --force-recreate uma-as
+	@until docker compose exec -T uma-as python -c \
+		"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/health')" >/dev/null 2>&1; \
+		do sleep 2; done
+	@docker compose --profile test run --rm rotation-check --phase after; status=$$?; \
+	echo "Restoring the original signing key and the memory store"; \
+	docker compose up -d --force-recreate uma-as >/dev/null 2>&1; \
+	docker compose --profile test rm -sf pg >/dev/null 2>&1; \
+	exit $$status
+
 ## embedded-check: prove the grant works with the resource enforcing itself
 # Flips alice-vault to ENFORCEMENT_MODE=embedded, runs the four beats straight
 # at the resource (no gateway, no ext_authz), then restores gateway mode.
@@ -534,6 +577,19 @@ embedded-check:
 # The Kubernetes shape of the lab: same source, deployed the way it would
 # actually run. `make up` above stays the fast path.
 include Makefile.k8s
+
+## check-all: every suite the requirements register cites, in one run — the
+## unit half first (nothing running), then everything against the compose
+## stack. The register names these as what proves the drafts; a check that
+## nobody runs is a claim, and this is how they all get run.
+.PHONY: check-all check-unit check-live
+check-unit: rules-test sig-test pep-test introduction-test org-test joint-test store-test
+check-live: smoke-test flow-check first-party-check multi-owner-check \
+	establishment-check assurance-check intent-check subagent-check org-check \
+	joint-check xaa-check adapter-check shim-test embedded-check kwaai-check \
+	rotation-check ts-agent-check fixture
+check-all: check-unit spec-check check-live
+	@echo "check-all: every suite the register cites has run"
 
 ## spec: render the Internet-Draft set from spec/src into site/static/spec.
 ## kramdown-rfc turns the Markdown into xml2rfc v3 XML, xml2rfc turns that into

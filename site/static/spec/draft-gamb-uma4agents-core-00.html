@@ -1615,9 +1615,10 @@ implementers.<a href="#section-1.2-3" class="pilcrow">¶</a></p>
 <p id="section-1.3-1">This document is the core of a set. <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> and <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> are <span class="bcp14">REQUIRED</span>
 to implement alongside it; this document together with those two constitutes the
 UMA 2.0 profile for autonomous agents.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.3-2"><span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>, <span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span> and <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> are <span class="bcp14">OPTIONAL</span> extensions of
-this document. <span>[<a href="#U4AMCP" class="cite xref">U4AMCP</a>]</span> is one binding of this profile to a concrete transport;
-others are possible and this document is written so that they are.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+<p id="section-1.3-2"><span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>, <span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>, <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> and <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span> are <span class="bcp14">OPTIONAL</span>
+extensions of this document. <span>[<a href="#U4AMCP" class="cite xref">U4AMCP</a>]</span> binds this profile to a transport and
+<span>[<a href="#U4AAAuth" class="cite xref">U4AAAuth</a>]</span> to an agent identity and signature layer; other bindings are
+possible and this document is written so that they are.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="roles">
@@ -1748,7 +1749,11 @@ access to this resource for this owner.<a href="#section-3.1-3.6.1" class="pilcr
 <dt id="section-3.1-3.9">resource_metadata:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-3.10">
             <p id="section-3.1-3.10.1"><span class="bcp14">REQUIRED</span>. The URL of the protected resource metadata document <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> that
-describes this resource, as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 5.1.<a href="#section-3.1-3.10.1" class="pilcrow">¶</a></p>
+describes this resource, as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 5.1. An enforcement point
+<span class="bcp14">MUST</span> name the document for the resource identifier the request was made
+to, formed as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3 forms it, and not the document of
+another identifier the same resource is reachable by; a client following
+the pointer is required by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3 to reject any other.<a href="#section-3.1-3.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-3.11">scope:</dt>
@@ -2363,7 +2368,8 @@ revocable, and <span class="bcp14">MUST NOT</span> be a fallback for another. An
 runs — a personal agent on her own device — without a browser session and
 without an identity provider in the path. It is the same message-signature
 profile the requesting agent uses, pointed the other way. Every handler <span class="bcp14">MUST</span> act
-on the owner the credential proved rather than on one the request named.<a href="#section-10-5" class="pilcrow">¶</a></p>
+on the owner the credential proved rather than on one the request named. What
+that software can ask her authority to do is specified in <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>.<a href="#section-10-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="owner-scoped">
@@ -2604,6 +2610,14 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
               <a href="#owner-authentication" class="auto internal xref">Section 10</a>
 </td>
           </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">22</td>
+            <td class="text-left" rowspan="1" colspan="1">The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server</td>
+            <td class="text-left" rowspan="1" colspan="1">Left to the deployment</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>
+</td>
+          </tr>
         </tbody>
       </table>
 </section>
@@ -2841,10 +2855,26 @@ here.<a href="#section-15.1-1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://u4a.ai/spec/owner/1.0</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
                 <span>[<a href="#U4AMCP" class="cite xref">U4AMCP</a>]</span>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>https://u4a.ai/spec/mcp/1.0</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#U4AAAuth" class="cite xref">U4AAAuth</a>]</span>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>https://u4a.ai/spec/aauth/1.0</code>
 </td>
             </tr>
           </tbody>
@@ -3136,6 +3166,10 @@ Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RF
         <dd>
 <span class="refAuthor">Richer, J., Ed.</span> and <span class="refAuthor">F. Imbault</span>, <span class="refTitle">"Grant Negotiation and Authorization Protocol (GNAP)"</span>, <span class="seriesInfo">RFC 9635</span>, <span class="seriesInfo">DOI 10.17487/RFC9635</span>, <time datetime="2024-10" class="refDate">October 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9635">https://www.rfc-editor.org/rfc/rfc9635</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="U4AAAuth">[U4AAAuth]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-aauth-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-aauth-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-aauth-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="U4ALAB">[U4ALAB]</dt>
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"UMA for Agents: a reference implementation"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://github.com/nickgamb/uma4agents">https://github.com/nickgamb/uma4agents</a>&gt;</span>. </dd>
@@ -3151,6 +3185,10 @@ Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RF
 <dt id="U4AMultiParty">[U4AMultiParty]</dt>
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Multi-Party Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-multiparty-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-multiparty-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-multiparty-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AOwner">[U4AOwner]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"The Resource Owner's API for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-owner-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-owner-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-owner-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4APolicy">[U4APolicy]</dt>
         <dd>
@@ -3189,7 +3227,10 @@ Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RF
 server, an enforcement point in two hosting shapes, a protected resource, an
 operator key directory, and requesting agents at both identity levels. It runs
 under container orchestration and on a single host, against both an in-memory
-and a replicated store.<a href="#appendix-A.1-1.4.1" class="pilcrow">¶</a></p>
+and a replicated store. It carries two requesting-agent implementations that
+share no code — one in Python, one in TypeScript — which meet on the wire and
+nowhere else; the second was written from these documents rather than from
+the first, and found one defect in the enforcement point on its first run.<a href="#appendix-A.1-1.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="appendix-A.1-1.5">Level of maturity:</dt>

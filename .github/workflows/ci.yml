@@ -1,0 +1,43 @@
+# What runs on every push: the half of check-all that needs nothing running
+# (the unit suites, the store suite on both backends, the draft render and
+# the requirements register) and the site on the Node the deploy pins. The
+# live half — every check against the compose stack — is `make check-live`
+# on a machine with the stack up, and the cluster twins are Makefile.k8s.
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: rules, signatures, enforcer, introductions, charter, mandate
+        run: make rules-test sig-test pep-test introduction-test org-test joint-test
+      - name: the store, on both backends
+        run: make store-test
+
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: render the drafts and check the register
+        run: make spec-check
+      - name: the rendered drafts are what is committed
+        run: git diff --exit-code -- site/static/spec
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.15.0
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: site
+      - name: build, with the link checker
+        run: npm run build
+        working-directory: site

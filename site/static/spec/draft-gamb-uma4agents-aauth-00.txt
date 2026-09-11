@@ -1,0 +1,448 @@
+
+
+
+
+Network Working Group                                            N. Gamb
+Internet-Draft                                            MindGarden LLC
+Intended status: Standards Track                                E. Maler
+Expires: 15 March 2027                                      Venn Factory
+                                                       11 September 2026
+
+
+ AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents
+                     draft-gamb-uma4agents-aauth-00
+
+Abstract
+
+   This document binds the UMA 2.0 profile for autonomous agents to the
+   AAuth protocol: the agent credential AAuth issues is the identified-
+   agent credential of the profile, AAuth's HTTP message signature
+   conventions are its proof of possession, the requesting party token
+   is an AAuth authorization token, and a resource may publish its
+   structure in AAuth's resource metadata beside RFC 9728.  AAuth's
+   four-party access mode is the topology the profile runs.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 March 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 1]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Relationship to the Set . . . . . . . . . . . . . . . . .   3
+     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
+   2.  The Identified Agent  . . . . . . . . . . . . . . . . . . . .   3
+   3.  Proof of Possession . . . . . . . . . . . . . . . . . . . . .   4
+   4.  The Grant . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   5.  Resource Metadata . . . . . . . . . . . . . . . . . . . . . .   5
+   6.  The Challenge . . . . . . . . . . . . . . . . . . . . . . . .   5
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   5
+     7.1.  Issuers Are Trusted by Dereference  . . . . . . . . . . .   6
+     7.2.  Algorithms Come From the Key  . . . . . . . . . . . . . .   6
+   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   6
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .   6
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .   6
+     10.2.  Informative References . . . . . . . . . . . . . . . . .   7
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .   8
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .   8
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   8
+
+1.  Introduction
+
+   [I-D.hardt-aauth-protocol] defines agent identity bound to a session
+   key, a signature convention over HTTP requests, and four access
+   modes, of which the fourth — federated, where an authorization server
+   the resource names decides — is the topology of [U4ACore].  What
+   AAuth leaves to the authorization server is how it knows the owner's
+   policy.  That is what the profile supplies.
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 2]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+   The two compose without either bending.  AAuth's resource token and
+   UMA's permission ticket are the same object minted on opposite sides
+   — both produced at a refused access, both naming what was attempted,
+   both a pointer to the authority that could grant it.  The difference
+   is where the state sits: AAuth's is minted by the resource, UMA's by
+   the owner's authorization server when the resource registers the
+   attempt.  For a grant that can wait on an absent owner, only the
+   second has anywhere to keep the pending request, and this binding
+   uses it.
+
+1.1.  Relationship to the Set
+
+   This document is a binding of [U4ACore] in the sense of its
+   Section 1.3.  Its identifying URI is https://u4a.ai/spec/aauth/1.0.
+
+1.2.  Notational Conventions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.  The Identified Agent
+
+   A requesting agent presenting itself at the identified level of
+   [U4ACore] Section 5.1 under this binding carries an AAuth agent
+   credential — a JWT [RFC7519] with typ of aa-agent+jwt — in the
+   agent_token header of the agreement JWS of [U4ATerms] Section 4.1.
+
+   The authorization server MUST:
+
+   *  refuse a credential whose iss does not use the https scheme;
+
+   *  resolve the issuer's keys through the agent server metadata AAuth
+      publishes at /.well-known/aauth-agent.json under the issuer,
+      following its jwks_uri, and verify the credential against them,
+      selecting by kid where one is present;
+
+   *  refuse a credential carrying no cnf.jwk;
+
+   *  treat cnf.jwk as the key that signed the agreement and that the
+      grant is confirmed to.
+
+   The connection handle is the credential's sub, qualified by the host
+   of its iss as sub@host, and MUST NOT be derived from the key.  AAuth
+   binds a fresh key per session; the subject is what persists.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 3]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+   Where the credential carries an act claim [RFC8693] naming another
+   agent's subject, an authorization server implementing [U4ALineage]
+   reads it as that document's Section 2.2 specifies.  Nothing further
+   is defined.
+
+3.  Proof of Possession
+
+   The message signature profile of [U4ACore] Section 6.1 — [RFC9421]
+   over @method, @authority, @path and authorization — is AAuth's
+   convention as [I-D.hardt-httpbis-signature-key] describes it, with
+   two constraints this binding adds.
+
+   The signature label MUST be sig1.  The alg parameter MUST be ed25519,
+   and every key this binding mints or verifies is an Ed25519 key in OKP
+   form; an implementation MAY accept other algorithms from third-party
+   issuers whose keys it fetches, choosing the permitted algorithms from
+   the key's type and never from the token's own header.
+
+4.  The Grant
+
+   The requesting party token of [U4ACore] Section 7.1 is issued as an
+   AAuth authorization token: a JWT with typ of aa-auth+jwt, its cnf.jwk
+   naming the agent's key, and the permissions, owner and contract
+   claims the profile requires. sub is the agent credential's sub, or
+   the literal aauth:pseudonymous-agent for an agent at the pseudonymous
+   level.
+
+   {
+     "iss": "https://alice-as.example",
+     "sub": "advisory-agent@ps.example",
+     "owner": "alice",
+     "aud": "https://rs.example",
+     "jti": "rpt_3f9c1a7e2b4d",
+     "exp": 1789433600,
+     "cnf": {"jwk": {"kty": "OKP", "crv": "Ed25519", "x": "…"}},
+     "permissions": [{
+       "resource_id": "alice-vault/get_positions",
+       "resource_scopes": ["positions:read"],
+       "exp": 1789602800
+     }],
+     "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+   }
+
+           Figure 1: A requesting party token under this binding.
+
+   An enforcement point verifies possession against cnf.jwk as returned
+   by introspection, as [U4ACore] Section 8.2 step 3.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 4]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+5.  Resource Metadata
+
+   A resource MAY publish, at /.well-known/aauth-resource.json, the same
+   structural facts its [RFC9728] document carries, in AAuth's encoding:
+
+   resource:  The resource identifier, as [RFC9728].
+
+   access_mode:  four-party.
+
+   access_servers:  The authorization servers the owner names; the same
+      array as authorization_servers.
+
+   jwks_uri:  The resource's keys, as [RFC9728].
+
+   r3_vocabularies:  An array of vocabularies, each with format, an
+      operations array naming each operation and its resource_scopes,
+      and a digest that is s256 over the canonical serialization of
+      operations with keys sorted.
+
+   owner_resources_endpoint:  The protected listing of [U4AFedAuthz]
+      Section 2.2.  The same URL as in the RFC 9728 document.
+
+   signed_metadata:  A JWT over the document with typ of aauth-
+      resource+jwt, signed by a key at jwks_uri.
+
+   Both documents MUST be generated from one registry of the resource's
+   operations.  The instance layer beneath them, and the permission
+   ticket, do not change with the encoding: owner_resources_endpoint
+   points at one listing.
+
+   The content digest gives the operation surface a stable identifier
+   that no owner's instances appear in.  A vocabulary describes what the
+   resource's operations are; the owner's terms describe what she
+   permits; they compose, and neither absorbs the other.
+
+6.  The Challenge
+
+   This binding uses the HTTP challenge of [U4ACore] Section 3.2
+   unchanged.  AAuth's own challenge header is not used; the permission
+   ticket already carries what AAuth's resource token would, minted on
+   the side that can hold a pending request.
+
+7.  Security Considerations
+
+   The considerations of [U4ACore] and [I-D.hardt-aauth-protocol] apply.
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 5]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+7.1.  Issuers Are Trusted by Dereference
+
+   Section 2 resolves an issuer over TLS and believes the keys it
+   publishes.  [U4ACore] Section 5.1 requires a deployment to say which
+   issuers it will believe, and this binding does not relieve it of
+   that.
+
+7.2.  Algorithms Come From the Key
+
+   Section 3.  A verifier that lets a token's header choose the
+   algorithm it is verified with has let the token choose whether it is
+   verified.
+
+8.  Privacy Considerations
+
+   The considerations of [U4ACore] apply.  An agent credential names its
+   subject to every authorization server it is presented to, which is
+   the identified level's purpose; an agent that does not wish to be
+   named presents at the pseudonymous level and this binding changes
+   nothing about that.
+
+9.  IANA Considerations
+
+   This document makes no request of IANA.  The media types aa-
+   agent+jwt, aa-auth+jwt and aauth-resource+jwt are defined by
+   [I-D.hardt-aauth-protocol].
+
+10.  References
+
+10.1.  Normative References
+
+   [I-D.hardt-aauth-protocol]
+              Hardt, D., "AAuth Protocol", Work in Progress, Internet-
+              Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
+              <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
+              protocol-02>.
+
+   [I-D.hardt-httpbis-signature-key]
+              Hardt, D. and T. Meunier, "HTTP Signature Keys", Work in
+              Progress, Internet-Draft, draft-hardt-httpbis-signature-
+              key-08, 5 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-hardt-
+              httpbis-signature-key-08>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 6]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [RFC9421]  Backman, A., Ed., Richer, J., Ed., and M. Sporny, "HTTP
+              Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
+              February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
+
+   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
+              Profile for Autonomous Agents", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-core-00>.
+
+   [U4AFedAuthz]
+              Gamb, N. and E. Maler, "Federated Authorization for
+              Autonomous Agents", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-fedauthz-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-fedauthz-00>.
+
+   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-terms-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-terms-00>.
+
+10.2.  Informative References
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 7]
+
+Internet-Draft            AAuth Binding for UMA           September 2026
+
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
+
+   [U4ALineage]
+              Gamb, N. and E. Maler, "Agent Lineage for User-Managed
+              Access (UMA) 2.0", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-lineage-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-lineage-00>.
+
+Appendix A.  Implementation Status
+
+   This section records the status of known implementations in the sense
+   of [RFC7942], and is to be removed before publication as an RFC.
+
+   The reference implementation [U4ALAB] runs this binding against the
+   AAuth reference person server, pinned at a fixed upstream revision,
+   for its identified-agent path, and serves both metadata encodings of
+   Section 5 from one registry.  A check runs the same negotiation at
+   both identity levels and asserts that the terms, the grant and the
+   authority named are identical across them.
+
+Acknowledgments
+
+   [I-D.hardt-aauth-protocol] supplied the agent identity and signature
+   conventions this binding composes with, and the observation that a
+   resource token and a permission ticket are one object minted on
+   opposite sides.
+
+Authors' Addresses
+
+   Nick Gamb
+   MindGarden LLC
+   Email: nickgamb@gmail.com
+
+
+   Eve Maler
+   Venn Factory
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 8]

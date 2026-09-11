@@ -117,6 +117,26 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
+  U4AOwner:
+    title: "The Resource Owner's API for User-Managed Access (UMA) 2.0"
+    author:
+      - ins: N. Gamb
+        name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-gamb-uma4agents-owner-00
+  U4AAAuth:
+    title: "AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"
+    author:
+      - ins: N. Gamb
+        name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-gamb-uma4agents-aauth-00
   U4AMCP:
     title: "Model Context Protocol Binding for User-Managed Access (UMA) 2.0"
     author:
@@ -224,9 +244,10 @@ This document is the core of a set. {{U4ATerms}} and {{U4AFedAuthz}} are REQUIRE
 to implement alongside it; this document together with those two constitutes the
 UMA 2.0 profile for autonomous agents.
 
-{{U4APolicy}}, {{U4ALineage}} and {{U4AMultiParty}} are OPTIONAL extensions of
-this document. {{U4AMCP}} is one binding of this profile to a concrete transport;
-others are possible and this document is written so that they are.
+{{U4APolicy}}, {{U4ALineage}}, {{U4AMultiParty}} and {{U4AOwner}} are OPTIONAL
+extensions of this document. {{U4AMCP}} binds this profile to a transport and
+{{U4AAAuth}} to an agent identity and signature layer; other bindings are
+possible and this document is written so that they are.
 
 ## Roles
 
@@ -319,7 +340,11 @@ ticket:
 
 resource_metadata:
 : REQUIRED. The URL of the protected resource metadata document {{RFC9728}} that
-  describes this resource, as {{RFC9728}} Section 5.1.
+  describes this resource, as {{RFC9728}} Section 5.1. An enforcement point
+  MUST name the document for the resource identifier the request was made
+  to, formed as {{RFC9728}} Section 3 forms it, and not the document of
+  another identifier the same resource is reachable by; a client following
+  the pointer is required by {{RFC9728}} Section 3.3 to reject any other.
 
 scope:
 : OPTIONAL. A space-delimited list of the scopes that would satisfy the attempted
@@ -793,7 +818,8 @@ The second form is what lets the owner's authority be reached by something she
 runs — a personal agent on her own device — without a browser session and
 without an identity provider in the path. It is the same message-signature
 profile the requesting agent uses, pointed the other way. Every handler MUST act
-on the owner the credential proved rather than on one the request named.
+on the owner the credential proved rather than on one the request named. What
+that software can ask her authority to do is specified in {{U4AOwner}}.
 
 # Owner-Scoped Artifacts {#owner-scoped}
 
@@ -860,6 +886,7 @@ intended to be stock UMA 2.0.
 | 19 | A layer above the resource owner that may only narrow | The resource rights administrator is named and given no wire surface | {{U4AMultiParty}} |
 | 20 | Several owners of equal standing, with signed verdicts carried in the grant | Exactly one authorization server per protected resource | {{U4AMultiParty}} |
 | 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient | Silent on how the owner authenticates | {{owner-authentication}} |
+| 22 | The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server | Left to the deployment | {{U4AOwner}} |
 {: title="Departures from UMA 2.0."}
 
 # Security Considerations
@@ -982,7 +1009,9 @@ here.
 | {{U4APolicy}} | `https://u4a.ai/spec/policy/1.0` |
 | {{U4ALineage}} | `https://u4a.ai/spec/lineage/1.0` |
 | {{U4AMultiParty}} | `https://u4a.ai/spec/multiparty/1.0` |
+| {{U4AOwner}} | `https://u4a.ai/spec/owner/1.0` |
 | {{U4AMCP}} | `https://u4a.ai/spec/mcp/1.0` |
+| {{U4AAAuth}} | `https://u4a.ai/spec/aauth/1.0` |
 {: title="Profile identifying URIs."}
 
 ## JSON Web Token Claims Registration
@@ -1091,7 +1120,10 @@ Description:
   server, an enforcement point in two hosting shapes, a protected resource, an
   operator key directory, and requesting agents at both identity levels. It runs
   under container orchestration and on a single host, against both an in-memory
-  and a replicated store.
+  and a replicated store. It carries two requesting-agent implementations that
+  share no code — one in Python, one in TypeScript — which meet on the wire and
+  nowhere else; the second was written from these documents rather than from
+  the first, and found one defect in the enforcement point on its first run.
 
 Level of maturity:
 : Research. The implementation exists to establish that the requirements in this

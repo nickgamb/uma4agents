@@ -1693,7 +1693,11 @@ information it can act on.<a href="#section-2.4-5" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-2.5-1">For each request over a resource the charter claims, the member's authorization
 server <span class="bcp14">MUST</span> ask the organization's decision endpoint once, presenting the facts
-of the request, and <span class="bcp14">MUST</span> fold the answer into its own.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
+of the request, and <span class="bcp14">MUST</span> fold the answer into its own. The facts are a JSON
+object carrying <code>resource_id</code>, the <code>scopes</code> attempted, the policy unit as
+<code>tier</code>, the <code>expires_in</code>, <code>purpose</code>, <code>reason</code>, <code>mission</code> and <code>operation</code> of the
+agreement, and the <code>assurance</code> and <code>standing</code> facts of <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>; the
+member's authorization server presents its membership credential with them.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
 <p id="section-2.5-2">The organization answers <code>allow</code>, <code>ask</code> or <code>refuse</code>, with reasons. <code>allow</code> means
 the organization has no objection, not that the request is granted. The
 composition rule is one sentence: <strong>both layers must allow, and either may
@@ -1754,10 +1758,16 @@ and its standing with the member over her own resources is untouched;<a href="#s
 her explicit agreement to a specific charter version, and <span class="bcp14">MUST</span> show her, before
 she agrees, what enrolling would change about terms she has already written.<a href="#section-2.8-1" class="pilcrow">¶</a></p>
 <p id="section-2.8-2">The organization issues a membership credential to her authorization server at
-enrolment, and that server presents it on every call to the organization. The
-organization <span class="bcp14">MUST</span> be able to end a membership and <span class="bcp14">MUST</span> notify the member's
-authorization server when it does, when her role changes, or when the charter
-changes.<a href="#section-2.8-2" class="pilcrow">¶</a></p>
+enrolment — a JWT with <code>typ</code> of <code>u4a-membership+jwt</code>, signed by the
+organization, naming the member as <code>sub</code> and the organization as <code>org</code> —
+and that server presents it as a bearer credential on every call to the
+organization. The organization <span class="bcp14">MUST</span> be able to end a membership and <span class="bcp14">MUST</span>
+notify the member's authorization server when it does, when her role changes,
+or when the charter changes. A notice is a JWT with <code>typ</code> of
+<code>u4a-org-notice+jwt</code>, signed by the organization and verified by the member's
+server against the keys it publishes, whose <code>kind</code> is one of
+<code>membership_ended</code>, <code>role_changed</code>, <code>charter_changed</code>, <code>break_glass_opened</code>,
+<code>break_glass</code> or <code>break_glass_used</code>.<a href="#section-2.8-2" class="pilcrow">¶</a></p>
 <p id="section-2.8-3">Leaving <span class="bcp14">MUST</span> withdraw the member's access to claimed resources and the ceiling
 over her, and <span class="bcp14">MUST</span> leave every narrowing the ceiling applied in place. Her terms
 were narrowed with her agreement and republished under a new version; undoing
@@ -1922,8 +1932,27 @@ and <span class="bcp14">MUST</span> refuse on any difference in the direction of
 an extra scope, a dropped prohibition. Differences in the direction of <em>less</em>
 are expected, since another holder's terms were folded in. This is what lets the
 folding party be untrusted.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
-<p id="section-3.4-4">Where the holder's policy asks her, the verdict is withheld until she answers,
-and the tally holds the negotiation pending as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> <code>request_submitted</code>.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<span id="name-a-verdicts-claims"></span><figure id="figure-1">
+          <div class="lang-json sourcecode" id="section-3.4-4.1">
+<pre>
+{
+  "iss": "https://alice-as.example",
+  "holder": "alice",
+  "account": "joint-brokerage-1",
+  "negotiation": "fam_8f3aQ2Xc",
+  "resource_id": "joint-brokerage-1/get_positions",
+  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "effect": "allow",
+  "iat": 1789430000,
+  "exp": 1789430300
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-a-verdicts-claims" class="selfRef">A verdict's claims.</a>
+          </figcaption></figure>
+<p id="section-3.4-5">Where the holder's policy asks her, the verdict is withheld until she answers,
+and the tally holds the negotiation pending as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> <code>request_submitted</code>.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="not-claims">
@@ -1980,7 +2009,7 @@ closed; only the record distinguishes them.<a href="#section-3.6-1" class="pilcr
 </dd>
         <dd class="break"></dd>
 </dl>
-<span id="name-the-joint-claim-on-a-grant"></span><figure id="figure-1">
+<span id="name-the-joint-claim-on-a-grant"></span><figure id="figure-2">
           <div class="lang-json sourcecode" id="section-3.7-3.1">
 <pre>
 {
@@ -2003,7 +2032,7 @@ closed; only the record distinguishes them.<a href="#section-3.6-1" class="pilcr
 }
 </pre>
 </div>
-<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
 <a href="#name-the-joint-claim-on-a-grant" class="selfRef">The joint claim on a grant.</a>
           </figcaption></figure>
 </section>

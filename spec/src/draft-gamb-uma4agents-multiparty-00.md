@@ -257,7 +257,11 @@ information it can act on.
 
 For each request over a resource the charter claims, the member's authorization
 server MUST ask the organization's decision endpoint once, presenting the facts
-of the request, and MUST fold the answer into its own.
+of the request, and MUST fold the answer into its own. The facts are a JSON
+object carrying `resource_id`, the `scopes` attempted, the policy unit as
+`tier`, the `expires_in`, `purpose`, `reason`, `mission` and `operation` of the
+agreement, and the `assurance` and `standing` facts of {{U4APolicy}}; the
+member's authorization server presents its membership credential with them.
 
 The organization answers `allow`, `ask` or `refuse`, with reasons. `allow` means
 the organization has no objection, not that the request is granted. The
@@ -304,10 +308,16 @@ her explicit agreement to a specific charter version, and MUST show her, before
 she agrees, what enrolling would change about terms she has already written.
 
 The organization issues a membership credential to her authorization server at
-enrolment, and that server presents it on every call to the organization. The
-organization MUST be able to end a membership and MUST notify the member's
-authorization server when it does, when her role changes, or when the charter
-changes.
+enrolment — a JWT with `typ` of `u4a-membership+jwt`, signed by the
+organization, naming the member as `sub` and the organization as `org` —
+and that server presents it as a bearer credential on every call to the
+organization. The organization MUST be able to end a membership and MUST
+notify the member's authorization server when it does, when her role changes,
+or when the charter changes. A notice is a JWT with `typ` of
+`u4a-org-notice+jwt`, signed by the organization and verified by the member's
+server against the keys it publishes, whose `kind` is one of
+`membership_ended`, `role_changed`, `charter_changed`, `break_glass_opened`,
+`break_glass` or `break_glass_used`.
 
 Leaving MUST withdraw the member's access to claimed resources and the ceiling
 over her, and MUST leave every narrowing the ceiling applied in place. Her terms
@@ -425,6 +435,21 @@ and MUST refuse on any difference in the direction of *more*: a longer expiry,
 an extra scope, a dropped prohibition. Differences in the direction of *less*
 are expected, since another holder's terms were folded in. This is what lets the
 folding party be untrusted.
+
+~~~ json
+{
+  "iss": "https://alice-as.example",
+  "holder": "alice",
+  "account": "joint-brokerage-1",
+  "negotiation": "fam_8f3aQ2Xc",
+  "resource_id": "joint-brokerage-1/get_positions",
+  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "effect": "allow",
+  "iat": 1789430000,
+  "exp": 1789430300
+}
+~~~
+{: title="A verdict's claims."}
 
 Where the holder's policy asks her, the verdict is withheld until she answers,
 and the tally holds the negotiation pending as {{UMAGrant}} `request_submitted`.
