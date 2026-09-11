@@ -353,6 +353,16 @@ smoke-test:
 	@echo "==> uma-as discovery..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma4agents-configuration | grep -q token_endpoint \
 		&& echo "  uma-as: OK" || echo "  uma-as: FAIL"
+	@echo "==> ... at UMA 2.0's well-known path, naming the profile it implements..."
+	@$(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
+		| grep -q '"uma_profiles_supported": *\[[^]]*https://u4a.ai/spec/core/1.0' \
+		&& echo "  uma_profiles_supported: OK" || echo "  uma_profiles_supported: FAIL"
+	@echo "==> ... and every grant type and claim format the token endpoint accepts..."
+	@$(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
+		| grep -q 'client_credentials' \
+		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
+		| grep -q 'urn:ietf:params:oauth:token-type:id-jag' \
+		&& echo "  advertised formats: OK" || echo "  advertised formats: FAIL"
 	@echo "==> uma-as JWKS..."
 	@$(CURL) https://alice-as.uma.lab/jwks | grep -q Ed25519 && echo "  jwks: OK" || echo "  jwks: FAIL"
 	@echo "==> Keycloak alice realm..."

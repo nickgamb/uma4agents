@@ -39,6 +39,7 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_DIRECTORY_TTL` | `300` | Seconds an operator key directory is cached **for a hit only**. A miss is always re-fetched, because a stale hit keeps attesting a key the operator has disowned while a stale miss merely fails to recognise one just published |
 | `UMA_AS_OWNER_CLIENTS` | `meridian-portal` | Comma-separated audiences accepted on owner tokens |
 | `UMA_AS_PENDING_TTL` | `3600` | How long a held ask-me ticket stays valid, in seconds |
+| `UMA_AS_RPT_AUDIENCE` | `https://gateway.uma.lab` | The `aud` on every grant this authority signs: the enforcement point they are for. One in the lab; a deployment with several names the one it protects |
 | `UMA_AS_STORE` | `memory` | `memory` or `postgres` |
 | `UMA_AS_DATABASE_URL` | — | Required when the store is `postgres` |
 | `UMA4A_CA_BUNDLE` | — | Trust bundle used when dereferencing agent-token issuers |
@@ -160,6 +161,8 @@ invitation, none of it does anything.
 | `UMA_PEP_ORG_INTERNAL` | the issuer | Where to reach it on the cluster network |
 | `UMA_PEP_ORG_TOKEN` | unset | What this gateway presents to it |
 | `UMA_PEP_MEMBERSHIP_TTL_S` | `10` | How long a cached answer about who is a member may be acted on. The window is somebody's access to the organization's resources *after* it was withdrawn, so it is short. Listings are always read fresh |
+| `UMA_PEP_MANDATE_TTL_S` | `30` | How long the electorate of a jointly held resource may be reused before the mandate is re-read from where the tally publishes it. Short: a holder leaving should stop counting in seconds, not at a restart |
+| `UMA_PEP_HOLDER_JWKS_TTL_S` | `300` | How long a co-owner's published keys are reused for verifying her verdicts. The window is a rotated-away key still verifying — ordinary key-rotation latency, and longer than the electorate's on purpose |
 | `UMA_PEP_SHARED_PREFIX` | `mcp/shared` | The path an organization's resources are reached at, one segment per member |
 | `UMA_PEP_SHARED_NAMESPACE` | `northwind-vault` | The resource-id namespace those resources publish under |
 

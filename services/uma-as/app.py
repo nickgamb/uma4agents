@@ -37,6 +37,7 @@ import introduction
 import joint
 import org
 import uma4a_joint
+import uma4a_profiles
 import policy
 import store
 
@@ -160,6 +161,9 @@ OWNER_KEY_PATH = os.environ.get("UMA_AS_OWNER_KEY", "/keys/owner-ed25519.pub")
 OWNER_EXPECTED_AUTHORITY = os.environ.get(
     "UMA_AS_OWNER_AUTHORITY", ISSUER.split("://", 1)[-1].split("/", 1)[0])
 PAT_TTL = 3600
+# Who the grants this server signs are for. One enforcement point in the lab,
+# so one audience; a deployment with several names the one it protects.
+RPT_AUDIENCE = os.environ.get("UMA_AS_RPT_AUDIENCE", "https://gateway.uma.lab")
 # Registration is declarative: this AS *reads* the RS's published metadata —
 # public structure from the RFC 9728 document, owner-bound instances from the
 # protected owner-resources endpoint — and materializes its registry from it.
@@ -390,8 +394,21 @@ async def jwks() -> dict:
     return {"keys": [jwk]}
 
 
+@app.get("/.well-known/uma2-configuration")
 @app.get("/.well-known/uma4agents-configuration")
 async def discovery() -> dict:
+    """Authorization server metadata, at UMA 2.0's well-known path and at the
+    one this implementation started with.
+
+    Two rules from the specification this serves. Every grant type and claim
+    token format the token endpoint accepts is advertised, and nothing it does
+    not accept is: a requesting agent that has never met this server decides
+    from this document alone what to attempt, and an accepted-but-unadvertised
+    format is indistinguishable to it from an unsupported one. And the profile
+    URIs are here because UMA 2.0 Grant section 4 asks a server supporting a
+    profile to say so — which is what lets a client tell this authorization
+    server from a stock one before it has sent anything.
+    """
     return {
         "issuer": ISSUER,
         "token_endpoint": f"{ISSUER}/token",
@@ -399,8 +416,13 @@ async def discovery() -> dict:
         "introspection_endpoint": f"{ISSUER}/introspect",
         "jwks_uri": f"{ISSUER}/jwks",
         "terms_endpoint": f"{ISSUER}/terms",
-        "grant_types_supported": ["urn:ietf:params:oauth:grant-type:uma-ticket"],
-        "claim_token_formats_supported": [AGREEMENT_FORMAT],
+        "response_types_supported": [],
+        "grant_types_supported": [
+            "urn:ietf:params:oauth:grant-type:uma-ticket",
+            "client_credentials",
+        ],
+        "claim_token_formats_supported": [AGREEMENT_FORMAT, ID_JAG_FORMAT],
+        "uma_profiles_supported": list(uma4a_profiles.AUTHORIZATION_SERVER),
     }
 
 
@@ -2576,7 +2598,7 @@ def standing_facts(conn: dict | None, tier_id: str,
     rule she wrote to be *asked* about sub-agents would silently fail to fire
     on exactly the resources that are half somebody else's.
     """
-    trajectory = trajectory or {"denials": 0, "tiers": []}
+    trajectory = trajectory or {"denials": 0, "tiers": [], "calls": 0}
     lineage = list(lineage_approved or [])
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
@@ -3157,7 +3179,7 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         # without this a multi-tenant server has nothing on an introspection
         # request that says which owner's registry to consult.
         "owner": owner,
-        "aud": "https://gateway.uma.lab",
+        "aud": RPT_AUDIENCE,
         "jti": jti,
         "exp": exp,
         "cnf": {"jwk": signer_jwk},

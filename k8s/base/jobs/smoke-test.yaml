@@ -51,6 +51,16 @@ data:
           lambda: (json.load(get("https://alice-as.uma.lab/health"))["status"] == "ok", ""))
     check("it publishes its keys",
           lambda: (len(json.load(get("https://alice-as.uma.lab/jwks"))["keys"]) >= 1, ""))
+    def profiles():
+        # UMA 2.0 Grant section 4: a server supporting a profile advertises
+        # its URI. And nothing the token endpoint accepts goes unadvertised.
+        doc = json.load(get("https://alice-as.uma.lab/.well-known/uma2-configuration"))
+        ok = ("https://u4a.ai/spec/core/1.0" in doc.get("uma_profiles_supported", [])
+              and "client_credentials" in doc.get("grant_types_supported", [])
+              and "urn:ietf:params:oauth:token-type:id-jag"
+                  in doc.get("claim_token_formats_supported", []))
+        return ok, "" if ok else json.dumps(doc)[:200]
+    check("it names the profile it implements, and everything it accepts", profiles)
     check("Alice's realm is imported",
           lambda: (get("https://keycloak.uma.lab/realms/alice/.well-known/openid-configuration").status == 200, ""))
     check("the portal serves",

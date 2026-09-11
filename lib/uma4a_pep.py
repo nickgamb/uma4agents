@@ -69,6 +69,10 @@ CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 # Short: a holder leaving should stop counting in seconds, not at a
 # restart.
 MANDATE_TTL_S = float(os.environ.get("UMA_PEP_MANDATE_TTL_S", "30"))
+# How long a co-owner's published keys are reused for verifying her verdicts.
+# The window is a rotated-away key still verifying, which is the ordinary key
+# rotation window and can be longer than the electorate's.
+HOLDER_JWKS_TTL_S = float(os.environ.get("UMA_PEP_HOLDER_JWKS_TTL_S", "300"))
 
 
 class Pending(Exception):
@@ -612,7 +616,7 @@ class Enforcer:
                                              timeout=5.0) as client:
                     r = await client.get(f"{issuer}/jwks")
                     r.raise_for_status()
-                cached = (time.time() + 300, r.json()["keys"])
+                cached = (time.time() + HOLDER_JWKS_TTL_S, r.json()["keys"])
                 self._holder_jwks[issuer] = cached
             except (httpx.HTTPError, KeyError, ValueError) as exc:
                 self.event("joint.jwks_unreachable", issuer=issuer,

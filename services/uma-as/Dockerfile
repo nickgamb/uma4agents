@@ -9,6 +9,7 @@ WORKDIR /app
 COPY lib/uma4a_http_sig.py .
 COPY lib/uma4a_org.py .
 COPY lib/uma4a_joint.py .
+COPY lib/uma4a_profiles.py .
 COPY services/uma-as/app.py services/uma-as/policy.py ./
 COPY services/uma-as/org.py services/uma-as/joint.py ./
 COPY services/uma-as/assurance.py services/uma-as/introduction.py ./

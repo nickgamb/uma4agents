@@ -691,6 +691,8 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
             "expires_in": int(terms["expires_in"]),
             "prohibited": list(terms.get("prohibited") or []),
             **({"per_operation": True} if terms.get("per_operation") else {}),
+            **({"constraints": dict(terms["constraints"])}
+               if isinstance(terms.get("constraints"), dict) else {}),
         },
     }
 
@@ -716,7 +718,7 @@ def apply_patch(tier: dict, patch: dict) -> dict:
     # resource cannot give. It is patchable because the layer above her can
     # narrow it — an organization whose charter does not allow a scope makes
     # her terms stop offering it, and the terms document has to say so.
-    for field in ("purpose", "expires_in", "prohibited", "scope"):
+    for field in ("purpose", "expires_in", "prohibited", "scope", "constraints"):
         if field in terms_patch:
             tier["terms"][field] = terms_patch[field]
     # Any owner edit produces a new template version so contracts are
