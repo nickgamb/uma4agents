@@ -74,8 +74,11 @@ to decorate:
 {"jsonrpc": "2.0", "id": 4, "error": {
   "code": -32001,
   "message": "authorization required: present this ticket to the resource owner's AS",
-  "data": {"error": "uma_challenge", "as_uri": "https://alice-as.uma.lab",
-           "ticket": "tkt_…", "resource_metadata": "…", "realm": "alice-vault"}}}
+  "data": {"error": "insufficient_authorization",
+           "as_uri": "https://alice-as.uma.lab", "ticket": "tkt_…",
+           "resource_metadata": "…", "realm": "alice-vault",
+           "scope": "trades:execute",
+           "authorization_remediation": { /* the object, not base64url */ }}}}
 ```
 
 A client should accept both. The `authorization_remediation` object is

@@ -1,0 +1,828 @@
+# Every normative statement in the drafts, and what proves it.
+#
+# One list per draft. Each row quotes a fragment of the sentence as rendered
+# (matched after whitespace normalisation, case-insensitively) and names one
+# of:
+#
+#   verified: check       targets: [make targets]  asserts: [what they print]
+#   verified: deployment  because: the requirement is on a deployment
+#   verified: binding     because: the requirement is on a binding document
+#
+# `make spec-check` fails the build if a normative sentence has no row, a row
+# names a make target that does not exist, or a row's text is no longer in the
+# draft. The check names are the ones the suites print, verbatim.
+
+draft-gamb-uma4agents-core-00:
+  - text: "MUST include in its metadata the value https://u4a.ai/spec/core/1.0 in the uma_profiles_supported array"
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["uma_profiles_supported: OK", "it names the profile it implements, and everything it accepts"]
+  - text: "An authorization server implementing [U4ATerms] MUST include it."
+    verified: check
+    targets: [smoke-test]
+    asserts: ["uma-as: OK"]
+  - text: "MUST NOT advertise a grant type or claim token format it will not accept, and MUST advertise every grant type and claim token format it will"
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["advertised formats: OK", "it names the profile it implements, and everything it accepts"]
+  - text: "An enforcement point MUST convey the following parameters when it refuses a request for want of authorization"
+    verified: check
+    targets: [smoke-test, embedded-check, pep-test]
+    asserts: ["gateway challenge: OK", "the remediation object names the authorization server and the ticket", "the header carries every required parameter"]
+  - text: "A binding of this profile MUST define how these parameters are carried, and MUST carry all of those marked REQUIRED."
+    verified: binding
+    because: "a requirement on binding documents; draft-gamb-uma4agents-mcp-00 section 3 is the one written, and embedded-check runs it"
+  - text: "MUST return 401 Unauthorized with a WWW-Authenticate header whose auth-scheme is UMA"
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["gateway challenge: OK", "an unauthorized tool call is refused with a ticket"]
+  - text: "A requesting agent MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
+    verified: check
+    targets: [multi-owner-check, k8s-smoke-test]
+    asserts: ["no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+  - text: "MAY be accepted as a claim_token with claim_token_format of urn:ietf:params:oauth:token-type:id-jag, in which case the authorization server MUST treat it as a claim about identity and reach, and MUST NOT treat it as conferring access"
+    verified: check
+    targets: [xaa-check]
+    asserts: ["but it is worth nothing without a ticket of her issuing", "and an operation outside the connection never becomes a grant"]
+  - text: "The authorization server MUST distinguish two kinds of pending request, and MUST make the kind available to the owner's decision surface"
+    verified: check
+    targets: [shim-test, intent-check]
+    asserts: ["first contact connects, then tier 1 grants", "tier 3 pends, Alice approves, trade executes", "first contact pends until she answers"]
+  - text: "A binding that surfaces the wait MUST be able to say that the party being waited on is not the requesting party's own user"
+    verified: check
+    targets: [shim-test]
+    asserts: ["the wait was handed back to Bob, not held open", "the pend names a principal Bob is not and cannot reach"]
+  - text: "The authorization server MUST verify that credential against keys published by its issuer, MUST require that the issuer identifier use the https scheme, and MUST derive the connection handle from the issuer and subject"
+    verified: check
+    targets: [flow-check, smoke-test]
+    asserts: ["differed across identity regimes", "agent identity stayed on the requesting side", "person-server: OK"]
+  - text: "The handle for an identified agent MUST NOT be derived from its key."
+    verified: check
+    targets: [flow-check]
+    asserts: ["expected two identity levels"]
+  - text: "This profile deliberately specifies no issuer allow-list, and a deployment MUST supply one."
+    verified: deployment
+    because: "which issuers may attest agents is deployment policy; the reference implementation trusts by dereference over TLS and refuses non-https issuers (flow-check)"
+  - text: "which the authorization server MUST resolve and MUST reject unless the document's own client_id"
+    verified: check
+    targets: [smoke-test, assurance-check]
+    asserts: ["agent CIMD: OK", "metadata that does not resolve buys nothing"]
+  - text: "a Signature-Agent [I-D.meunier-webbotauth-registry] naming a directory of keys the operator publishes, which MUST be covered by the request signature where it is present"
+    verified: check
+    targets: [sig-test, smoke-test]
+    asserts: ["covers signature-agent, with tag + expires", "a swapped Signature-Agent must not verify", "signatures directory: OK"]
+  - text: "an authorization server MUST NOT admit a request it would otherwise refuse on the strength of descriptive metadata alone"
+    verified: check
+    targets: [assurance-check, first-party-check]
+    asserts: ["the nameless agent was admitted too — assurance is not a gate", "an attested agent that is not hers is still asked"]
+  - text: "Failure to resolve descriptive metadata MUST leave the request where it was rather than refusing it"
+    verified: check
+    targets: [assurance-check]
+    asserts: ["metadata that does not resolve buys nothing", "and is still worth nothing on the second try"]
+  - text: "A requesting agent MUST prove possession of the confirmed key on every request to the protected resource, and an enforcement point MUST verify it."
+    verified: check
+    targets: [sig-test, smoke-test, k8s-policy-test]
+    asserts: ["baseline round trip", "gateway challenge: OK", "the requesting party cannot reach the vault directly"]
+  - text: "A signature MUST cover at least the components"
+    verified: check
+    targets: [sig-test]
+    asserts: ["baseline round trip", "dropping a required component is rejected"]
+  - text: "a verifier MUST accept a superset rather than requiring an exact set"
+    verified: check
+    targets: [sig-test]
+    asserts: ["covers signature-agent, with tag + expires"]
+  - text: "A verifier MUST reconstruct the signature base using the @authority value it is configured with, and MUST NOT take it from the Host header"
+    verified: check
+    targets: [sig-test, k8s-smoke-test]
+    asserts: ["a signature over another authority is rejected", "an unauthorized tool call is refused with a ticket"]
+  - text: "A verifier MUST echo the received @signature-params value verbatim when reconstructing the base"
+    verified: check
+    targets: [sig-test]
+    asserts: ["covers signature-agent, with tag + expires"]
+  - text: "the signature MUST cover a Content-Digest [RFC9530] header, and the verifier MUST recompute the digest from the received body"
+    verified: check
+    targets: [sig-test, establishment-check]
+    asserts: ["a body without its digest is refused where one is required", "a tampered body-bound header is rejected", "signed by a key that origin does not publish: refused"]
+  - text: "A verifier MUST be able to _require_ the digest rather than merely accept it when present"
+    verified: check
+    targets: [sig-test]
+    asserts: ["a body without its digest is refused where one is required"]
+  - text: "The requesting party token MUST be a JWT [RFC7519] signed by the authorization server, and MUST carry:"
+    verified: check
+    targets: [store-test, smoke-test]
+    asserts: ["rpt: exactly one of %d burns wins", "jwks: OK"]
+  - text: "the authorization server MUST bind the grant to that access."
+    verified: check
+    targets: [shim-test, intent-check]
+    asserts: ["tier 3 pends, Alice approves, trade executes", "her trade tier marks the prohibitions it actually refuses"]
+  - text: "Such a token MUST carry:"
+    verified: check
+    targets: [intent-check]
+    asserts: ["and names the mechanism that refuses each"]
+  - text: "An enforcement point MUST hold a protection API access token issued in the owner's name, MUST register attempted access to obtain a permission ticket, MUST introspect a presented token before allowing a call, and MUST refuse"
+    verified: check
+    targets: [establishment-check, k8s-policy-test]
+    asserts: ["her resource challenges, on a relationship nobody provisioned", "cannot reach the vault behind the gateway"]
+  - text: "An enforcement point MUST perform the following steps in this order, and the order is normative:"
+    verified: check
+    targets: [store-test, embedded-check]
+    asserts: ["rpt: a later burn still loses", "a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards"]
+  - text: "An enforcement point MUST NOT consume a single-use token before step 5."
+    verified: check
+    targets: [embedded-check]
+    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
+  - text: "An enforcement point MUST verify proof of possession against the key returned by introspection rather than the key carried inside the token"
+    verified: check
+    targets: [sig-test]
+    asserts: ["a signature over another authority is rejected"]
+  - text: "MUST be consumed by an operation that decides and records in one indivisible step, and that reports to its caller whether that caller was the one that consumed it"
+    verified: check
+    targets: [store-test]
+    asserts: ["ticket: exactly one of %d presentations wins", "rpt: exactly one of %d burns wins", "decision: exactly one of %d taps is recorded"]
+  - text: "A caller told that it was not MUST refuse the request."
+    verified: check
+    targets: [store-test]
+    asserts: ["rpt: a later burn still loses"]
+  - text: "An authorization server MUST include, in an introspection response [RFC7662] whose active member is false, an error member naming the reason."
+    verified: check
+    targets: [subagent-check, establishment-check]
+    asserts: ["and a revoked sub-agent's next call does not go through", "the next call stops, and asking again only re-asks her"]
+  - text: "At minimum it MUST distinguish a reason that further negotiation cannot change from one that it can."
+    verified: check
+    targets: [subagent-check]
+    asserts: ["and a revoked sub-agent's next call does not go through"]
+  - text: "An enforcement point receiving a reason of the first kind MUST refuse without issuing a fresh challenge."
+    verified: check
+    targets: [subagent-check, assurance-check]
+    asserts: ["and a revoked sub-agent's next call does not go through", "and an agent of that operator is refused by name"]
+  - text: "An authorization server implementing this profile MUST:"
+    verified: check
+    targets: [intent-check, store-test, subagent-check]
+    asserts: ["first contact pends until she answers", "revoke: a grant issued under it can no longer be spent", "her records show one connection, with no sponsor"]
+  - text: "An authorization server MUST accept at least one of the following as the owner's credential on every owner-facing operation"
+    verified: check
+    targets: [kwaai-check, fixture]
+    asserts: ["her device key, held by a personal AI: also accepted", "her portal session: still accepted", "owner request signed by a key she did not enrol: 401"]
+  - text: "Each accepted credential MUST be independently sufficient and independently revocable, and MUST NOT be a fallback for another."
+    verified: check
+    targets: [kwaai-check]
+    asserts: ["neither is a fallback for the other", "a decision body changed after signing: 401", "a body the signature never covered: 401"]
+  - text: "An authorization server MUST NOT hold a static owner credential of its own."
+    verified: check
+    targets: [k8s-policy-test]
+    asserts: ["cannot reach Alice's authorization server directly", "cannot read Alice's policy"]
+  - text: "Every handler MUST act on the owner the credential proved rather than on one the request named."
+    verified: check
+    targets: [multi-owner-check, store-test]
+    asserts: ["and no negotiation over one owner's resources reaches another's record", "test_owners_cannot_see_each_other"]
+  - text: "Every artifact in this profile that is scoped to an owner MUST carry or resolve to that owner:"
+    verified: check
+    targets: [multi-owner-check]
+    asserts: ["every owner's tiers name her own resources", "terms template ids name their owner", "every authority signs with its own key"]
+  - text: "the permission ticket, which MUST resolve only at the authorization server that minted it"
+    verified: check
+    targets: [multi-owner-check, xaa-check]
+    asserts: ["and no negotiation over one owner's resources reaches another's record", "and it is refused at Alice's"]
+  - text: "which MUST be per-resource and whose authorization_servers array names that owner's choice"
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["resource metadata (carol): OK", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+  - text: "each metadata document MUST name the URL it was fetched from"
+    verified: check
+    targets: [k8s-smoke-test]
+    asserts: ["each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+  - text: "This profile specifies no allow-list of issuers; a deployment MUST supply one"
+    verified: deployment
+    because: "restated from section 5.1; which issuers may attest agents is deployment policy"
+  - text: "Ending a relationship and invalidating the grants under it are the same decision and MUST be the same operation."
+    verified: check
+    targets: [store-test]
+    asserts: ["revoke: the connection is deactivated", "revoke: a grant issued under it can no longer be spent"]
+  - text: "it MUST refuse with a reason naming the truncation"
+    verified: check
+    targets: [smoke-test]
+    asserts: ["truncated body: OK"]
+  - text: "Which resources a named person owns MUST NOT be published at an unauthenticated URI."
+    verified: check
+    targets: [k8s-policy-test]
+    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+  - text: "a decision the owner did not personally take MUST NOT be"
+    verified: check
+    targets: [org-check]
+    asserts: ["and his approval is NOT recorded as one of hers"]
+  - text: "It MUST NOT parse it, compare it to the purpose in the owner's terms, or let it affect the decision other than by its absence."
+    verified: check
+    targets: [intent-check]
+    asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
+
+draft-gamb-uma4agents-fedauthz-00:
+  - text: "A resource server MUST publish protected resource metadata [RFC9728] for each resource it serves."
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["resource metadata (alice): OK", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+  - text: "It MUST NOT name which owners have instances behind it."
+    verified: check
+    targets: [k8s-policy-test]
+    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+  - text: "The document MUST carry signed_metadata as [RFC9728] Section 2.1"
+    verified: check
+    targets: [k8s-smoke-test]
+    asserts: ["each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+  - text: "MUST serve them only to a request signed with [RFC9421] by the authorization server that owner has named"
+    verified: check
+    targets: [k8s-policy-test, k8s-smoke-test]
+    asserts: ["cannot read the owner-bound resource listing", "the authorization server pulled what the resource publishes"]
+  - text: "MUST be able to learn what a resource server protects by fetching, and MUST NOT require the resource server to push resource descriptions"
+    verified: check
+    targets: [k8s-smoke-test, fixture]
+    asserts: ["the authorization server pulled what the resource publishes", "no IdP, no database, no gateway, no certificate"]
+  - text: "it MUST attempt a fresh pull before answering invalid_resource_id"
+    verified: check
+    targets: [establishment-check]
+    asserts: ["her resource challenges, on a relationship nobody provisioned"]
+  - text: "An authorization server MUST NOT condition its own readiness on the pull having completed"
+    verified: check
+    targets: [smoke-test, k8s-smoke-test]
+    asserts: ["uma-as: OK", "the authorization server is up"]
+  - text: "The request MUST carry a Content-Digest [RFC9530] covered by the signature."
+    verified: check
+    targets: [establishment-check]
+    asserts: ["signed by a key that origin does not publish: refused", "the gateway did register itself, by signature and not secret"]
+  - text: "The authorization server MUST verify the signature by:"
+    verified: check
+    targets: [establishment-check]
+    asserts: ["claiming a resource at an origin that publishes none: refused", "claiming a resource whose metadata names another: refused"]
+  - text: "A resource server that cannot be reached, or whose document fails any of the three checks, MUST be refused."
+    verified: check
+    targets: [establishment-check]
+    asserts: ["claiming a resource at an origin that publishes none: refused", "claiming a resource whose metadata names another: refused"]
+  - text: "MUST respond 202 Accepted with a body carrying status of pending and error of authorization_pending"
+    verified: check
+    targets: [establishment-check, store-test]
+    asserts: ["the gateway did register itself, by signature and not secret", "registration: the record is readable and pending"]
+  - text: "Registration reaches an owner; it MUST NOT create one."
+    verified: check
+    targets: [establishment-check]
+    asserts: ["none of that put anything in her registry"]
+  - text: "While the owner has not answered, the token endpoint MUST respond 403 with error of authorization_pending."
+    verified: check
+    targets: [establishment-check]
+    asserts: ["her registry shows it pending again, not active"]
+  - text: "After the owner has revoked the resource server, it MUST respond 403 with error of access_denied."
+    verified: check
+    targets: [establishment-check]
+    asserts: ["the next call stops, and asking again only re-asks her"]
+  - text: "the authorization server MUST stop honouring that resource server's PAT on every protection API call, from every replica, at once"
+    verified: check
+    targets: [establishment-check, store-test]
+    asserts: ["she can withdraw the resource server", "resource server: revocation is readable afterwards"]
+  - text: "A resource server that registers again after being revoked MUST land in the pending state, not the active one."
+    verified: check
+    targets: [establishment-check, store-test]
+    asserts: ["her registry shows it pending again, not active", "registration: re-registering lands in pending, not active"]
+  - text: "re-registration MUST NOT be a way to undo a withdrawal"
+    verified: check
+    targets: [store-test]
+    asserts: ["registration: approving a revoked server is not-found", "registration: re-registering lands in pending, not active"]
+  - text: "An authorization server MUST include, in an introspection response [RFC7662] whose active member is false, an error member."
+    verified: check
+    targets: [subagent-check, establishment-check]
+    asserts: ["and a revoked sub-agent's next call does not go through", "the next call stops, and asking again only re-asks her"]
+  - text: "connection_revoked is terminal: an enforcement point receiving it MUST refuse without issuing a fresh challenge"
+    verified: check
+    targets: [subagent-check]
+    asserts: ["and a revoked sub-agent's next call does not go through"]
+  - text: "Introspection MUST NOT consume a single-use token."
+    verified: check
+    targets: [embedded-check]
+    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
+  - text: "An authorization server MUST offer that operation, and it MUST report to its caller whether that caller was the one that consumed the token."
+    verified: check
+    targets: [store-test]
+    asserts: ["rpt: exactly one of %d burns wins", "rpt: a later burn still loses"]
+  - text: "An enforcement point MUST NOT be told, and MUST NOT report, the identity handle of the requesting agent."
+    verified: check
+    targets: [store-test, intent-check]
+    asserts: ["test_an_allowed_call_can_be_traced_to_its_agent", "every call is filed under the tier it was made against"]
+  - text: "An authorization server MUST bound the response size it will read, MUST NOT follow redirects, MUST require https"
+    verified: check
+    targets: [establishment-check, first-party-check]
+    asserts: ["claiming a resource at an origin that publishes none: refused", "an https origin is required"]
+  - text: "the resource server's status MUST be read on each protection API call rather than cached in process"
+    verified: check
+    targets: [store-test]
+    asserts: ["resource server: revocation is readable afterwards"]
+
+draft-gamb-uma4agents-lineage-00:
+  - text: "Its confirmed key MUST equal jwk."
+    verified: check
+    targets: [introduction-test]
+    asserts: ["an introduction not signed by the key it names is refused"]
+  - text: "An authorization server MUST bound the size of an introduction it will parse"
+    verified: check
+    targets: [introduction-test]
+    asserts: ["a JWS larger than the ceiling is refused"]
+  - text: "the authorization server MUST first establish what the document settles on its own"
+    verified: check
+    targets: [introduction-test]
+    asserts: ["a well-formed introduction verifies", "an introduction for another key is refused", "an introduction for another authority is refused", "an expired introduction is refused"]
+  - text: "An assertion that fails any of these is a malformed request and MUST be refused as one."
+    verified: check
+    targets: [introduction-test, subagent-check]
+    asserts: ["a document of another type is refused", "an introduction naming another agent's key is refused outright"]
+  - text: "The authorization server MUST refuse to act on it unless every one of the following holds, and MUST check them in this order"
+    verified: check
+    targets: [introduction-test]
+    asserts: ["an agent the owner has never met may not introduce", "a revoked agent may not introduce", "an agent she never approved in person may not introduce", "an agent that was itself introduced may not introduce", "a revoked agent cannot be restored by an introduction", "an agent from another operator may not be introduced", "fan-out is capped"]
+  - text: "The authorization server MUST record why the introduction was not honoured, and MUST then treat the request exactly as one that offered no lineage"
+    verified: check
+    targets: [subagent-check]
+    asserts: ["an agent from another operator is a stranger again"]
+  - text: "the authorization server MUST record a standing connection for the introduced agent without asking the owner, carrying the introducing agent's handle, and MUST NOT record any approval for it"
+    verified: check
+    targets: [subagent-check]
+    asserts: ["it is admitted and gets a grant of its own", "her records name the agent that introduced it", "and then she is asked about a sub-agent again"]
+  - text: "It MUST carry forward any prior revocation count for the same handle"
+    verified: check
+    targets: [store-test]
+    asserts: ["test_revocations_survive_reconnection"]
+  - text: "An introduced connection MUST be created only after every refusal the authorization server would apply to a first contact"
+    verified: check
+    targets: [subagent-check, assurance-check]
+    asserts: ["an agent from another operator is a stranger again", "and an agent of that operator is refused by name"]
+  - text: "The owner's record MUST show the connection as introduced, and by whom."
+    verified: check
+    targets: [subagent-check]
+    asserts: ["her records name the agent that introduced it", "it is a separate connection, not the parent's"]
+  - text: "MUST make available to policy the set of units at which the owner has personally approved any live member of a lineage"
+    verified: check
+    targets: [store-test, subagent-check]
+    asserts: ["lineage: what a sub-agent earned reaches the whole lineage", "what a sub-agent earned reaches the agent that introduced it"]
+  - text: "An owner MUST be able to express each of the following per policy unit"
+    verified: check
+    targets: [rules-test, subagent-check]
+    asserts: ["all three sub-agent postures are storable", "a second worker goes straight through, and she is not woken", "and then she is asked about a sub-agent again"]
+  - text: "An introduced agent MUST be counted against the attention bound"
+    verified: check
+    targets: [rules-test]
+    asserts: ["the pend budget is a small positive default"]
+  - text: "Revoking a connection MUST revoke every connection it introduced, in the same operation."
+    verified: check
+    targets: [subagent-check]
+    asserts: ["one action revokes the sub-agents with it", "every sub-agent is revoked in her records"]
+  - text: "The authorization server MUST revoke the introducing connection first"
+    verified: check
+    targets: [subagent-check]
+    asserts: ["one action revokes the sub-agents with it"]
+  - text: "An agent revoked by cascade MUST NOT be re-admitted by an introduction from the agent whose revocation ended it"
+    verified: check
+    targets: [subagent-check, introduction-test]
+    asserts: ["and cannot be re-introduced by the agent that sponsored it", "a revoked agent cannot be restored by an introduction"]
+
+draft-gamb-uma4agents-mcp-00:
+  - text: "A resource MUST offer the first and MAY offer the others, and all MUST be generated from one registry of the resource's tools."
+    verified: check
+    targets: [smoke-test, embedded-check]
+    asserts: ["resource metadata (alice): OK", "aauth-resource: OK", "capabilities.extensions names the AS"]
+  - text: "it MUST corroborate the authorization server named in any later challenge against the metadata document"
+    verified: check
+    targets: [multi-owner-check]
+    asserts: ["no two owners are sent to the same authority"]
+  - text: "An enforcement point MUST allow session bootstrap and discovery methods without authorization, and MUST refuse, by default, any method it does not recognise"
+    verified: check
+    targets: [adapter-check, pep-test]
+    asserts: ["it discovers Alice's tools as ordinary MCP", "an unknown method is refused, not forwarded", "an open method passes without authorization"]
+  - text: "MUST use the HTTP binding of [U4ACore] Section 3.2"
+    verified: check
+    targets: [smoke-test, pep-test]
+    asserts: ["gateway challenge: OK", "ext_authz body passthrough: OK", "the header carries every required parameter"]
+  - text: "It therefore MUST NOT attempt to answer a challenge as a JSON-RPC _result_"
+    verified: check
+    targets: [smoke-test]
+    asserts: ["ext_authz body passthrough: OK"]
+  - text: "call it refuses for want of authorization with a JSON-RPC error [JSONRPC] whose code is -32001"
+    verified: check
+    targets: [embedded-check]
+    asserts: ["challenged in-band"]
+  - text: "Its content MUST be identical to what the HTTP binding would have encoded."
+    verified: check
+    targets: [embedded-check]
+    asserts: ["the remediation object is identical in both encodings", "the remediation object names the authorization server and the ticket"]
+  - text: "A refusal for any other reason MUST use code -32002"
+    verified: check
+    targets: [embedded-check]
+    asserts: ["a refusal that is not a challenge arrives as -32002"]
+  - text: "A client implementing this binding MUST recognise both encodings and MUST negotiate identically after either."
+    verified: check
+    targets: [embedded-check]
+    asserts: ["a resource enforced its owner's UMA policy with no gateway"]
+  - text: "The requesting side MUST NOT attempt to satisfy that wait from its own user."
+    verified: check
+    targets: [shim-test]
+    asserts: ["the pend names a principal Bob is not and cannot reach"]
+  - text: "an implementation MUST convey in the human-readable content of the request that the party being waited on is the resource owner"
+    verified: check
+    targets: [shim-test]
+    asserts: ["the wait was handed back to Bob, not held open", "the pend names a principal Bob is not and cannot reach"]
+  - text: "An enforcement point that reads these headers MUST reconcile each against the body and MUST refuse a request on which they disagree."
+    verified: check
+    targets: [pep-test, embedded-check]
+    asserts: ["a header naming an open method over a body naming a protected one is refused", "and a header naming a different tool than the body is refused"]
+  - text: "it MUST require both headers on protected methods rather than checking them only when present"
+    verified: check
+    targets: [pep-test, embedded-check]
+    asserts: ["a tools/call with no routing headers on 2026-07-28 is refused"]
+  - text: "An enforcement point MUST validate the Origin header [RFC6454]"
+    verified: check
+    targets: [pep-test, embedded-check]
+    asserts: ["a request from an origin the resource does not serve is refused"]
+  - text: "it MUST detect that the body it received was truncated and MUST refuse with a reason naming the truncation"
+    verified: check
+    targets: [smoke-test]
+    asserts: ["truncated body: OK"]
+
+draft-gamb-uma4agents-multiparty-00:
+  - text: "An organization MUST publish a charter, versioned, carrying:"
+    verified: check
+    targets: [org-test, org-check]
+    asserts: ["the charter this lab ships is valid", "creating one publishes a charter version rather than editing in place"]
+  - text: "A pattern MUST name a namespace: it MUST NOT place a wildcard in the segment that identifies whose resource it is"
+    verified: check
+    targets: [joint-check, org-test]
+    asserts: ["but not one written as a wildcard, which would reach anybody's", "a role that hands out somebody's personal account is refused"]
+  - text: "The pattern language MUST be segment-wise, with a wildcard matching one segment and never crossing a separator"
+    verified: check
+    targets: [org-test]
+    asserts: ["a wildcard stops at the separator", "and the organization's copy of the matcher is the same object"]
+  - text: "Each role MUST carry a delegation value, one of:"
+    verified: check
+    targets: [org-test]
+    asserts: ["and says whose agents may act on them", "a delegation setting nobody defined is refused"]
+  - text: "There MUST be no field that lengthens an expiry, adds a scope, removes a prohibition, or turns off an ask."
+    verified: check
+    targets: [org-test]
+    asserts: ["no combination of envelope and tier produces wider terms than it started with"]
+  - text: "A member's authorization server MUST apply the envelope when a policy unit over a claimed resource is written, and again whenever the charter changes"
+    verified: check
+    targets: [org-check, org-test]
+    asserts: ["terms over the firm's book that exceed the ceiling are refused", "and the charter's prohibitions are added to them", "the clamp is expressed as a patch, so the store bumps the terms version"]
+  - text: "It MUST NOT apply the envelope only at grant time."
+    verified: check
+    targets: [org-check]
+    asserts: ["the terms document an agent reads names the organization"]
+  - text: "A terms document MUST state that a layer above the owner is in force over its resources"
+    verified: check
+    targets: [org-check, org-test]
+    asserts: ["the terms document an agent reads names the organization", "the envelope that leaves carries the ceiling and the disclosure"]
+  - text: "the member's authorization server MUST ask the organization's decision endpoint once, presenting the facts of the request, and MUST fold the answer into its own"
+    verified: check
+    targets: [org-check]
+    asserts: ["under first-party-only, somebody else's agent is refused the book", "a request her own terms would grant is refused for want of a reason"]
+  - text: "the member MUST be shown the organization's reasons separately from her own"
+    verified: check
+    targets: [org-check]
+    asserts: ["the administrator's own rule refuses what the settings allowed", "and refuses her because of which group she is in"]
+  - text: "An organization's decision MUST NOT widen what the member's policy would decide."
+    verified: check
+    targets: [org-test]
+    asserts: ["a custom rule that tries to *allow* is refused, not ignored"]
+  - text: "the member's authorization server MUST refuse requests over claimed resources; a ceiling nobody can read is not a ceiling"
+    verified: check
+    targets: [org-check]
+    asserts: ["and an organization that cannot be reached does not stop that"]
+  - text: "A request over a resource the charter does not claim MUST NOT be sent to the organization."
+    verified: check
+    targets: [org-test, org-check]
+    asserts: ["her own account is left entirely alone by the charter", "while the same third-party agent still reaches her own accounts"]
+  - text: "It MUST NOT be able to read the member's policy"
+    verified: check
+    targets: [org-check, org-test]
+    asserts: ["and it never sees what any member's policy says", "and nothing else — no purpose, no template id, no prohibition of hers"]
+  - text: "the record MUST name the organization's administrator, and MUST NOT record the decision as the member's"
+    verified: check
+    targets: [org-check]
+    asserts: ["her record says who did it, and that it was not her", "and his approval is NOT recorded as one of hers"]
+  - text: "A member's authorization server MUST NOT enrol her with an organization without her explicit agreement to a specific charter version"
+    verified: check
+    targets: [org-check]
+    asserts: ["standing authority over her agents is not a button press", "and inviting her has made her a member of nothing"]
+  - text: "The organization MUST be able to end a membership and MUST notify the member's authorization server when it does"
+    verified: check
+    targets: [org-check]
+    asserts: ["an administrator can change what a member may reach", "with nothing restarted and no new deployment"]
+  - text: "Leaving MUST withdraw the member's access to claimed resources and the ceiling over her, and MUST leave every narrowing the ceiling applied in place."
+    verified: check
+    targets: [store-test, joint-check]
+    asserts: ["test_tier_edits_bump_the_version", "her own terms survive leaving"]
+  - text: "Such a grant MUST be single-use, bound to a key, short-lived, and over a resource the charter both claims and names for this purpose."
+    verified: check
+    targets: [org-test, org-check]
+    asserts: ["break-glass over a resource the charter does not claim is refused", "including break-glass, when the charter has it"]
+  - text: "The enforcement point MUST recognise it by issuer and MUST introspect it with the organization rather than with the member's authorization server."
+    verified: check
+    targets: [org-check]
+    asserts: ["including break-glass, when the charter has it"]
+  - text: "The member MUST be notified at the moment the window opens, before any data moves."
+    verified: check
+    targets: [org-check]
+    asserts: ["including break-glass, when the charter has it"]
+  - text: "The tally MUST publish, for each jointly held resource, a mandate carrying:"
+    verified: check
+    targets: [joint-check, k8s-policy-test]
+    asserts: ["the tally publishes who is entitled to be counted", "who is entitled to be counted is published"]
+  - text: "An owner MUST NOT appear twice."
+    verified: check
+    targets: [joint-test]
+    asserts: ["a mandate at or above the floor stands"]
+  - text: "A holder's authorization server MUST store the mandate she agreed to, MUST re-ask her when the published mandate differs"
+    verified: check
+    targets: [joint-check]
+    asserts: ["joining without agreeing is refused", "a holder who has written no terms cannot be counted"]
+  - text: "the tally MUST obtain each holder's terms over it from her authorization server and MUST fold them into one terms document"
+    verified: check
+    targets: [joint-check, joint-test]
+    asserts: ["the agent is offered one folded document", "with the shortest expiry either holder set", "only the scopes both of them offer", "and every prohibition either of them wrote"]
+  - text: "MUST answer with a verdict: a JWS [RFC7515] signed by that server with a typ of u4a-verdict+jwt"
+    verified: check
+    targets: [joint-check]
+    asserts: ["and carries a signed verdict from each holder", "each signed by that holder's own authority, not the tally's"]
+  - text: "a holder's authorization server MUST compare the folded document the agent signed against the terms she published, and MUST refuse on any difference in the direction of"
+    verified: check
+    targets: [joint-check]
+    asserts: ["nor one that rewrites who was entitled to be counted"]
+  - text: "A verdict MUST travel from the holder's authorization server to the tally."
+    verified: check
+    targets: [joint-check]
+    asserts: ["each signed by that holder's own authority, not the tally's"]
+  - text: "It MUST NOT be gathered by the requesting agent and presented as a claim."
+    verified: check
+    targets: [joint-check]
+    asserts: ["a grant nobody's authority signed is refused"]
+  - text: "The tally MUST sum the weight of holders whose verdict is allow and compare it to the threshold."
+    verified: check
+    targets: [joint-test]
+    asserts: ["two holders of equal weight, unanimity", "a heavier holder can carry a threshold alone"]
+  - text: "It MUST refuse the moment the weight still outstanding cannot carry the request over the threshold"
+    verified: check
+    targets: [joint-test, joint-check]
+    asserts: ["one refusal ends it without waiting for the other", "a holder who declines stops the request"]
+  - text: "Silence and unreachability MUST both fail closed"
+    verified: check
+    targets: [joint-test]
+    asserts: ["nobody has answered yet", "one of two, under unanimity, is still pending"]
+  - text: "A grant the tally issues MUST carry a joint claim with:"
+    verified: check
+    targets: [joint-check]
+    asserts: ["the grant names the mandate it was issued under", "and carries a signed verdict from each holder"]
+  - text: "An enforcement point protecting a jointly held resource MUST, before allowing a call under such a grant:"
+    verified: check
+    targets: [joint-check]
+    asserts: ["a grant nobody's authority signed is refused", "nor one that rewrites who was entitled to be counted"]
+  - text: "The tally member of the grant is for display and MUST NOT be trusted."
+    verified: check
+    targets: [joint-check]
+    asserts: ["nor one that rewrites who was entitled to be counted"]
+  - text: "A charter claim MUST NOT match a jointly held resource, and a holder's authorization server MUST refuse to apply an organization's envelope or decision to one regardless."
+    verified: check
+    targets: [joint-check]
+    asserts: ["a charter may claim a namespace it does not own", "its ceiling does not clamp terms over the joint account"]
+  - text: "A jointly held resource MUST NOT share a policy unit with any other resource"
+    verified: check
+    targets: [joint-check]
+    asserts: ["a tier cannot mix it with anything else"]
+  - text: "a holder's authorization server MUST NOT expose another holder's pending queue, decisions or record"
+    verified: check
+    targets: [joint-check]
+    asserts: ["a holder cannot read her co-owner's queue", "and carries none of her co-owner's terms"]
+
+draft-gamb-uma4agents-policy-00:
+  - text: "Each policy unit MUST name the resources it covers, MUST name the terms proffered for them"
+    verified: check
+    targets: [rules-test]
+    asserts: ["she can write a tier of her own", "its terms document starts at v1", "and it carries her ask-me choice"]
+  - text: "A resource MUST belong to exactly one policy unit."
+    verified: check
+    targets: [rules-test, store-test]
+    asserts: ["a tier with no resources yet is allowed", "test_tiers_can_be_added_and_removed"]
+  - text: "an authorization server MUST refuse access to an ungoverned resource rather than apply a default"
+    verified: check
+    targets: [store-test]
+    asserts: ["test_tiers_can_be_added_and_removed"]
+  - text: "an implementation MUST NOT offer negation, nesting, or expressions"
+    verified: check
+    targets: [rules-test]
+    asserts: ["a relaxation needs every condition in its rule", "separate rules are alternatives", "a count condition without its argument is unstorable"]
+  - text: "An authorization server MUST refuse to store a rule that would relax a requirement on an observed condition"
+    verified: check
+    targets: [rules-test, first-party-check]
+    asserts: ["only decisions Alice made herself may relax", "nor smuggled in beside a standing condition", "a rule relaxing on what the agent showed is still unstorable"]
+  - text: "An implementation MUST NOT class any condition as relaxing unless it is one of the following kinds"
+    verified: check
+    targets: [rules-test]
+    asserts: ["and every one of those is in RELAXING_CONDITIONS"]
+  - text: "An implementation MUST keep the record of grants it made and the record of approvals the owner gave apart"
+    verified: check
+    targets: [store-test, org-check]
+    asserts: ["standing: what she approved is a separate list", "and his approval is NOT recorded as one of hers"]
+  - text: "An authorization server MUST evaluate a policy unit's rules in two passes"
+    verified: check
+    targets: [rules-test]
+    asserts: ["a restriction beats a relaxation that also matched", "the strictest match wins, whatever order the rules are in"]
+  - text: "A restriction that matches MUST win over a relaxation that also matched"
+    verified: check
+    targets: [rules-test]
+    asserts: ["a restriction beats a relaxation that also matched"]
+  - text: "MUST be treated as matching if its effect is ask or refuse and as not matching if its effect is auto"
+    verified: check
+    targets: [rules-test]
+    asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching"]
+  - text: "An authorization server MUST NOT evaluate any rule until it has established that the requesting agent holds a standing connection"
+    verified: check
+    targets: [first-party-check, assurance-check]
+    asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate"]
+  - text: "An authorization server MUST publish the conditions its rules may name, and for each MUST state whether it may relax."
+    verified: check
+    targets: [intent-check]
+    asserts: ["all four are offered to her policy editor"]
+  - text: "An implementation MUST derive each from a check that has run and passed, MUST NOT accept any of them from the requesting side's own assertion, and MUST NOT combine them into a single score."
+    verified: check
+    targets: [rules-test]
+    asserts: ["nothing is granted by construction — binding starts at 0", "an agent cannot assert its own level", "there is no composite score to game"]
+  - text: "A directory that cannot be resolved MUST leave the agent at level 1, not level 0."
+    verified: check
+    targets: [rules-test, assurance-check]
+    asserts: ["a directory that did not check out leaves the claim self-asserted", "metadata that does not resolve buys nothing"]
+  - text: "An implementation MUST cache a directory hit and MUST NOT cache a miss"
+    verified: check
+    targets: [assurance-check]
+    asserts: ["and is still worth nothing on the second try"]
+  - text: "Assurance MUST NOT decide admission."
+    verified: check
+    targets: [assurance-check]
+    asserts: ["the nameless agent was admitted too — assurance is not a gate"]
+  - text: "An authorization server MUST let the owner claim an operator origin as her own, and MUST class an agent as the owner's own only where both hold"
+    verified: check
+    targets: [first-party-check]
+    asserts: ["her origin shows as hers", "her operator published its key", "an attested agent that is not hers is still asked"]
+  - text: "It MUST NOT skip first contact, and it MUST NOT beat a restriction that also matched."
+    verified: check
+    targets: [first-party-check]
+    asserts: ["first contact still pends, and she connects it", "but the trade tier still asks her about it"]
+  - text: "The owner MUST be able to disclaim an origin."
+    verified: check
+    targets: [first-party-check]
+    asserts: ["the origin is no longer hers", "and its connection survives — the claim bought friction, not access"]
+  - text: "An authorization server MUST bound the number of pending requests from agents that hold no standing connection."
+    verified: check
+    targets: [assurance-check]
+    asserts: ["and the ones past the cap are refused with a reason, not queued"]
+  - text: "Past the bound it MUST refuse with 429 and error of request_denied, and MUST NOT queue."
+    verified: check
+    targets: [assurance-check]
+    asserts: ["and the ones past the cap are refused with a reason, not queued"]
+  - text: "An agent that holds an active connection MUST NOT be counted against the bound and MUST NOT be refused for it."
+    verified: check
+    targets: [assurance-check]
+    asserts: ["an established agent is unaffected by the queue being full"]
+  - text: "The bound MUST be applied in two lanes, split on whether the agent is at level 2 on the accountability axis."
+    verified: check
+    targets: [assurance-check]
+    asserts: ["a first contact she could name is not refused for budget", "and it is waiting for her, in its own lane"]
+  - text: "The owner MUST be able to block an operator by origin."
+    verified: check
+    targets: [assurance-check, store-test]
+    asserts: ["blocking it revokes every agent it runs, in one step", "test_blocked_operators_round_trip"]
+  - text: "Blocking MUST end every active connection held by an agent of that operator and MUST invalidate the grants under them, in one step"
+    verified: check
+    targets: [assurance-check]
+    asserts: ["blocking it revokes every agent it runs, in one step", "and an agent of that operator is refused by name"]
+  - text: "Unblocking MUST NOT restore connections that blocking ended."
+    verified: check
+    targets: [store-test]
+    asserts: ["test_blocked_operators_round_trip"]
+  - text: "An authorization server MUST assign the identifier of a negotiation once, when the permission ticket is first created, and MUST carry it unchanged through every ticket rotation."
+    verified: check
+    targets: [store-test]
+    asserts: ["negotiation outlives the ticket that indexed it"]
+  - text: "An authorization server MUST record a refusal — by policy, by a blocked operator, by the attention bound, or by the owner — with the same prominence as a grant."
+    verified: check
+    targets: [intent-check, assurance-check]
+    asserts: ["one agent's trajectory is one agent's", "and an agent of that operator is refused by name"]
+  - text: "Every entry in the record that concerns a requesting agent MUST carry that agent's connection handle as an indexed attribute of the row"
+    verified: check
+    targets: [store-test, intent-check]
+    asserts: ["test_the_ledger_names_the_agent", "one agent's trajectory is one agent's", "and holds none of the other's"]
+  - text: "An authorization server MUST record such an entry without an attribution rather than invent one."
+    verified: check
+    targets: [intent-check]
+    asserts: ["a decline is recorded with nobody to name"]
+  - text: "the record MUST say who, and the decision MUST NOT be written as the owner's"
+    verified: check
+    targets: [org-check]
+    asserts: ["her record says who did it, and that it was not her", "her record says which of them it was"]
+  - text: "the authorization server MUST resolve the agent from the negotiation and MUST NOT accept a handle from the report"
+    verified: check
+    targets: [store-test, intent-check]
+    asserts: ["test_an_allowed_call_can_be_traced_to_its_agent", "every call is filed under the tier it was made against"]
+  - text: "An implementation MUST make the difference visible"
+    verified: check
+    targets: [assurance-check, rules-test]
+    asserts: ["the operator's own directory raised accountability to 2", "the operator publishing this agent's key is worth more than saying so"]
+
+draft-gamb-uma4agents-terms-00:
+  - text: "MUST serve, for each set of terms it proffers, a document at a URI that resolves for as long as the authorization server serves the owner"
+    verified: check
+    targets: [multi-owner-check, store-test]
+    asserts: ["and an agent holding no token can dereference them", "terms: a published version cannot be rewritten"]
+  - text: "A terms document MUST carry:"
+    verified: check
+    targets: [rules-test]
+    asserts: ["every shipped tier's rules are valid", "its terms document starts at v1"]
+  - text: "the agreement MUST name the operation proposed"
+    verified: check
+    targets: [intent-check, shim-test]
+    asserts: ["her trade tier marks the prohibitions it actually refuses", "tier 3 pends, Alice approves, trade executes"]
+  - text: "The content of a terms document at a given template_id MUST NOT change."
+    verified: check
+    targets: [store-test]
+    asserts: ["terms: a published version cannot be rewritten"]
+  - text: "An authorization server that changes the owner's terms MUST issue a new template_id and MUST continue to serve every previous version."
+    verified: check
+    targets: [store-test]
+    asserts: ["policy: an owner edit produces a new template version", "terms: a published version cannot be rewritten"]
+  - text: "An authorization server MUST serve a terms document as JSON, and MUST serve, at the same URI, a plain-language representation"
+    verified: check
+    targets: [intent-check]
+    asserts: ["the terms document is served as JSON, as HTML and as JSON-LD at one URI"]
+  - text: "The required claim MUST additionally carry a terms_template member"
+    verified: check
+    targets: [shim-test, intent-check]
+    asserts: ["terms were rendered inside the agent", "a rewritten purpose ends the negotiation"]
+  - text: "The authorization server MUST offer exactly one set of terms per demand."
+    verified: check
+    targets: [joint-check]
+    asserts: ["the agent is offered one folded document"]
+  - text: "The JWS protected header MUST carry exactly one of:"
+    verified: check
+    targets: [flow-check]
+    asserts: ["differed across identity regimes"]
+  - text: "The authorization server MUST verify the JWS against the key so named, and MUST refuse an agreement carrying neither."
+    verified: check
+    targets: [intent-check, flow-check]
+    asserts: ["a rewritten purpose ends the negotiation", "differed across identity regimes"]
+  - text: "The agreement MUST echo, unchanged, the template_id, terms_uri, purpose, nonce and family of the proffered template"
+    verified: check
+    targets: [intent-check]
+    asserts: ["a rewritten purpose ends the negotiation"]
+  - text: "It MUST carry an expires_in no greater than the template's, and a prohibited array that is a superset of the template's."
+    verified: check
+    targets: [intent-check]
+    asserts: ["so does dropping one of her prohibitions", "and so does helping itself to a longer expiry", "binding itself to more than she asked is allowed"]
+  - text: "the agreement MUST carry an operation member naming the operation proposed and the parameters proposed for it"
+    verified: check
+    targets: [shim-test]
+    asserts: ["tier 3 pends, Alice approves, trade executes"]
+  - text: "The agreement MAY carry the following, and MUST NOT carry anything else that affects the decision:"
+    verified: check
+    targets: [intent-check]
+    asserts: ["but it cannot buy anything either", "but citing one can never widen access"]
+  - text: "The authorization server MUST bound its length, MUST record it, and MUST NOT parse it"
+    verified: check
+    targets: [intent-check]
+    asserts: ["a reason past the cap is refused rather than stored", "markup in a reason is stored verbatim, to be escaped on render", "her purpose is still hers, not the agent's"]
+  - text: "The authorization server MUST record the citation and MUST NOT dereference it."
+    verified: check
+    targets: [intent-check]
+    asserts: ["the citation is on the record beside her terms", "and it is kept as a reference, not as text she has to trust"]
+  - text: "It MUST NOT read the content of either."
+    verified: check
+    targets: [intent-check, rules-test]
+    asserts: ["but it cannot buy anything either", "a stated reason costs nothing", "citing one costs nothing"]
+  - text: "the authorization server MUST return a receipt alongside the token, as a member named receipt"
+    verified: check
+    targets: [intent-check]
+    asserts: ["the grant returns a receipt countersigned by her authority"]
+  - text: "The receipt MUST be a JWS signed by the authorization server with a typ of myterms-receipt+jws, and MUST carry:"
+    verified: check
+    targets: [intent-check]
+    asserts: ["the grant returns a receipt countersigned by her authority", "and the receipt embeds the agreement the agent signed"]
+  - text: "A requesting side that will not agree to the proffered terms MUST be able to say so."
+    verified: check
+    targets: [intent-check]
+    asserts: ["a decline is recorded with nobody to name"]
+  - text: "An authorization server MUST accept a decline parameter with the value true at the token endpoint"
+    verified: check
+    targets: [intent-check]
+    asserts: ["a decline is recorded with nobody to name"]
+  - text: "An authorization server MUST record such a refusal without attributing it to a party."
+    verified: check
+    targets: [intent-check]
+    asserts: ["a decline is recorded with nobody to name"]
+  - text: "MUST be computed over the agreement exactly as transmitted, not over a re-serialization of its claims"
+    verified: check
+    targets: [intent-check]
+    asserts: ["and the record keeps it beside what she dictated"]
+  - text: "An authorization server MUST NOT place anything in a terms document that identifies the owner beyond what the resource identifier already discloses."
+    verified: check
+    targets: [multi-owner-check]
+    asserts: ["terms template ids name their owner", "and an agent holding no token can dereference them"]

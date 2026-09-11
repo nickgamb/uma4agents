@@ -161,6 +161,25 @@ def main(base: str, upstream: str | None) -> int:
             check("and it is the same one the challenge named",
                   any(named.rstrip("/") == s.rstrip("/") for s in servers),
                   f"challenge said {named}, document says {servers}")
+        # The authority the resource names says what it speaks. UMA 2.0 Grant
+        # section 4 has a server that supports a profile advertise its URI;
+        # an agent reading this before it has sent anything learns that the
+        # party behind the challenge negotiates the way this profile says.
+        for as_uri in servers[:1]:
+            meta = {}
+            for path in ("/.well-known/uma2-configuration",
+                         "/.well-known/uma4agents-configuration"):
+                try:
+                    r = client.get(as_uri.rstrip("/") + path, timeout=10.0)
+                    if r.status_code == 200:
+                        meta = r.json()
+                        break
+                except (httpx.HTTPError, ValueError):
+                    continue
+            profiles = meta.get("uma_profiles_supported") or []
+            check("and that authorization server says it implements this profile",
+                  "https://u4a.ai/spec/core/1.0" in profiles,
+                  f"uma_profiles_supported: {profiles or 'absent'}")
 
         print("\n== 3 · A grant is not taken on faith ==")
         bad = mcp_call(client, base, tool,

@@ -1099,8 +1099,8 @@ Coverage:
 : Every normative requirement in this document is exercised by an automated
   check, except those addressed to deployments or to bindings rather than to this
   profile's own components. The register at
-  https://u4a.ai/spec/conformance/ names, for each requirement, the check that
-  verifies it and the assertion that check prints.
+  https://u4a.ai/spec/conformance.yaml names, for each requirement, the check
+  that verifies it and the assertion that check prints.
 
 Licensing:
 : Apache 2.0.

@@ -1793,8 +1793,8 @@ document can be met and to find the ones that cannot.</t>
     <t>Every normative requirement in this document is exercised by an automated
 check, except those addressed to deployments or to bindings rather than to this
 profile's own components. The register at
-https://u4a.ai/spec/conformance/ names, for each requirement, the check that
-verifies it and the assertion that check prints.</t>
+https://u4a.ai/spec/conformance.yaml names, for each requirement, the check
+that verifies it and the assertion that check prints.</t>
   </dd>
   <dt>Licensing:</dt>
   <dd>
@@ -2195,16 +2195,17 @@ gTZJiV2yDsEGBk7H9dkde1Sot6IXSgiaS7NLVqMtYqF9INIb37iDR3rgqvgE
 lI0Q8XRFy9bioCops7WuIGja0zdsGfORZKDWCm4ODYabLJI1ndEXJUAziPhp
 tJL4YqQXVJCzc22+wlNt9FSdVSGeJb3kzPpHNrUlvNyZftyKnIiGMQlwyeHj
 ouzgDr667HxoToGqxAHNip3lVHKhB+iiVnCvM/YSLTgoMUxfi9pw/0zVa/FZ
-75qRR5GP8KCBI3xLdbWJXC87NAoYdSgc3PCWhEkOBH+TcUDLTdVO9abxp1oG
-5XJR6q2zV++CrdppFPfz4VaIbz8pl/Dp6nPeWmuk0hRR/lB6ATj59OTka0in
-Z8T23KzXgCpjy+ypL2cuRE1grE8WivkHDWGyIMzIDQk4Lpa5MyF2YYtxQvqA
-iz5HIAIKuNhpQmFE5egSIjYcdrDjtVD2r7Km32X+qEB7m4ZdxeMyGSk5wUFz
-m7KSalj24E+WkMVVkZ8z8cjzqTcALxb5VxNuRTIxie7DTNhuzaDuaQRMErRi
-4AgKMGsk1f9ID5D5x4L5NdoRftc2mzU3jdx06tlf6CZc6Y7Pi8xiAbH6S+Qo
-TncSt6jC6KwBzlvxy8L+d1LNgc1x+/DokPsM41QOrWKO7TCFf/P0xBnDM6zS
-P3XgnmQjS80bKCo1PBmahLPZp8mqQEuactnFOoR3Lopm/MkZLJsYqRGCHXpf
-oykH3KTaJpUxiMO2RVEiUaOPWr4IU25N30QrKgRwaIP+kpOyormOq5/Z7tHf
-bdb608Nicy96YYi9XWfbqskkrpMMjUQOD5G5gfSHB+LOkv8N1OVo6+fBAAA=
+75qRR5GP8KCBI3xLdbWJXC87NAoYdSgc3HC2zVaVhEoOBIOTcVDLTddO9qY5
+cAFlmI9Sj509exdw1W6jdH/KB1whxv2kXMKvq895e62RTlNU+UPpB+Bk1JOT
+ryGhnhHrc8NeA6uMLbVfATl3IWoEY72yUNA/aAqTBaFGbkrAsbHMnQuxC12M
+k9IHXPg5AhNQ0MVOIwojKkeYELXh0IMdsYXSf5U3/e4GiIq0t2nYWTwulZGy
+Exw2tykrqYhlL/5kCXlcFfk5E4+8n3oDAGORfzXhdiQTk+o+1IQt1wxqn0YA
+JUE7Bo6iALdGkv2P9ACZgCycX6Ml4Xdts1lz48hNp979hW7Ele76vMgsHhCr
+wESO43SncYs6jM4b4NwVvyzsgScVHdggtw+PDrnXME7m0Erm2BZTCDhPTxwy
+PMNq/VOH7klGstTcgSJTw9OhSUCbjZqsCrSlKZddrEd496Jwxp+ewfKJ0Roh
+4KH3dZpyyE2qrVIZhzhsXRQlEzUCqSWMMOfW9E20o0IQhzboLzktK5rruAqa
+7R7/3WatP0EsNvmiF4b423W2rZpMYjvJ0FDkEBGZHEiBeDDuLPnf43XbDevB
+AAA=
 
 -->
 

@@ -35,6 +35,56 @@
 # nav links straight there. This is so trimming the URL by hand still lands
 # somewhere real. Declared here rather than through createRedirect because this
 # file is the one that gets read to find out what the host does.
+# The identifying URI of each document in the specification set, as UMA 2.0
+# Grant section 4 asks a profile to have and an authorization server to
+# advertise. They dereference to the document an implementer reading
+# uma_profiles_supported needs; the draft name behind each moves with
+# revisions, the URI does not.
+[[redirects]]
+  from = "/spec/core/1.0"
+  to = "/spec/draft-gamb-uma4agents-core-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/terms/1.0"
+  to = "/spec/draft-gamb-uma4agents-terms-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/fedauthz/1.0"
+  to = "/spec/draft-gamb-uma4agents-fedauthz-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/policy/1.0"
+  to = "/spec/draft-gamb-uma4agents-policy-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/lineage/1.0"
+  to = "/spec/draft-gamb-uma4agents-lineage-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/multiparty/1.0"
+  to = "/spec/draft-gamb-uma4agents-multiparty-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec/mcp/1.0"
+  to = "/spec/draft-gamb-uma4agents-mcp-00.html"
+  status = 302
+
+[[redirects]]
+  from = "/spec"
+  to = "/docs/reference/specification/"
+  status = 301
+
+[[redirects]]
+  from = "/spec/"
+  to = "/docs/reference/specification/"
+  status = 301
+
 [[redirects]]
   from = "/docs"
   to = "/docs/overview/"

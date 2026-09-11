@@ -544,6 +544,7 @@ spec:
 	@mkdir -p site/static/spec
 	@docker run --rm -v "$(PWD)/spec":/spec -v "$(PWD)/site/static/spec":/out \
 		u4a-spec:local bash /spec/render.sh
+	@cp spec/conformance.yaml site/static/spec/conformance.yaml
 
 ## spec-check: the requirements register — every normative statement in the
 ## drafts is mapped to the check that proves it, and every check named exists.
