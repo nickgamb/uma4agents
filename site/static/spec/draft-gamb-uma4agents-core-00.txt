@@ -3,9 +3,10 @@
 
 
 Network Working Group                                            N. Gamb
-Internet-Draft                                               Independent
-Intended status: Standards Track                       11 September 2026
-Expires: 15 March 2027
+Internet-Draft                                            MindGarden LLC
+Intended status: Standards Track                                E. Maler
+Expires: 15 March 2027                                      Venn Factory
+                                                       11 September 2026
 
 
       User-Managed Access (UMA) 2.0 Profile for Autonomous Agents
@@ -52,8 +53,7 @@ Copyright Notice
 
 
 
-
-Gamb                      Expires 15 March 2027                 [Page 1]
+Gamb & Maler              Expires 15 March 2027                 [Page 1]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 2]
+Gamb & Maler              Expires 15 March 2027                 [Page 2]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -133,9 +133,9 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
      15.1.  Normative References . . . . . . . . . . . . . . . . . .  25
      15.2.  Informative References . . . . . . . . . . . . . . . . .  27
    Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  29
-     A.1.  UMA for Agents Reference Implementation . . . . . . . . .  29
+     A.1.  UMA for Agents Reference Implementation . . . . . . . . .  30
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  30
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  30
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  31
 
 1.  Introduction
 
@@ -165,7 +165,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 3]
+Gamb & Maler              Expires 15 March 2027                 [Page 3]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 4]
+Gamb & Maler              Expires 15 March 2027                 [Page 4]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 5]
+Gamb & Maler              Expires 15 March 2027                 [Page 5]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 6]
+Gamb & Maler              Expires 15 March 2027                 [Page 6]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -389,7 +389,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 7]
+Gamb & Maler              Expires 15 March 2027                 [Page 7]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 8]
+Gamb & Maler              Expires 15 March 2027                 [Page 8]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -501,7 +501,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                 [Page 9]
+Gamb & Maler              Expires 15 March 2027                 [Page 9]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -557,7 +557,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 10]
+Gamb & Maler              Expires 15 March 2027                [Page 10]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -613,7 +613,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 11]
+Gamb & Maler              Expires 15 March 2027                [Page 11]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 12]
+Gamb & Maler              Expires 15 March 2027                [Page 12]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -725,7 +725,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 13]
+Gamb & Maler              Expires 15 March 2027                [Page 13]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -781,7 +781,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 14]
+Gamb & Maler              Expires 15 March 2027                [Page 14]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -837,7 +837,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 15]
+Gamb & Maler              Expires 15 March 2027                [Page 15]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -893,7 +893,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 16]
+Gamb & Maler              Expires 15 March 2027                [Page 16]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -949,7 +949,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 17]
+Gamb & Maler              Expires 15 March 2027                [Page 17]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1005,7 +1005,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 18]
+Gamb & Maler              Expires 15 March 2027                [Page 18]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1061,7 +1061,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 19]
+Gamb & Maler              Expires 15 March 2027                [Page 19]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1117,7 +1117,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 20]
+Gamb & Maler              Expires 15 March 2027                [Page 20]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1173,7 +1173,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 21]
+Gamb & Maler              Expires 15 March 2027                [Page 21]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1229,7 +1229,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 22]
+Gamb & Maler              Expires 15 March 2027                [Page 22]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1285,7 +1285,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 23]
+Gamb & Maler              Expires 15 March 2027                [Page 23]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1341,7 +1341,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 24]
+Gamb & Maler              Expires 15 March 2027                [Page 24]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1397,7 +1397,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 25]
+Gamb & Maler              Expires 15 March 2027                [Page 25]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1453,7 +1453,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb                      Expires 15 March 2027                [Page 26]
+Gamb & Maler              Expires 15 March 2027                [Page 26]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1468,14 +1468,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
    [U4AFedAuthz]
-              Gamb, N., "Federated Authorization for Autonomous Agents",
-              Work in Progress, Internet-Draft, draft-gamb-uma4agents-
-              fedauthz-00, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-gamb-uma4agents-fedauthz-00>.
+              Gamb, N. and E. Maler, "Federated Authorization for
+              Autonomous Agents", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-fedauthz-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-fedauthz-00>.
 
-   [U4ATerms] Gamb, N., "Owner-Proffered Terms for User-Managed Access
-              (UMA) 2.0", Work in Progress, Internet-Draft, draft-gamb-
-              uma4agents-terms-00, 2026,
+   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://datatracker.ietf.org/doc/html/draft-gamb-
               uma4agents-terms-00>.
 
@@ -1500,19 +1501,25 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
               protocol-02>.
 
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 27]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    [I-D.ietf-oauth-client-id-metadata-document]
               Parecki, A. and E. Smith, "OAuth Client ID Metadata
               Document", Work in Progress, Internet-Draft, draft-ietf-
               oauth-client-id-metadata-document-02, 6 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               client-id-metadata-document-02>.
-
-
-
-Gamb                      Expires 15 March 2027                [Page 27]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    [I-D.ietf-oauth-identity-assertion-authz-grant]
               Parecki, A., McGuinness, K., and B. Campbell, "Identity
@@ -1553,48 +1560,50 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
               September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 28]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    [RFC9635]  Richer, J., Ed. and F. Imbault, "Grant Negotiation and
               Authorization Protocol (GNAP)", RFC 9635,
               DOI 10.17487/RFC9635, October 2024,
               <https://www.rfc-editor.org/rfc/rfc9635>.
 
-   [U4ALAB]   Gamb, N., "UMA for Agents: a reference implementation",
-              2026, <https://github.com/nickgamb/uma4agents>.
-
-
-
-
-
-Gamb                      Expires 15 March 2027                [Page 28]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
 
    [U4ALineage]
-              Gamb, N., "Agent Lineage for User-Managed Access (UMA)
-              2.0", Work in Progress, Internet-Draft, draft-gamb-
-              uma4agents-lineage-00, 2026,
+              Gamb, N. and E. Maler, "Agent Lineage for User-Managed
+              Access (UMA) 2.0", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-lineage-00, 2026,
               <https://datatracker.ietf.org/doc/html/draft-gamb-
               uma4agents-lineage-00>.
 
-   [U4AMCP]   Gamb, N., "Model Context Protocol Binding for User-Managed
-              Access (UMA) 2.0", Work in Progress, Internet-Draft,
-              draft-gamb-uma4agents-mcp-00, 2026,
+   [U4AMCP]   Gamb, N. and E. Maler, "Model Context Protocol Binding for
+              User-Managed Access (UMA) 2.0", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-mcp-00, 2026,
               <https://datatracker.ietf.org/doc/html/draft-gamb-
               uma4agents-mcp-00>.
 
    [U4AMultiParty]
-              Gamb, N., "Multi-Party Authorization for User-Managed
-              Access (UMA) 2.0", Work in Progress, Internet-Draft,
-              draft-gamb-uma4agents-multiparty-00, 2026,
+              Gamb, N. and E. Maler, "Multi-Party Authorization for
+              User-Managed Access (UMA) 2.0", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
               <https://datatracker.ietf.org/doc/html/draft-gamb-
               uma4agents-multiparty-00>.
 
    [U4APolicy]
-              Gamb, N., "Owner Policy, Assurance and Attention for User-
-              Managed Access (UMA) 2.0", Work in Progress, Internet-
-              Draft, draft-gamb-uma4agents-policy-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              Gamb, N. and E. Maler, "Owner Policy, Assurance and
+              Attention for User-Managed Access (UMA) 2.0", Work in
+              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
+              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
               uma4agents-policy-00>.
 
    [UMAClaims2010]
@@ -1607,6 +1616,16 @@ Appendix A.  Implementation Status
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
 
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 29]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 A.1.  UMA for Agents Reference Implementation
 
    Organization:  Independent
@@ -1617,14 +1636,6 @@ A.1.  UMA for Agents Reference Implementation
       and requesting agents at both identity levels.  It runs under
       container orchestration and on a single host, against both an in-
       memory and a replicated store.
-
-
-
-
-Gamb                      Expires 15 March 2027                [Page 29]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    Level of maturity:  Research.  The implementation exists to establish
       that the requirements in this document can be met and to find the
@@ -1649,12 +1660,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 Acknowledgments
 
-   The cross-principal topology this profile depends on, and the claims-
-   gathering loop it transforms, are the work of the authors of
-   [UMAGrant] and [UMAFedAuthz].  The idea that a resource owner might
-   proffer terms rather than receive them appears in UMA's own 2010 work
-   on access authorization claims [UMAClaims2010], and this profile is
-   its descendant.
+   This profile rests on [UMAGrant] and [UMAFedAuthz], and on the decade
+   of Kantara UMA Work Group discussion behind them.  The idea that a
+   resource owner might proffer terms rather than receive them appears
+   in UMA's own 2010 work on access authorization claims
+   [UMAClaims2010].
 
    [I-D.hardt-aauth-protocol] supplied the agent identity and key-
    binding mechanics this profile composes with, and the observation
@@ -1664,17 +1674,63 @@ Acknowledgments
    [I-D.ietf-oauth-rar-metadata-remediation] supplied the remediation
    payload that Section 3.3 extends by two members.
 
-Author's Address
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 30]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
+Authors' Addresses
 
    Nick Gamb
-   Independent
+   MindGarden LLC
    Email: nickgamb@gmail.com
 
 
+   Eve Maler
+   Venn Factory
 
 
 
 
 
 
-Gamb                      Expires 15 March 2027                [Page 30]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 31]

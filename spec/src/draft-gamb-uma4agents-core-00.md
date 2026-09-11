@@ -13,8 +13,12 @@ author:
   -
     ins: N. Gamb
     name: Nick Gamb
-    organization: Independent
+    organization: MindGarden LLC
     email: nickgamb@gmail.com
+  -
+    ins: E. Maler
+    name: Eve Maler
+    organization: Venn Factory
 normative:
   RFC6749:
   RFC6750:
@@ -59,6 +63,8 @@ normative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
@@ -67,6 +73,8 @@ normative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
@@ -84,6 +92,8 @@ informative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-policy-00
@@ -92,6 +102,8 @@ informative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-lineage-00
@@ -100,6 +112,8 @@ informative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
@@ -108,6 +122,8 @@ informative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-mcp-00
@@ -125,6 +141,8 @@ informative:
     author:
       - ins: N. Gamb
         name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
     date: 2026
     target: https://github.com/nickgamb/uma4agents
 
@@ -1073,11 +1091,10 @@ Notes:
 # Acknowledgments
 {:numbered="false"}
 
-The cross-principal topology this profile depends on, and the claims-gathering
-loop it transforms, are the work of the authors of {{UMAGrant}} and
-{{UMAFedAuthz}}. The idea that a resource owner might proffer terms rather than
-receive them appears in UMA's own 2010 work on access authorization claims
-{{UMAClaims2010}}, and this profile is its descendant.
+This profile rests on {{UMAGrant}} and {{UMAFedAuthz}}, and on the decade of
+Kantara UMA Work Group discussion behind them. The idea that a resource owner
+might proffer terms rather than receive them appears in UMA's own 2010 work on
+access authorization claims {{UMAClaims2010}}.
 
 {{I-D.hardt-aauth-protocol}} supplied the agent identity and key-binding
 mechanics this profile composes with, and the observation that its resource

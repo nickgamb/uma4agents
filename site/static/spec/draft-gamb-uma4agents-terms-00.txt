@@ -1,0 +1,728 @@
+
+
+
+
+Network Working Group                                            N. Gamb
+Internet-Draft                                            MindGarden LLC
+Intended status: Standards Track                                E. Maler
+Expires: 15 March 2027                                      Venn Factory
+                                                       11 September 2026
+
+
+        Owner-Proffered Terms for User-Managed Access (UMA) 2.0
+                     draft-gamb-uma4agents-terms-00
+
+Abstract
+
+   This document extends the claims-gathering loop of the User-Managed
+   Access (UMA) 2.0 Grant so that the authorization server proffers the
+   _content_ of the claim it requires, rather than only naming
+   acceptable claim formats.
+
+   The resource owner's authorization server publishes a terms document
+   — purpose, scope, duration and prohibitions — at a persistent,
+   dereferenceable URI.  The requesting side echoes that document, signs
+   it with the key it will later prove possession of, and presents it as
+   the claim token.  The grant returns a receipt, counter-signed by the
+   authorization server, embedding the signed agreement, so that both
+   parties hold identical records of what was agreed.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 March 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 1]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Relationship to the Set . . . . . . . . . . . . . . . . .   3
+     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
+   2.  The Terms Document  . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Versions Are Immutable  . . . . . . . . . . . . . . . . .   4
+     2.2.  Representations . . . . . . . . . . . . . . . . . . . . .   4
+   3.  Proffering  . . . . . . . . . . . . . . . . . . . . . . . . .   5
+   4.  The Agreement . . . . . . . . . . . . . . . . . . . . . . . .   6
+     4.1.  The Signing Key . . . . . . . . . . . . . . . . . . . . .   6
+     4.2.  Claims  . . . . . . . . . . . . . . . . . . . . . . . . .   6
+     4.3.  What the Requesting Side May Author . . . . . . . . . . .   7
+   5.  The Receipt . . . . . . . . . . . . . . . . . . . . . . . . .   8
+   6.  Declining . . . . . . . . . . . . . . . . . . . . . . . . . .   8
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+     7.1.  The Agreement Binds the Key That Will Act . . . . . . . .   9
+     7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .   9
+     7.3.  Terms Are Not a Sandbox . . . . . . . . . . . . . . . . .   9
+   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
+     8.1.  The Roster Is the Owner's . . . . . . . . . . . . . . . .  10
+     8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  10
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  10
+     9.1.  Media Type Registration . . . . . . . . . . . . . . . . .  10
+     9.2.  URN Sub-namespace Registration  . . . . . . . . . . . . .  11
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
+
+1.  Introduction
+
+   [UMAGrant] Section 3.3.4 lets an authorization server tell a client
+   what claims it needs by naming claim types and acceptable formats.
+   The client then gathers those claims from wherever it can and
+   presents them.  The authorization server asks _what can you tell me
+   about yourself_.
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 2]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   This extension adds the other direction.  The authorization server
+   proffers a document stating what the resource owner requires of
+   anyone who wants this access, and the claim the requesting side
+   returns is that document, signed.  The authorization server asks
+   _will you agree to this_.
+
+   The pattern is that of [IEEE7012], in which an individual proffers
+   machine-readable terms as first party and a counterparty's agent
+   agrees to them as second party.  This document extends it from
+   privacy terms to terms of access, and carries the agreement inside a
+   grant so that the terms are conditions on an authorization rather
+   than a record kept beside one.  It is also a direct descendant of
+   UMA's own 2010 work [UMAClaims2010], which defined a "requesting
+   party policy" claim for exactly this purpose and which the 2.0
+   specifications did not carry forward.
+
+1.1.  Relationship to the Set
+
+   This document extends [UMAGrant] and is REQUIRED to implement
+   alongside [U4ACore].  It is separable: a UMA deployment with no
+   agents in it can adopt this extension on its own, and nothing here
+   depends on the requesting side being autonomous.
+
+   Its identifying URI, for the uma_profiles_supported metadata of
+   [UMAGrant] Section 4, is https://u4a.ai/spec/terms/1.0.
+
+1.2.  Notational Conventions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   The notation s256(x) is as defined in [U4ACore].
+
+2.  The Terms Document
+
+   An authorization server implementing this extension MUST serve, for
+   each set of terms it proffers, a document at a URI that resolves for
+   as long as the authorization server serves the owner whose terms they
+   are.
+
+   A terms document MUST carry:
+
+   template_id:  REQUIRED.  A stable identifier for this version of
+      these terms, namespaced by owner.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 3]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   purpose:  REQUIRED.  What the access is for, in the owner's words.
+
+   scope:  REQUIRED.  An array of scope strings the terms cover.
+
+   expires_in:  REQUIRED.  The maximum lifetime, in seconds, of access
+      granted under these terms.
+
+   prohibited:  REQUIRED.  An array of identifiers naming what the
+      requesting side undertakes not to do.  MAY be empty.
+
+   proffered_by:  REQUIRED.  The issuer identifier of the authorization
+      server that proffers them.
+
+   A terms document MAY carry any other member.  Two are defined here:
+
+   per_operation:  OPTIONAL.  Boolean.  Where true, a grant under these
+      terms is bound to one operation and spent once, as [U4ACore]
+      Section 7.2, and the agreement MUST name the operation proposed.
+
+   constraints:  OPTIONAL.  An object narrowing what the scope reaches.
+
+2.1.  Versions Are Immutable
+
+   The content of a terms document at a given template_id MUST NOT
+   change.  An authorization server that changes the owner's terms MUST
+   issue a new template_id and MUST continue to serve every previous
+   version.
+
+   An agreement is a signature over a document.  A document that can
+   change after it is signed makes every agreement over it unverifiable
+   later, which removes the only property that distinguishes this from a
+   consent dialog.
+
+2.2.  Representations
+
+   An authorization server MUST serve a terms document as JSON, and MUST
+   serve, at the same URI, a plain-language representation intended for
+   a person, selected by HTTP content negotiation.  It SHOULD
+   additionally serve a representation in a rights expression language
+   such as [ODRL].
+
+   The three representations satisfy [IEEE7012] Sections 4.4.1 and
+   4.4.2.  The requirement that they share a URI is what makes the
+   human-readable statement and the machine-readable one the same terms
+   rather than two documents that may drift.
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 4]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+3.  Proffering
+
+   Where the authorization server requires agreement to terms before it
+   will decide, it responds to a ticket presentation with need_info as
+   [UMAGrant] Section 3.3.6, carrying a required claim whose claim_type
+   is urn:uma4agents:claim:myterms-agreement and whose
+   claim_token_format array includes urn:uma4agents:format:myterms-
+   agreement-v1+jws.
+
+   The required claim MUST additionally carry a terms_template member:
+   the terms document of Section 2, plus
+
+   terms_uri:  REQUIRED.  The URI at which this version of this document
+      is served.
+
+   nonce:  REQUIRED.  A value the authorization server has not
+      previously used, to be echoed in the agreement.
+
+   family:  REQUIRED.  The identifier of this negotiation, stable across
+      ticket rotations.
+
+   resource_id:  REQUIRED.  The resource the terms are being proffered
+      over.
+
+   {
+     "error": "need_info",
+     "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
+     "required_claims": [{
+       "claim_type": "urn:uma4agents:claim:myterms-agreement",
+       "claim_token_format": [
+         "urn:uma4agents:format:myterms-agreement-v1+jws"
+       ],
+       "friendly_name": "Alice's terms: Holdings summary",
+       "terms_template": {
+         "template_id": "alice/advisor/v2",
+         "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+         "proffered_by": "https://alice-as.example",
+         "purpose": "Suitability review for advisory onboarding",
+         "scope": ["positions:read"],
+         "expires_in": 172800,
+         "prohibited": ["retention-after-review", "marketing"],
+         "resource_id": "alice-vault/get_positions",
+         "family": "fam_8f3aQ2Xc",
+         "nonce": "n5Kd2pQrTgWs"
+       }
+     }]
+   }
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 5]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+              Figure 1: A need_info response proffering terms.
+
+   The authorization server MUST offer exactly one set of terms per
+   demand.  There is no counter-offer and no negotiation beyond the
+   single choice of agreeing or not, per [IEEE7012] Section 5.2.2.  A
+   protocol that let the requesting side propose amendments would make
+   the owner a party to a conversation she is not present for.
+
+4.  The Agreement
+
+   The requesting side agrees by presenting a claim token whose
+   claim_token_format is urn:uma4agents:format:myterms-agreement-v1+jws
+   and whose value is the base64url encoding of a JWS [RFC7515] in
+   compact serialization with a typ of myterms-agreement-v1+jws.
+
+4.1.  The Signing Key
+
+   The JWS protected header MUST carry exactly one of:
+
+   jwk:  A public JWK [RFC7517], where the requesting side is
+      pseudonymous.
+
+   agent_token:  A credential from an issuer that asserts the requesting
+      agent's identity and names the signing key, where the requesting
+      side is identified.
+
+   The authorization server MUST verify the JWS against the key so
+   named, and MUST refuse an agreement carrying neither.  The key that
+   signs the agreement is the key that is confirmed in the grant, so
+   that the party that agreed and the party that later acts are provably
+   the same.
+
+4.2.  Claims
+
+   The agreement MUST echo, unchanged, the template_id, terms_uri,
+   purpose, nonce and family of the proffered template, and MUST carry
+   an aud naming the authorization server that proffered them.
+
+   It MUST carry an expires_in no greater than the template's, and a
+   prohibited array that is a superset of the template's.
+
+   Where the template's per_operation is true, the agreement MUST carry
+   an operation member naming the operation proposed and the parameters
+   proposed for it.
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 6]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   {
+     "iss": "agent:6cR6qTmCj6s0S95M",
+     "aud": "https://alice-as.example",
+     "iat": 1789430000,
+     "template_id": "alice/advisor/v2",
+     "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+     "purpose": "Suitability review for advisory onboarding",
+     "scope": ["positions:read"],
+     "expires_in": 172800,
+     "prohibited": ["retention-after-review", "marketing"],
+     "family": "fam_8f3aQ2Xc",
+     "nonce": "n5Kd2pQrTgWs",
+
+     "reason": "Suitability review before Thursday's client meeting.",
+     "mission": {
+       "approver": "https://ps.example",
+       "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+     }
+   }
+
+      Figure 2: An agreement.  Everything above the blank line is the
+                         owner's template, echoed.
+
+   The superset test on prohibited is deliberate: binding yourself to
+   more than was asked is agreement, and refusing it would make the
+   honest case fail.  Every other echoed member is compared for
+   equality, because a requesting side that can alter the purpose it
+   signed up to has signed a different document from the one the owner
+   published.
+
+4.3.  What the Requesting Side May Author
+
+   The agreement MAY carry the following, and MUST NOT carry anything
+   else that affects the decision:
+
+   reason:  OPTIONAL.  A string stating why the access is wanted.  The
+      authorization server MUST bound its length, MUST record it, and
+      MUST NOT parse it, compare it to the purpose in the terms, or let
+      its content affect the decision.
+
+   mission:  OPTIONAL.  An object citing a mandate the requesting side
+      is acting under, with an approver member that is an https URL and
+      an s256 member that is a content digest.  The authorization server
+      MUST record the citation and MUST NOT dereference it.
+
+   Policy MAY read the _absence_ of either.  It MUST NOT read the
+   content of either.  See [U4APolicy].
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 7]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   An authority that reads a stated reason and rules on whether it is
+   plausible has put a judgement about natural language inside an
+   authorization decision: the same request becomes answerable two ways,
+   and the requesting side learns to write whatever gets through.  Bound
+   it, record it, show it to the owner, and let policy do exactly one
+   thing with it — notice when it is missing.
+
+   A mission citation is recorded rather than dereferenced because the
+   issuers that serve missions serve them to their own administrators.
+   A relying party in another trust domain has nothing to fetch, so an
+   agent citing a real mandate and one inventing a digest are
+   indistinguishable to it.  That is why the citation is a record for
+   the owner to read and never an input to the decision.
+
+5.  The Receipt
+
+   On issuing a grant against an agreement, the authorization server
+   MUST return a receipt alongside the token, as a member named receipt
+   in the token endpoint response.
+
+   The receipt MUST be a JWS signed by the authorization server with a
+   typ of myterms-receipt+jws, and MUST carry:
+
+   terms_uri:  REQUIRED.  The document that was agreed to.
+
+   template_id:  REQUIRED.  The version that was agreed to.
+
+   agreement:  REQUIRED. s256 over the octets of the agreement as
+      transmitted.
+
+   agreement_jws:  REQUIRED.  The complete agreement JWS, as received.
+
+   family:  REQUIRED.  The negotiation this receipt completes.
+
+   Embedding the whole agreement rather than a reference to it is what
+   makes the two records identical: the owner's side retains it with her
+   decision record and the requesting side retains the receipt, and
+   neither has to ask the other for the half it is missing.  This
+   satisfies [IEEE7012] Sections 5.2.2 and 5.4.4.
+
+6.  Declining
+
+   A requesting side that will not agree to the proffered terms MUST be
+   able to say so.  An authorization server MUST accept a decline
+   parameter with the value true at the token endpoint while a
+   negotiation is awaiting a claim, MUST end the negotiation, and MUST
+   record the refusal against the terms that were declined.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 8]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   A refusal is a record too, per [IEEE7012] Section 5.2.4.  It is also
+   the only signal an owner has that her terms are the reason nobody
+   uses a resource she has published.
+
+   A declining requesting side has signed nothing, so there is no key
+   and no identity to file the record under.  An authorization server
+   MUST record such a refusal without attributing it to a party.  An
+   implementation that invents an attribution here is asserting
+   something it does not know.
+
+7.  Security Considerations
+
+7.1.  The Agreement Binds the Key That Will Act
+
+   See Section 4.1.  If the agreement could be signed by one key and the
+   grant confirmed to another, the party that agreed and the party that
+   acts would be different parties, and the agreement would say nothing
+   about the requests made under it.
+
+7.2.  The Digest Is Over the Transmitted Octets
+
+   The agreement member of the receipt, and any digest of the agreement
+   recorded with the grant, MUST be computed over the agreement exactly
+   as transmitted, not over a re-serialization of its claims.  A digest
+   over re-serialized JSON is a digest of the verifier's serializer, and
+   two conforming implementations will disagree about it.
+
+7.3.  Terms Are Not a Sandbox
+
+   An owner's prohibitions divide into two kinds, and an implementation
+   SHOULD be able to say which is which for each one it supports.  A
+   prohibition on something that must cross the owner's boundary to
+   happen — placing an order outside approved parameters, reusing an
+   approval for a second action — can be refused at the enforcement
+   point.  A prohibition on what happens afterwards on the requesting
+   side's own systems — retention, onward sharing, training — cannot.
+
+   Both belong in the terms, and only one is a control.  The second is
+   what the dually-signed record exists for: it makes the undertaking
+   checkable against conduct rather than preventing the conduct.
+   Describing the second kind as enforcement is the overstatement this
+   section exists to prevent.
+
+8.  Privacy Considerations
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 9]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+8.1.  The Roster Is the Owner's
+
+   [IEEE7012] Section 4.2 places the roster of proffered terms with a
+   neutral non-profit, so that an individual chooses from a small set of
+   well-understood agreements rather than authoring her own.  This
+   document places it with the owner's own authorization server, because
+   the terms here are conditions inside a grant that server issues and
+   it has to be able to serve them for as long as the grant is
+   checkable.
+
+   The divergence is real and has a cost: terms nobody else proffers are
+   terms nobody else has read.  A deployment SHOULD proffer terms drawn
+   from a published roster where one exists for its domain, and the
+   template_id namespacing in Section 2 is designed so that a roster
+   identifier can be used directly.
+
+8.2.  The Terms Document Is Public
+
+   A terms document is dereferenced by a requesting side that holds no
+   token, so its content is public to anyone who can guess or observe
+   its URI.  It states what the owner requires, which is a statement
+   about her.  An authorization server MUST NOT place anything in a
+   terms document that identifies the owner beyond what the resource
+   identifier already discloses.
+
+   Where a layer above the owner has narrowed her terms, the narrowing
+   appears in the document, which is deliberate — see [U4AMultiParty].
+   An agent reads the document before it signs, and that is the only
+   moment at which "these terms are not hers alone" is information it
+   can act on.
+
+9.  IANA Considerations
+
+9.1.  Media Type Registration
+
+   IANA is asked to register the following in the "Media Types"
+   registry.
+
+   Type name:  application
+
+   Subtype name:  myterms-agreement-v1+jws
+
+   Required parameters:  N/A
+
+   Optional parameters:  N/A
+
+   Encoding considerations:  binary; a JWS in compact serialization
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 10]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   Security considerations:  See Section 7 of this document
+
+   Interoperability considerations:  N/A
+
+   Published specification:  Section 4 of this document
+
+   Applications that use this media type:  Applications implementing UMA
+      2.0 with this extension
+
+   Change controller:  IETF
+
+   IANA is asked to register application/myterms-receipt+jws in the same
+   registry, with the same considerations and with Section 5 of this
+   document as its published specification.
+
+9.2.  URN Sub-namespace Registration
+
+   IANA is asked to record the following identifiers, which are defined
+   by this document within the urn:uma4agents: namespace:
+
+      +================================================+============+
+      | Identifier                                     | Defined in |
+      +================================================+============+
+      | urn:uma4agents:claim:myterms-agreement         | Section 3  |
+      +------------------------------------------------+------------+
+      | urn:uma4agents:format:myterms-agreement-v1+jws | Section 4  |
+      +------------------------------------------------+------------+
+
+               Table 1: Identifiers defined by this document.
+
+10.  References
+
+10.1.  Normative References
+
+   [IEEE7012] "IEEE Standard for Machine Readable Personal Privacy
+              Terms", IEEE Std 7012-2025, 2025,
+              <https://standards.ieee.org/ieee/7012/7192/>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 11]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
+              Profile for Autonomous Agents", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-core-00>.
+
+   [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
+              Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
+              Kantara Recommendation, 7 January 2018,
+              <https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-
+              grant-2.0.html>.
+
+10.2.  Informative References
+
+   [ODRL]     Iannella, R. and S. Villata, "ODRL Information Model 2.2",
+              W3C Recommendation, 15 February 2018,
+              <https://www.w3.org/TR/odrl-model/>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
+
+   [U4AMultiParty]
+              Gamb, N. and E. Maler, "Multi-Party Authorization for
+              User-Managed Access (UMA) 2.0", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-multiparty-00>.
+
+   [U4APolicy]
+              Gamb, N. and E. Maler, "Owner Policy, Assurance and
+              Attention for User-Managed Access (UMA) 2.0", Work in
+              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
+              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-policy-00>.
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 12]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+   [UMAClaims2010]
+              Maler, E. and P. Bryan, "Simple Access Authorization
+              Claims", April 2010,
+              <https://kantarainitiative.org/confluence/display/uma/>.
+
+Appendix A.  Implementation Status
+
+   This section records the status of known implementations in the sense
+   of [RFC7942], and is to be removed before publication as an RFC.
+
+   The reference implementation [U4ALAB] described in [U4ACore]
+   implements this extension in full, including all three
+   representations of Section 2.2, the immutability requirement of
+   Section 2.1, the receipt of Section 5 and the unattributed refusal
+   record of Section 6.  It was checked clause by clause against
+   [IEEE7012]; the divergences found are the ones stated in this
+   document rather than a longer list kept elsewhere.
+
+Acknowledgments
+
+   The direction this extension reverses — an authorization server that
+   proffers rather than demands — is the "requesting party policy" claim
+   of [UMAClaims2010], and this document is its descendant.  [IEEE7012]
+   supplied the pattern, the three representations, the single-choice
+   rule and the dual-record requirement, and the divergences in
+   Section 8 are stated in its terms rather than around them.
+
+Authors' Addresses
+
+   Nick Gamb
+   MindGarden LLC
+   Email: nickgamb@gmail.com
+
+
+   Eve Maler
+   Venn Factory
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 13]

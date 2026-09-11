@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Owner-Proffered Terms for User-Managed Access (UMA) 2.0</title>
+<meta content="Nick Gamb" name="author">
+<meta content="Eve Maler" name="author">
+<meta content="
+       This document extends the claims-gathering loop of the User-Managed Access (UMA)
+2.0 Grant so that the authorization server proffers the  content  of the claim it
+requires, rather than only naming acceptable claim formats. 
+       The resource owner's authorization server publishes a terms document — purpose,
+scope, duration and prohibitions — at a persistent, dereferenceable URI. The
+requesting side echoes that document, signs it with the key it will later prove
+possession of, and presents it as the claim token. The grant returns a receipt,
+counter-signed by the authorization server, embedding the signed agreement, so
+that both parties hold identical records of what was agreed. 
+    " name="description">
+<meta content="xml2rfc 3.34.1" name="generator">
+<meta content="UMA" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="terms" name="keyword">
+<meta content="consent" name="keyword">
+<meta content="receipts" name="keyword">
+<meta content="draft-gamb-uma4agents-terms-00" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.1
+    Python 3.13.5
+    ConfigArgParse 1.7.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 5.4.0
+    natsort 8.4.0
+    platformdirs 4.11.8
+    pycountry 26.2.16
+    PyYAML 6.0.3
+    requests 2.34.2
+    wcwidth 0.8.3
+-->
+<link href="draft-gamb-uma4agents-terms-00.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">/*
+
+  NOTE: Changes at the bottom of this file overrides some earlier settings.
+
+  Once the style has stabilized and has been adopted as an official RFC style,
+  this can be consolidated so that style settings occur only in one place, but
+  for now the contents of this file consists first of the initial CSS work as
+  provided to the RFC Formatter (xml2rfc) work, followed by itemized and
+  commented changes found necessary during the development of the v3
+  formatters.
+
+*/
+
+/* fonts */
+@import url('https://static.ietf.org/fonts/noto-sans/import.css'); /* Sans-serif */
+@import url('https://static.ietf.org/fonts/noto-serif/import.css'); /* Serif (print) */
+@import url('https://static.ietf.org/fonts/roboto-mono/import.css'); /* Monospace */
+
+:root {
+  --font-sans: 'Noto Sans', Arial, Helvetica, sans-serif;
+  --font-serif: 'Noto Serif', 'Times', 'Times New Roman', serif;
+  --font-mono: 'Roboto Mono', Courier, 'Courier New', monospace;
+}
+
+@viewport {
+  zoom: 1.0;
+}
+@-ms-viewport {
+  width: extend-to-zoom;
+  zoom: 1.0;
+}
+/* general and mobile first */
+html {
+}
+body {
+  max-width: 90%;
+  margin: 1.5em auto;
+  color: #222;
+  background-color: #fff;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  scroll-behavior: smooth;
+  overflow-wrap: break-word;
+}
+.ears {
+  display: none;
+}
+
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  margin: 1em 0 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+#title {
+  clear: both;
+  border-bottom: 1px solid #ddd;
+  margin: 0 0 0.5em 0;
+  padding: 1em 0 0.5em;
+}
+.author {
+  padding-bottom: 4px;
+}
+h1 {
+  font-size: 26px;
+  margin: 1em 0;
+}
+h2 {
+  font-size: 22px;
+  margin-top: -20px;  /* provide offset for in-page anchors */
+  padding-top: 33px;
+}
+h3 {
+  font-size: 18px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h4 {
+  font-size: 16px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h5, h6 {
+  font-size: 14px;
+}
+#n-copyright-notice {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+/* general structure */
+p {
+  padding: 0;
+  margin: 0 0 1em 0;
+  text-align: left;
+}
+div, span {
+  position: relative;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+@media print {
+  svg {
+    max-height: 850px;
+    max-width: 660px;
+  }
+}
+svg[font-family~="serif" i], svg [font-family~="serif" i] {
+  font-family: var(--font-serif);
+}
+svg[font-family~="sans-serif" i], svg [font-family~="sans-serif" i] {
+  font-family: var(--font-sans);
+}
+svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
+  font-family: var(--font-mono);
+}
+.alignCenter.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  display: table;
+  border: none;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 1em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.ulBare, li.ulBare {
+  margin-left: 0em !important;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+/* 
+dl.nohang > dt {
+  float: none;
+}
+*/
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+/* links */
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #22e; /* Arlen: WCAG 2019 */
+}
+a[href]:hover {
+  background-color: #f2f2f2;
+}
+figcaption a[href],
+a[href].selfRef {
+  color: #222;
+}
+/* XXX probably not this:
+a.selfRef:hover {
+  background-color: transparent;
+  cursor: default;
+} */
+
+/* Figures */
+tt, code, pre {
+  background-color: #f9f9f9;
+  font-family: var(--font-mono);
+}
+pre {
+  border: 1px solid #eee;
+  margin: 0;
+  padding: 1em;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption {
+  font-style: italic;
+  margin: 0 0 1em 0;
+}
+@media screen {
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+    max-width: calc(100% - 22px);
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 1.2em 2em;
+}
+blockquote {
+  background-color: #f9f9f9;
+  color: #111; /* Arlen: WCAG 2019 */
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin: 1em 0;
+}
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+.xref {
+  overflow-wrap: normal;
+}
+
+/* tables */
+table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  border: 1px solid #eee;
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5em 0.75em;
+}
+th {
+  text-align: left;
+  background-color: #e9e9e9;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f5f5f5;
+}
+table caption {
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+table p {
+  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
+     be allowed within tables more generally, it would be far better to select on a class. */
+  margin: 0;
+}
+sub,
+sup {
+ white-space: nowrap;
+}
+
+/* pilcrow */
+a.pilcrow {
+  color: #666; /* Arlen: AHDJ 2019 */
+  text-decoration: none;
+  visibility: hidden;
+  user-select: none;
+  -ms-user-select: none;
+  -o-user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@media screen {
+  aside:hover > a.pilcrow,
+  p:hover > a.pilcrow,
+  blockquote:hover > a.pilcrow,
+  div:hover > a.pilcrow,
+  li:hover > a.pilcrow,
+  pre:hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: 0.9em;
+}
+#identifiers dt {
+  width: 3em;
+  clear: left;
+}
+#identifiers dd {
+  float: left;
+  margin-bottom: 0;
+}
+/* Fix PDF info block run off issue */
+@media print {
+  #identifiers dd {
+    max-width: 100%;
+  }
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #666; /* Arlen: WCAG 2019 */
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc  {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+nav.toc ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+nav.toc li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.refSubseries {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 600px) {
+  .index ul {
+    -moz-column-count: 2;
+    -moz-column-gap: 20px;
+  }
+  .index ul ul {
+    -moz-column-count: 1;
+    -moz-column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  font-family: var(--font-sans);
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+
+/* temporary notes */
+.rfcEditorRemove::before {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  padding: 0.2em;
+  content: "The RFC Editor will remove this note";
+  color: #9e2a00; /* Arlen: WCAG 2019 */
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+}
+.rfcEditorRemove {
+  position: relative;
+  padding-top: 1.8em;
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  border-radius: 3px;
+}
+.cref {
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 1023px) {
+  body {
+    padding-top: 2em;
+  }
+  #title {
+    padding: 1em 0;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-top: -18px;  /* provide offset for in-page anchors */
+    padding-top: 38px;
+  }
+  #identifiers dd {
+    max-width: 60%;
+  }
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    background-color: inherit;
+    border-bottom: 1px solid #ccc;
+  }
+  #toc h2 {
+    margin: -1px 0 0 0;
+    padding: 4px 0 4px 6px;
+    padding-right: 1em;
+    min-width: 190px;
+    font-size: 1.1em;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 6px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 1024px) {
+  body {
+    max-width: 724px;
+    margin: 42px auto;
+    padding-left: 1.5em;
+    padding-right: 29em;
+  }
+  #toc {
+    position: fixed;
+    top: 42px;
+    right: 42px;
+    width: 25%;
+    margin: 0;
+    padding: 0 1em;
+    z-index: 1;
+  }
+  #toc h2 {
+    border-top: none;
+    border-bottom: 1px solid #ddd;
+    font-size: 1em;
+    font-weight: normal;
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 0;
+    overflow: auto;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  .breakable pre {
+    break-inside: auto;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+/* This is commented out here, as the string-set: doesn't
+   pass W3C validation currently */
+/*
+.ears thead .left {
+  string-set: ears-top-left content();
+}
+
+.ears thead .center {
+  string-set: ears-top-center content();
+}
+
+.ears thead .right {
+  string-set: ears-top-right content();
+}
+
+.ears tfoot .left {
+  string-set: ears-bottom-left content();
+}
+
+.ears tfoot .center {
+  string-set: ears-bottom-center content();
+}
+
+.ears tfoot .right {
+  string-set: ears-bottom-right content();
+}
+*/
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+  /* The following is commented out here, but set appropriately by in code, as
+     the content depends on the document */
+  /*
+  @top-left {
+    content: 'Internet-Draft';
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-left {
+    content: string(ears-top-left);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-center {
+    content: string(ears-top-center);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-right {
+    content: string(ears-top-right);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @bottom-left {
+    content: string(ears-bottom-left);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-center {
+    content: string(ears-bottom-center);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-right {
+      content: '[Page ' counter(page) ']';
+      vertical-align: top;
+      border-top: solid 1px #ccc;
+  }
+  */
+
+}
+
+/* Changes introduced to fix issues found during implementation */
+/* Make sure links are clickable even if overlapped by following H* */
+a {
+  z-index: 2;
+}
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Leave room in document info to show Internet-Draft on one line */
+#identifiers dt {
+  width: 8em;
+}
+
+/* Don't waste quite as much whitespace between label and value in doc info */
+#identifiers dd {
+  margin-left: 1em;
+}
+
+/* Give floating toc a background color (needed when it's a div inside section */
+#toc {
+  background-color: white;
+}
+
+/* Make the collapsed ToC header render white on gray also when it's a link */
+@media screen and (max-width: 1023px) {
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+}
+
+/* Give the bottom of the ToC some whitespace */
+@media screen and (min-width: 1024px) {
+  #toc {
+    padding: 0 0 1em 1em;
+  }
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* prevent monospace from becoming overly large */
+tt, code, pre {
+  font-size: 95%;
+}
+
+/* Fix the height/width aspect for ascii art*/
+.sourcecode pre,
+.art-text pre {
+  line-height: 1.12;
+}
+
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin-right: 0.5em;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table td.text-left,
+table th.text-left {
+  text-align: left;
+}
+table td.text-center,
+table th.text-center {
+  text-align: center;
+}
+table td.text-right,
+table th.text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 30em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Provide table alignment support.  We can't use the alignX classes above
+   since they do unwanted things with caption and other styling. */
+table.right {
+ margin-left: auto;
+ margin-right: 0;
+}
+table.center {
+ margin-left: auto;
+ margin-right: auto;
+}
+table.left {
+ margin-left: 0;
+ margin-right: auto;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+caption a[href] {
+  color: #222;
+}
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+/* Tweak the invisible space above H* in order not to overlay links in text above */
+ h2 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 31px;
+ }
+ h3 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+ h4 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+/* Float artwork pilcrow to the right */
+@media screen {
+  .artwork a.pilcrow {
+    display: block;
+    line-height: 0.7;
+    margin-top: 0.15em;
+  }
+}
+/* Make pilcrows on dd visible */
+@media screen {
+  dd:hover > a.pilcrow {
+    visibility: visible;
+  }
+}
+/* Make the placement of figcaption match that of a table's caption
+   by removing the figure's added bottom margin */
+.alignLeft.art-text,
+.alignCenter.art-text,
+.alignRight.art-text {
+   margin-bottom: 0;
+}
+.alignLeft,
+.alignCenter,
+.alignRight {
+  margin: 1em 0 0 0;
+}
+/* In print, the pilcrow won't show on hover, so prevent it from taking up space,
+   possibly even requiring a new line */
+@media print {
+  a.pilcrow {
+    display: none;
+  }
+}
+/* Styling for the external metadata */
+div#external-metadata {
+  background-color: #eee;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+  display: none;
+}
+div#internal-metadata {
+  padding: 0.5em;                       /* to match the external-metadata padding */
+}
+/* Styling for title RFC Number */
+h1#rfcnum {
+  clear: both;
+  margin: 0 0 -1em;
+  padding: 1em 0 0 0;
+}
+/* Make .olPercent look the same as <ol><li> */
+dl.olPercent > dd {
+  margin-bottom: 0.25em;
+  min-height: initial;
+}
+/* Give aside some styling to set it apart */
+aside {
+  border-left: 1px solid #ddd;
+  margin: 1em 0 1em 2em;
+  padding: 0.2em 2em;
+}
+aside > dl,
+aside > ol,
+aside > ul,
+aside > table,
+aside > p {
+  margin-bottom: 0.5em;
+}
+/* Additional page break settings */
+@media print {
+  figcaption, table caption {
+    page-break-before: avoid;
+  }
+  table {
+    page-break-inside: avoid;
+  }
+}
+/* Font size adjustments for print */
+@media print {
+  body  { font-size: 10pt;      line-height: normal; max-width: 96%; }
+  h1    { font-size: 1.72em;    padding-top: 1.5em; } /* 1*1.2*1.2*1.2 */
+  h2    { font-size: 1.44em;    padding-top: 1.5em; } /* 1*1.2*1.2 */
+  h3    { font-size: 1.2em;     padding-top: 1.5em; } /* 1*1.2 */
+  h4    { font-size: 1em;       padding-top: 1.5em; }
+  h5, h6 { font-size: 1em;      margin: initial; padding: 0.5em 0 0.3em; }
+}
+/* Sourcecode margin in print, when there's no pilcrow */
+@media print {
+  .artwork,
+  .artwork > pre,
+  .sourcecode {
+    margin-bottom: 1em;
+  }
+}
+/* Avoid narrow tables forcing too narrow table captions, which may render badly */
+table {
+  min-width: 20em;
+}
+/* ol type a */
+ol.type-a { list-style-type: lower-alpha; }
+ol.type-A { list-style-type: upper-alpha; }
+ol.type-i { list-style-type: lower-roman; }
+ol.type-I { list-style-type: upper-roman; }
+/* Apply the print table and row borders in general, on request from the RPC,
+and increase the contrast between border and odd row background slightly */
+table {
+  border: 1px solid #ddd;
+}
+td {
+  border-top: 1px solid #ddd;
+}
+tr {
+  break-inside: avoid;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f8f8f8;
+}
+/* Use style rules to govern display of the TOC. */
+@media screen and (max-width: 1023px) {
+  #toc nav { display: none; }
+  #toc.active nav { display: block; }
+}
+/* Add support for keepWithNext */
+.keepWithNext {
+  break-after: avoid-page;
+  break-after: avoid-page;
+}
+/* Add support for keepWithPrevious */
+.keepWithPrevious {
+  break-before: avoid-page;
+}
+/* Change the approach to avoiding breaks inside artwork etc. */
+figure, pre, table, .artwork, .sourcecode  {
+  break-before: auto;
+  break-after: auto;
+}
+/* Avoid breaks between <dt> and <dd> */
+dl {
+  break-before: auto;
+  break-inside: auto;
+}
+dt {
+  break-before: auto;
+  break-after: avoid-page;
+}
+dd {
+  break-before: avoid-page;
+  break-after: auto;
+  orphans: 3;
+  widows: 3
+}
+span.break, dd.break {
+  margin-bottom: 0;
+  min-height: 0;
+  break-before: auto;
+  break-inside: auto;
+  break-after: auto;
+}
+/* Undo break-before ToC */
+@media print {
+  #toc {
+    break-before: auto;
+  }
+}
+/* Text in compact lists should not get extra bottom margin space,
+   since that would makes the list not compact */
+ul.compact p, .ulCompact p,
+ol.compact p, .olCompact p {
+ margin: 0;
+}
+/* But the list as a whole needs the extra space at the end */
+section ul.compact,
+section .ulCompact,
+section ol.compact,
+section .olCompact {
+  margin-bottom: 1em;                    /* same as p not within ul.compact etc. */
+}
+/* The tt and code background above interferes with for instance table cell
+   backgrounds.  Changed to something a bit more selective. */
+tt, code {
+  background-color: transparent;
+}
+p tt, p code, li tt, li code, dt tt, dt code {
+  background-color: #f8f8f8;
+}
+/* Tweak the pre margin -- 0px doesn't come out well */
+pre {
+   margin-top: 0.5px;
+}
+/* Tweak the compact list text */
+ul.compact, .ulCompact,
+ol.compact, .olCompact,
+dl.compact, .dlCompact {
+  line-height: normal;
+}
+/* Don't add top margin for nested lists */
+li > ul, li > ol, li > dl,
+dd > ul, dd > ol, dd > dl,
+dl > dd > dl {
+  margin-top: initial;
+}
+/* Elements that should not be rendered on the same line as a <dt> */
+/* This should match the element list in writer.text.TextWriter.render_dl() */
+dd > div.artwork:first-child,
+dd > aside:first-child,
+dd > blockquote:first-child,
+dd > figure:first-child,
+dd > ol:first-child,
+dd > div.sourcecode:first-child,
+dd > table:first-child,
+dd > ul:first-child {
+  clear: left;
+}
+/* fix for weird browser behaviour when <dd/> is empty */
+dt+dd:empty::before{
+  content: "\00a0";
+}
+/* Make paragraph spacing inside <li> smaller than in body text, to fit better within the list */
+li > p {
+  margin-bottom: 0.5em
+}
+/* Don't let p margin spill out from inside list items */
+li > p:last-of-type:only-child {
+  margin-bottom: 0;
+}
+</style>
+<link href="rfc-local.css" rel="stylesheet" type="text/css">
+<script type="application/javascript">async function addMetadata(){try{const e=document.styleSheets[0].cssRules;for(let t=0;t<e.length;t++)if(/#identifiers/.exec(e[t].selectorText)){const a=e[t].cssText.replace("#identifiers","#external-updates");document.styleSheets[0].insertRule(a,document.styleSheets[0].cssRules.length)}}catch(e){console.log(e)}const e=document.getElementById("external-metadata");if(e)try{var t,a="",o=function(e){const t=document.getElementsByTagName("meta");for(let a=0;a<t.length;a++)if(t[a].getAttribute("name")===e)return t[a].getAttribute("content");return""}("rfc.number");if(o){t="https://www.rfc-editor.org/rfc/rfc"+o+".json";try{const e=await fetch(t);a=await e.json()}catch(e){t=document.URL.indexOf("html")>=0?document.URL.replace(/html$/,"json"):document.URL+".json";const o=await fetch(t);a=await o.json()}}if(!a)return;e.style.display="block";const s="",d="https://datatracker.ietf.org/doc",n="https://datatracker.ietf.org/ipr/search",c="https://www.rfc-editor.org/info",l=a.doc_id.toLowerCase(),i=a.doc_id.slice(0,3).toLowerCase(),f=a.doc_id.slice(3).replace(/^0+/,""),u={status:"Status",obsoletes:"Obsoletes",obsoleted_by:"Obsoleted By",updates:"Updates",updated_by:"Updated By",see_also:"See Also",errata_url:"Errata"};let h="<dl style='overflow:hidden' id='external-updates'>";["status","obsoletes","obsoleted_by","updates","updated_by","see_also","errata_url"].forEach(e=>{if("status"==e){a[e]=a[e].toLowerCase();var t=a[e].split(" "),o=t.length,w="",p=1;for(let e=0;e<o;e++)p<o?w=w+r(t[e])+" ":w+=r(t[e]),p++;a[e]=w}else if("obsoletes"==e||"obsoleted_by"==e||"updates"==e||"updated_by"==e){var g,m="",b=1;g=a[e].length;for(let t=0;t<g;t++)a[e][t]&&(a[e][t]=String(a[e][t]).toLowerCase(),m=b<g?m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>, ":m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>",b++);a[e]=m}else if("see_also"==e){var y,L="",C=1;y=a[e].length;for(let t=0;t<y;t++)if(a[e][t]){a[e][t]=String(a[e][t]);var _=a[e][t].slice(0,3),v=a[e][t].slice(3).replace(/^0+/,"");L=C<y?"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>, ":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>, ":"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>",C++}a[e]=L}else if("errata_url"==e){var R="";R=a[e]?R+"<a href='"+a[e]+"'>Errata exist</a> | <a href='"+d+"/"+l+"'>Datatracker</a>| <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>":"<a href='"+d+"/"+l+"'>Datatracker</a> | <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>",a[e]=R}""!=a[e]?"Errata"==u[e]?h+=`<dt>More info:</dt><dd>${a[e]}</dd>`:h+=`<dt>${u[e]}:</dt><dd>${a[e]}</dd>`:"Errata"==u[e]&&(h+=`<dt>More info:</dt><dd>${a[e]}</dd>`)}),h+="</dl>",e.innerHTML=h}catch(e){console.log(e)}else console.log("Could not locate metadata <div> element");function r(e){return e.charAt(0).toUpperCase()+e.slice(1)}}window.removeEventListener("load",addMetadata),window.addEventListener("load",addMetadata);</script>
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Owner-Proffered Terms</td>
+<td class="right">September 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Gamb &amp; Maler</td>
+<td class="center">Expires 15 March 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-gamb-uma4agents-terms-00</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-09-11" class="published">11 September 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-03-15">15 March 2027</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">N. Gamb</div>
+<div class="org">MindGarden LLC</div>
+</div>
+<div class="author">
+      <div class="author-name">E. Maler</div>
+<div class="org">Venn Factory</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Owner-Proffered Terms for User-Managed Access (UMA) 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document extends the claims-gathering loop of the User-Managed Access (UMA)
+2.0 Grant so that the authorization server proffers the <em>content</em> of the claim it
+requires, rather than only naming acceptable claim formats.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">The resource owner's authorization server publishes a terms document — purpose,
+scope, duration and prohibitions — at a persistent, dereferenceable URI. The
+requesting side echoes that document, signs it with the key it will later prove
+possession of, and presents it as the claim token. The grant returns a receipt,
+counter-signed by the authorization server, embedding the signed agreement, so
+that both parties hold identical records of what was agreed.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 15 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-relationship-to-the-set" class="internal xref">Relationship to the Set</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-notational-conventions" class="internal xref">Notational Conventions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-the-terms-document" class="internal xref">The Terms Document</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-versions-are-immutable" class="internal xref">Versions Are Immutable</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-representations" class="internal xref">Representations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-proffering" class="internal xref">Proffering</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-agreement" class="internal xref">The Agreement</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-the-signing-key" class="internal xref">The Signing Key</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-claims" class="internal xref">Claims</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-what-the-requesting-side-ma" class="internal xref">What the Requesting Side May Author</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-receipt" class="internal xref">The Receipt</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-declining" class="internal xref">Declining</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-agreement-binds-the-key" class="internal xref">The Agreement Binds the Key That Will Act</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-the-digest-is-over-the-tran" class="internal xref">The Digest Is Over the Transmitted Octets</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-terms-are-not-a-sandbox" class="internal xref">Terms Are Not a Sandbox</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-the-roster-is-the-owners" class="internal xref">The Roster Is the Owner's</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-the-terms-document-is-publi" class="internal xref">The Terms Document Is Public</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-urn-sub-namespace-registrat" class="internal xref">URN Sub-namespace Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.4 lets an authorization server tell a client what claims
+it needs by naming claim types and acceptable formats. The client then gathers
+those claims from wherever it can and presents them. The authorization server
+asks <em>what can you tell me about yourself</em>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This extension adds the other direction. The authorization server proffers a
+document stating what the resource owner requires of anyone who wants this
+access, and the claim the requesting side returns is that document, signed. The
+authorization server asks <em>will you agree to this</em>.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The pattern is that of <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span>, in which an individual proffers
+machine-readable terms as first party and a counterparty's agent agrees to them
+as second party. This document extends it from privacy terms to terms of access,
+and carries the agreement inside a grant so that the terms are conditions on an
+authorization rather than a record kept beside one. It is also a direct
+descendant of UMA's own 2010 work <span>[<a href="#UMAClaims2010" class="cite xref">UMAClaims2010</a>]</span>, which defined a "requesting
+party policy" claim for exactly this purpose and which the 2.0 specifications did
+not carry forward.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="relationship-to-the-set">
+<section id="section-1.1">
+        <h3 id="name-relationship-to-the-set">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-relationship-to-the-set" class="section-name selfRef">Relationship to the Set</a>
+        </h3>
+<p id="section-1.1-1">This document extends <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> and is <span class="bcp14">REQUIRED</span> to implement alongside
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>. It is separable: a UMA deployment with no agents in it can adopt
+this extension on its own, and nothing here depends on the requesting side being
+autonomous.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">Its identifying URI, for the <code>uma_profiles_supported</code> metadata of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span>
+Section 4, is <code>https://u4a.ai/spec/terms/1.0</code>.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="notational-conventions">
+<section id="section-1.2">
+        <h3 id="name-notational-conventions">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-notational-conventions" class="section-name selfRef">Notational Conventions</a>
+        </h3>
+<p id="section-1.2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">The notation <code>s256(x)</code> is as defined in <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="terms-document">
+<section id="section-2">
+      <h2 id="name-the-terms-document">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-terms-document" class="section-name selfRef">The Terms Document</a>
+      </h2>
+<p id="section-2-1">An authorization server implementing this extension <span class="bcp14">MUST</span> serve, for each set of
+terms it proffers, a document at a URI that resolves for as long as the
+authorization server serves the owner whose terms they are.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">A terms document <span class="bcp14">MUST</span> carry:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">template_id:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1"><span class="bcp14">REQUIRED</span>. A stable identifier for this version of these terms, namespaced by
+owner.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">purpose:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1"><span class="bcp14">REQUIRED</span>. What the access is for, in the owner's words.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">scope:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1"><span class="bcp14">REQUIRED</span>. An array of scope strings the terms cover.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.7">expires_in:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.8">
+          <p id="section-2-3.8.1"><span class="bcp14">REQUIRED</span>. The maximum lifetime, in seconds, of access granted under these
+terms.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.9">prohibited:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.10">
+          <p id="section-2-3.10.1"><span class="bcp14">REQUIRED</span>. An array of identifiers naming what the requesting side undertakes
+not to do. <span class="bcp14">MAY</span> be empty.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.11">proffered_by:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1"><span class="bcp14">REQUIRED</span>. The issuer identifier of the authorization server that proffers them.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-4">A terms document <span class="bcp14">MAY</span> carry any other member. Two are defined here:<a href="#section-2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-5">
+        <dt id="section-2-5.1">per_operation:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-5.2">
+          <p id="section-2-5.2.1"><span class="bcp14">OPTIONAL</span>. Boolean. Where <code>true</code>, a grant under these terms is bound to one
+operation and spent once, as <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 7.2, and the agreement <span class="bcp14">MUST</span>
+name the operation proposed.<a href="#section-2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-5.3">constraints:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-5.4">
+          <p id="section-2-5.4.1"><span class="bcp14">OPTIONAL</span>. An object narrowing what the scope reaches.<a href="#section-2-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<div id="immutable">
+<section id="section-2.1">
+        <h3 id="name-versions-are-immutable">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-versions-are-immutable" class="section-name selfRef">Versions Are Immutable</a>
+        </h3>
+<p id="section-2.1-1">The content of a terms document at a given <code>template_id</code> <span class="bcp14">MUST NOT</span> change. An
+authorization server that changes the owner's terms <span class="bcp14">MUST</span> issue a new
+<code>template_id</code> and <span class="bcp14">MUST</span> continue to serve every previous version.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">An agreement is a signature over a document. A document that can change after it
+is signed makes every agreement over it unverifiable later, which removes the
+only property that distinguishes this from a consent dialog.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="representations">
+<section id="section-2.2">
+        <h3 id="name-representations">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-representations" class="section-name selfRef">Representations</a>
+        </h3>
+<p id="section-2.2-1">An authorization server <span class="bcp14">MUST</span> serve a terms document as JSON, and <span class="bcp14">MUST</span> serve, at
+the same URI, a plain-language representation intended for a person, selected by
+HTTP content negotiation. It <span class="bcp14">SHOULD</span> additionally serve a representation in a
+rights expression language such as <span>[<a href="#ODRL" class="cite xref">ODRL</a>]</span>.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">The three representations satisfy <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Sections 4.4.1 and 4.4.2. The
+requirement that they share a URI is what makes the human-readable statement and
+the machine-readable one the same terms rather than two documents that may drift.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="proffering">
+<section id="section-3">
+      <h2 id="name-proffering">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-proffering" class="section-name selfRef">Proffering</a>
+      </h2>
+<p id="section-3-1">Where the authorization server requires agreement to terms before it will decide,
+it responds to a ticket presentation with <code>need_info</code> as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section
+3.3.6, carrying a required claim whose <code>claim_type</code> is
+<code>urn:uma4agents:claim:myterms-agreement</code> and whose <code>claim_token_format</code> array
+includes <code>urn:uma4agents:format:myterms-agreement-v1+jws</code>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The required claim <span class="bcp14">MUST</span> additionally carry a <code>terms_template</code> member: the terms
+document of <a href="#terms-document" class="auto internal xref">Section 2</a>, plus<a href="#section-3-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-3">
+        <dt id="section-3-3.1">terms_uri:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.2">
+          <p id="section-3-3.2.1"><span class="bcp14">REQUIRED</span>. The URI at which this version of this document is served.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.3">nonce:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.4">
+          <p id="section-3-3.4.1"><span class="bcp14">REQUIRED</span>. A value the authorization server has not previously used, to be
+echoed in the agreement.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.5">family:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.6">
+          <p id="section-3-3.6.1"><span class="bcp14">REQUIRED</span>. The identifier of this negotiation, stable across ticket rotations.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.7">resource_id:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.8">
+          <p id="section-3-3.8.1"><span class="bcp14">REQUIRED</span>. The resource the terms are being proffered over.<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<span id="name-a-need_info-response-proffe"></span><figure id="figure-1">
+        <div class="lang-json sourcecode" id="section-3-4.1">
+<pre>
+{
+  "error": "need_info",
+  "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
+  "required_claims": [{
+    "claim_type": "urn:uma4agents:claim:myterms-agreement",
+    "claim_token_format": [
+      "urn:uma4agents:format:myterms-agreement-v1+jws"
+    ],
+    "friendly_name": "Alice's terms: Holdings summary",
+    "terms_template": {
+      "template_id": "alice/advisor/v2",
+      "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+      "proffered_by": "https://alice-as.example",
+      "purpose": "Suitability review for advisory onboarding",
+      "scope": ["positions:read"],
+      "expires_in": 172800,
+      "prohibited": ["retention-after-review", "marketing"],
+      "resource_id": "alice-vault/get_positions",
+      "family": "fam_8f3aQ2Xc",
+      "nonce": "n5Kd2pQrTgWs"
+    }
+  }]
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-a-need_info-response-proffe" class="selfRef">A need_info response proffering terms.</a>
+        </figcaption></figure>
+<p id="section-3-5">The authorization server <span class="bcp14">MUST</span> offer exactly one set of terms per demand. There is
+no counter-offer and no negotiation beyond the single choice of agreeing or not,
+per <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Section 5.2.2. A protocol that let the requesting side propose
+amendments would make the owner a party to a conversation she is not present for.<a href="#section-3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="agreement">
+<section id="section-4">
+      <h2 id="name-the-agreement">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-agreement" class="section-name selfRef">The Agreement</a>
+      </h2>
+<p id="section-4-1">The requesting side agrees by presenting a claim token whose
+<code>claim_token_format</code> is <code>urn:uma4agents:format:myterms-agreement-v1+jws</code> and
+whose value is the base64url encoding of a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> in compact
+serialization with a <code>typ</code> of <code>myterms-agreement-v1+jws</code>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="signing-key">
+<section id="section-4.1">
+        <h3 id="name-the-signing-key">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-the-signing-key" class="section-name selfRef">The Signing Key</a>
+        </h3>
+<p id="section-4.1-1">The JWS protected header <span class="bcp14">MUST</span> carry exactly one of:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.1-2">
+          <dt id="section-4.1-2.1">jwk:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1">A public JWK <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span>, where the requesting side is pseudonymous.<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.3">agent_token:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.4">
+            <p id="section-4.1-2.4.1">A credential from an issuer that asserts the requesting agent's identity and
+names the signing key, where the requesting side is identified.<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.1-3">The authorization server <span class="bcp14">MUST</span> verify the JWS against the key so named, and <span class="bcp14">MUST</span>
+refuse an agreement carrying neither. The key that signs the agreement is the key
+that is confirmed in the grant, so that the party that agreed and the party that
+later acts are provably the same.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="agreement-claims">
+<section id="section-4.2">
+        <h3 id="name-claims">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-claims" class="section-name selfRef">Claims</a>
+        </h3>
+<p id="section-4.2-1">The agreement <span class="bcp14">MUST</span> echo, unchanged, the <code>template_id</code>, <code>terms_uri</code>, <code>purpose</code>,
+<code>nonce</code> and <code>family</code> of the proffered template, and <span class="bcp14">MUST</span> carry an <code>aud</code> naming
+the authorization server that proffered them.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">It <span class="bcp14">MUST</span> carry an <code>expires_in</code> no greater than the template's, and a <code>prohibited</code>
+array that is a superset of the template's.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3">Where the template's <code>per_operation</code> is <code>true</code>, the agreement <span class="bcp14">MUST</span> carry an
+<code>operation</code> member naming the operation proposed and the parameters proposed for
+it.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<span id="name-an-agreement-everything-abo"></span><figure id="figure-2">
+          <div class="lang-json sourcecode" id="section-4.2-4.1">
+<pre>
+{
+  "iss": "agent:6cR6qTmCj6s0S95M",
+  "aud": "https://alice-as.example",
+  "iat": 1789430000,
+  "template_id": "alice/advisor/v2",
+  "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
+  "purpose": "Suitability review for advisory onboarding",
+  "scope": ["positions:read"],
+  "expires_in": 172800,
+  "prohibited": ["retention-after-review", "marketing"],
+  "family": "fam_8f3aQ2Xc",
+  "nonce": "n5Kd2pQrTgWs",
+
+  "reason": "Suitability review before Thursday's client meeting.",
+  "mission": {
+    "approver": "https://ps.example",
+    "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+  }
+}
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
+<a href="#name-an-agreement-everything-abo" class="selfRef">An agreement. Everything above the blank line is the owner's template, echoed.</a>
+          </figcaption></figure>
+<p id="section-4.2-5">The superset test on <code>prohibited</code> is deliberate: binding yourself to more than
+was asked is agreement, and refusing it would make the honest case fail. Every
+other echoed member is compared for equality, because a requesting side that can
+alter the purpose it signed up to has signed a different document from the one
+the owner published.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="requester-claims">
+<section id="section-4.3">
+        <h3 id="name-what-the-requesting-side-ma">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-what-the-requesting-side-ma" class="section-name selfRef">What the Requesting Side May Author</a>
+        </h3>
+<p id="section-4.3-1">The agreement <span class="bcp14">MAY</span> carry the following, and <span class="bcp14">MUST NOT</span> carry anything else that
+affects the decision:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3-2">
+          <dt id="section-4.3-2.1">reason:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1"><span class="bcp14">OPTIONAL</span>. A string stating why the access is wanted. The authorization server
+<span class="bcp14">MUST</span> bound its length, <span class="bcp14">MUST</span> record it, and <span class="bcp14">MUST NOT</span> parse it, compare it to the
+purpose in the terms, or let its content affect the decision.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.3-2.3">mission:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-2.4">
+            <p id="section-4.3-2.4.1"><span class="bcp14">OPTIONAL</span>. An object citing a mandate the requesting side is acting under, with
+an <code>approver</code> member that is an <code>https</code> URL and an <code>s256</code> member that is a
+content digest. The authorization server <span class="bcp14">MUST</span> record the citation and <span class="bcp14">MUST NOT</span>
+dereference it.<a href="#section-4.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.3-3">Policy <span class="bcp14">MAY</span> read the <em>absence</em> of either. It <span class="bcp14">MUST NOT</span> read the content of either.
+See <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-4">An authority that reads a stated reason and rules on whether it is plausible has
+put a judgement about natural language inside an authorization decision: the same
+request becomes answerable two ways, and the requesting side learns to write
+whatever gets through. Bound it, record it, show it to the owner, and let policy
+do exactly one thing with it — notice when it is missing.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">A mission citation is recorded rather than dereferenced because the issuers that
+serve missions serve them to their own administrators. A relying party in another
+trust domain has nothing to fetch, so an agent citing a real mandate and one
+inventing a digest are indistinguishable to it. That is why the citation is a
+record for the owner to read and never an input to the decision.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="receipt">
+<section id="section-5">
+      <h2 id="name-the-receipt">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-receipt" class="section-name selfRef">The Receipt</a>
+      </h2>
+<p id="section-5-1">On issuing a grant against an agreement, the authorization server <span class="bcp14">MUST</span> return a
+receipt alongside the token, as a member named <code>receipt</code> in the token endpoint
+response.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The receipt <span class="bcp14">MUST</span> be a JWS signed by the authorization server with a <code>typ</code> of
+<code>myterms-receipt+jws</code>, and <span class="bcp14">MUST</span> carry:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-3">
+        <dt id="section-5-3.1">terms_uri:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.2">
+          <p id="section-5-3.2.1"><span class="bcp14">REQUIRED</span>. The document that was agreed to.<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.3">template_id:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.4">
+          <p id="section-5-3.4.1"><span class="bcp14">REQUIRED</span>. The version that was agreed to.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.5">agreement:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.6">
+          <p id="section-5-3.6.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over the octets of the agreement as transmitted.<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.7">agreement_jws:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.8">
+          <p id="section-5-3.8.1"><span class="bcp14">REQUIRED</span>. The complete agreement JWS, as received.<a href="#section-5-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.9">family:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.10">
+          <p id="section-5-3.10.1"><span class="bcp14">REQUIRED</span>. The negotiation this receipt completes.<a href="#section-5-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-4">Embedding the whole agreement rather than a reference to it is what makes the two
+records identical: the owner's side retains it with her decision record and the
+requesting side retains the receipt, and neither has to ask the other for the
+half it is missing. This satisfies <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Sections 5.2.2 and 5.4.4.<a href="#section-5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="declining">
+<section id="section-6">
+      <h2 id="name-declining">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-declining" class="section-name selfRef">Declining</a>
+      </h2>
+<p id="section-6-1">A requesting side that will not agree to the proffered terms <span class="bcp14">MUST</span> be able to say
+so. An authorization server <span class="bcp14">MUST</span> accept a <code>decline</code> parameter with the value
+<code>true</code> at the token endpoint while a negotiation is awaiting a claim, <span class="bcp14">MUST</span> end
+the negotiation, and <span class="bcp14">MUST</span> record the refusal against the terms that were
+declined.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">A refusal is a record too, per <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Section 5.2.4. It is also the only
+signal an owner has that her terms are the reason nobody uses a resource she has
+published.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">A declining requesting side has signed nothing, so there is no key and no identity
+to file the record under. An authorization server <span class="bcp14">MUST</span> record such a refusal
+without attributing it to a party. An implementation that invents an attribution
+here is asserting something it does not know.<a href="#section-6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-7">
+      <h2 id="name-security-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="the-agreement-binds-the-key-that-will-act">
+<section id="section-7.1">
+        <h3 id="name-the-agreement-binds-the-key">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-the-agreement-binds-the-key" class="section-name selfRef">The Agreement Binds the Key That Will Act</a>
+        </h3>
+<p id="section-7.1-1">See <a href="#signing-key" class="auto internal xref">Section 4.1</a>. If the agreement could be signed by one key and the grant
+confirmed to another, the party that agreed and the party that acts would be
+different parties, and the agreement would say nothing about the requests made
+under it.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-digest-is-over-the-transmitted-octets">
+<section id="section-7.2">
+        <h3 id="name-the-digest-is-over-the-tran">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-the-digest-is-over-the-tran" class="section-name selfRef">The Digest Is Over the Transmitted Octets</a>
+        </h3>
+<p id="section-7.2-1">The <code>agreement</code> member of the receipt, and any digest of the agreement recorded
+with the grant, <span class="bcp14">MUST</span> be computed over the agreement exactly as transmitted, not
+over a re-serialization of its claims. A digest over re-serialized JSON is a
+digest of the verifier's serializer, and two conforming implementations will
+disagree about it.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terms-are-not-a-sandbox">
+<section id="section-7.3">
+        <h3 id="name-terms-are-not-a-sandbox">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-terms-are-not-a-sandbox" class="section-name selfRef">Terms Are Not a Sandbox</a>
+        </h3>
+<p id="section-7.3-1">An owner's prohibitions divide into two kinds, and an implementation <span class="bcp14">SHOULD</span> be
+able to say which is which for each one it supports. A prohibition on something
+that must cross the owner's boundary to happen — placing an order outside
+approved parameters, reusing an approval for a second action — can be refused at
+the enforcement point. A prohibition on what happens afterwards on the requesting
+side's own systems — retention, onward sharing, training — cannot.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">Both belong in the terms, and only one is a control. The second is what the
+dually-signed record exists for: it makes the undertaking checkable against
+conduct rather than preventing the conduct. Describing the second kind as
+enforcement is the overstatement this section exists to prevent.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-8">
+      <h2 id="name-privacy-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<div id="the-roster-is-the-owners">
+<section id="section-8.1">
+        <h3 id="name-the-roster-is-the-owners">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-the-roster-is-the-owners" class="section-name selfRef">The Roster Is the Owner's</a>
+        </h3>
+<p id="section-8.1-1"><span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> Section 4.2 places the roster of proffered terms with a neutral
+non-profit, so that an individual chooses from a small set of well-understood
+agreements rather than authoring her own. This document places it with the
+owner's own authorization server, because the terms here are conditions inside a
+grant that server issues and it has to be able to serve them for as long as the
+grant is checkable.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The divergence is real and has a cost: terms nobody else proffers are terms
+nobody else has read. A deployment <span class="bcp14">SHOULD</span> proffer terms drawn from a published
+roster where one exists for its domain, and the <code>template_id</code> namespacing in
+<a href="#terms-document" class="auto internal xref">Section 2</a> is designed so that a roster identifier can be used directly.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-terms-document-is-public">
+<section id="section-8.2">
+        <h3 id="name-the-terms-document-is-publi">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-the-terms-document-is-publi" class="section-name selfRef">The Terms Document Is Public</a>
+        </h3>
+<p id="section-8.2-1">A terms document is dereferenced by a requesting side that holds no token, so its
+content is public to anyone who can guess or observe its URI. It states what the
+owner requires, which is a statement about her. An authorization server <span class="bcp14">MUST NOT</span>
+place anything in a terms document that identifies the owner beyond what the
+resource identifier already discloses.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">Where a layer above the owner has narrowed her terms, the narrowing appears in
+the document, which is deliberate — see <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>. An agent reads the
+document before it signs, and that is the only moment at which "these terms are
+not hers alone" is information it can act on.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-9">
+      <h2 id="name-iana-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="media-type-registration">
+<section id="section-9.1">
+        <h3 id="name-media-type-registration">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+        </h3>
+<p id="section-9.1-1">IANA is asked to register the following in the "Media Types" registry.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
+          <dt id="section-9.1-2.1">Type name:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1">application<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.3">Subtype name:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1">myterms-agreement-v1+jws<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.5">Required parameters:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.6">
+            <p id="section-9.1-2.6.1">N/A<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.7">Optional parameters:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.8">
+            <p id="section-9.1-2.8.1">N/A<a href="#section-9.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.9">Encoding considerations:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.10">
+            <p id="section-9.1-2.10.1">binary; a JWS in compact serialization<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.11">Security considerations:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.12">
+            <p id="section-9.1-2.12.1">See <a href="#security-considerations" class="auto internal xref">Section 7</a> of this document<a href="#section-9.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.13">Interoperability considerations:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.14">
+            <p id="section-9.1-2.14.1">N/A<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.15">Published specification:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.16">
+            <p id="section-9.1-2.16.1"><a href="#agreement" class="auto internal xref">Section 4</a> of this document<a href="#section-9.1-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.17">Applications that use this media type:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.18">
+            <p id="section-9.1-2.18.1">Applications implementing UMA 2.0 with this extension<a href="#section-9.1-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.19">Change controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.20">
+            <p id="section-9.1-2.20.1">IETF<a href="#section-9.1-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.1-3">IANA is asked to register <code>application/myterms-receipt+jws</code> in the same registry,
+with the same considerations and with <a href="#receipt" class="auto internal xref">Section 5</a> of this document as its
+published specification.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="urn-sub-namespace-registration">
+<section id="section-9.2">
+        <h3 id="name-urn-sub-namespace-registrat">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-urn-sub-namespace-registrat" class="section-name selfRef">URN Sub-namespace Registration</a>
+        </h3>
+<p id="section-9.2-1">IANA is asked to record the following identifiers, which are defined by this
+document within the <code>urn:uma4agents:</code> namespace:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<span id="name-identifiers-defined-by-this"></span><table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-identifiers-defined-by-this" class="selfRef">Identifiers defined by this document.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>urn:uma4agents:claim:myterms-agreement</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#proffering" class="auto internal xref">Section 3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>urn:uma4agents:format:myterms-agreement-v1+jws</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#agreement" class="auto internal xref">Section 4</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-10">
+      <h2 id="name-references">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-10.1">
+        <h3 id="name-normative-references">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="IEEE7012">[IEEE7012]</dt>
+        <dd>
+<span class="refTitle">"IEEE Standard for Machine Readable Personal Privacy Terms"</span>, <span class="seriesInfo">IEEE Std 7012-2025</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://standards.ieee.org/ieee/7012/7192/">https://standards.ieee.org/ieee/7012/7192/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7517">[RFC7517]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4ACore">[U4ACore]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-core-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-core-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-core-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMAGrant">[UMAGrant]</dt>
+      <dd>
+<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"</span>, <span class="seriesInfo">Kantara Recommendation</span>, <time datetime="2018-01-07" class="refDate">7 January 2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-10.2">
+        <h3 id="name-informative-references">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="ODRL">[ODRL]</dt>
+        <dd>
+<span class="refAuthor">Iannella, R.</span> and <span class="refAuthor">S. Villata</span>, <span class="refTitle">"ODRL Information Model 2.2"</span>, <span class="seriesInfo">W3C Recommendation</span>, <time datetime="2018-02-15" class="refDate">15 February 2018</time>, <span>&lt;<a href="https://www.w3.org/TR/odrl-model/">https://www.w3.org/TR/odrl-model/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7942">[RFC7942]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4ALAB">[U4ALAB]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"UMA for Agents: a reference implementation"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://github.com/nickgamb/uma4agents">https://github.com/nickgamb/uma4agents</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AMultiParty">[U4AMultiParty]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Multi-Party Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-multiparty-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-multiparty-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-multiparty-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4APolicy">[U4APolicy]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-policy-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-policy-00">https://datatracker.ietf.org/doc/html/draft-gamb-uma4agents-policy-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMAClaims2010">[UMAClaims2010]</dt>
+      <dd>
+<span class="refAuthor">Maler, E.</span> and <span class="refAuthor">P. Bryan</span>, <span class="refTitle">"Simple Access Authorization Claims"</span>, <time datetime="2010-04" class="refDate">April 2010</time>, <span>&lt;<a href="https://kantarainitiative.org/confluence/display/uma/">https://kantarainitiative.org/confluence/display/uma/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="implementation-status">
+<section id="appendix-A">
+      <h2 id="name-implementation-status">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      </h2>
+<p id="appendix-A-1">This section records the status of known implementations in the sense of
+<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> described in <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> implements this extension
+in full, including all three representations of <a href="#representations" class="auto internal xref">Section 2.2</a>, the
+immutability requirement of <a href="#immutable" class="auto internal xref">Section 2.1</a>, the receipt of <a href="#receipt" class="auto internal xref">Section 5</a> and the
+unattributed refusal record of <a href="#declining" class="auto internal xref">Section 6</a>. It was checked clause by clause
+against <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span>; the divergences found are the ones stated in this document
+rather than a longer list kept elsewhere.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">The direction this extension reverses — an authorization server that proffers
+rather than demands — is the "requesting party policy" claim of
+<span>[<a href="#UMAClaims2010" class="cite xref">UMAClaims2010</a>]</span>, and this document is its descendant. <span>[<a href="#IEEE7012" class="cite xref">IEEE7012</a>]</span> supplied the
+pattern, the three representations, the single-choice rule and the dual-record
+requirement, and the divergences in <a href="#privacy-considerations" class="auto internal xref">Section 8</a> are stated in its
+terms rather than around them.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Nick Gamb</span></div>
+<div dir="auto" class="left"><span class="org">MindGarden LLC</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:nickgamb@gmail.com" class="email">nickgamb@gmail.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Eve Maler</span></div>
+<div dir="auto" class="left"><span class="org">Venn Factory</span></div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
