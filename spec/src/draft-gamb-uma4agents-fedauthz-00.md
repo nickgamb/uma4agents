@@ -49,6 +49,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
 informative:
   I-D.hardt-aauth-protocol:
   U4AMultiParty:
@@ -61,6 +62,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

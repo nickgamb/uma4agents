@@ -3,7 +3,7 @@ templateKey: blog-post
 title: "Everything You Need to Know About Deploying U4A at Scale"
 date: 2026-08-12T00:00:00.000Z
 author: Nick Gamb
-description: "A field guide to running owner-authoritative authorization for real: how it differs from the policy engine you already run, the parts list, the five things that will bite you, a complete Kubernetes reference architecture on the solo.io stack — and an honest list of what it does not solve yet."
+description: "A field guide to running owner-authoritative authorization for real: how it differs from the policy engine you already run, the parts list, the five things that will bite you, a complete Kubernetes reference architecture on the solo.io stack — and an honest account of its edges."
 featuredpost: true
 featuredimage: /img/blog/u4a-at-scale.svg
 category: Agentic Identity
@@ -222,13 +222,13 @@ make k8s-chaos         # break it while she is being asked
 
 There is a fifteen-minute walkthrough in [docs/KUBERNETES.md](https://github.com/nickgamb/uma4agents/blob/main/docs/KUBERNETES.md) — every step a command, an expected number, and what to notice in the output. Bring a coffee.
 
-## What this does not answer yet
+## The edges you will hit
 
-Worth being straight about, because the gaps are as informative as the fixes and you will hit them in roughly this order.
+Worth being straight about, because the edges are as informative as the fixes. Two of these have answers now and two of them do not, and you will meet all four in roughly this order.
 
-**One authorization server per resource server.** RFC 9728 makes `authorization_servers` an array, and the lab configures exactly one. The resource server is genuinely multi-owner — Alice's holdings sit beside other people's — but every one of those owners is pointed at the same authorization server. The case that actually tests the model is owners who each brought their own, and that is a discovery-and-trust problem this deployment does not solve.
+**More than one authorization server behind one resource server.** RFC 9728 makes `authorization_servers` an array, and a single resource still names one. Two *owners* of the same resource server now name two different authorities — Alice's and Carol's, each with her own keys and her own record, asserted by `make multi-owner-check` — and a resource server can be introduced to an authority nobody provisioned it against, by signing as the origin it serves. What is still one is the array on any given resource document.
 
-**No key rotation.** The signing key is minted once by a Job and mounted to all three replicas. Publishing a `jwks_uri` makes rotation *possible* — serve both keys, sign with the new one, retire the old after the longest token lifetime — but nothing here exercises it, and a rotation that races a replica rollout is its own small nightmare.
+**Key rotation is survivable, and the cost is bookkeeping.** `UMA_AS_KID` names the key the authority signs with, `UMA_AS_PREVIOUS_KEYS` the ones it has retired and still publishes; `/jwks` serves the set, and a token is verified against the key its `kid` names. An enforcement point that meets a signature it cannot verify refetches the key set rather than refusing for the life of its cache, so a rotation does not have to wait on anybody's TTL. `make rotation-check` rotates under live grants and asserts that one issued before the rotation still spends afterwards. What you owe in return is retention: the old key stays published until the longest-lived token signed with it has expired, and retiring it early is indistinguishable from revoking every grant it signed.
 
 **Any issuer is a trusted issuer.** The authorization server resolves an agent token's issuer by dereferencing whatever `https` origin the token names and believing the keys it publishes. TLS is the trust root, which is AAuth's own precondition, and for a lab that is the honest default. A real deployment needs a policy about *which* issuers may attest agents to it. That policy is not a protocol gap; it is the deployment decision the protocol leaves you.
 
@@ -251,4 +251,4 @@ The protocol was the interesting part last time. This time the interesting part 
 
 ---
 
-*U4A is [open source under Apache 2.0](https://github.com/nickgamb/uma4agents). [FINDINGS.md](https://github.com/nickgamb/uma4agents/blob/main/FINDINGS.md) carries the recommendations to spec authors, each backed by running code — including the atomicity one above, which exists because we deployed it.*
+*U4A is [open source under Apache 2.0](https://github.com/nickgamb/uma4agents). [FINDINGS.md](https://github.com/nickgamb/uma4agents/blob/main/FINDINGS.md) carries the recommendations to spec authors, each backed by running code — including the atomicity one above, which exists because we deployed it. Those recommendations are now written as the [U4A specification set](/docs/reference/specification/), nine Internet-Drafts, and comment on them is wanted.*

@@ -22,6 +22,21 @@ release within that month. One entry per release.
 
 ## September 11 2026
 
+### v2026.09.7
+
+#### New
+
+- **Blog:** [An Agent Is Not a Principal](/blog/2026-09-11-an-agent-is-not-a-principal/) — why delegating a delegation is a category error, why an enterprise identity provider has no standing over a resource it does not own, how lineage is attested rather than transferred, and what the owner decides. Ends with a tutorial for implementing sub-agent grants on either side, with the refusals an implementer will meet and what each one means.
+
+#### Enhancements
+
+- **Docs:** the specification-set page states what each document covers instead of explaining how it came to be written, and the count of drafts is right in every place that gives one.
+- **Blog:** *Everything You Need to Know About Deploying U4A at Scale* — key rotation and multiple owners naming different authorities were listed as open; both have since been built, and the section now says what the answers are. *Let Them* cites the RAR-metadata draft under the name it was adopted with, `draft-ietf-oauth-rar-metadata-remediation`. Both posts point at the specification set.
+
+#### Bug fixes
+
+- **Specification:** every cross-reference between the drafts linked to a datatracker URL for a document that has never been submitted there, so all nine 404'd. Each now resolves to its rendered page on this site. The 2010 Kantara claims reference pointed at a Confluence space that is gone; it is cited without a URL rather than with a dead one.
+
 ### v2026.09.6
 
 #### New

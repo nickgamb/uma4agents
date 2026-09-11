@@ -802,28 +802,26 @@ Internet-Draft          Multi-Party Authorization         September 2026
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-core-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
 
    [U4AFedAuthz]
               Gamb, N. and E. Maler, "Federated Authorization for
               Autonomous Agents", Work in Progress, Internet-Draft,
               draft-gamb-uma4agents-fedauthz-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-fedauthz-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
+              00.html>.
 
    [U4APolicy]
               Gamb, N. and E. Maler, "Owner Policy, Assurance and
               Attention for User-Managed Access (UMA) 2.0", Work in
               Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
-              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-policy-00>.
+              2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
+              00.html>.
 
    [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-terms-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-terms-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
@@ -833,7 +831,9 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 7.2.  Informative References
 
-
+   [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
+              Work Group, "Solving Data Sharing Challenges with UMA: The
+              Julie Adams Healthcare Use Case from PP2PI",
 
 
 
@@ -842,9 +842,6 @@ Gamb & Maler              Expires 15 March 2027                [Page 15]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-   [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
-              Work Group, "Solving Data Sharing Challenges with UMA: The
-              Julie Adams Healthcare Use Case from PP2PI",
               Kantara Editors' Draft Report, March 2023,
               <https://kantara.atlassian.net/wiki/spaces/uma/
               pages/4850258/Notes+drafts+and+WIP>.
@@ -890,6 +887,9 @@ Authors' Addresses
    Nick Gamb
    MindGarden LLC
    Email: nickgamb@gmail.com
+
+
+
 
 
 

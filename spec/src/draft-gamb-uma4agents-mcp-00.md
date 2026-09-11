@@ -44,6 +44,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   U4AFedAuthz:
     title: "Federated Authorization for Autonomous Agents"
     author:
@@ -54,6 +55,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
 informative:
   I-D.hardt-aauth-protocol:
   I-D.ietf-oauth-rar-metadata-remediation:

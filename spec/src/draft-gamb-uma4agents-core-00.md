@@ -68,6 +68,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
   U4AFedAuthz:
     title: "Federated Authorization for Autonomous Agents"
     author:
@@ -78,6 +79,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
 informative:
   RFC9635:
   RFC9449:
@@ -97,6 +99,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-policy-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
   U4ALineage:
     title: "Agent Lineage for User-Managed Access (UMA) 2.0"
     author:
@@ -107,6 +110,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-lineage-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html
   U4AMultiParty:
     title: "Multi-Party Authorization for User-Managed Access (UMA) 2.0"
     author:
@@ -117,6 +121,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html
   U4AOwner:
     title: "The Resource Owner's API for User-Managed Access (UMA) 2.0"
     author:
@@ -127,6 +132,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-owner-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html
   U4AAAuth:
     title: "AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"
     author:
@@ -137,6 +143,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-aauth-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html
   U4AMCP:
     title: "Model Context Protocol Binding for User-Managed Access (UMA) 2.0"
     author:
@@ -147,6 +154,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-mcp-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html
   UMAClaims2010:
     title: "Simple Access Authorization Claims"
     author:
@@ -155,7 +163,6 @@ informative:
       - ins: P. Bryan
         name: Paul Bryan
     date: 2010-04
-    target: https://kantarainitiative.org/confluence/display/uma/
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

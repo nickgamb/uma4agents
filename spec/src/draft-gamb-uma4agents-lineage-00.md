@@ -34,6 +34,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   U4ATerms:
     title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
     author:
@@ -44,6 +45,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
     author:
@@ -54,6 +56,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-policy-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
 informative:
   I-D.hardt-aauth-protocol:
   I-D.niyikiza-oauth-attenuating-agent-tokens:

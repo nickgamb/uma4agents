@@ -14,7 +14,7 @@ A working proof-of-concept that carries [User-Managed Access (UMA)
 into the agent era: the owner sets policy once, and other people's AI agents
 negotiate access to her resources against it — while she's offline for the easy
 cases, and with a tap for the sensitive ones. What it found is written as a
-[specification set](spec/README.md): seven Internet-Drafts profiling and
+[specification set](spec/README.md): nine Internet-Drafts profiling and
 extending UMA 2.0, every requirement in them exercised by a check here.
 
 The whole stack runs locally with one command. It binds to

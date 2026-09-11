@@ -82,8 +82,7 @@ endpoints, the events, and the exact places this profile departs from UMA 2.0.
 
 It is not a product. It is a proof of concept built alongside
 [Eve Maler](https://www.linkedin.com/in/evemaler/) to find out which parts of
-UMA survive contact with agents. [The findings](/docs/reference/findings/) are
-what it produced, and the [specification set](/docs/reference/specification/)
-— seven Internet-Drafts profiling and extending UMA 2.0 — is what the findings
-were for. Where the lab does something a production system would not, the page
-says so.
+UMA survive contact with agents. It produced
+[the findings](/docs/reference/findings/) and, from those, a
+[specification set](/docs/reference/specification/) of nine Internet-Drafts.
+Where the lab does something a production system would not, the page says so.

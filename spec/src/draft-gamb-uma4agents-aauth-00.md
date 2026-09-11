@@ -36,6 +36,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   U4ATerms:
     title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
     author:
@@ -46,6 +47,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
   U4AFedAuthz:
     title: "Federated Authorization for Autonomous Agents"
     author:
@@ -56,6 +58,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
 informative:
   U4ALineage:
     title: "Agent Lineage for User-Managed Access (UMA) 2.0"
@@ -67,6 +70,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-lineage-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

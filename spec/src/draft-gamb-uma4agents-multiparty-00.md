@@ -46,6 +46,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   U4ATerms:
     title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
     author:
@@ -56,6 +57,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
   U4AFedAuthz:
     title: "Federated Authorization for Autonomous Agents"
     author:
@@ -66,6 +68,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
     author:
@@ -76,6 +79,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-policy-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
 informative:
   PP2PI:
     title: "Solving Data Sharing Challenges with UMA: The Julie Adams Healthcare Use Case from PP2PI"

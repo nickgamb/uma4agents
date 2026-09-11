@@ -535,23 +535,23 @@ Internet-Draft                Agent Lineage               September 2026
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-core-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
 
    [U4APolicy]
               Gamb, N. and E. Maler, "Owner Policy, Assurance and
               Attention for User-Managed Access (UMA) 2.0", Work in
               Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
-              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-policy-00>.
+              2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
+              00.html>.
 
    [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-terms-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-terms-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
 10.2.  Informative References
+
+
 
 
 

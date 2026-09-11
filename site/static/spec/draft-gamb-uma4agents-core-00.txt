@@ -135,7 +135,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
      16.2.  Informative References . . . . . . . . . . . . . . . . .  28
    Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  31
      A.1.  UMA for Agents Reference Implementation . . . . . . . . .  31
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  32
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  31
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  32
 
 1.  Introduction
@@ -1531,14 +1531,13 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Gamb, N. and E. Maler, "Federated Authorization for
               Autonomous Agents", Work in Progress, Internet-Draft,
               draft-gamb-uma4agents-fedauthz-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-fedauthz-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
+              00.html>.
 
    [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-terms-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-terms-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
    [UMAFedAuthz]
               Maler, E., Machulak, M., and J. Richer, "Federated
@@ -1560,6 +1559,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
               <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
               protocol-02>.
+
 
 
 
@@ -1634,8 +1634,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    [U4AAAuth] Gamb, N. and E. Maler, "AAuth Binding for User-Managed
               Access (UMA) 2.0 for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-aauth-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-aauth-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html>.
 
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
@@ -1645,35 +1644,36 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Gamb, N. and E. Maler, "Agent Lineage for User-Managed
               Access (UMA) 2.0", Work in Progress, Internet-Draft,
               draft-gamb-uma4agents-lineage-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-lineage-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-lineage-
+              00.html>.
 
    [U4AMCP]   Gamb, N. and E. Maler, "Model Context Protocol Binding for
               User-Managed Access (UMA) 2.0", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-mcp-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-mcp-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html>.
 
    [U4AMultiParty]
               Gamb, N. and E. Maler, "Multi-Party Authorization for
               User-Managed Access (UMA) 2.0", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-multiparty-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
+              00.html>.
 
    [U4AOwner] Gamb, N. and E. Maler, "The Resource Owner's API for User-
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-owner-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-owner-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html>.
 
    [U4APolicy]
               Gamb, N. and E. Maler, "Owner Policy, Assurance and
               Attention for User-Managed Access (UMA) 2.0", Work in
               Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
-              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-policy-00>.
+              2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
+              00.html>.
 
+   [UMAClaims2010]
+              Maler, E. and P. Bryan, "Simple Access Authorization
+              Claims", April 2010.
 
 
 
@@ -1681,11 +1681,6 @@ Gamb & Maler              Expires 15 March 2027                [Page 30]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
-
-   [UMAClaims2010]
-              Maler, E. and P. Bryan, "Simple Access Authorization
-              Claims", April 2010,
-              <https://kantarainitiative.org/confluence/display/uma/>.
 
 Appendix A.  Implementation Status
 
@@ -1728,16 +1723,6 @@ A.1.  UMA for Agents Reference Implementation
       a defect found by running the implementation rather than by
       reading the specification it was built from.
 
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 31]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
 Acknowledgments
 
    This profile rests on [UMAGrant] and [UMAFedAuthz], and on the decade
@@ -1745,6 +1730,13 @@ Acknowledgments
    resource owner might proffer terms rather than receive them appears
    in UMA's own 2010 work on access authorization claims
    [UMAClaims2010].
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 31]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    [I-D.hardt-aauth-protocol] supplied the agent identity and key-
    binding mechanics this profile composes with, and the observation
@@ -1763,6 +1755,14 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
+
+
+
+
+
+
+
+
 
 
 

@@ -45,6 +45,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   IEEE7012:
     title: "IEEE Standard for Machine Readable Personal Privacy Terms"
     date: 2025
@@ -71,7 +72,6 @@ informative:
       - ins: P. Bryan
         name: Paul Bryan
     date: 2010-04
-    target: https://kantarainitiative.org/confluence/display/uma/
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
     author:
@@ -82,6 +82,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-policy-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
   U4AMultiParty:
     title: "Multi-Party Authorization for User-Managed Access (UMA) 2.0"
     author:
@@ -92,6 +93,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

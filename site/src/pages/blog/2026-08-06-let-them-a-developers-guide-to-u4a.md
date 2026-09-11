@@ -76,7 +76,7 @@ WWW-Authenticate: UMA realm="alice-vault",
 
 Two parameters carry the whole idea. `as_uri` names **Alice's** authorization server, not the agent's. `ticket` is an opaque handle to a negotiation that has already started on her side.
 
-That challenge is deliberately a superset of the RAR-metadata step-up draft rather than a rival to it. `error` and `authorization_remediation` are `draft-zehavi-oauth-rar-metadata` unchanged, so a client that implements that draft can read most of this without knowing UMA exists. Decoded, the remediation object is ordinary RAR:
+That challenge is deliberately a superset of the RAR-metadata step-up draft rather than a rival to it. `error` and `authorization_remediation` are `draft-ietf-oauth-rar-metadata-remediation` unchanged, so a client that implements that draft can read most of this without knowing UMA exists. Decoded, the remediation object is ordinary RAR:
 
 ```json
 {
@@ -182,4 +182,4 @@ Agent identity is a solved-enough problem with too many solutions. Owner-authori
 
 ---
 
-*U4A is [open source under Apache 2.0](https://github.com/nickgamb/uma4agents). [FINDINGS.md](https://github.com/nickgamb/uma4agents/blob/main/FINDINGS.md) carries the recommendations to spec authors — which UMA 2.0 primitives to keep, transform, or park, each backed by running code.*
+*U4A is [open source under Apache 2.0](https://github.com/nickgamb/uma4agents). [FINDINGS.md](https://github.com/nickgamb/uma4agents/blob/main/FINDINGS.md) carries the recommendations to spec authors — which UMA 2.0 primitives to keep, transform, or park, each backed by running code. Those recommendations are now written as the [U4A specification set](/docs/reference/specification/), nine Internet-Drafts, and comment on them is wanted.*

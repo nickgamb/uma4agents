@@ -73,7 +73,7 @@ UMA 2.0. Listed in reading order.
 - [Reference · Events](https://u4a.ai/docs/reference/events.md): The structured event stream, every event name, and the ledger projected from it.
 - [Reference · MCP binding](https://u4a.ai/docs/reference/mcp-binding.md): How the grant travels over Model Context Protocol — discovery channels, both challenge encodings, the pend, and what MCP's types cannot yet express.
 - [Reference · Configuration](https://u4a.ai/docs/reference/configuration.md): Every setting each component reads, its default, and the two settings people get wrong.
-- [Reference · The specification set](https://u4a.ai/docs/reference/specification.md): Nine Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, written from this lab, with every requirement mapped to the check that proves it.
+- [Reference · The specification set](https://u4a.ai/docs/reference/specification.md): The nine Internet-Drafts that specify UMA 2.0 for agents — what each covers, their identifying URIs, and how to build them.
 - [Reference · Deviations from UMA 2.0](https://u4a.ai/docs/reference/deviations.md): The extension register — every place this profile departs from stock UMA, what the baseline says, and why each departure exists.
 - [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-five recommendations, and what was parked.
 
@@ -82,6 +82,7 @@ UMA 2.0. Listed in reading order.
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [September 11 2026 · v2026.09.7](https://u4a.ai/changelog.md): Blog: [An Agent Is Not a Principal](/blog/2026-09-11-an-agent-is-not-a-principal/) — why delegating a delegation is a category error, why an enterprise identity provider has no standing over a resource it does not own, how lineage is attested rather than transferred, and what the owner decides. Ends with a tutorial for implementing sub-agent grants on either side, with the refusals an implementer will meet and what each one means.
 - [September 11 2026 · v2026.09.6](https://u4a.ai/changelog.md): Specification: nine Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, in `spec/src` and rendered to `site/static/spec/`: `draft-gamb-uma4agents-core-00` (the grant profile), `-terms-00` (owner-proffered terms), `-fedauthz-00` (federated authorization for agents), `-policy-00` (owner policy, assurance and attention), `-lineage-00` (agent lineage), `-multiparty-00` (organizations and co-ownership), `-owner-00` (the resource owner's API), `-mcp-00` (the MCP binding) and `-aauth-00` (the AAuth binding). `make spec` renders them through kramdown-rfc and xml2rfc in a container. Each has an identifying URI under `https://u4a.ai/spec/` that dereferences to the draft.
 - [September 11 2026 · v2026.09.5](https://u4a.ai/changelog.md): Enforcement point: the tool surface is configurable. `UMA_PEP_TOOLS` names a JSON document mapping each MCP tool to a resource id, its scopes and whether its grant is single-use — which is what the owner's tiers can name, and therefore what she can approve separately. Absent, the lab's own surface is used. A malformed document stops the service rather than silently protecting the wrong tools.
 - [September 10 2026 · v2026.09.4](https://u4a.ai/changelog.md): Authorization server: sub-agent grants. An agent holding a connection may introduce a sibling, which skips first contact and then negotiates its own terms under its own key for its own grant. Nothing is passed down and nothing is inherited.
@@ -93,12 +94,12 @@ most days.
 - [August 25 2026 · v2026.08.24](https://u4a.ai/changelog.md): Docs: search moved from the docs tab bar into the site navigation. It already covered the blog and the changelog; now it is reachable from them.
 - [August 25 2026 · v2026.08.23](https://u4a.ai/changelog.md): Docs: a changelog at `/changelog/`, back to the first release. In `⌘K` search as one row per release, in `llms.txt`, in the sitemap, published as `/changelog.md`, and readable over MCP with a new `listChangelog` tool.
 - [August 25 2026 · v2026.08.22](https://u4a.ai/changelog.md): Organization: a charter may only claim a namespace it names. `northwind-vault/*` is accepted; `*/get_positions` is refused.
-- [August 25 2026 · v2026.08.21](https://u4a.ai/changelog.md): Joint ownership: a resource can have several owners of equal standing, none of whom can decide alone. A published mandate names who is entitled to be counted, at what weight and how many it takes; each owner's authority signs a verdict bound to one negotiation and one agreement; a tally collects them.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts
 
-- [Everything You Need to Know About Deploying U4A at Scale](https://u4a.ai/blog/2026-08-12-deploying-u4a-at-scale.md): A field guide to running owner-authoritative authorization for real: how it differs from the policy engine you already run, the parts list, the five things that will bite you, a complete Kubernetes reference architecture on the solo.io stack — and an honest list of what it does not solve yet.
+- [An Agent Is Not a Principal](https://u4a.ai/blog/2026-09-11-an-agent-is-not-a-principal.md): Agents spawn agents. The usual answer is for the parent to delegate what it was delegated — a category error, because the agent was never a principal. What to do instead, why the resource owner has to be the one deciding, and how to implement it.
+- [Everything You Need to Know About Deploying U4A at Scale](https://u4a.ai/blog/2026-08-12-deploying-u4a-at-scale.md): A field guide to running owner-authoritative authorization for real: how it differs from the policy engine you already run, the parts list, the five things that will bite you, a complete Kubernetes reference architecture on the solo.io stack — and an honest account of its edges.
 - [Let Them: A Developer's Guide to UMA for Agents](https://u4a.ai/blog/2026-08-06-let-them-a-developers-guide-to-u4a.md): The industry is fighting over how agents prove who they are. That is the wrong fight. The question that decides whether an agent economy works is whether the owner of a resource can set the terms — and U4A is what that looks like in running code.
 
 ## Pages

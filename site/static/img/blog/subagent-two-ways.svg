@@ -1,0 +1,146 @@
+<svg viewBox="0 0 1640 1020" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- Two ways to authorize a worker an orchestrator spawned.
+       The anchor of the picture is her connection list: one row on the left,
+       four on the right, for the same four agents doing the same work.
+       Paint order: panels, then boxes, then connectors, then every label last,
+       so no line is ever drawn over text.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="aTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5e8fa3"/>
+    </marker>
+    <marker id="aCoral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+    <marker id="aLime" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bcdb2c"/>
+    </marker>
+  </defs>
+  <style>
+    .h1   { font-size: 30px; font-weight: 600; fill: #ffffff; }
+    .sub  { font-size: 16px; fill: #8a8f97; }
+    .colh { font-size: 22px; font-weight: 600; }
+    .coln { font-size: 13px; fill: #8a8f97; }
+    .sec  { font-size: 12px; fill: #8a8f97; letter-spacing: 1.6px; }
+    .box  { font-size: 15px; fill: #ffffff; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .note { font-size: 14px; }
+    .bul  { font-size: 15px; fill: #d5d8dc; }
+    .foot { font-size: 19px; fill: #ffffff; }
+  </style>
+
+  <rect width="1640" height="1020" fill="#0a0b0d"/>
+
+  <!-- ===== panels ===== -->
+  <rect x="60"  y="126" width="730" height="792" rx="14" fill="none" stroke="#e8836b" stroke-width="1.4" stroke-dasharray="7 6" opacity="0.75"/>
+  <rect x="850" y="126" width="730" height="792" rx="14" fill="none" stroke="#bcdb2c" stroke-width="1.4" stroke-dasharray="7 6" opacity="0.75"/>
+
+  <!-- ===== boxes: the fleet ===== -->
+  <rect x="235"  y="246" width="380" height="56" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.6"/>
+  <rect x="75"   y="358" width="220" height="56" rx="10" fill="#121317" stroke="#6e4a44" stroke-width="1.4"/>
+  <rect x="315"  y="358" width="220" height="56" rx="10" fill="#121317" stroke="#6e4a44" stroke-width="1.4"/>
+  <rect x="555"  y="358" width="220" height="56" rx="10" fill="#121317" stroke="#6e4a44" stroke-width="1.4"/>
+
+  <rect x="1025" y="246" width="380" height="56" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.6"/>
+  <rect x="865"  y="358" width="220" height="56" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.4"/>
+  <rect x="1105" y="358" width="220" height="56" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.4"/>
+  <rect x="1345" y="358" width="220" height="56" rx="10" fill="#121317" stroke="#5e8fa3" stroke-width="1.4"/>
+
+  <!-- ===== boxes: her records ===== -->
+  <rect x="75"  y="536" width="700" height="186" rx="10" fill="#121317" stroke="#3a4a52" stroke-width="1.4"/>
+  <rect x="865" y="536" width="700" height="186" rx="10" fill="#121317" stroke="#3a4a52" stroke-width="1.4"/>
+  <line x1="75"  y1="573" x2="775"  y2="573" stroke="#2a3238" stroke-width="1"/>
+  <line x1="865" y1="573" x2="1565" y2="573" stroke="#2a3238" stroke-width="1"/>
+
+  <!-- ===== connectors ===== -->
+  <path d="M425,302 L425,330 L185,330 L185,356" fill="none" stroke="#e8836b" stroke-width="1.5" marker-end="url(#aCoral)"/>
+  <path d="M425,302 L425,356" fill="none" stroke="#e8836b" stroke-width="1.5" marker-end="url(#aCoral)"/>
+  <path d="M425,302 L425,330 L665,330 L665,356" fill="none" stroke="#e8836b" stroke-width="1.5" marker-end="url(#aCoral)"/>
+
+  <path d="M1215,302 L1215,330 L975,330 L975,356" fill="none" stroke="#bcdb2c" stroke-width="1.5" marker-end="url(#aLime)"/>
+  <path d="M1215,302 L1215,356" fill="none" stroke="#bcdb2c" stroke-width="1.5" marker-end="url(#aLime)"/>
+  <path d="M1215,302 L1215,330 L1455,330 L1455,356" fill="none" stroke="#bcdb2c" stroke-width="1.5" marker-end="url(#aLime)"/>
+
+  <path d="M425,490 L425,528"  fill="none" stroke="#5e8fa3" stroke-width="1.5" marker-end="url(#aTeal)"/>
+  <path d="M1215,490 L1215,528" fill="none" stroke="#5e8fa3" stroke-width="1.5" marker-end="url(#aTeal)"/>
+
+  <!-- ===== labels ===== -->
+  <text class="h1"  x="60" y="60">Two ways to authorize a worker</text>
+  <text class="sub" x="60" y="92">An orchestrator spawns three of them. What the owner ends up holding is not the same.</text>
+
+  <text class="colh" x="92"  y="176" fill="#e8836b">Hand down the parent's token</text>
+  <text class="coln" x="92"  y="200">the usual way</text>
+  <text class="colh" x="882" y="176" fill="#bcdb2c">Introduce the worker</text>
+  <text class="coln" x="882" y="200">what this profile does instead</text>
+
+  <text class="sec" x="92"  y="232">THE FLEET</text>
+  <text class="sec" x="882" y="232">THE FLEET</text>
+
+  <text class="box"  x="425"  y="272" text-anchor="middle">orchestrator</text>
+  <text class="mono" x="425"  y="291" text-anchor="middle" fill="#8cc2d4">key K0 · holds a grant</text>
+  <text class="box"  x="1215" y="272" text-anchor="middle">orchestrator</text>
+  <text class="mono" x="1215" y="291" text-anchor="middle" fill="#8cc2d4">key K0 · holds a grant</text>
+
+  <text class="box"  x="185" y="384" text-anchor="middle">worker 1</text>
+  <text class="mono" x="185" y="403" text-anchor="middle" fill="#e8836b">key K0 · the same grant</text>
+  <text class="box"  x="425" y="384" text-anchor="middle">worker 2</text>
+  <text class="mono" x="425" y="403" text-anchor="middle" fill="#e8836b">key K0 · the same grant</text>
+  <text class="box"  x="665" y="384" text-anchor="middle">worker 3</text>
+  <text class="mono" x="665" y="403" text-anchor="middle" fill="#e8836b">key K0 · the same grant</text>
+
+  <text class="box"  x="975"  y="384" text-anchor="middle">worker 1</text>
+  <text class="mono" x="975"  y="403" text-anchor="middle" fill="#bcdb2c">key K1 · its own grant</text>
+  <text class="box"  x="1215" y="384" text-anchor="middle">worker 2</text>
+  <text class="mono" x="1215" y="403" text-anchor="middle" fill="#bcdb2c">key K2 · its own grant</text>
+  <text class="box"  x="1455" y="384" text-anchor="middle">worker 3</text>
+  <text class="mono" x="1455" y="403" text-anchor="middle" fill="#bcdb2c">key K3 · its own grant</text>
+
+  <text class="note" x="425"  y="454" text-anchor="middle" fill="#e8836b">the parent's key and grant, copied to each</text>
+  <text class="note" x="1215" y="454" text-anchor="middle" fill="#bcdb2c">a signed introduction naming the worker's key</text>
+  <text class="mono" x="1215" y="476" text-anchor="middle" fill="#8a8f97">it confers no tier and no scope — the worker then negotiates its own</text>
+
+  <text class="sec" x="92"  y="516">IN HER AUTHORIZATION SERVER</text>
+  <text class="sec" x="882" y="516">IN HER AUTHORIZATION SERVER</text>
+
+  <text class="mono" x="95"  y="563" fill="#8a8f97">CONNECTION</text>
+  <text class="mono" x="360" y="563" fill="#8a8f97">HANDLE</text>
+  <text class="mono" x="560" y="563" fill="#8a8f97">INTRODUCED BY</text>
+  <text class="mono" x="885"  y="563" fill="#8a8f97">CONNECTION</text>
+  <text class="mono" x="1150" y="563" fill="#8a8f97">HANDLE</text>
+  <text class="mono" x="1350" y="563" fill="#8a8f97">INTRODUCED BY</text>
+
+  <text class="mono" x="95"  y="600" fill="#dfe3e8">advisory-agent</text>
+  <text class="mono" x="360" y="600" fill="#8cc2d4">jkt:RnJ0c2Fm…</text>
+  <text class="mono" x="560" y="600" fill="#6a7076">—</text>
+  <text class="note" x="95"  y="668" fill="#e8836b">One row. Four agents are acting.</text>
+  <text class="mono" x="95"  y="694" fill="#8a8f97">She cannot see them, name them, or take one away.</text>
+
+  <text class="mono" x="885"  y="600" fill="#dfe3e8">advisory-agent</text>
+  <text class="mono" x="1150" y="600" fill="#8cc2d4">jkt:RnJ0c2Fm…</text>
+  <text class="mono" x="1350" y="600" fill="#6a7076">—</text>
+  <text class="mono" x="885"  y="628" fill="#dfe3e8">advisory-worker-1</text>
+  <text class="mono" x="1150" y="628" fill="#8cc2d4">jkt:9Kd2Vv1p…</text>
+  <text class="mono" x="1350" y="628" fill="#bcdb2c">advisory-agent</text>
+  <text class="mono" x="885"  y="656" fill="#dfe3e8">advisory-worker-2</text>
+  <text class="mono" x="1150" y="656" fill="#8cc2d4">jkt:Lm4pQz8t…</text>
+  <text class="mono" x="1350" y="656" fill="#bcdb2c">advisory-agent</text>
+  <text class="mono" x="885"  y="684" fill="#dfe3e8">advisory-worker-3</text>
+  <text class="mono" x="1150" y="684" fill="#8cc2d4">jkt:Qx7sB2rd…</text>
+  <text class="mono" x="1350" y="684" fill="#bcdb2c">advisory-agent</text>
+  <text class="note" x="885"  y="712" fill="#bcdb2c">Four rows. Four agents are acting.</text>
+
+  <text class="sec" x="92"  y="762">WHAT THAT COSTS HER</text>
+  <text class="sec" x="882" y="762">WHAT THAT BUYS HER</text>
+
+  <text class="bul" x="92" y="796">✕&#160;&#160;They are indistinguishable from the parent in her records</text>
+  <text class="bul" x="92" y="826">✕&#160;&#160;No worker can be revoked without revoking all of them</text>
+  <text class="bul" x="92" y="856">✕&#160;&#160;Each holds whatever the parent held, wherever it reaches</text>
+  <text class="bul" x="92" y="886">✕&#160;&#160;She agreed to one agent and got four</text>
+
+  <text class="bul" x="882" y="796">✓&#160;&#160;Each is a connection of its own, and revocable alone</text>
+  <text class="bul" x="882" y="826">✓&#160;&#160;Each is bound by every tier's rules, as any agent is</text>
+  <text class="bul" x="882" y="856">✓&#160;&#160;A tier the lineage never reached still stops and asks her</text>
+  <text class="bul" x="882" y="886">✓&#160;&#160;Revoking the parent takes its workers with it, in one action</text>
+
+  <text class="foot" x="820" y="968" text-anchor="middle">The task graph nests as deep as you like. The authority graph stays one level deep.</text>
+</svg>

@@ -46,6 +46,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
   U4ATerms:
     title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
     author:
@@ -56,6 +57,7 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-terms-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
 informative:
   SP800-63-3:
     title: "Digital Identity Guidelines"
@@ -75,6 +77,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-lineage-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html
   U4AMultiParty:
     title: "Multi-Party Authorization for User-Managed Access (UMA) 2.0"
     author:
@@ -85,6 +88,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-multiparty-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:

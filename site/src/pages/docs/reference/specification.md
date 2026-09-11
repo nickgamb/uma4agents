@@ -2,7 +2,7 @@
 templateKey: doc
 title: The specification set
 seoTitle: "UMA 2.0 for Agents — the specification set"
-description: Nine Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, written from this lab, with every requirement mapped to the check that proves it.
+description: The nine Internet-Drafts that specify UMA 2.0 for agents — what each covers, their identifying URIs, and how to build them.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -12,14 +12,13 @@ next:
     blurb: The recommendations the drafts answer.
 ---
 
-What this lab found is written as a set of Internet-Drafts. Three are required
-to implement together and constitute the profile; four are optional
-extensions; two are bindings, one to a transport and one to an agent identity
-layer. Each has an identifying
-URI, and the authorization server advertises the ones it implements in
-`uma_profiles_supported`, as UMA 2.0 Grant §4 asks.
+Nine Internet-Drafts specify this profile. Three are required and together
+constitute it, four are optional extensions, and two are bindings.
 
-| Draft | Title | Status in the set | URI |
+Each document has an identifying URI. An authorization server lists the ones it
+implements in its `uma_profiles_supported` metadata, as UMA 2.0 Grant §4 asks.
+
+| Draft | Title | In the set | URI |
 |---|---|---|---|
 | [core](/spec/draft-gamb-uma4agents-core-00.html) ([txt](/spec/draft-gamb-uma4agents-core-00.txt)) | User-Managed Access (UMA) 2.0 Profile for Autonomous Agents | **Required** | `https://u4a.ai/spec/core/1.0` |
 | [terms](/spec/draft-gamb-uma4agents-terms-00.html) ([txt](/spec/draft-gamb-uma4agents-terms-00.txt)) | Owner-Proffered Terms for UMA 2.0 | **Required** | `https://u4a.ai/spec/terms/1.0` |
@@ -31,76 +30,75 @@ URI, and the authorization server advertises the ones it implements in
 | [mcp](/spec/draft-gamb-uma4agents-mcp-00.html) ([txt](/spec/draft-gamb-uma4agents-mcp-00.txt)) | Model Context Protocol Binding | Binding | `https://u4a.ai/spec/mcp/1.0` |
 | [aauth](/spec/draft-gamb-uma4agents-aauth-00.html) ([txt](/spec/draft-gamb-uma4agents-aauth-00.txt)) | AAuth Binding | Binding | `https://u4a.ai/spec/aauth/1.0` |
 
-The drafts are in Internet-Draft form. Whether they go to the datatracker is a
-separate decision, and nothing in them depends on it.
+They are drafts, and comment on them is wanted. Open an issue on
+[the repository](https://github.com/nickgamb/uma4agents/issues), or read
+[the findings](/docs/reference/findings/) for the recommendations behind each.
 
-One term differs between the drafts and these pages. What the lab and every
-page here calls a **tier** — a group of resources with one terms document,
-one ask-me switch and its rules — the drafts call a **policy unit**, so that
-the word carries no suggestion of rank. They are the same object.
+**Terminology.** These pages say *tier* where the drafts say *policy unit*.
+Same object: a group of resources with one terms document, one ask-me switch,
+and its rules.
 
-## What each one carries
+## What each document covers
 
-**Core** narrows UMA 2.0 in one place and extends it in several: the challenge
-is a set of parameters rather than a header, so an enforcement point with no
-status line can emit it; the requesting agent is a key it proves possession
-of, at one of two identity levels; the requesting party token is
-proof-of-possession and carries its permissions as a claim; a grant may be
-bound to one operation and spent once; enforcement has a normative order and
-single use must survive replication; the owner holds a standing, revocable
-relationship with each agent; and every owner-scoped artifact carries its
-owner. Its §11 is the register the [deviations page](/docs/reference/deviations/)
-is numbered from.
+**Core** — the grant. The challenge as a set of parameters rather than an HTTP
+header; two identity levels for the requesting agent; a proof-of-possession
+token carrying its permissions as a claim; operation binding and single use;
+the order an enforcement point runs its checks in; the standing connection;
+the owner's credential to her own server; and which artifacts carry an owner.
+Its §11 is the extension register the
+[deviations page](/docs/reference/deviations/) follows.
 
-**Owner-Proffered Terms** transforms claims-gathering: the authorization server
-proffers the content of the claim it requires, at a persistent URI in three
-representations, and the grant returns a counter-signed receipt embedding the
-signed agreement. Adoptable by any UMA deployment, agents or not.
+**Owner-Proffered Terms** — claims-gathering in which the authorization server
+proffers the claim's content. The terms document and its three
+representations, version immutability, the signed agreement, what the
+requesting side may author in it, the counter-signed receipt, and declining.
+Usable by any UMA deployment, agents or not.
 
-**Federated Authorization for Agents** makes registration declarative, splits
-discovery into a public structural layer and a protected instance layer, lets a
-resource server establish itself with an owner's authority by signing as its
-own origin, and gives introspection a reason.
+**Federated Authorization for Agents** — declarative registration; discovery
+split into a public structural layer and a protected instance layer;
+resource-server establishment by a signature from the origin it serves; and
+the reason an introspection response gives for an inactive token.
 
-**Owner Policy, Assurance and Attention** states the asymmetry — evidence from
-the requesting side may only tighten; only the owner's own decisions may relax
-— and enforces it where policy is stored. Assurance is three axes with no
-composite; the pending queue has a depth limit in two lanes; the owner's record
-names the counterparty on every row it honestly can.
+**Owner Policy, Assurance and Attention** — which conditions may relax a
+requirement and which may only tighten, enforced when a policy is saved;
+three assurance axes with no composite score; a depth limit on the owner's
+pending queue, in two lanes; operator blocking; and what her record carries.
 
-**Agent Lineage** lets an agent introduce a sibling that skips first contact
-and then negotiates its own grant. Nothing is handed down; depth is one by an
-explicit check; revocation cascades.
+**Agent Lineage** — one agent introducing another. The introduction document
+and the RFC 8693 `act` alternative, the six admission checks, approval pooled
+across a lineage, the fan-out ceiling, and the revocation cascade.
 
-**Multi-Party Authorization** answers the two ways one-deciding-party fails: a
-layer above the owner that may only narrow, and owners of equal standing whose
-signed verdicts travel in the grant and are re-verified at the enforcement
-point.
+**Multi-Party Authorization** — Part I, an organization above the owner: its
+charter, the envelope clamped into her terms, roles carrying `delegation`, and
+break-glass. Part II, owners of equal standing: a published mandate, a signed
+verdict from each owner's authority, and a tally that carries them in the
+grant.
 
-**The Owner's API** is the surface through which her portal, a command line or
-her own agent operate her authorization server: the queue and its decisions,
-her relationships with agents, operators and resource servers, her policy and
-terms, and the record. Left to the deployment by UMA 2.0; specified here so
-that software she runs can act for her against any conforming server.
+**The Resource Owner's API** — the surface her portal, a command line or an
+agent she runs uses to operate her authorization server: the queue and its
+decisions, her connections and the operators behind them, her resource
+servers, her policy and terms, the condition vocabulary, the record, and an
+event stream.
 
-**The AAuth binding** makes AAuth's agent credential the identified-agent
-credential, its signature conventions the proof of possession, its
-authorization token the grant, and its resource metadata a second encoding of
-the same structural facts.
+**MCP binding** — the challenge in both hosting shapes, the three discovery
+channels, reconciling MCP's routing headers against the body, origin
+validation, and truncated bodies.
 
-**The MCP binding** says how the challenge parameters travel over MCP in both
-hosting shapes, how a client discovers before its first call that it must
-negotiate, and what an enforcement point reading MCP's routing headers must do
-to avoid being steered.
+**AAuth binding** — AAuth's agent credential as the identified-agent
+credential, its signature conventions as proof of possession, its
+authorization token as the grant, and its resource metadata as a second
+encoding of the same structural facts.
 
-## Every requirement, and its check
+## Requirements and checks
 
-`make spec-check` reads the rendered drafts and the register in
-`spec/conformance.yaml`, and fails unless every normative statement in the set
-has a register row, every row names a check that exists, and every check named
-is run by a suite. The register itself is the honest map of what the reference
-implementation proves: a requirement on a *deployment* — an issuer allow-list,
-an egress policy — is marked as one rather than claimed.
+[`spec/conformance.yaml`](https://github.com/nickgamb/uma4agents/blob/main/spec/conformance.yaml)
+maps every normative statement in the set to what verifies it: a make target
+and the assertion that target prints, or a note that the requirement falls on
+a deployment or on a binding rather than on this implementation.
+
+`make spec-check` fails the build if a statement has no row, a row quotes text
+that is no longer in the draft, a row names a make target that does not exist,
+or a row cites an assertion that no suite prints.
 
 ## Building them
 
@@ -108,6 +106,6 @@ an egress policy — is marked as one rather than claimed.
 make spec
 ```
 
-renders `spec/src/*.md` through kramdown-rfc and xml2rfc in a container, into
-`site/static/spec/`. The reference cache is committed, so a render reaches no
-network.
+Renders `spec/src/*.md` through kramdown-rfc and xml2rfc in a container, into
+`site/static/spec/`. The bibliographic reference cache is committed, so the
+render needs no network.

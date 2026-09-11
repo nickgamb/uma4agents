@@ -458,15 +458,14 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-core-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
 
    [U4AFedAuthz]
               Gamb, N. and E. Maler, "Federated Authorization for
               Autonomous Agents", Work in Progress, Internet-Draft,
               draft-gamb-uma4agents-fedauthz-00, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-gamb-
-              uma4agents-fedauthz-00>.
+              <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
+              00.html>.
 
 12.2.  Informative References
 
@@ -496,6 +495,7 @@ Appendix A.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
+
 
 
 
