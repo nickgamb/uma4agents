@@ -38,11 +38,19 @@ directory has no folder for.
 
 | # | Obligation | Who does it |
 |---|---|---|
-| 1 | Answer an unauthorized call with `401` + `WWW-Authenticate: UMA`, naming the owner's authorization server and a ticket | sidecar |
-| 2 | Publish RFC 9728 protected-resource metadata, so the agent can corroborate that authority rather than trust the header | sidecar |
-| 3 | Hold a PAT with the owner's authority and introspect each grant on every call — never cache the verdict | sidecar |
-| 4 | Verify the RFC 9421 proof-of-possession signature against the key bound into the grant, and check the operation digest | sidecar |
+| 1 | Introduce itself to the owner's authority, signing with a key published at its own origin — and **wait for her to authorize it** | sidecar |
+| 2 | Answer an unauthorized call with `401` + `WWW-Authenticate: UMA`, naming the owner's authorization server and a ticket | sidecar |
+| 3 | Publish RFC 9728 protected-resource metadata, so the agent can corroborate that authority rather than trust the header | sidecar |
+| 4 | Hold a PAT with the owner's authority and introspect each grant on every call — never cache the verdict | sidecar |
+| 5 | Verify the RFC 9421 proof-of-possession signature against the key bound into the grant, and check the operation digest | sidecar |
 | — | Do the actual work | your MCP server |
+
+Obligation 1 is the one people are surprised by, and it is the most
+characteristic of this profile. A resource server is not configured into an
+owner's authority by an administrator; it introduces itself, holding nothing
+that authority issued, and sits inert until the owner says yes from her
+portal. There is no client secret to exchange, because a shared string would
+be a way around her.
 
 ## Vendor neutrality
 
@@ -91,7 +99,26 @@ asserts exactly that.
    implementation, not a product — read
    [PROTOCOL.md](../docs/PROTOCOL.md) for what any implementation must do.
 2. Put the sidecar in front of your MCP server (`n8n/docker-compose.yml`).
-3. Describe your tools to the sidecar so tiers can name them
-   (`n8n/tools.json`).
-4. Check it with `python3 conformance.py https://your-endpoint` — it asserts
-   the four obligations above from outside, the way an agent would meet them.
+   There is no published image; it builds from this repository.
+3. Describe your tools in a `tools.json` and point `UMA_PEP_TOOLS` at it. That
+   surface is what the owner's tiers can name, so the split there is the split
+   she gets to approve.
+4. Approve the resource server from the owner's portal. Until then it answers
+   `authorization_pending` and protects nothing.
+5. Check it with `python3 conformance.py https://your-endpoint --upstream
+   <internal url>` — it asserts the obligations above from outside, the way an
+   agent would meet them.
+
+## What has been run, and what has not
+
+The sidecar path is exercised end to end against the lab's authorization
+server: no grant is answered `401` with a UMA challenge and the upstream is
+never reached; a real negotiated grant is forwarded and answered `200`; the
+upstream receives an `X-Uma-Contract` header and never the agent's
+`Authorization`. The registration and owner-approval steps above are the ones
+the lab's own gateway performs on every start.
+
+What has not been run is a full n8n instance behind it. The sidecar speaks HTTP
+to an HTTP upstream and parses MCP from the body — it has no knowledge of the
+tool behind it — so the n8n-specific part is configuration rather than code,
+but it is worth saying plainly that the vendor half is untested.

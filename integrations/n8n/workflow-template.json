@@ -1,64 +1,85 @@
 {
+  "id": "u4aMcpStarter001",
   "name": "U4A-ready MCP server (starter)",
   "nodes": [
     {
       "parameters": {
-        "path": "u4a-protected",
         "authentication": "headerAuth",
-        "options": {}
+        "path": "u4a-protected"
       },
-      "id": "mcp-trigger",
+      "id": "b7c1e2a4-0001-4a10-9f11-2a3b4c5d6e01",
       "name": "MCP Server Trigger",
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
-      "typeVersion": 1,
-      "position": [0, 0],
-      "notes": "Header auth keeps this endpoint from being reached around the U4A sidecar. It is not what authorizes agents — the sidecar does that, before anything gets here. Copy the PRODUCTION URL into UMA_PEP_UPSTREAM."
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "Header auth keeps this endpoint from being reached around the U4A sidecar. It is not what authorizes agents \u2014 the sidecar does that, before anything gets here. Copy the PRODUCTION URL into UMA_PEP_UPSTREAM."
     },
     {
       "parameters": {
         "name": "get_invoices",
         "description": "List invoices for a customer",
-        "workflowInputs": {
-          "values": [{ "name": "customer_id", "type": "string" }]
-        }
+        "language": "javaScript",
+        "jsCode": "// Replace with a real lookup. The point of this node is the tool's\n// name and shape, which is what tools.json maps to a resource id.\nreturn JSON.stringify([{ id: 'inv_1001', amount: 4200, status: 'open' }]);"
       },
-      "id": "tool-read",
+      "id": "b7c1e2a4-0002-4a10-9f11-2a3b4c5d6e02",
       "name": "get_invoices",
-      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
-      "typeVersion": 2,
-      "position": [260, -120],
-      "notes": "A read. Name it in tools.json under its own resource id so the owner can put it in a tier of its own."
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        -140
+      ],
+      "notes": "A read. Give it its own resource id in tools.json so the owner can put it in a tier of its own."
     },
     {
       "parameters": {
         "name": "issue_refund",
         "description": "Refund a payment",
-        "workflowInputs": {
-          "values": [
-            { "name": "payment_id", "type": "string" },
-            { "name": "amount", "type": "number" }
-          ]
-        }
+        "language": "javaScript",
+        "jsCode": "// Replace with a real refund call. Mark this one single_use in\n// tools.json: its grant should be spent by one call.\nreturn JSON.stringify({ refunded: true });"
       },
-      "id": "tool-write",
+      "id": "b7c1e2a4-0003-4a10-9f11-2a3b4c5d6e03",
       "name": "issue_refund",
-      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
-      "typeVersion": 2,
-      "position": [260, 120],
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        140
+      ],
       "notes": "An act with consequences. This is the one that belongs on a tier the owner marked ask-me, and the reason tools are split rather than exposed as one endpoint."
     }
   ],
   "connections": {
     "get_invoices": {
-      "ai_tool": [[{ "node": "MCP Server Trigger", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     },
     "issue_refund": {
-      "ai_tool": [[{ "node": "MCP Server Trigger", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "meta": {
-    "templateCredsSetupCompleted": false,
-    "description": "A starter MCP server shaped for U4A. Two tools on purpose: one read and one act with consequences, so the owner has something worth splitting across tiers. Import it, replace the tools with your own, activate it, then put the U4A sidecar in front — see integrations/n8n/README.md."
+    "description": "A starter MCP server shaped for U4A. Two tools on purpose: one read and one act with consequences, so the owner has something worth splitting across tiers. Import it, replace the tool bodies with your own, activate it, then put the U4A sidecar in front \u2014 see integrations/n8n/README.md."
   }
 }

@@ -3,9 +3,17 @@
 # n8n is not in this file on purpose. It is wherever it already runs, and this
 # changes nothing about it — the sidecar is the only thing agents reach, and
 # the only thing that has to be exposed.
+#
+# The image is built from this repository. There is no published image yet, so
+# clone it and build rather than pulling something that does not exist:
+#
+#   git clone https://github.com/nickgamb/uma4agents
+#   docker compose build
 services:
   u4a-sidecar:
-    image: ghcr.io/nickgamb/u4a-pep:latest
+    build:
+      context: ../..
+      dockerfile: services/uma-pep/Dockerfile
     restart: unless-stopped
     environment:
       # Setting an upstream is what turns this from a gateway callout into a
@@ -13,24 +21,33 @@ services:
       UMA_PEP_UPSTREAM: ${UMA_PEP_UPSTREAM}
       UMA_PEP_UPSTREAM_TIMEOUT_S: "60"
 
-      UMA_AS_PUBLIC: ${UMA_AS_PUBLIC}
-      UMA_AS_INTERNAL: ${UMA_AS_PUBLIC}
-      UMA_OWNER: ${UMA_OWNER}
-      UMA_AS_RS_CLIENT_ID: ${UMA_AS_RS_CLIENT_ID}
-      UMA_AS_RS_CLIENT_SECRET: ${UMA_AS_RS_CLIENT_SECRET}
+      # The tool surface. Read at startup; a malformed file stops the sidecar
+      # rather than silently protecting the wrong tools.
+      UMA_PEP_TOOLS: /config/tools.json
 
-      # The public URL agents use. The metadata document claims it, and RFC
-      # 9728 has the client refuse a document that names anything else — so a
-      # value that does not match what the agent typed fails at discovery,
-      # which is the correct and confusing failure.
-      UMA_PEP_PUBLIC_BASE: ${UMA_PEP_PUBLIC_BASE}
-      UMA_EXPECTED_AUTHORITY: ${UMA_PEP_PUBLIC_BASE}
-      UMA_REALM: ${UMA_OWNER}
+      UMA_AS_PUBLIC: ${UMA_AS_PUBLIC}
+      UMA_AS_INTERNAL: ${UMA_AS_INTERNAL}
+      UMA_OWNER: ${UMA_OWNER}
+      UMA_REALM: ${UMA_REALM}
+
+      # No client secret. It registers by signing with a key it publishes at
+      # its own origin, and the owner approves it from her portal.
+      UMA_AS_RS_CLIENT_ID: ${UMA_AS_RS_CLIENT_ID}
+      UMA_AS_RS_CLIENT_SECRET: ""
+      UMA_PEP_RS_NAME: ${UMA_PEP_RS_NAME}
+
+      # What agents type. The metadata document claims it, and RFC 9728 has
+      # the client refuse a document naming anything else.
+      UMA_PEP_SCHEME: ${UMA_PEP_SCHEME}
+      UMA_EXPECTED_AUTHORITY: ${UMA_EXPECTED_AUTHORITY}
     volumes:
       - ./tools.json:/config/tools.json:ro
+      # The signing key is this resource server's identity. Keep it: a new key
+      # is a new resource server, and the owner would have to authorize it
+      # again.
       - sidecar-keys:/keys
     ports:
-      - "8443:9000"
+      - "8443:9002"
 
 volumes:
   sidecar-keys:

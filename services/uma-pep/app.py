@@ -77,13 +77,64 @@ ALLOWED_ORIGINS = {
     ).split(",") if o
 }
 
-# Alice's vault tool surface: tool -> (resource_id, scopes). This is what the
-# gateway registers at her AS on startup.
-TOOLS = {
+# The tool surface this enforcement point protects: tool -> (resource_id,
+# scopes). It is what the owner's authority is told about, and therefore what
+# her tiers can name — so the split here is the split she gets to approve.
+# Exposing one endpoint as one resource means she can only ever say yes to all
+# of it.
+#
+# The lab's is Alice's vault. Any other deployment supplies its own with
+# UMA_PEP_TOOLS, a JSON document of
+#
+#   {"<tool>": {"resource": "<id>", "scopes": [...], "single_use": false}}
+#
+# which is the whole of what has to be described to put this in front of an
+# MCP server somebody else wrote.
+_LAB_TOOLS = {
     "get_positions": ("alice-vault/get_positions", ["positions:read"]),
     "get_transactions": ("alice-vault/get_transactions", ["transactions:read"]),
     "execute_trade": ("alice-vault/execute_trade", ["trades:execute"]),
 }
+_LAB_SINGLE_USE = {"execute_trade"}
+
+
+def _load_tools(path: str) -> tuple[dict, set]:
+    """Read a tool surface from disk, or fail loudly.
+
+    Deliberately not falling back to the lab's surface on a malformed file: a
+    resource server that silently protects the wrong tools is worse than one
+    that does not start, because nothing downstream would report it — the
+    challenge, the registration and the metadata document would all be
+    internally consistent and all about somebody else's tools.
+    """
+    with open(path, encoding="utf-8") as f:
+        doc = json.load(f)
+    if not isinstance(doc, dict) or not doc:
+        raise ValueError(f"{path} must be a non-empty object of tool definitions")
+    tools, single_use = {}, set()
+    for tool, spec in doc.items():
+        if tool.startswith("_"):          # room for comments in the document
+            continue
+        if not isinstance(spec, dict):
+            raise ValueError(f"{path}: {tool!r} must be an object")
+        rid = spec.get("resource")
+        scopes = spec.get("scopes")
+        if not isinstance(rid, str) or not rid:
+            raise ValueError(f"{path}: {tool!r} needs a resource id")
+        if not isinstance(scopes, list) or not all(isinstance(x, str) for x in scopes):
+            raise ValueError(f"{path}: {tool!r} needs a list of scopes")
+        tools[tool] = (rid, scopes)
+        if spec.get("single_use"):
+            single_use.add(tool)
+    if not tools:
+        raise ValueError(f"{path} defined no tools")
+    return tools, single_use
+
+
+if _tools_path := os.environ.get("UMA_PEP_TOOLS"):
+    TOOLS, _CONFIGURED_SINGLE_USE = _load_tools(_tools_path)
+else:
+    TOOLS, _CONFIGURED_SINGLE_USE = _LAB_TOOLS, _LAB_SINGLE_USE
 # Owners besides the primary one that this gateway fronts, each at its own
 # path. A resource server holding many people's accounts holds a distinct
 # protected resource for each: `/mcp` is Alice's, `/mcp/carol` is Carol's,
@@ -215,7 +266,9 @@ def joint_tools(account: str) -> dict:
     be exact.
     """
     return {tool: (f"{account}/{tool}", ss) for tool, (_, ss) in TOOLS.items()}
-SINGLE_USE_TOOLS = {"execute_trade"}
+# Tools whose grant is spent by one call. Named in the tool document as
+# `"single_use": true`; the lab's trade endpoint is the example.
+SINGLE_USE_TOOLS = _CONFIGURED_SINGLE_USE
 # Deny by default. An allow-list of open methods silently admits every method
 # a future protocol revision invents — 2026-07-28 alone added tasks/*,
 # server/discover and subscriptions/listen — so the protected set is named

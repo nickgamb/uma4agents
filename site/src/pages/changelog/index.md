@@ -20,6 +20,18 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 11 2026
+
+### v2026.09.5
+
+#### New
+
+- **Enforcement point:** the tool surface is configurable. `UMA_PEP_TOOLS` names a JSON document mapping each MCP tool to a resource id, its scopes and whether its grant is single-use — which is what the owner's tiers can name, and therefore what she can approve separately. Absent, the lab's own surface is used. A malformed document stops the service rather than silently protecting the wrong tools.
+
+#### Bug fixes
+
+- **Integrations:** the n8n kit described a `tools.json` nothing read, an environment variable that did not exist, a client secret the registration flow does not use, and an image that was never published. It omitted the step that matters most — the owner authorizing the resource server before it can protect anything. Corrected, and the sidecar path is now verified end to end against the lab.
+
 ## September 10 2026
 
 ### v2026.09.4

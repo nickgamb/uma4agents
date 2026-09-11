@@ -49,15 +49,35 @@ written a folder for yet.
 
 | # | Obligation |
 |---|---|
-| 1 | Answer an unauthorized call with `401` + `WWW-Authenticate: UMA`, naming the authorization server and a ticket |
-| 2 | Publish RFC 9728 protected-resource metadata, so the agent can corroborate that authority rather than trust the header |
-| 3 | Hold a PAT with the owner's authority and introspect the grant **on every call** — never cache the verdict |
-| 4 | Verify the RFC 9421 proof-of-possession signature against the key bound into the grant, and check the operation digest |
+| 1 | Introduce itself to the owner's authority, signing with a key published at its own origin — and **wait for her to authorize it** |
+| 2 | Answer an unauthorized call with `401` + `WWW-Authenticate: UMA`, naming the authorization server and a ticket |
+| 3 | Publish RFC 9728 protected-resource metadata, so the agent can corroborate that authority rather than trust the header |
+| 4 | Hold a PAT with the owner's authority and introspect the grant **on every call** — never cache the verdict |
+| 5 | Verify the RFC 9421 proof-of-possession signature against the key bound into the grant, and check the operation digest |
+
+## The owner authorizes the resource server, too
+
+The first obligation is the one people are surprised by, and it is the most
+characteristic thing here.
+
+A resource server is not configured into an owner's authority by an
+administrator. It introduces itself, holding nothing that authority issued: it
+signs the registration with a key it publishes at its own origin, so the
+credential *is* the origin, and verifying it is a fetch the authority performs
+rather than a claim it is handed. There is no client secret to exchange,
+because a shared string would be a way around her.
+
+Until she answers, calls through the sidecar return `authorization_pending` and
+nothing reaches the resource. She approves it in her portal under **Resource
+servers** — the same shape as her answer about an agent's first contact,
+because it is the same kind of question.
 
 Your MCP server keeps doing the work. It never sees a grant: the sidecar
 strips the agent's `Authorization` header before forwarding, because that
 credential is addressed to this authority and spent here, and an upstream that
-received it could replay it.
+received it could replay it. It does receive an `X-Uma-Contract` header — the
+agreement digest, a fact about the call it may want to log and cannot use to
+obtain anything.
 
 ## The same integration for every vendor
 
@@ -88,6 +108,11 @@ approves once and the unit rules attach to, so drawing them badly is the thing
 most worth getting right early. Exposing one endpoint as one resource means she
 can only ever say yes to all of it.
 
+That surface is a file — `tools.json`, read at startup — mapping each MCP tool
+to a resource id and its scopes, with `single_use` for anything whose grant
+should be spent by one call. It is the whole of what has to be described to put
+this in front of a server somebody else wrote.
+
 **Which calls should ever wake somebody?** Most should not. The policy layer
 exists so that standing rules answer nearly everything and a person is
 interrupted only where they said they wanted to be.
@@ -116,8 +141,25 @@ Everything above that last check can pass while the resource is still wide
 open on another port. A suite that only proves the allows would pass against an
 endpoint with no enforcement at all.
 
+## What has been run
+
+The sidecar path is exercised end to end against the lab's authorization
+server: a call with no grant is answered `401` with a UMA challenge and the
+upstream is never reached; after a real grant is negotiated the call is
+forwarded and answered `200`; the upstream sees the contract digest and never
+the agent's `Authorization`.
+
+The n8n workflow template imports into n8n 2.38.6 and round-trips back out with
+every node resolving at its current version.
+
+What has not been run is the two halves joined: a live n8n behind a live
+sidecar. The sidecar speaks HTTP to an HTTP upstream and parses MCP from the
+body, so that join is configuration rather than code — but it is worth saying
+which part was tested and which was reasoned.
+
 ## Files
 
 [`integrations/`](https://github.com/nickgamb/uma4agents/tree/main/integrations)
-in the repository: the vendor-neutral contract, a worked n8n example with an
-importable workflow and a compose file, and the conformance checker.
+in the repository: the vendor-neutral contract, a worked n8n example with a
+compose file and a tool surface, and the conformance checker. There is no
+published image — the compose file builds from the repository.
