@@ -1,0 +1,672 @@
+
+
+
+
+Network Working Group                                            N. Gamb
+Internet-Draft                                            MindGarden LLC
+Intended status: Standards Track                                E. Maler
+Expires: 15 March 2027                                      Venn Factory
+                                                       11 September 2026
+
+
+            Agent Lineage for User-Managed Access (UMA) 2.0
+                    draft-gamb-uma4agents-lineage-00
+
+Abstract
+
+   This document lets an autonomous agent that holds a standing
+   relationship with a resource owner introduce another agent to her.
+   The introduced agent skips the owner's first-contact question and
+   then negotiates its own terms, under its own key, for its own grant.
+   Nothing is handed down.
+
+   The task graph an orchestrating agent builds may nest as deeply as it
+   likes.  The authority graph stays one level deep: every agent is
+   separately visible to the owner, separately bounded by her policy,
+   and separately revocable, and revoking the agent that introduced
+   others revokes them with it.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 March 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 1]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Relationship to the Set . . . . . . . . . . . . . . . . .   3
+     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
+   2.  Asserting a Lineage . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  By Introduction Document  . . . . . . . . . . . . . . . .   3
+     2.2.  By Issuer Attestation . . . . . . . . . . . . . . . . . .   4
+   3.  Admission . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.1.  What the Document Settles . . . . . . . . . . . . . . . .   5
+     3.2.  What the Owner's Record Settles . . . . . . . . . . . . .   5
+     3.3.  Failure Falls Back  . . . . . . . . . . . . . . . . . . .   6
+     3.4.  The Introduced Connection . . . . . . . . . . . . . . . .   6
+   4.  Policy Over a Lineage . . . . . . . . . . . . . . . . . . . .   6
+     4.1.  Approval Belongs to the Lineage . . . . . . . . . . . . .   6
+     4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   6
+     4.3.  The Ceiling . . . . . . . . . . . . . . . . . . . . . . .   7
+   5.  Attention . . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   6.  Revocation  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   8
+     7.1.  Nothing Is Handed Down  . . . . . . . . . . . . . . . . .   8
+     7.2.  The Introducer Is Looked Up, Never Named  . . . . . . . .   8
+     7.3.  Depth Is a Check, Not an Emergent Property  . . . . . . .   8
+     7.4.  Same Operator Means Same Directory  . . . . . . . . . . .   8
+     7.5.  Fan-Out Is a Ceiling, Not a Rule  . . . . . . . . . . . .   9
+   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
+     9.1.  Media Type Registration . . . . . . . . . . . . . . . . .   9
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .   9
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  10
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  11
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  11
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 2]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+1.  Introduction
+
+   An orchestrating agent spawns workers.  Under [U4ACore] each worker
+   is individuated by its own key, so each is a stranger to the owner
+   and each costs her a question.  The usual answer is to hand the
+   workers the parent's token, at which point they are indistinguishable
+   from the parent in the owner's records, cannot be revoked
+   individually, and hold authority the owner never agreed to give them.
+   Attenuated-token designs such as
+   [I-D.niyikiza-oauth-attenuating-agent-tokens] narrow what is handed
+   down without changing that it is handed down.
+
+   This document takes the other position.  The parent may say _this is
+   one of mine_, and the owner's authorization server may act on that by
+   not asking her whether she wants a relationship with the newcomer.
+   Everything after that is the newcomer's own: it signs the owner's
+   terms with its own key, is bound by her policy as itself, and
+   receives a grant confirmed to its own key.  An introduction admits an
+   agent; it does not approve anything for it.
+
+1.1.  Relationship to the Set
+
+   This document is an OPTIONAL extension of [U4ACore] and depends on
+   [U4ATerms] and [U4APolicy].  Its identifying URI is
+   https://u4a.ai/spec/lineage/1.0.
+
+1.2.  Notational Conventions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   jkt(k) is as defined in [U4ACore], over the JWK Thumbprint of
+   [RFC7638].
+
+2.  Asserting a Lineage
+
+   A requesting agent asserts that another agent introduced it in
+   exactly one of two ways.
+
+2.1.  By Introduction Document
+
+   The introducing agent signs a compact JWS [RFC7515] whose protected
+   header carries:
+
+   typ:  REQUIRED. u4a-introduction-v1+jws.
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 3]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   jwk:  REQUIRED.  The introducing agent's public key [RFC7517].
+
+   agent_token:  OPTIONAL.  The introducing agent's identity credential,
+      where it is an identified agent under [U4ACore] Section 5.1.  Its
+      confirmed key MUST equal jwk.
+
+   and whose claims are:
+
+   sub:  REQUIRED. jkt(k) for the introduced agent's key k.
+
+   aud:  REQUIRED.  The issuer identifier of the owner's authorization
+      server.
+
+   exp:  REQUIRED.  Expiry.  SHOULD be short; the reference
+      implementation uses five minutes.
+
+   iat:  REQUIRED.
+
+   jti:  REQUIRED.
+
+   The introduction deliberately carries no iss.  The introducing
+   agent's identity travels only in the header key, which the signature
+   verifies against and from which the authorization server re-derives a
+   connection handle.  An iss naming the introducer would have to be
+   either ignored or believed, and believing it would let any agent
+   nominate any other agent's handle as its sponsor.
+
+   The introduced agent carries the introduction in its agreement
+   ([U4ATerms]) as a claim named introduction.  An authorization server
+   MUST bound the size of an introduction it will parse; the reference
+   implementation refuses one over 4096 octets.
+
+2.2.  By Issuer Attestation
+
+   Where the introduced agent is an identified agent, its issuer MAY
+   assert the lineage instead, by placing the introducing agent's
+   subject identifier in an act claim [RFC8693] of the introduced
+   agent's credential.  No second document is needed; the authorization
+   server reads the claim it already verified.
+
+   [I-D.hardt-aauth-protocol] defines this use of act in its agent
+   credential.  Nothing new is defined here; the claim is read.
+
+3.  Admission
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 4]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+3.1.  What the Document Settles
+
+   On receiving an assertion of lineage, the authorization server MUST
+   first establish what the document settles on its own: that it
+   verifies against the key in its header, that its aud names this
+   authorization server, that it has not expired, and that its sub
+   equals the thumbprint of the key that signed the agreement it arrived
+   in.  An assertion that fails any of these is a malformed request and
+   MUST be refused as one.
+
+3.2.  What the Owner's Record Settles
+
+   An assertion that holds up as a document is then decided against the
+   owner's record.  The authorization server MUST refuse to act on it
+   unless every one of the following holds, and MUST check them in this
+   order so that a refusal names the strongest reason:
+
+   1.  The introducing agent holds an active standing connection with
+       this owner, looked up by the handle derived from the header key
+       (or, under Section 2.2, from the issuer and the act subject).
+
+   2.  The owner has personally approved the introducing agent at at
+       least one policy unit.  An agent she has never said yes to cannot
+       vouch for another.
+
+   3.  The introducing agent was not itself introduced.  Depth is capped
+       at one by this check and by nothing else — an introduced agent
+       becomes eligible under check 2 the moment the owner approves it
+       at anything, so without this check the cap would be an accident
+       of timing.
+
+   4.  The introduced agent has no prior connection with this owner that
+       is not active.  A revoked agent goes back through first contact;
+       an introduction MUST NOT restore what the owner withdrew.
+
+   5.  Under Section 2.1, one operator has published both keys: the
+       introduced agent is at accountability level 2 ([U4APolicy]
+       Section 5.1), and the _same_ directory at the _same_ origin also
+       holds the introducing key.  Under Section 2.2, the issuer's
+       attestation satisfies this check.
+
+   6.  The introducing agent has fewer live introduced agents than a
+       deployment ceiling.
+
+   Check 5 exists because an agent cannot be allowed to point at a
+   second directory it runs itself.  The directory that attests the
+   child is the one that must also attest the parent.
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 5]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+3.3.  Failure Falls Back
+
+   An assertion that holds up as a document but fails Section 3.2 is not
+   an error.  The authorization server MUST record why the introduction
+   was not honoured, and MUST then treat the request exactly as one that
+   offered no lineage: the agent is a stranger, and first contact is put
+   to the owner.  The introduction was a shortcut that did not apply,
+   not a credential that was rejected.
+
+3.4.  The Introduced Connection
+
+   Where the assertion is honoured, the authorization server MUST record
+   a standing connection for the introduced agent without asking the
+   owner, carrying the introducing agent's handle, and MUST NOT record
+   any approval for it.  It MUST carry forward any prior revocation
+   count for the same handle, as [U4ACore] Section 9.
+
+   An introduced connection MUST be created only after every refusal the
+   authorization server would apply to a first contact — a blocked
+   operator, a policy refusal, the attention bound — has been passed.
+   Persisting it earlier leaves a live connection for an operator the
+   owner has shut out.
+
+   The owner's record MUST show the connection as introduced, and by
+   whom.
+
+4.  Policy Over a Lineage
+
+4.1.  Approval Belongs to the Lineage
+
+   Approval the owner gives at a policy unit belongs to the lineage, not
+   to the connection that earned it, and flows in both directions.  An
+   authorization server MUST make available to policy the set of units
+   at which the owner has personally approved any live member of a
+   lineage — the introducing agent or any agent it introduced — and MUST
+   exclude revoked members from that set.
+
+   The owner approved a unit for this fleet; it does not matter which
+   member earned it.  A worker that was approved to trade means the
+   orchestrator that spawned it need not be asked again to trade.
+
+4.2.  Three Postures
+
+   An owner MUST be able to express each of the following per policy
+   unit, using the conditions of [U4APolicy]:
+
+   Per agent:  Every agent is asked once at this unit, introduced or
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 6]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+      not.  This is the default and what happens when she writes
+      nothing.
+
+   Lineage-wide:  Whoever in the lineage earns this unit, the rest
+      inherit it.  Expressed by narrowing the per-agent ask to fire only
+      when nothing in the lineage has been approved here.
+
+   Always ask for introduced agents:  An introduced agent is asked at
+      this unit every time, whatever its lineage has earned.
+
+   All three are tightening conditions on the observed side of the
+   asymmetry in [U4APolicy] Section 3.  Lineage-wide is not "relax when
+   the lineage is approved" — it is "narrow the existing ask so that it
+   fires only when the lineage is new".  Which agents join a lineage is
+   chosen by the operator running them, so the requesting side can only
+   ever cause an ask to remain; it cannot cause one to go away.
+
+4.3.  The Ceiling
+
+   A unit the lineage was never approved for pends for an introduced
+   agent exactly as it would have for the introducing agent.  This is
+   not configurable.  Introduction skips the relationship question; it
+   does not skip the owner.
+
+5.  Attention
+
+   An introduced agent MUST be counted against the attention bound of
+   [U4APolicy] Section 6 as a first contact is, and the pending requests
+   it generates at policy units MUST be counted with it.  An agent skips
+   the relationship question, not the queue discipline; otherwise one
+   approved agent could flood the owner's queue with introduced ones,
+   each individually well-formed and none counted.
+
+6.  Revocation
+
+   Revoking a connection MUST revoke every connection it introduced, in
+   the same operation.  The authorization server MUST revoke the
+   introducing connection first, so that a negotiation arriving mid-
+   cascade cannot find it active and be admitted behind it, and MUST
+   report the number of connections and grants the cascade ended.
+
+   Because depth is one (Section 3.2 check 3), the cascade need not
+   recurse.
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 7]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   Every introduced agent's live grants stop working on its next call,
+   through the introspection of [U4ACore] Section 8.2, with no action
+   per link.  Revoking an introduced agent that held the lineage's only
+   approval at a unit returns the lineage to pending at that unit, which
+   is correct: the approval was hers and it was for an agent she has now
+   removed.
+
+   An agent revoked by cascade MUST NOT be re-admitted by an
+   introduction from the agent whose revocation ended it (Section 3.2
+   check 4), and MUST NOT be re-admitted by an introduction from any
+   other agent either.
+
+7.  Security Considerations
+
+7.1.  Nothing Is Handed Down
+
+   The introduced agent's grant is confirmed to its own key, over terms
+   it signed itself, under a policy evaluated against it.  The
+   introduction confers no permission, no scope, and no approval; it
+   removes one question.  An implementation that lets an introduction
+   carry anything else has reinvented token passing with an extra
+   document.
+
+7.2.  The Introducer Is Looked Up, Never Named
+
+   See Section 2.1.  The only statement of who introduced an agent is
+   the key that signed the introduction, which the signature proves
+   possession of and the owner's record resolves.  A design that let the
+   introduction name its signer would let any agent claim any sponsor.
+
+7.3.  Depth Is a Check, Not an Emergent Property
+
+   See Section 3.2 check 3.  The reference implementation was first
+   written on the assumption that an introduced agent could never
+   introduce, because it begins with no approvals.  That is false the
+   moment the owner approves it at anything.  The cap has to be
+   explicit.
+
+7.4.  Same Operator Means Same Directory
+
+   See Section 3.2 check 5.  Level-2 accountability proves an operator
+   published a key.  Two keys in two directories at two origins prove
+   two operators, or one operator and an impostor.  The check is that
+   one directory holds both.
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 8]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+7.5.  Fan-Out Is a Ceiling, Not a Rule
+
+   Check 6 bounds how many agents one connection may put forward, so
+   that the attention bound of Section 5 is not the only thing standing
+   between an approved agent and an unbounded fleet.  It is a deployment
+   ceiling and not an owner policy: the reference implementation
+   defaults it to three.
+
+8.  Privacy Considerations
+
+   The owner's record shows every introduced agent, who introduced it,
+   and what it did, as [U4APolicy] Section 8 requires of any agent.  An
+   orchestrator's structure is therefore visible to the owner to the
+   depth of one, which is the depth at which she is asked to trust it.
+
+9.  IANA Considerations
+
+9.1.  Media Type Registration
+
+   IANA is asked to register the following in the "Media Types"
+   registry.
+
+   Type name:  application
+
+   Subtype name:  u4a-introduction-v1+jws
+
+   Required parameters:  N/A
+
+   Optional parameters:  N/A
+
+   Encoding considerations:  binary; a JWS in compact serialization
+
+   Security considerations:  See Section 7 of this document
+
+   Interoperability considerations:  N/A
+
+   Published specification:  Section 2.1 of this document
+
+   Applications that use this media type:  Applications implementing UMA
+      2.0 with this extension
+
+   Change controller:  IETF
+
+10.  References
+
+10.1.  Normative References
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                 [Page 9]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
+              Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
+              2015, <https://www.rfc-editor.org/rfc/rfc7638>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
+              Profile for Autonomous Agents", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-core-00>.
+
+   [U4APolicy]
+              Gamb, N. and E. Maler, "Owner Policy, Assurance and
+              Attention for User-Managed Access (UMA) 2.0", Work in
+              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
+              2026, <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-policy-00>.
+
+   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-terms-00, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-gamb-
+              uma4agents-terms-00>.
+
+10.2.  Informative References
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 10]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   [I-D.hardt-aauth-protocol]
+              Hardt, D., "AAuth Protocol", Work in Progress, Internet-
+              Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
+              <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
+              protocol-02>.
+
+   [I-D.niyikiza-oauth-attenuating-agent-tokens]
+              Aimable, N., "Attenuating Authorization Tokens for Agentic
+              Delegation Chains", Work in Progress, Internet-Draft,
+              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
+              2026, <https://datatracker.ietf.org/doc/html/draft-
+              niyikiza-oauth-attenuating-agent-tokens-01>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
+
+Appendix A.  Implementation Status
+
+   This section records the status of known implementations in the sense
+   of [RFC7942], and is to be removed before publication as an RFC.
+
+   The reference implementation [U4ALAB] implements this document in
+   full, including both assertion forms of Section 2.  The admission
+   decision is tested by minting introductions with the client library
+   and verifying them with the server module, so the two sides are
+   checked against each other; every refusal in Section 3.2 is
+   exercised, as are the three postures of Section 4.2, the ceiling of
+   Section 4.3, approval flowing from an introduced agent to the agent
+   that introduced it, and the cascade of Section 6 against live grants.
+
+Acknowledgments
+
+   [RFC8693] supplied the act claim and [I-D.hardt-aauth-protocol] the
+   use of it in an agent credential that Section 2.2 reads.
+
+Authors' Addresses
+
+   Nick Gamb
+   MindGarden LLC
+   Email: nickgamb@gmail.com
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 11]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+   Eve Maler
+   Venn Factory
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 15 March 2027                [Page 12]

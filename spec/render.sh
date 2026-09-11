@@ -20,9 +20,11 @@ for md in "$SRC"/*.md; do
     fi
     # kramdown-rfc writes warnings to stderr and still exits 0; a reference
     # declared twice or a missing anchor is worth failing on rather than
-    # discovering in a review.
-    if [ -s /tmp/kd.err ]; then
-        echo "FAIL (kramdown-rfc warnings)"; cat /tmp/kd.err; status=1; continue
+    # discovering in a review. A first-time fetch into the reference cache is
+    # not a warning: the fetched file is committed and never fetched again.
+    if grep -v 'fetching from' /tmp/kd.err | grep -q .; then
+        echo "FAIL (kramdown-rfc warnings)"; grep -v 'fetching from' /tmp/kd.err
+        status=1; continue
     fi
 
     if ! xml2rfc --v3 --text --html --cache /spec/.refcache \
