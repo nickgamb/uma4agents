@@ -104,7 +104,7 @@ def main() -> int:
     keys.client_id = f"{OPERATOR}/agent.json"
     keys.signature_agent = keys.publish(c, OPERATOR)
     ent = Enterprise(subject_token=OKTA_REFRESH, client_id=OKTA_CLIENT,
-                     client_secret=OKTA_SECRET,
+                     client_secret=OKTA_SECRET, issuer=OKTA,
                      subject_token_type="urn:ietf:params:oauth:token-type:refresh_token")
 
     r = mcp_call(c, f"{GATEWAY}{BOOK_PATH}", "tools/call",

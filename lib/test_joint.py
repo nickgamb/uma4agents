@@ -161,6 +161,33 @@ check("a resource outside the mandate is not governed by it",
       j.governs(m, "meridian-joint/get_positions")
       and not j.governs(m, "alice-vault/get_positions"))
 
+print("\n== the mandate digest a verdict is given under ==")
+base = {"resources": ["joint/*"], "rule": {"kind": "all"},
+        "holders": [{"owner": "alice", "issuer": "https://alice.example", "weight": 1},
+                    {"owner": "carol", "issuer": "https://carol.example", "weight": 1}]}
+d0 = j.mandate_digest(base)
+check("a mandate has a digest", bool(d0) and d0.startswith("s256:"), str(d0))
+check("holder order and what is published beside it do not change it",
+      j.mandate_digest({**base, "holders": list(reversed(base["holders"])),
+                        "summary": ["published beside it"],
+                        "tally": "https://tally.example"}) == d0)
+check("nor does an issuer's trailing slash",
+      j.mandate_digest({**base, "holders": [
+          dict(base["holders"][0], issuer="https://alice.example/"),
+          base["holders"][1]]}) == d0)
+for label, changed in [
+        ("a holder's weight", {**base, "rule": {"kind": "threshold", "threshold": 2},
+                               "holders": [dict(base["holders"][0], weight=2),
+                                           base["holders"][1]]}),
+        ("a holder's issuer", {**base, "holders": [
+            dict(base["holders"][0], issuer="https://elsewhere.example"),
+            base["holders"][1]]}),
+        ("the rule", {**base, "rule": {"kind": "any"}}),
+        ("what it covers", {**base, "resources": ["joint/*", "other/*"]})]:
+    check(f"changing {label} changes it", j.mandate_digest(changed) != d0)
+check("a document that is not a mandate has none",
+      j.mandate_digest({"holders": []}) is None)
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 for f in FAIL:
     print(f"  - {f}")

@@ -226,17 +226,19 @@ departures; anything not named there is intended to be stock UMA 2.0.
 
 This profile is an extension grant on OAuth 2.0 {{RFC6749}}, as UMA 2.0 is.
 
-GNAP {{RFC9635}} is the more interesting comparison, and in several respects the
-better carrier: its interaction model is more general than OAuth's, key binding
-is native rather than an extension, and its request format expresses what a
-client wants far better than a scope string. What GNAP does not decide is whose
-policy the answer expresses. It negotiates between a client and the resource
-owner reachable through that client's own interaction, and has no notion of a
-second principal who is not the requester, is not present, and whose policy must
-be satisfied anyway — nor of that principal proffering terms the requesting side
-must sign. Those two are the whole of this work. A GNAP binding of this profile
-would be a reasonable document and probably a cleaner one than the OAuth-shaped
-binding here; it is not a substitute for it.
+GNAP {{RFC9635}} is the closer comparison, and in several respects the better
+carrier: its interaction model is more general than OAuth's, key binding is
+native rather than an extension, and its request format expresses what a client
+wants far better than a scope string. GNAP also anticipates a resource owner who
+is not the end user, reached by the authorization server asynchronously while
+the client waits (Section 1.6.4 of {{RFC9635}}), and expects the authorization
+server to follow that owner's decisions, including automated rules. What it
+leaves to implementations is what those rules may rest on and what is agreed:
+it defines no terms the owner publishes and the requesting side signs, no record
+of that agreement held by both parties, and no constraint on which facts may
+relax a requirement. Those are the substance of this profile. A GNAP binding of
+it would be a reasonable document, and probably a cleaner one than the
+OAuth-shaped binding here; it is not a substitute for it.
 
 DPoP {{RFC9449}} solves the same problem as {{proof-of-possession}} for the
 OAuth installed base. This profile uses {{RFC9421}} instead because the signature
@@ -481,6 +483,13 @@ an identity assertion authorization grant
 MUST treat it as a claim about identity and reach, and MUST NOT treat it as
 conferring access.
 
+A requesting agent MUST send the credentials it exchanges for such an assertion
+only to the identity provider they belong to, as configured at the agent, and
+MUST NOT send them to a provider or token endpoint that only the authorization
+server's request names. The authorization server says which provider it will
+believe. If it could also say where the agent's credentials go, any resource an
+agent visited could collect an employee's token and the application's secret.
+
 Presenting the same assertion as a `jwt-bearer` grant would have the identity
 provider's assertion produce the access token directly, which makes the identity
 provider the deciding party over a resource it does not own. An identity
@@ -541,13 +550,18 @@ Identified:
   authorization server MUST verify that credential against keys published by its
   issuer, MUST require that the issuer identifier use the `https` scheme, and
   MUST derive the connection handle from the issuer and subject rather than from
-  the key.
+  the key. The issuer MUST qualify the handle whole, including any path.
 
 The handle for an identified agent MUST NOT be derived from its key. Issuers that
 attest agents commonly bind a fresh key per session; a thumbprint-keyed
 relationship forgets such an agent on every run, which presents to the owner as
 an agent she has approved asking to be approved again. This was found by running
 it.
+
+Qualifying by the issuer's host alone is the natural shortcut and it merges
+strangers. A multi-tenant identity provider commonly serves every tenant from one
+host and tells them apart by path, so two tenants' agents with the same subject
+would be one connection, sharing its standing and the owner's approvals.
 
 Which issuers an authorization server will believe is deployment policy, not a
 wire-protocol rule. This profile deliberately specifies no issuer allow-list, and
@@ -625,6 +639,12 @@ without reading the header is safe and is not conformant, and would reject any
 third-party signer whose serialization differs. A verifier MUST be able to
 *require* the digest rather than merely accept it when present, since a signer
 that omits it must not thereby escape the check.
+
+An enforcement point MUST check a covered `Content-Digest` against the body it
+received, and MUST refuse a request whose signature covers one when it has no
+body to check it against. Covering the digest is the signer's statement that the
+bytes matter; an enforcement point that verifies the signature and never reads
+the body accepts that statement without testing it.
 
 # The Grant {#the-grant}
 
@@ -719,15 +739,24 @@ order is normative:
 1. Introspect the presented token, without consuming it, and establish that it is
    active and that the relationship behind it still stands.
 2. Establish that the resource being accessed appears in `permissions` with a
-   scope that covers the attempted access.
+   scope that covers the attempted access, and that the permission's own `exp`
+   and `nbf`, where present, admit the present time.
 3. Verify proof of possession against the key named by `cnf` in the introspection
    response.
-4. Where the token carries `single_use`, establish that the attempted operation
+4. Where the token carries `single_use`, or the enforcement point treats the
+   attempted operation as single-use, establish that the attempted operation
    matches `operation.tool` and that `s256` over the received parameters equals
    `operation.params_s256`.
 5. Consume the token.
 
 An enforcement point MUST NOT consume a single-use token before step 5.
+
+An enforcement point that treats an operation as single-use MUST refuse a token
+for it that carries no `operation`. An enforcement point MUST consume a token
+that carries `single_use` wherever it is presented, whether or not it treats the
+operation as single-use. The grant says what it was issued for; an enforcement
+point that reads single-use from its own configuration alone lets a grant issued
+for one act serve as standing authority wherever that configuration is absent.
 
 Consuming at step 1 is the intuitive placement and it is a denial of service.
 Anyone who observes the token can replay it with a garbage signature: the replay
@@ -770,6 +799,13 @@ around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.
 
+An authorization server MUST NOT describe a token as active to a resource server
+whose protection API access token was issued for a different owner than the
+token's, and SHOULD answer as it would for a token it does not know. A resource
+server holds one such token per owner it serves; the one it presents says whose
+resources it is asking about, and a grant against anybody else's is not its
+business.
+
 # Standing Connections {#connections}
 
 A connection is the standing relationship an owner has with one requesting agent,
@@ -786,6 +822,8 @@ An authorization server implementing this profile MUST:
   invalidate every live requesting party token issued under it in the same
   indivisible step that ends the connection;
 - retain the fact that a connection was previously ended, across any later
+  re-establishment of a connection with the same handle;
+- keep inactive every token invalidated by ending a connection, across any later
   re-establishment of a connection with the same handle.
 
 A revocation that ends the relationship and then fails to invalidate the tokens

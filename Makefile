@@ -486,6 +486,23 @@ joint-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		python lib/test_joint.py
 
+## as-test: the authorization server's own handlers over the in-memory store —
+## what a grant may not outlive, whose tokens a resource server may ask about,
+## whose approval may relax her policy, and what a holder's verdict commits her
+## to. Needs nothing running.
+.PHONY: as-test
+as-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q fastapi uvicorn 'pyjwt[crypto]' python-multipart sse-starlette httpx asyncpg && python lib/test_as.py"
+
+## client-test: the agent's side — where its enterprise credentials may be
+## sent, where a receipt may be written, the challenge a resource emits
+## in-process, and an owner's answer that did not arrive. Needs nothing running.
+.PHONY: client-test
+client-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q 'pyjwt[crypto]' httpx && python lib/test_client.py"
+
 ## store-test: prove single-use really is single-use, on both storage backends
 # The authorization server's state has two implementations — in-process for
 # this stack, Postgres for the replicated one — and they must be the same
@@ -583,7 +600,7 @@ include Makefile.k8s
 ## stack. The register names these as what proves the drafts; a check that
 ## nobody runs is a claim, and this is how they all get run.
 .PHONY: check-all check-unit check-live
-check-unit: rules-test sig-test pep-test introduction-test org-test joint-test store-test
+check-unit: rules-test sig-test pep-test introduction-test org-test joint-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
 	establishment-check assurance-check intent-check subagent-check org-check \
 	joint-check xaa-check adapter-check shim-test embedded-check kwaai-check \

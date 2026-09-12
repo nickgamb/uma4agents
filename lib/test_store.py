@@ -151,6 +151,78 @@ async def test_owner_decides_once(store) -> None:
     await store.close_negotiation("fam_decide")
 
 
+async def test_a_decision_outlives_a_stale_write(store) -> None:
+    """A poll holding a copy read before she answered writes it back, and her
+    answer is still there.
+
+    The grant loop does exactly this: `pending_poll` receives the negotiation
+    from `consume_ticket`, finds it undecided, and rotates the ticket with
+    that same record. If she tapped in between, the rotation used to write
+    `decision: null` over her approval and the request went back to waiting
+    for a decision she had already made."""
+    import copy
+
+    rec = negotiation("fam_stale_poll")
+    rec["state"] = "awaiting-owner"
+    rec["decision"] = None
+    ticket = await store.mint_ticket(rec, 300)
+    snapshot = copy.deepcopy(await store.consume_ticket(ticket))
+    by = {"kind": "owner", "owner": "alice"}
+    await store.decide("fam_stale_poll", "approved", by)
+
+    await store.mint_ticket(copy.deepcopy(snapshot), 300)
+    after = await store.negotiation("fam_stale_poll")
+    check("decision: rotating a stale copy keeps her approval",
+          after is not None and after.get("decision") == "approved",
+          f"decision is now {(after or {}).get('decision')!r}")
+    check("decision: and keeps who made it",
+          (after or {}).get("decided_by") == by,
+          f"decided_by is now {(after or {}).get('decided_by')!r}")
+
+    await store.save_negotiation(copy.deepcopy(snapshot))
+    after = await store.negotiation("fam_stale_poll")
+    check("decision: saving a stale copy keeps it too",
+          after is not None and after.get("decision") == "approved",
+          f"decision is now {(after or {}).get('decision')!r}")
+    await store.close_negotiation("fam_stale_poll")
+
+
+async def test_who_decided_is_written_with_the_decision(store) -> None:
+    """The author of a decision is stored by the step that stores it, and a
+    losing second decision cannot re-attribute the first."""
+    rec = negotiation("fam_author")
+    rec["state"] = "awaiting-owner"
+    rec["decision"] = None
+    await store.mint_ticket(rec, 300)
+    admin = {"kind": "administrator", "admin": "dana", "organization": "meridian"}
+    await store.decide("fam_author", "approved", admin)
+    stored = await store.negotiation("fam_author")
+    check("decision: the author is on the record the decision is on",
+          (stored or {}).get("decided_by") == admin,
+          f"decided_by is {(stored or {}).get('decided_by')!r}")
+    await store.decide("fam_author", "approved", {"kind": "owner", "owner": "alice"})
+    stored = await store.negotiation("fam_author")
+    check("decision: a refused second decision leaves the author alone",
+          (stored or {}).get("decided_by") == admin,
+          f"decided_by is {(stored or {}).get('decided_by')!r}")
+    await store.close_negotiation("fam_author")
+
+
+async def test_a_deleted_default_stays_deleted(store) -> None:
+    """Seeding runs on paths that meet an owner for the first time — and on
+    every PAT request. A tier she deleted is not put back by any of them."""
+    original = (await store.tiers()).get("tier1")
+    check("seed: the default tier exists to begin with", original is not None,
+          "no tier1 to delete")
+    if original is None:
+        return
+    await store.delete_tier("tier1")
+    await store.seed()
+    check("seed: a deleted default is not seeded back",
+          "tier1" not in await store.tiers(), "tier1 came back")
+    await store.create_tier("tier1", original)
+
+
 async def test_revoke_burns_live_grants(store) -> None:
     """Revocation deactivates the connection and every live token under it in
     one step. If the two halves could come apart, a revoked agent would keep
@@ -593,6 +665,9 @@ TESTS = [
     test_rpt_is_burned_once,
     test_unknown_rpt_cannot_be_burned,
     test_owner_decides_once,
+    test_a_decision_outlives_a_stale_write,
+    test_who_decided_is_written_with_the_decision,
+    test_a_deleted_default_stays_deleted,
     test_revoke_burns_live_grants,
     test_resource_server_revocation_is_visible,
     test_a_resource_server_registers_and_waits,
@@ -866,7 +941,7 @@ async def _truncate(dsn: str) -> None:
         await conn.execute(
             "DROP TABLE IF EXISTS tickets, negotiations, rpts, connections, "
             "resource_servers, ledger, terms_docs, tiers, owner_events, "
-            "blocked_operators, owned_operators CASCADE")
+            "blocked_operators, owned_operators, owners CASCADE")
     finally:
         await conn.close()
 

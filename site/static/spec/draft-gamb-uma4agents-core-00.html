@@ -1243,7 +1243,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 15 March 2027</td>
+<td class="center">Expires 16 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1256,12 +1256,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-core-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-11" class="published">11 September 2026</time>
+<time datetime="2026-09-12" class="published">12 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-15">15 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1310,7 +1310,7 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1588,17 +1588,19 @@ departures; anything not named there is intended to be stock UMA 2.0.<a href="#s
 <a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-other-autho" class="section-name selfRef">Relationship to Other Authorization Work</a>
         </h3>
 <p id="section-1.2-1">This profile is an extension grant on OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, as UMA 2.0 is.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
-<p id="section-1.2-2">GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> is the more interesting comparison, and in several respects the
-better carrier: its interaction model is more general than OAuth's, key binding
-is native rather than an extension, and its request format expresses what a
-client wants far better than a scope string. What GNAP does not decide is whose
-policy the answer expresses. It negotiates between a client and the resource
-owner reachable through that client's own interaction, and has no notion of a
-second principal who is not the requester, is not present, and whose policy must
-be satisfied anyway — nor of that principal proffering terms the requesting side
-must sign. Those two are the whole of this work. A GNAP binding of this profile
-would be a reasonable document and probably a cleaner one than the OAuth-shaped
-binding here; it is not a substitute for it.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> is the closer comparison, and in several respects the better
+carrier: its interaction model is more general than OAuth's, key binding is
+native rather than an extension, and its request format expresses what a client
+wants far better than a scope string. GNAP also anticipates a resource owner who
+is not the end user, reached by the authorization server asynchronously while
+the client waits (Section 1.6.4 of <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>), and expects the authorization
+server to follow that owner's decisions, including automated rules. What it
+leaves to implementations is what those rules may rest on and what is agreed:
+it defines no terms the owner publishes and the requesting side signs, no record
+of that agreement held by both parties, and no constraint on which facts may
+relax a requirement. Those are the substance of this profile. A GNAP binding of
+it would be a reasonable document, and probably a cleaner one than the
+OAuth-shaped binding here; it is not a substitute for it.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
 <p id="section-1.2-3">DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> solves the same problem as <a href="#proof-of-possession" class="auto internal xref">Section 6</a> for the
 OAuth installed base. This profile uses <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> instead because the signature
 must cover the request rather than only bind the token, and because the same
@@ -1921,12 +1923,18 @@ an identity assertion authorization grant
 <code>urn:ietf:params:oauth:token-type:id-jag</code>, in which case the authorization server
 <span class="bcp14">MUST</span> treat it as a claim about identity and reach, and <span class="bcp14">MUST NOT</span> treat it as
 conferring access.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">Presenting the same assertion as a <code>jwt-bearer</code> grant would have the identity
+<p id="section-4.1-3">A requesting agent <span class="bcp14">MUST</span> send the credentials it exchanges for such an assertion
+only to the identity provider they belong to, as configured at the agent, and
+<span class="bcp14">MUST NOT</span> send them to a provider or token endpoint that only the authorization
+server's request names. The authorization server says which provider it will
+believe. If it could also say where the agent's credentials go, any resource an
+agent visited could collect an employee's token and the application's secret.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">Presenting the same assertion as a <code>jwt-bearer</code> grant would have the identity
 provider's assertion produce the access token directly, which makes the identity
 provider the deciding party over a resource it does not own. An identity
 assertion proves who an agent acts for and carries no entitlement of its own,
 which is what a UMA claim is for. Where both are demanded, identity is demanded
-first, because which terms apply follows from which party the agent acts for.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+first, because which terms apply follows from which party the agent acts for.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="responses">
@@ -2004,7 +2012,7 @@ binding it to a key — for example an <code>aa-agent+jwt</code> as defined by
 authorization server <span class="bcp14">MUST</span> verify that credential against keys published by its
 issuer, <span class="bcp14">MUST</span> require that the issuer identifier use the <code>https</code> scheme, and
 <span class="bcp14">MUST</span> derive the connection handle from the issuer and subject rather than from
-the key.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+the key. The issuer <span class="bcp14">MUST</span> qualify the handle whole, including any path.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2013,9 +2021,13 @@ attest agents commonly bind a fresh key per session; a thumbprint-keyed
 relationship forgets such an agent on every run, which presents to the owner as
 an agent she has approved asking to be approved again. This was found by running
 it.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
-<p id="section-5.1-4">Which issuers an authorization server will believe is deployment policy, not a
+<p id="section-5.1-4">Qualifying by the issuer's host alone is the natural shortcut and it merges
+strangers. A multi-tenant identity provider commonly serves every tenant from one
+host and tells them apart by path, so two tenants' agents with the same subject
+would be one connection, sharing its standing and the owner's approvals.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">Which issuers an authorization server will believe is deployment policy, not a
 wire-protocol rule. This profile deliberately specifies no issuer allow-list, and
-a deployment <span class="bcp14">MUST</span> supply one.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+a deployment <span class="bcp14">MUST</span> supply one.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="descriptive-metadata">
@@ -2102,6 +2114,11 @@ without reading the header is safe and is not conformant, and would reject any
 third-party signer whose serialization differs. A verifier <span class="bcp14">MUST</span> be able to
 <em>require</em> the digest rather than merely accept it when present, since a signer
 that omits it must not thereby escape the check.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">An enforcement point <span class="bcp14">MUST</span> check a covered <code>Content-Digest</code> against the body it
+received, and <span class="bcp14">MUST</span> refuse a request whose signature covers one when it has no
+body to check it against. Covering the digest is the signer's statement that the
+bytes matter; an enforcement point that verifies the signature and never reads
+the body accepts that statement without testing it.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2236,14 +2253,16 @@ active and that the relationship behind it still stands.<a href="#section-8.2-2.
 </li>
           <li id="section-8.2-2.2">
             <p id="section-8.2-2.2.1">Establish that the resource being accessed appears in <code>permissions</code> with a
-scope that covers the attempted access.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+scope that covers the attempted access, and that the permission's own <code>exp</code>
+and <code>nbf</code>, where present, admit the present time.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.3">
             <p id="section-8.2-2.3.1">Verify proof of possession against the key named by <code>cnf</code> in the introspection
 response.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.4">
-            <p id="section-8.2-2.4.1">Where the token carries <code>single_use</code>, establish that the attempted operation
+            <p id="section-8.2-2.4.1">Where the token carries <code>single_use</code>, or the enforcement point treats the
+attempted operation as single-use, establish that the attempted operation
 matches <code>operation.tool</code> and that <code>s256</code> over the received parameters equals
 <code>operation.params_s256</code>.<a href="#section-8.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -2252,14 +2271,20 @@ matches <code>operation.tool</code> and that <code>s256</code> over the received
 </li>
         </ol>
 <p id="section-8.2-3">An enforcement point <span class="bcp14">MUST NOT</span> consume a single-use token before step 5.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
-<p id="section-8.2-4">Consuming at step 1 is the intuitive placement and it is a denial of service.
+<p id="section-8.2-4">An enforcement point that treats an operation as single-use <span class="bcp14">MUST</span> refuse a token
+for it that carries no <code>operation</code>. An enforcement point <span class="bcp14">MUST</span> consume a token
+that carries <code>single_use</code> wherever it is presented, whether or not it treats the
+operation as single-use. The grant says what it was issued for; an enforcement
+point that reads single-use from its own configuration alone lets a grant issued
+for one act serve as standing authority wherever that configuration is absent.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">Consuming at step 1 is the intuitive placement and it is a denial of service.
 Anyone who observes the token can replay it with a garbage signature: the replay
 is correctly refused, and the grant is already spent, so the one legitimate call
 — the operation the owner personally approved seconds earlier — then fails. An
-attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<p id="section-8.2-5">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
+attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
 introspection rather than the key carried inside the token, so that a token
-accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="indivisibility">
@@ -2296,6 +2321,12 @@ issuing a fresh challenge. A bare <code>{"active": false}</code> sends a request
 around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
+<p id="section-8.4-3">An authorization server <span class="bcp14">MUST NOT</span> describe a token as active to a resource server
+whose protection API access token was issued for a different owner than the
+token's, and <span class="bcp14">SHOULD</span> answer as it would for a token it does not know. A resource
+server holds one such token per owner it serves; the one it presents says whose
+resources it is asking about, and a grant against anybody else's is not its
+business.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2325,7 +2356,11 @@ indivisible step that ends the connection;<a href="#section-9-3.3.1" class="pilc
 </li>
         <li class="normal" id="section-9-3.4">
           <p id="section-9-3.4.1">retain the fact that a connection was previously ended, across any later
-re-establishment of a connection with the same handle.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+re-establishment of a connection with the same handle;<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.5">
+          <p id="section-9-3.5.1">keep inactive every token invalidated by ending a connection, across any later
+re-establishment of a connection with the same handle.<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-4">A revocation that ends the relationship and then fails to invalidate the tokens

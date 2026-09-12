@@ -61,3 +61,7 @@ NOTES.md
 okta.env
 *.okta.env
 .diagram-out/
+
+# Local peer-review scratch, never committed
+chatgpt_probe.md
+reviews/

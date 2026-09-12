@@ -207,24 +207,59 @@ class PostgresOwnerStore:
         return self._parent._pool
 
     async def seed(self) -> None:
-        """Starting policy for an owner who has none. ON CONFLICT DO NOTHING is
-        the whole concurrency story: three replicas racing leaves one copy, and
-        a later owner edit is never overwritten by a restart."""
+        """Starting policy for a new owner, once. See OwnerStore.seed.
+
+        The `owners` row is the claim. Replicas racing to seed the same owner
+        contend on its primary key, one inserts it and seeds, and the others
+        wait on that row and then find it taken. A database from before the
+        marker has owners with policy and no row: they are claimed here
+        without being given any defaults, because a table that already holds
+        her tiers is one she has been editing."""
         async with self._pool.acquire() as conn:
             async with conn.transaction():
-                for tier_id, tier in policy.defaults(self._o).items():
-                    await conn.execute(
-                        "INSERT INTO tiers (owner, tier_id, tier) VALUES ($1, $2, $3) "
-                        "ON CONFLICT (owner, tier_id) DO NOTHING",
-                        self._o, tier_id, json.dumps(tier))
-                for cid, rs in store.default_resource_servers(self._o).items():
-                    await conn.execute(
-                        "INSERT INTO resource_servers (owner, client_id, rs) "
-                        "VALUES ($1, $2, $3) "
-                        "ON CONFLICT (owner, client_id) DO NOTHING",
-                        self._o, cid, json.dumps(rs))
+                claimed = await conn.fetchval(
+                    "INSERT INTO owners (owner) VALUES ($1) "
+                    "ON CONFLICT (owner) DO NOTHING RETURNING owner", self._o)
+                if claimed is None:
+                    return
+                if not await conn.fetchval(
+                        "SELECT EXISTS (SELECT 1 FROM tiers WHERE owner = $1)",
+                        self._o):
+                    for tier_id, tier in policy.defaults(self._o).items():
+                        await conn.execute(
+                            "INSERT INTO tiers (owner, tier_id, tier) "
+                            "VALUES ($1, $2, $3) "
+                            "ON CONFLICT (owner, tier_id) DO NOTHING",
+                            self._o, tier_id, json.dumps(tier))
+                if not await conn.fetchval(
+                        "SELECT EXISTS (SELECT 1 FROM resource_servers "
+                        "WHERE owner = $1)", self._o):
+                    for cid, rs in store.default_resource_servers(self._o).items():
+                        await conn.execute(
+                            "INSERT INTO resource_servers (owner, client_id, rs) "
+                            "VALUES ($1, $2, $3) "
+                            "ON CONFLICT (owner, client_id) DO NOTHING",
+                            self._o, cid, json.dumps(rs))
 
     # --- negotiations and tickets ------------------------------------------
+
+    # Both writers of a negotiation use this. A decision already on the row
+    # is kept, with who made it, whatever the incoming record says: the
+    # incoming record is routinely a copy read before she answered.
+    _UPSERT_NEGOTIATION = (
+        "INSERT INTO negotiations (owner, family, expires, state, decision, rec) "
+        "VALUES ($6, $1, $2, $3, $4, $5) "
+        "ON CONFLICT (owner, family) DO UPDATE SET "
+        "  expires = EXCLUDED.expires, state = EXCLUDED.state, "
+        "  decision = COALESCE(negotiations.decision, EXCLUDED.decision), "
+        "  rec = CASE WHEN negotiations.decision IS NULL THEN EXCLUDED.rec "
+        "        ELSE EXCLUDED.rec "
+        "             || jsonb_build_object('decision', negotiations.decision) "
+        "             || CASE WHEN negotiations.rec ? 'decided_by' "
+        "                     THEN jsonb_build_object('decided_by', "
+        "                                             negotiations.rec -> 'decided_by') "
+        "                     ELSE '{}'::jsonb END "
+        "        END")
 
     async def mint_ticket(self, rec: dict, ttl: float) -> str:
         import secrets
@@ -234,11 +269,7 @@ class PostgresOwnerStore:
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
-                    "INSERT INTO negotiations (owner, family, expires, state, decision, rec) "
-                    "VALUES ($6, $1, $2, $3, $4, $5) "
-                    "ON CONFLICT (owner, family) DO UPDATE SET "
-                    "  expires = EXCLUDED.expires, state = EXCLUDED.state, "
-                    "  decision = EXCLUDED.decision, rec = EXCLUDED.rec",
+                    self._UPSERT_NEGOTIATION,
                     rec["family"], rec["expires"], rec["state"],
                     rec.get("decision"), json.dumps(rec), self._o)
                 await conn.execute(
@@ -284,11 +315,7 @@ class PostgresOwnerStore:
         now asserts they do not.
         """
         await self._pool.execute(
-            "INSERT INTO negotiations (owner, family, expires, state, decision, rec) "
-            "VALUES ($6, $1, $2, $3, $4, $5) "
-            "ON CONFLICT (owner, family) DO UPDATE SET "
-            "  expires = EXCLUDED.expires, state = EXCLUDED.state, "
-            "  decision = EXCLUDED.decision, rec = EXCLUDED.rec",
+            self._UPSERT_NEGOTIATION,
             rec["family"], rec.get("expires", time.time() + 3600),
             rec["state"], rec.get("decision"), json.dumps(rec), self._o)
 
@@ -319,21 +346,24 @@ class PostgresOwnerStore:
             self._o)
         return [json.loads(r["rec"]) for r in rows]
 
-    async def decide(self, family: str, decision: str) -> bool:
+    async def decide(self, family: str, decision: str,
+                     decided_by: dict | None = None) -> bool:
         # The WHERE clause is the guard: a second tap, or a stale portal,
-        # updates nothing and is told so.
+        # updates nothing and is told so. Who decided goes in the same
+        # statement — see OwnerStore.decide.
         row = await self._pool.fetchrow(
             """
             UPDATE negotiations
                SET decision = $2,
-                   rec = jsonb_set(rec, '{decision}', to_jsonb($2::text))
+                   rec = rec || jsonb_build_object('decision', $2::text,
+                                                   'decided_by', $4::jsonb)
              WHERE family = $1
                AND owner = $3
                AND state = 'awaiting-owner'
                AND decision IS NULL
             RETURNING family
             """,
-            family, decision, self._o)
+            family, decision, self._o, json.dumps(decided_by))
         return row is not None
 
     # --- RPTs ---------------------------------------------------------------

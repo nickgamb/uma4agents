@@ -5,8 +5,8 @@
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
 Intended status: Standards Track                                E. Maler
-Expires: 15 March 2027                                      Venn Factory
-                                                       11 September 2026
+Expires: 16 March 2027                                      Venn Factory
+                                                       12 September 2026
 
 
              Federated Authorization for Autonomous Agents
@@ -43,7 +43,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 March 2027.
+   This Internet-Draft will expire on 16 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 1]
+Gamb & Maler              Expires 16 March 2027                 [Page 1]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 2]
+Gamb & Maler              Expires 16 March 2027                 [Page 2]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 3]
+Gamb & Maler              Expires 16 March 2027                 [Page 3]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 4]
+Gamb & Maler              Expires 16 March 2027                 [Page 4]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 5]
+Gamb & Maler              Expires 16 March 2027                 [Page 5]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 6]
+Gamb & Maler              Expires 16 March 2027                 [Page 6]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -389,7 +389,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 7]
+Gamb & Maler              Expires 16 March 2027                 [Page 7]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -427,6 +427,11 @@ Internet-Draft             FedAuthz for Agents            September 2026
    connection_revoked:  The owner has ended the standing relationship
       under which this token was issued.  See [U4ACore] Section 9.
 
+   revoked:  The token was invalidated when the owner ended the
+      relationship it was issued under, and a relationship with the same
+      agent has since been re-established.  The token stays inactive; a
+      grant under the new relationship is negotiated afresh.
+
    Of these, connection_revoked is terminal: an enforcement point
    receiving it MUST refuse without issuing a fresh challenge, because
    renegotiation cannot change an outcome the owner has settled.  The
@@ -440,12 +445,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                 [Page 8]
+Gamb & Maler              Expires 16 March 2027                 [Page 8]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -501,7 +501,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 9]
+Gamb & Maler              Expires 16 March 2027                 [Page 9]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -557,7 +557,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                [Page 10]
+Gamb & Maler              Expires 16 March 2027                [Page 10]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -613,7 +613,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                [Page 11]
+Gamb & Maler              Expires 16 March 2027                [Page 11]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                [Page 12]
+Gamb & Maler              Expires 16 March 2027                [Page 12]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -725,4 +725,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 15 March 2027                [Page 13]
+Gamb & Maler              Expires 16 March 2027                [Page 13]

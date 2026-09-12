@@ -250,6 +250,7 @@ distinguishable from a settled one:
 |---|---|
 | `connection_revoked` | `403 access_revoked` — terminal, do not re-challenge |
 | `already_consumed` | Fresh challenge |
+| `revoked` | Fresh challenge — the grant ended with a connection she revoked, and the agent has since been admitted again |
 | `expired` | Fresh challenge |
 | `unknown_token` | Fresh challenge |
 | `invalid_signature` | Fresh challenge |

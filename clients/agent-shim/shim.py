@@ -56,7 +56,9 @@ from uma4a_grant import (
     DiscoveryMismatch,
     GrantDenied,
     TermsRejected,
+    jsonrpc_challenge,
     parse_challenge,
+    receipt_filename,
     run_grant_async,
     signed_headers,
     validate_resource_metadata,
@@ -144,19 +146,8 @@ keys = bootstrap_identity()
 def store_receipt(receipt_jws: str) -> None:
     """Persist the counter-signed receipt from the owner's AS — this agent's
     half of the dual-held MyTerms record."""
-    import json as _json
-
-    try:
-        payload = _json.loads(
-            __import__("base64").urlsafe_b64decode(
-                receipt_jws.split(".")[1] + "=="
-            )
-        )
-        family = payload.get("family", "unknown")
-    except Exception:
-        family = "unknown"
     os.makedirs(RECEIPTS_DIR, exist_ok=True)
-    path = os.path.join(RECEIPTS_DIR, f"{family}.receipt.jws")
+    path = os.path.join(RECEIPTS_DIR, receipt_filename(receipt_jws))
     with open(path, "w") as f:
         f.write(receipt_jws)
     log(f"receipt held: {path}")
@@ -304,11 +295,7 @@ class Upstream:
         with the ticket and the AS in its data. The envelope follows the
         deployment; the ticket does not.
         """
-        err = (payload or {}).get("error") or {}
-        data = err.get("data") or {}
-        if data.get("error") == "uma_challenge" and data.get("ticket"):
-            return data["as_uri"], data["ticket"]
-        return None
+        return jsonrpc_challenge(payload)
 
     async def resume(self, held: dict) -> tuple[str, str | None]:
         """Poll a pend this shim is already holding.

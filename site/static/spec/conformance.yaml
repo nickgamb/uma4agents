@@ -129,8 +129,36 @@ draft-gamb-uma4agents-core-00:
     asserts: ["her resource challenges, on a relationship nobody provisioned", "cannot reach the vault behind the gateway"]
   - text: "An enforcement point MUST perform the following steps in this order, and the order is normative:"
     verified: check
-    targets: [store-test, embedded-check]
-    asserts: ["rpt: a later burn still loses", "a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards"]
+    targets: [store-test, embedded-check, pep-test]
+    asserts: ["rpt: a later burn still loses", "a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "a grant over the resource without the tool's scope is not", "a permission past its own expiry is not honoured", "nor one before it becomes valid"]
+  - text: "An enforcement point that treats an operation as single-use MUST refuse a token for it that carries no operation."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a single-use tool refuses a grant bound to no operation"]
+  - text: "An enforcement point MUST consume a token that carries single_use wherever it is presented, whether or not it treats the operation as single-use."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a grant marked single-use is spent even at a tool not listed as one", "and refused for a different call to that tool"]
+  - text: "An enforcement point MUST check a covered Content-Digest against the body it received, and MUST refuse a request whose signature covers one when it has no body to check it against."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a covered body changed after signing is refused", "a covered body that arrives unchanged verifies", "where the body must be covered, a signature that does not cover it is refused"]
+  - text: "The issuer MUST qualify the handle whole, including any path."
+    verified: check
+    targets: [as-test]
+    asserts: ["two tenants of one provider are two connections", "an issuer with no path names connections as it always has"]
+  - text: "A requesting agent MUST send the credentials it exchanges for such an assertion only to the identity provider they belong to"
+    verified: check
+    targets: [client-test]
+    asserts: ["a challenge naming a different provider is refused", "a token endpoint off the provider's origin is refused", "credentials that name no provider are sent nowhere"]
+  - text: "An authorization server MUST NOT describe a token as active to a resource server whose protection API access token was issued for a different owner"
+    verified: check
+    targets: [as-test]
+    asserts: ["a resource server holding another owner's PAT is told nothing", "the owner's own resource server is told the grant is live"]
+  - text: "keep inactive every token invalidated by ending a connection, across any later re-establishment of a connection with the same handle"
+    verified: check
+    targets: [as-test]
+    asserts: ["admitting the same agent again does not revive what revocation ended"]
   - text: "An enforcement point MUST NOT consume a single-use token before step 5."
     verified: check
     targets: [embedded-check]
@@ -584,8 +612,28 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["the grant names the mandate it was issued under", "and carries a signed verdict from each holder"]
   - text: "An enforcement point protecting a jointly held resource MUST, before allowing a call under such a grant:"
     verified: check
-    targets: [joint-check]
-    asserts: ["a grant nobody's authority signed is refused", "nor one that rewrites who was entitled to be counted"]
+    targets: [joint-check, pep-test]
+    asserts: ["a grant nobody's authority signed is refused", "nor one that rewrites who was entitled to be counted", "genuine verdicts do not carry a grant bound to another key", "nor a grant with scopes the agreement did not have", "nor one that outlives the agreement", "nor one stripped of the operation the holders agreed to", "nor verdicts about a different negotiation", "a published mandate that reweights a holder is not the one agreed to", "a published mandate that does not cover the resource counts for nothing"]
+  - text: "The grant MUST also carry, as a family claim, the negotiation identifier its verdicts name, and the tally's introspection response MUST return it."
+    verified: check
+    targets: [joint-check, pep-test]
+    asserts: ["both holders allowed, so the grant issues", "nor verdicts about a different negotiation"]
+  - text: "An enforcement point protecting a jointly held resource MUST refuse a grant that carries no joint claim."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a jointly held resource refuses a grant carrying no verdicts at all"]
+  - text: "An allow verdict MUST carry cnf_jkt, scope, expires_in and mandate_s256"
+    verified: check
+    targets: [as-test]
+    asserts: ["the verdict names the key that agreed", "and the scope and lifetime agreed", "and the mandate she is counting under"]
+  - text: "authorization server that has recorded the owner's approval of one agreement MUST NOT issue an allow verdict about a different agreement"
+    verified: check
+    targets: [as-test]
+    asserts: ["her approval is not signed over an agreement she did not see", "and is signed over the one she did"]
+  - text: "enforcement points MUST compute the digest this way."
+    verified: check
+    targets: [joint-test]
+    asserts: ["a mandate has a digest", "holder order and what is published beside it do not change it", "nor does an issuer's trailing slash", "a document that is not a mandate has none"]
   - text: "The tally member of the grant is for display and MUST NOT be trusted."
     verified: check
     targets: [joint-check]
@@ -604,6 +652,14 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a holder cannot read her co-owner's queue", "and carries none of her co-owner's terms"]
 
 draft-gamb-uma4agents-policy-00:
+  - text: "An authorization server MUST record who made a decision in the same step that records the decision"
+    verified: check
+    targets: [store-test, as-test]
+    asserts: ["decision: the author is on the record the decision is on", "decision: a refused second decision leaves the author alone", "an administrator's approval is not recorded as hers", "her own approval is recorded as hers"]
+  - text: "A recorded decision MUST NOT be undone by a later write of the negotiation it decides."
+    verified: check
+    targets: [store-test]
+    asserts: ["decision: rotating a stale copy keeps her approval", "decision: and keeps who made it", "decision: saving a stale copy keeps it too"]
   - text: "Each policy unit MUST name the resources it covers, MUST name the terms proffered for them"
     verified: check
     targets: [rules-test]
@@ -782,10 +838,14 @@ draft-gamb-uma4agents-terms-00:
     verified: check
     targets: [intent-check]
     asserts: ["a rewritten purpose ends the negotiation"]
-  - text: "It MUST carry an expires_in no greater than the template's, and a prohibited array that is a superset of the template's."
+  - text: "It MUST carry a positive expires_in no greater than the template's, a scope array that is a subset of the template's, and a prohibited array that is a superset of the template's."
     verified: check
-    targets: [intent-check]
-    asserts: ["so does dropping one of her prohibitions", "and so does helping itself to a longer expiry", "binding itself to more than she asked is allowed"]
+    targets: [intent-check, as-test]
+    asserts: ["so does dropping one of her prohibitions", "and so does helping itself to a longer expiry", "binding itself to more than she asked is allowed", "an agreement that adds a scope to the terms is refused", "an agreement with no lifetime is refused"]
+  - text: "A grant issued on an agreement MUST NOT outlive the agreement"
+    verified: check
+    targets: [as-test]
+    asserts: ["a grant lasts no longer than the agent agreed to", "and neither does its permission"]
   - text: "the agreement MUST carry an operation member naming the operation proposed and the parameters proposed for it"
     verified: check
     targets: [shim-test]

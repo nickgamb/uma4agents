@@ -88,6 +88,10 @@ object. Only then does it go and get one.
 
 This is the same shape as every other beat in this profile: the resource side
 states what it needs, and the requesting side decides whether to satisfy it.
+What the resource side does not decide is where the agent's credentials go.
+The agent is configured with the identity provider its credentials belong to,
+and refuses a challenge that names a different provider, or a token endpoint
+off that provider's origin, before anything is sent.
 An agent carrying no enterprise credentials is refused at that point in plain
 terms rather than left guessing.
 

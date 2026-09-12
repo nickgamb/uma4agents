@@ -56,6 +56,15 @@ class Enterprise:
     subject_token: str
     client_id: str
     client_secret: str = ""
+    # The identity provider these credentials belong to, and the only place
+    # they are ever sent. The challenge names which provider the resource
+    # side will believe; it does not get to name where an employee's token
+    # and the application's secret go, because a resource this agent has
+    # never heard of is exactly the party that should not be able to.
+    issuer: str = ""
+    # Where that provider exchanges tokens, when it is not at the provider's
+    # own origin or should not be taken from the challenge at all.
+    token_endpoint: str = ""
     # What the subject token *is*. A real tenant exchanges the refresh token
     # from the employee's sign-in; the provider shipped beside this lab
     # exchanges an ID token. Left unset, the challenge decides — the provider
@@ -414,6 +423,45 @@ def provider_trust(ca_bundle: str = ""):
     return _PROVIDER_TRUST[private]
 
 
+def jsonrpc_challenge(payload: dict | None) -> tuple[str, str] | None:
+    """(as_uri, ticket) from a challenge that arrived as a JSON-RPC error.
+
+    A resource enforcing in-process has no status line to put
+    `WWW-Authenticate` on, so the same parameters arrive in the error's data,
+    with the same `error` value the header carries.
+    """
+    data = (((payload or {}).get("error") or {}).get("data")) or {}
+    if not isinstance(data, dict):
+        return None
+    if data.get("error") == "insufficient_authorization" \
+            and data.get("as_uri") and data.get("ticket"):
+        return data["as_uri"], data["ticket"]
+    return None
+
+
+def receipt_filename(receipt_jws: str) -> str:
+    """The file a counter-signed receipt is kept under, named for its
+    negotiation.
+
+    Read from the receipt's payload without verifying it, which is fine for
+    choosing a name and for nothing else — so the name is held to the
+    characters a family id is made of. Anything wider lets whoever produced
+    the receipt choose where on this machine it is written.
+    """
+    import base64
+    import json
+    import re
+
+    try:
+        family = json.loads(base64.urlsafe_b64decode(
+            receipt_jws.split(".")[1] + "==")).get("family")
+    except Exception:                                           # noqa: BLE001
+        family = None
+    if not isinstance(family, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", family):
+        family = "unknown"
+    return f"{family}.receipt.jws"
+
+
 def identity_ask(body: dict) -> dict | None:
     """The identity requirement in a `need_info`, if that is what it is."""
     for claim in body.get("required_claims") or []:
@@ -423,14 +471,36 @@ def identity_ask(body: dict) -> dict | None:
 
 
 def id_jag_request(ask: dict, enterprise: "Enterprise") -> tuple[str, dict]:
-    """Where to go and what to ask for, taken from what the server said.
+    """Where to go and what to ask for.
 
-    Every field but the credentials comes out of the challenge. The agent
-    contributes who it is; the resource side contributes everything about
-    where it will be honoured.
+    The resource side contributes everything about where an assertion will
+    be honoured: the audience, the resource, the scope, which provider it
+    believes. The agent contributes who it is — and decides where its
+    credentials go. They go to the provider they belong to or nowhere: a
+    challenge naming a different provider, or a token endpoint off that
+    provider's origin, is refused before anything is sent.
     """
+    from urllib.parse import urlparse
+
     idp = ask.get("identity_provider") or {}
-    endpoint = idp.get("token_endpoint") or f"{idp.get('issuer', '').rstrip('/')}/token"
+    pinned = (enterprise.issuer or "").rstrip("/")
+    named = (idp.get("issuer") or "").rstrip("/")
+    if not pinned:
+        raise GrantDenied(
+            "this agent's enterprise credentials name no identity provider, "
+            "so there is nowhere it may send them")
+    if named != pinned:
+        raise GrantDenied(
+            f"the resource wants an assertion from {named or 'an unnamed provider'}, "
+            f"and this agent's credentials belong to {pinned}")
+    endpoint = (enterprise.token_endpoint or idp.get("token_endpoint")
+                or f"{pinned}/token")
+    if not enterprise.token_endpoint:
+        told, own = urlparse(endpoint), urlparse(pinned)
+        if (told.scheme, told.netloc) != (own.scheme, own.netloc):
+            raise GrantDenied(
+                f"the resource names {endpoint} as where to exchange, which is "
+                f"not at {pinned}")
     return endpoint, {
         "grant_type": idp.get("grant_type") or TOKEN_EXCHANGE,
         "requested_token_type": idp.get("requested_token_type") or ID_JAG_FORMAT,

@@ -95,8 +95,13 @@ class OwnerStore(Protocol):
     parameter."""
 
     async def seed(self) -> None:
-        """Give a new owner her starting tiers and resource servers. Idempotent
-        — an owner who already has policy keeps it."""
+        """Give a new owner her starting tiers and resource servers, once.
+
+        Once per owner, not once per empty table. Seeding is called on every
+        path that may be the first to meet an owner, so a seed that asked
+        only "is this default missing?" would put back a tier she deleted the
+        next time any of those paths ran — and a default tier is policy that
+        grants things. What she removed stays removed."""
 
     # --- negotiations and tickets ------------------------------------------
 
@@ -106,6 +111,11 @@ class OwnerStore(Protocol):
         The record's ``expires`` is set from ``ttl`` here rather than by the
         caller, so the one place that decides a ticket's lifetime is the one
         place that writes it.
+
+        A decision already recorded on the stored negotiation survives this
+        write, along with who made it. The record passed in is often a copy
+        read before she answered — a poll rotating its ticket — and writing
+        that copy back must not un-decide the request.
         """
 
     async def consume_ticket(self, ticket: str) -> dict | None:
@@ -124,8 +134,9 @@ class OwnerStore(Protocol):
         Most negotiations are created by `mint_ticket` and only updated here.
         One kind is not: a request over a jointly held resource arrives from
         a tally, and there is no ticket at this authority to have made it.
+
+        A recorded decision is write-once here as in `mint_ticket`.
         """
-        """Write back a record mutated in place, without minting a ticket."""
 
     async def close_negotiation(self, family: str | None) -> None:
         """Drop a finished negotiation and any ticket still indexed to it.
@@ -143,9 +154,17 @@ class OwnerStore(Protocol):
         """Every negotiation awaiting Alice, undecided — what her portal
         lists."""
 
-    async def decide(self, family: str, decision: str) -> bool:
-        """Record the owner's decision. False if there is no such negotiation
-        awaiting her, so a double-tap or a stale portal cannot decide twice."""
+    async def decide(self, family: str, decision: str,
+                     decided_by: dict | None = None) -> bool:
+        """Record a decision and who made it, in one step. False if there is
+        no such negotiation awaiting one, so a double-tap or a stale portal
+        cannot decide twice.
+
+        `decided_by` is written with the decision rather than after it
+        because what it says changes what the decision may do: only her own
+        approval may later relax one of her rules. Written separately, a poll
+        landing between the two writes reads an approval with no author and
+        treats it as hers."""
 
     # --- RPTs: the atomicity everything else rests on ----------------------
 

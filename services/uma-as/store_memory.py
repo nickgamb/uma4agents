@@ -48,6 +48,7 @@ class MemoryOwnerStore:
         self._organization: dict | None = None
         self._mandates: dict[str, dict] = {}
         self._subscribers: list[asyncio.Queue] = []
+        self._seeded = False
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -55,7 +56,10 @@ class MemoryOwnerStore:
         self._owner = owner
 
     async def seed(self) -> None:
-        """Starting policy for an owner who has none. Idempotent."""
+        """Starting policy for a new owner, once. See OwnerStore.seed."""
+        if self._seeded:
+            return
+        self._seeded = True
         if not self._tiers:
             self._tiers = policy.defaults(getattr(self, "_owner", "alice"))
         if not self._rs:
@@ -64,11 +68,21 @@ class MemoryOwnerStore:
 
     # --- negotiations and tickets ------------------------------------------
 
+    def _keep_decision(self, rec: dict) -> None:
+        """Carry a recorded decision onto a record about to replace it."""
+        stored = self._negotiations.get(rec["family"])
+        if stored is None or stored is rec or stored.get("decision") is None:
+            return
+        rec["decision"] = stored["decision"]
+        if "decided_by" in stored:
+            rec["decided_by"] = stored["decided_by"]
+
     async def mint_ticket(self, rec: dict, ttl: float) -> str:
         import secrets
 
         ticket = f"tkt_{secrets.token_urlsafe(24)}"
         rec["expires"] = time.time() + ttl
+        self._keep_decision(rec)
         self._negotiations[rec["family"]] = rec
         self._tickets[ticket] = rec["family"]
         return ticket
@@ -90,7 +104,9 @@ class MemoryOwnerStore:
         return self._negotiations.get(family)
 
     async def save_negotiation(self, rec: dict) -> None:
-        # The caller mutated the very object this dict holds; nothing to do.
+        # Usually the very object this dict holds, mutated in place. When it
+        # is a copy, a decision recorded since the copy was taken stands.
+        self._keep_decision(rec)
         self._negotiations[rec["family"]] = rec
 
     async def close_negotiation(self, family: str | None) -> None:
@@ -111,13 +127,15 @@ class MemoryOwnerStore:
         return [copy.deepcopy(r) for r in self._negotiations.values()
                 if r["state"] == "awaiting-owner" and r.get("decision") is None]
 
-    async def decide(self, family: str, decision: str) -> bool:
+    async def decide(self, family: str, decision: str,
+                     decided_by: dict | None = None) -> bool:
         rec = self._negotiations.get(family)
         if rec is None or rec["state"] != "awaiting-owner":
             return False
         if rec.get("decision") is not None:
             return False
         rec["decision"] = decision
+        rec["decided_by"] = decided_by
         return True
 
     # --- RPTs ---------------------------------------------------------------

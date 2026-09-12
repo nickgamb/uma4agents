@@ -49,7 +49,7 @@ POST   /perm            register attempted permissions -> ticket
 POST   /introspect      RPT introspection (permissions array). Never consumes by
                         default; an inactive answer carries an `error` reason
                         (invalid_signature | unknown_token | connection_revoked |
-                        already_consumed | expired) so the PEP can tell a
+                        already_consumed | revoked | expired) so the PEP can tell a
                         re-negotiable failure from a settled one
 POST   /consume         burn a single-use RPT — the atomic last step of
                         enforcement, called only after PoP and operation binding

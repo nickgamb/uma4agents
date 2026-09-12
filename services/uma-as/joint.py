@@ -123,6 +123,20 @@ def moved(record: dict, fresh: dict) -> list[str]:
         out.append(f"{', '.join(added)} would join the holders of this account")
     if gone := sorted(old_holders - new_holders):
         out.append(f"{', '.join(gone)} would no longer be a holder")
+    # A holder who stays but changes is the quieter version of the same
+    # thing. A new issuer is a different authority answering in her name; a
+    # new weight moves the count without anybody joining or leaving.
+    old_by = {h["owner"]: h for h in was.get("holders") or []}
+    for h in sorted(now.get("holders") or [], key=lambda h: h["owner"]):
+        before = old_by.get(h["owner"])
+        if before is None:
+            continue
+        if (before.get("issuer") or "").rstrip("/") != (h.get("issuer") or "").rstrip("/"):
+            out.append(f"{h['owner']}'s answers would come from "
+                       f"{h.get('issuer')} rather than {before.get('issuer')}")
+        if before.get("weight", 1) != h.get("weight", 1):
+            out.append(f"{h['owner']} would carry a weight of {h.get('weight', 1)} "
+                       f"rather than {before.get('weight', 1)}")
     old_rule = (was.get("rule") or {}).get("threshold")
     new_rule = (now.get("rule") or {}).get("threshold")
     if old_rule != new_rule:

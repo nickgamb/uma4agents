@@ -300,8 +300,9 @@ The agreement MUST echo, unchanged, the `template_id`, `terms_uri`, `purpose`,
 `nonce` and `family` of the proffered template, and MUST carry an `aud` naming
 the authorization server that proffered them.
 
-It MUST carry an `expires_in` no greater than the template's, and a `prohibited`
-array that is a superset of the template's.
+It MUST carry a positive `expires_in` no greater than the template's, a `scope`
+array that is a subset of the template's, and a `prohibited` array that is a
+superset of the template's.
 
 Where the template's `per_operation` is `true`, the agreement MUST carry an
 `operation` member naming the operation proposed and the parameters proposed for
@@ -334,7 +335,13 @@ The superset test on `prohibited` is deliberate: binding yourself to more than
 was asked is agreement, and refusing it would make the honest case fail. Every
 other echoed member is compared for equality, because a requesting side that can
 alter the purpose it signed up to has signed a different document from the one
-the owner published.
+the owner published. `scope` and `expires_in` are the same test pointed the other
+way: agreeing to less than was offered is agreement, and agreeing to more is not.
+
+A grant issued on an agreement MUST NOT outlive the agreement's `expires_in`. An
+agreement for a shorter time is a statement about how long the access will be
+used, and a grant issued past it would leave the receipt and the grant
+disagreeing about what was agreed.
 
 ## What the Requesting Side May Author {#requester-claims}
 

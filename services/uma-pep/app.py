@@ -623,6 +623,8 @@ async def check(request: Request, rest: str = "") -> Response:
         protocol_version=h.get("mcp-protocol-version"),
         signature_agent=h.get("signature-agent"),
         traceparent=h.get("traceparent"),
+        body=body,
+        content_digest=h.get("content-digest"),
     )
     owner, kind = route_of(original_path)
     if kind == "joint":

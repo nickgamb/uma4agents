@@ -338,6 +338,12 @@ defined:
 : The owner has ended the standing relationship under which this token was
   issued. See {{U4ACore}} Section 9.
 
+`revoked`:
+: The token was invalidated when the owner ended the relationship it was issued
+  under, and a relationship with the same agent has since been re-established.
+  The token stays inactive; a grant under the new relationship is negotiated
+  afresh.
+
 Of these, `connection_revoked` is terminal: an enforcement point receiving it
 MUST refuse without issuing a fresh challenge, because renegotiation cannot
 change an outcome the owner has settled. The others MAY be answered with a

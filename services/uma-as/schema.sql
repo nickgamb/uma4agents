@@ -186,6 +186,14 @@ CREATE TABLE IF NOT EXISTS tiers (
     PRIMARY KEY (owner, tier_id)
 );
 
+-- Owners who have been given their starting policy. Seeding runs on every
+-- path that may be the first to meet an owner; without a record that it has
+-- happened, it re-inserted any default tier she had since deleted.
+CREATE TABLE IF NOT EXISTS owners (
+    owner     text PRIMARY KEY,
+    seeded_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- The organization she administers resources for, if any. One row per owner
 -- rather than a join table: see the note on OwnerStore.organization for why
 -- two at once is a different feature and not a wider column.

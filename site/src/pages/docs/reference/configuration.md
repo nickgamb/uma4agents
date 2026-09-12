@@ -166,6 +166,8 @@ invitation, none of it does anything.
 | `UMA_PEP_MEMBERSHIP_TTL_S` | `10` | How long a cached answer about who is a member may be acted on. The window is somebody's access to the organization's resources *after* it was withdrawn, so it is short. Listings are always read fresh |
 | `UMA_PEP_MANDATE_TTL_S` | `30` | How long the electorate of a jointly held resource may be reused before the mandate is re-read from where the tally publishes it. Short: a holder leaving should stop counting in seconds, not at a restart |
 | `UMA_PEP_HOLDER_JWKS_TTL_S` | `300` | How long a co-owner's published keys are reused for verifying her verdicts. The window is a rotated-away key still verifying — ordinary key-rotation latency, and longer than the electorate's on purpose |
+| `UMA_PEP_CLOCK_SKEW_S` | `60` | How far a jointly held grant's remaining life may run past the lifetime its holders' verdicts state. Verdicts are signed a moment before the grant, so exact equality would refuse honest grants |
+| `UMA_PEP_REQUIRE_CONTENT_DIGEST` | unset | Set to `true` to refuse a tool call whose signature does not cover a `Content-Digest`. Unset, a digest that is covered is still checked against the body the gateway received |
 | `UMA_PEP_SHARED_PREFIX` | `mcp/shared` | The path an organization's resources are reached at, one segment per member |
 | `UMA_PEP_SHARED_NAMESPACE` | `northwind-vault` | The resource-id namespace those resources publish under |
 

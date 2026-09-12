@@ -81,6 +81,25 @@ joint: {
 The last field is the tally's own claim. The enforcement point ignores it and
 recomputes, which is why the field is safe to carry at all.
 
+**It cannot put genuine verdicts behind a different grant.** A verdict that
+said only "yes, to this agreement" would fit inside any grant: the enforcement
+point sees the grant and the verdicts, never the agreement. So an `allow`
+verdict states what the holder's authority verified — the key that signed the
+agreement (`cnf_jkt`), its `scope`, its `expires_in`, the `operation` if it
+named one — and the enforcement point refuses a grant that is bound to another
+key, wider, longer, or no longer bound to that operation. The tally issues its
+grant from the agreement, bounded by the folded terms, so an honest grant always
+passes.
+
+**It cannot change the electorate after the fact.** The mandate is read from
+where the tally publishes it, which would be circular on its own. Every `allow`
+verdict names `mandate_s256`, the digest of the mandate that holder agreed to:
+holders by owner, issuer and weight, the rule and its threshold, and the
+resources. A published mandate with a weight moved or an issuer swapped has a
+different digest, and no verdict was given under it. The digest is
+`uma4a_joint.mandate_digest`; `make joint-test` pins what changes it and what
+does not.
+
 **And it recomputes against the mandate the tally *publishes*, never the copy
 in the grant.** That distinction is the whole difference between a check and a
 formality. Counting against the embedded copy would leave the electorate in

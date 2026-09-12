@@ -208,6 +208,17 @@ owner herself decided. An implementation MUST keep the record of grants it made
 and the record of approvals the owner gave apart, and MUST NOT write an approval
 where the decision was taken by someone acting for her (see {{U4AMultiParty}}).
 
+An authorization server MUST record who made a decision in the same step that
+records the decision, and MUST NOT write an approval as the owner's unless that
+record names her. Written in two steps, the moment between them holds a decision
+with no author, and a grant loop reading it then has nothing to tell her approval
+from an administrator's.
+
+A recorded decision MUST NOT be undone by a later write of the negotiation it
+decides. The writer is routinely holding a copy read before the decision was
+made — a requesting agent's poll rotating its ticket — and writing that copy back
+would put a request she has answered back in front of her.
+
 ## What May Only Tighten {#tightening}
 
 Every other condition may appear only in a rule whose effect is `ask` or

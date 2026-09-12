@@ -264,7 +264,8 @@ def main() -> int:                                            # noqa: C901
 
     print("\n5. the resource side names the provider; the agent goes and asks")
     ent = Enterprise(subject_token=employee_id_token(c, "alice"),
-                     client_id=AGENT_CLIENT, client_secret=AGENT_SECRET)
+                     client_id=AGENT_CLIENT, client_secret=AGENT_SECRET,
+                     issuer=XAA)
     rpt, why, said = negotiate(c, BOOK_PATH, keys, ent, hdrs=alice)
     check("an assertion is obtained and the grant is issued", rpt is not None, why)
     check("the agent was told where to go rather than knowing in advance",

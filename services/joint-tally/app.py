@@ -311,6 +311,14 @@ def verify_verdict(jws: str, holder: dict, rec: dict) -> dict | None:
                 or claims.get("contract") != rec["contract_hash"] \
                 or claims.get("effect") not in ("allow", "refuse"):
             return None
+        # A yes given under a different mandate than the one this tally
+        # counts would be refused at the enforcement point. Caught here so the
+        # agent is not told yes and then turned away.
+        doc = MANDATES.get(rec.get("account") or "")
+        if claims["effect"] == "allow" and (
+                doc is None or claims.get("mandate_s256") != J.mandate_digest(doc)):
+            event("verdict.other_mandate", corr=rec["family"], holder=holder["owner"])
+            return None
         return claims
     event("verdict.unverified", corr=rec["family"], holder=holder["owner"])
     return None
@@ -586,17 +594,31 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
     that matters.
     """
     jti = f"rpt_{uuid.uuid4().hex[:12]}"
-    exp = int(now()) + min(3600, int(rec["template"]["expires_in"] or 900))
+    # The grant is built from the agreement the agent signed, bounded by the
+    # folded terms it was offered — not from the offer alone. Each holder's
+    # verdict states the agreement's scope and lifetime, and the enforcement
+    # point refuses a grant wider or longer than those.
+    lifetime = int(rec["template"]["expires_in"] or 900)
+    if (agreed := int(rec["contract"].get("expires_in") or 0)) > 0:
+        lifetime = min(lifetime, agreed)
+    exp = int(now()) + min(3600, lifetime)
+    offered = list(rec["template"]["scope"] or [])
+    scopes = [s for s in (rec["contract"].get("scope") or offered) if s in offered]
     claims = {
         "iss": ISSUER,
         "sub": rec["contract"].get("sub") or "aauth:pseudonymous-agent",
         "owner": rec["account"],
         "aud": AUDIENCE,
         "jti": jti,
+        # The negotiation, as every verdict inside names it. Introspection
+        # returns these claims as they are, and the enforcement point refuses
+        # verdicts about a negotiation other than the grant's — so a grant
+        # that did not say which one it was would carry no verdict at all.
+        "family": rec["family"],
         "exp": exp,
         "cnf": {"jwk": rec["signer"]},
         "permissions": [{"resource_id": rec["resource_id"],
-                         "resource_scopes": rec["template"]["scope"],
+                         "resource_scopes": scopes,
                          "exp": exp}],
         "contract": rec["contract_hash"],
         "joint": {

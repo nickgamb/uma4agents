@@ -32,7 +32,10 @@ operation as an organization applying a ceiling, pointed sideways instead of
 down.
 """
 
+import base64
 import copy
+import hashlib
+import json
 
 from uma4a_org import claims_match, clamp
 
@@ -134,6 +137,49 @@ def validate_mandate(doc: dict, floor: int = 0) -> dict:
 
 def governs(mandate: dict, resource_id: str) -> bool:
     return claims_match(resource_id, mandate.get("resources") or [])
+
+
+def _b64_sha256(data: bytes) -> str:
+    return base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+
+
+def mandate_digest(doc: dict) -> str | None:
+    """A digest of the parts of a mandate that decide a count.
+
+    Who the holders are, which authority speaks for each, what each weighs,
+    how many it takes, and what the mandate covers — and nothing else, so
+    the summary a tally publishes beside it, or the order it lists holders
+    in, cannot change the digest while any of those can.
+
+    Every holder's verdict carries this. It is what lets an enforcement point
+    read the mandate from the tally and still not have to trust the tally
+    for it: a published mandate whose digest is not the one the holders
+    signed under is not the mandate they agreed to. None for a document that
+    is not a mandate at all.
+    """
+    try:
+        m = validate_mandate(doc)
+    except MandateError:
+        return None
+    canonical = {
+        "holders": sorted(({"owner": h["owner"], "issuer": h["issuer"],
+                            "weight": h["weight"]} for h in m["holders"]),
+                          key=lambda h: h["owner"]),
+        "resources": sorted(m["resources"]),
+        "rule": {"kind": m["rule"]["kind"], "threshold": m["rule"]["threshold"]},
+    }
+    return "s256:" + _b64_sha256(
+        json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode())
+
+
+def key_thumbprint(jwk: dict) -> str | None:
+    """RFC 7638 thumbprint of an OKP key, in the `jkt:` form handles use."""
+    try:
+        canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
+                               separators=(",", ":"), sort_keys=True)
+    except (KeyError, TypeError):
+        return None
+    return "jkt:" + _b64_sha256(canonical.encode())
 
 
 def holder(mandate: dict, owner: str) -> dict | None:

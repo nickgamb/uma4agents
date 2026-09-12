@@ -5,8 +5,8 @@
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
 Intended status: Standards Track                                E. Maler
-Expires: 15 March 2027                                      Venn Factory
-                                                       11 September 2026
+Expires: 16 March 2027                                      Venn Factory
+                                                       12 September 2026
 
 
         Owner-Proffered Terms for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 March 2027.
+   This Internet-Draft will expire on 16 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 1]
+Gamb & Maler              Expires 16 March 2027                 [Page 1]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -84,20 +84,20 @@ Table of Contents
    6.  Declining . . . . . . . . . . . . . . . . . . . . . . . . . .   9
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
      7.1.  The Agreement Binds the Key That Will Act . . . . . . . .   9
-     7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .   9
+     7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .  10
      7.3.  Terms Are Not a Sandbox . . . . . . . . . . . . . . . . .  10
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  10
      8.1.  The Roster Is the Owner's . . . . . . . . . . . . . . . .  10
-     8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  10
+     8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  11
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
      9.1.  Media Type Registration . . . . . . . . . . . . . . . . .  11
-     9.2.  URN Sub-namespace Registration  . . . . . . . . . . . . .  11
-   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
+     9.2.  URN Sub-namespace Registration  . . . . . . . . . . . . .  12
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
      10.1.  Normative References . . . . . . . . . . . . . . . . . .  12
-     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  13
    Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 2]
+Gamb & Maler              Expires 16 March 2027                 [Page 2]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 3]
+Gamb & Maler              Expires 16 March 2027                 [Page 3]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 4]
+Gamb & Maler              Expires 16 March 2027                 [Page 4]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 15 March 2027                 [Page 5]
+Gamb & Maler              Expires 16 March 2027                 [Page 5]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -320,8 +320,9 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    purpose, nonce and family of the proffered template, and MUST carry
    an aud naming the authorization server that proffered them.
 
-   It MUST carry an expires_in no greater than the template's, and a
-   prohibited array that is a superset of the template's.
+   It MUST carry a positive expires_in no greater than the template's, a
+   scope array that is a subset of the template's, and a prohibited
+   array that is a superset of the template's.
 
    Where the template's per_operation is true, the agreement MUST carry
    an operation member naming the operation proposed and the parameters
@@ -332,8 +333,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-
-Gamb & Maler              Expires 15 March 2027                 [Page 6]
+Gamb & Maler              Expires 16 March 2027                 [Page 6]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -366,7 +366,14 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    honest case fail.  Every other echoed member is compared for
    equality, because a requesting side that can alter the purpose it
    signed up to has signed a different document from the one the owner
-   published.
+   published. scope and expires_in are the same test pointed the other
+   way: agreeing to less than was offered is agreement, and agreeing to
+   more is not.
+
+   A grant issued on an agreement MUST NOT outlive the agreement's
+   expires_in.  An agreement for a shorter time is a statement about how
+   long the access will be used, and a grant issued past it would leave
+   the receipt and the grant disagreeing about what was agreed.
 
 4.3.  What the Requesting Side May Author
 
@@ -379,20 +386,20 @@ Internet-Draft            Owner-Proffered Terms           September 2026
       its content affect the decision.
 
    mission:  OPTIONAL.  An object citing a mandate the requesting side
+
+
+
+Gamb & Maler              Expires 16 March 2027                 [Page 7]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
       is acting under, with an approver member that is an https URL and
       an s256 member that is a content digest.  The authorization server
       MUST record the citation and MUST NOT dereference it.
 
    Policy MAY read the _absence_ of either.  It MUST NOT read the
    content of either.  See [U4APolicy].
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                 [Page 7]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
    An authority that reads a stated reason and rules on whether it is
    plausible has put a judgement about natural language inside an
@@ -428,6 +435,21 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
    family:  REQUIRED.  The negotiation this receipt completes.
 
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 16 March 2027                 [Page 8]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
    {
      "iss": "https://alice-as.example",
      "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
@@ -440,15 +462,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    }
 
                        Figure 3: A receipt's claims.
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                 [Page 8]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
    Embedding the whole agreement rather than a reference to it is what
    makes the two records identical: the owner's side retains it with her
@@ -483,6 +496,16 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    acts would be different parties, and the agreement would say nothing
    about the requests made under it.
 
+
+
+
+
+
+Gamb & Maler              Expires 16 March 2027                 [Page 9]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 7.2.  The Digest Is Over the Transmitted Octets
 
    The agreement member of the receipt, and any digest of the agreement
@@ -490,21 +513,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    as transmitted, not over a re-serialization of its claims.  A digest
    over re-serialized JSON is a digest of the verifier's serializer, and
    two conforming implementations will disagree about it.
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                 [Page 9]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 7.3.  Terms Are Not a Sandbox
 
@@ -540,6 +548,20 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    template_id namespacing in Section 2 is designed so that a roster
    identifier can be used directly.
 
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 16 March 2027                [Page 10]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 8.2.  The Terms Document Is Public
 
    A terms document is dereferenced by a requesting side that holds no
@@ -554,13 +576,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    An agent reads the document before it signs, and that is the only
    moment at which "these terms are not hers alone" is information it
    can act on.
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 10]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 9.  IANA Considerations
 
@@ -594,6 +609,15 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    registry, with the same considerations and with Section 5 of this
    document as its published specification.
 
+
+
+
+
+Gamb & Maler              Expires 16 March 2027                [Page 11]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 9.2.  URN Sub-namespace Registration
 
    IANA is asked to record the following identifiers, which are defined
@@ -610,13 +634,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
                Table 1: Identifiers defined by this document.
 
 10.  References
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 11]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 10.1.  Normative References
 
@@ -646,6 +663,17 @@ Internet-Draft            Owner-Proffered Terms           September 2026
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
 
+
+
+
+
+
+
+Gamb & Maler              Expires 16 March 2027                [Page 12]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
               Kantara Recommendation, 7 January 2018,
@@ -666,13 +694,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 12]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
    [U4AMultiParty]
               Gamb, N. and E. Maler, "Multi-Party Authorization for
@@ -701,6 +722,14 @@ Appendix A.  Implementation Status
    implements this extension in full, including all three
    representations of Section 2.2, the immutability requirement of
    Section 2.1, the receipt of Section 5 and the unattributed refusal
+
+
+
+Gamb & Maler              Expires 16 March 2027                [Page 13]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
    record of Section 6.  It was checked clause by clause against
    [IEEE7012]; the divergences found are the ones stated in this
    document rather than a longer list kept elsewhere.
@@ -719,15 +748,6 @@ Authors' Addresses
    Nick Gamb
    MindGarden LLC
    Email: nickgamb@gmail.com
-
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 13]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
 
 
    Eve Maler
@@ -761,24 +781,4 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 15 March 2027                [Page 14]
+Gamb & Maler              Expires 16 March 2027                [Page 14]

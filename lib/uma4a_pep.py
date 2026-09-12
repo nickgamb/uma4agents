@@ -45,6 +45,8 @@ from urllib.parse import urlencode
 
 from uma4a_http_sig import VerifyError, verify
 from uma4a_http_sig import sign as http_sign
+from uma4a_joint import MandateError, key_thumbprint, mandate_digest, validate_mandate
+from uma4a_joint import governs as joint_governs
 from uma4a_joint import tally as joint_tally
 from uma4a_org import claims_match, envelope_breach
 
@@ -73,6 +75,15 @@ MANDATE_TTL_S = float(os.environ.get("UMA_PEP_MANDATE_TTL_S", "30"))
 # The window is a rotated-away key still verifying, which is the ordinary key
 # rotation window and can be longer than the electorate's.
 HOLDER_JWKS_TTL_S = float(os.environ.get("UMA_PEP_HOLDER_JWKS_TTL_S", "300"))
+# How far a grant's remaining life may run past the lifetime its holders
+# agreed to. The verdicts are signed a moment before the grant is, so exact
+# equality would refuse honest grants on clock skew alone.
+CLOCK_SKEW_S = float(os.environ.get("UMA_PEP_CLOCK_SKEW_S", "60"))
+# Whether a tool call's signature must cover its body. Off by default because
+# covering it is the client's choice under RFC 9421; a digest that *is*
+# covered is always checked against the bytes that arrived.
+REQUIRE_CONTENT_DIGEST = os.environ.get(
+    "UMA_PEP_REQUIRE_CONTENT_DIGEST", "").lower() in ("1", "true", "yes")
 
 
 class Pending(Exception):
@@ -121,6 +132,12 @@ class AuthzFacts:
     # Web Bot Auth: where this agent publishes its keys. Covered by the
     # signature when present, so it cannot be swapped in transit.
     signature_agent: str | None = None
+    # The bytes of the call and the Content-Digest header sent with them.
+    # An adapter that can see the raw body passes both; one that cannot
+    # passes neither, and a signature covering a digest is then refused
+    # rather than accepted unchecked.
+    body: bytes | None = None
+    content_digest: str | None = None
     # W3C Trace Context. The negotiation family correlates everything *inside*
     # this system; traceparent is what joins it to the caller's trace, which
     # matters because a grant spans two organizations and an offline human.
@@ -195,6 +212,7 @@ class Enforcer:
         org_internal: str = "",
         org_token: str = "",
         joint_issuer: str = "",
+        require_content_digest: bool = REQUIRE_CONTENT_DIGEST,
         event=None,
     ) -> None:
         self.owner = owner
@@ -246,6 +264,7 @@ class Enforcer:
         # that happened to embed a plausible mandate would be accepting the
         # electorate from the party that assembled it.
         self.joint_issuer = joint_issuer.rstrip("/")
+        self.require_content_digest = require_content_digest
         self.event = event or (lambda *a, **k: None)
         self._pat: dict[str, Any] = {"token": None, "expires": 0}
         self._membership: tuple[float, dict] = (0.0, {})
@@ -543,13 +562,37 @@ class Enforcer:
         """
         joint = info.get("joint")
         if not joint:
+            # An enforcer that exists for a jointly held account accepts
+            # nothing else. Skipping the count because the claim was left out
+            # would let the party being checked opt out of the check.
+            if self.joint_issuer:
+                return ("this resource is held jointly, and this grant carries "
+                        "no holders' verdicts to count")
             return None
         mandate = await self.published_mandate(joint.get("account") or "")
         if mandate is None:
             return ("this resource is held jointly and its mandate could not "
                     "be read, so who was entitled to a say is not known here")
+        # Counted as the holders' authorities read it, not as published. A
+        # rule left as a word with no threshold beside it would otherwise
+        # count to zero, and zero is a count any single verdict clears.
+        try:
+            mandate = validate_mandate(mandate)
+        except MandateError as exc:
+            return f"the published mandate is not one this side can count: {exc}"
         if not mandate.get("holders"):
             return "that mandate names no holders to have agreed to it"
+        if not joint_governs(mandate, rid):
+            return "the published mandate does not cover this resource"
+        # The mandate is read from the tally, which is the party being
+        # checked. What makes that safe is that each holder's verdict names
+        # the digest of the mandate she agreed to, so a tally publishing a
+        # different electorate — a weight moved, a holder swapped — publishes
+        # a mandate no verdict was given under.
+        digest = mandate_digest(mandate)
+        if digest is None:
+            return "the published mandate is not a mandate this side can count"
+        jkt = key_thumbprint(((info.get("cnf") or {}).get("jwk")) or {})
         by_owner = {h["owner"]: h for h in mandate["holders"]}
         verdicts: dict[str, str] = {}
         for jws in joint.get("verdicts") or []:
@@ -571,13 +614,52 @@ class Enforcer:
             if claims.get("resource_id") != rid:
                 return (f"{holder['owner']}'s verdict is about a different "
                         f"resource")
-            if claims.get("effect") == "allow":
-                verdicts[holder["owner"]] = "allow"
+            if claims.get("negotiation") != info.get("family"):
+                return (f"{holder['owner']}'s verdict is about a different "
+                        f"negotiation")
+            if claims.get("effect") != "allow":
+                continue
+            if claims.get("mandate_s256") != digest:
+                return (f"{holder['owner']} agreed under a different mandate "
+                        f"than the one published for this account")
+            if outside := self._outside_verdict(info, rid, claims, jkt):
+                return (f"{holder['owner']}'s verdict does not cover this "
+                        f"grant: {outside}")
+            verdicts[holder["owner"]] = "allow"
         result = joint_tally(mandate, verdicts)
         if result["effect"] != "allow":
             return (f"this grant claims the holders agreed, and the verdicts "
                     f"inside it carry {result['for']} of the "
                     f"{result['threshold']} it takes")
+        return None
+
+    @staticmethod
+    def _outside_verdict(info: dict, rid: str, claims: dict,
+                         jkt: str | None) -> str | None:
+        """How a grant exceeds what one holder's verdict agreed to, if it does.
+
+        The verdict states what the holder's authority verified in the signed
+        agreement. Everything material in the grant has to be derivable from
+        it: the grant may be narrower, never wider, and never bound to a
+        different key — otherwise a party holding genuine verdicts could
+        issue whatever grant it liked beside them.
+        """
+        if not jkt or claims.get("cnf_jkt") != jkt:
+            return "it is bound to a different key than the one that agreed"
+        agreed = set(claims.get("scope") or [])
+        for p in info.get("permissions") or []:
+            if p.get("resource_id") == rid and not set(p.get("resource_scopes") or []) <= agreed:
+                return "it carries scopes the agreement did not"
+        lifetime = claims.get("expires_in")
+        if not isinstance(lifetime, (int, float)) or lifetime <= 0:
+            return "the verdict names no agreed lifetime"
+        ends = max([float(info.get("exp") or 0)]
+                   + [float(p.get("exp") or 0) for p in info.get("permissions") or []])
+        if ends - time.time() > lifetime + CLOCK_SKEW_S:
+            return "it lasts longer than the agreement"
+        if (op := claims.get("operation")) is not None:
+            if not info.get("single_use") or info.get("operation") != op:
+                return "it is not bound to the one operation that was agreed"
         return None
 
     async def published_mandate(self, account: str) -> dict | None:
@@ -744,11 +826,24 @@ class Enforcer:
                                 description="the resource owner revoked this agent")
             return await self.challenge(f.tool, rid, scopes)
 
-        # 2. Does the grant cover this resource?
-        perms = {p["resource_id"] for p in info.get("permissions", [])}
+        # 2. Does the grant cover this resource, with the scopes this tool
+        #    needs, at this moment? A permission is the unit of authority, so
+        #    its own scopes and validity window are checked here rather than
+        #    trusted to have been issued consistently with the token's.
+        perms = {p.get("resource_id") for p in info.get("permissions", [])}
         if rid not in perms:
             self.event("access.denied", reason="permission-scope", tool=f.tool,
-                       granted=sorted(perms))
+                       granted=sorted(p for p in perms if p))
+            return await self.challenge(f.tool, rid, scopes)
+        at = time.time()
+        usable = [p for p in info.get("permissions", [])
+                  if p.get("resource_id") == rid
+                  and set(scopes) <= set(p.get("resource_scopes") or [])
+                  and (p.get("exp") is None or float(p["exp"]) > at)
+                  and (p.get("nbf") is None or float(p["nbf"]) <= at)]
+        if not usable:
+            self.event("access.denied", reason="permission-scope", tool=f.tool,
+                       needed=scopes)
             return await self.challenge(f.tool, rid, scopes)
 
         # 2a. If an organization governs this resource, does the grant sit
@@ -800,6 +895,9 @@ class Enforcer:
                 signature=f.signature,
                 public_key=pub,
                 signature_agent=f.signature_agent,
+                body=f.body,
+                require_digest=self.require_content_digest,
+                digest_header=f.content_digest,
             )
         except (KeyError, VerifyError) as exc:
             self.event("access.denied", reason=f"pop: {exc}", tool=f.tool,
@@ -808,12 +906,24 @@ class Enforcer:
                             description=f"proof-of-possession failed: {exc}")
 
         # 4. Operation binding: this trade, not trading authority.
-        #    An override is always single-use, whatever tool it names — the
-        #    organization's clause is an exception for one act, and one act
-        #    is what it gets.
-        if f.tool in self.single_use_tools or (override and info.get("single_use")):
+        #    Single-use when this deployment says the tool is, *or* when the
+        #    grant says it is. The second half is what the grant is for: a
+        #    grant issued for one act is spent by one act wherever it is
+        #    presented, not only at a resource that happens to agree. An
+        #    override is always single-use for the same reason — the
+        #    organization's clause is an exception for one act.
+        if f.tool in self.single_use_tools or info.get("single_use"):
             op = info.get("operation") or {}
             actual = s256(json.dumps(f.args or {}, sort_keys=True).encode())
+            if not op and f.tool in self.single_use_tools and not override:
+                # A tool this deployment treats as single-use takes a grant
+                # bound to one operation. A grant without the binding is
+                # authority to perform the tool, which is what the tool being
+                # listed here exists to prevent.
+                self.event("access.denied", reason="operation-binding-missing",
+                           tool=f.tool)
+                return Decision(outcome="deny", status=403, error="operation_required",
+                                description="this tool takes a grant bound to one operation")
             if op and (op.get("tool") != f.tool or op.get("params_s256") != actual):
                 self.event("access.denied", reason="operation-binding", tool=f.tool,
                            expected=op.get("params_s256"), actual=actual)

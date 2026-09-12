@@ -80,24 +80,32 @@ path](/docs/guides/approval/), not the thing that decided to use it.
 
 ## GNAP
 
-GNAP is the more interesting comparison, because it was designed with the
-limitations above in view. It has a real negotiation: a client makes a request,
-the server can say what it still needs, and there are defined ways to involve a
-party who is not in the request path.
+GNAP is the closer comparison, because it was designed with the limitations
+above in view. It has a real negotiation: a client makes a request, the server
+can say what it still needs, and there are defined ways to involve a party who
+is not in the request path.
 
 That is the same shape as UMA's claims-gathering, and GNAP does it more cleanly.
 Its interaction model is more general, key binding is native rather than an
 extension, and its request format expresses "here is what I want" far better
 than a scope string.
 
-What GNAP does not decide is **whose policy the answer expresses**. It gives you
-excellent machinery for a negotiation between a client and an authorization
-server; it does not require that authorization server to belong to a different
-party from the resource server, and in most deployments it will not.
+GNAP also covers the absent owner. [RFC 9635 §1.6.4](https://www.rfc-editor.org/rfc/rfc9635.html#section-1.6.4)
+describes a resource owner who is not the end user, reached by the authorization
+server asynchronously while the client polls, and §1.4 expects the server to
+follow her decisions, including automated rules.
 
-That is the axis, and it is not a criticism of GNAP — it is a different
-question. A GNAP-based binding of this profile would be a reasonable thing to
-build, and probably a cleaner one than the OAuth-shaped binding here.
+What GNAP leaves to implementations is **what those rules may rest on, and what
+is agreed**. It defines no terms the owner publishes and the requesting side
+signs, no record of that agreement held by both parties, and no constraint on
+which facts may relax a requirement. It also does not require the authorization
+server to belong to a different party from the resource server, and in most
+deployments it will not.
+
+Those are the parts this profile specifies, and it is not a criticism of GNAP
+to say it leaves them open. A GNAP-based binding of this profile would be a
+reasonable thing to build, and probably a cleaner one than the OAuth-shaped
+binding here.
 
 ## What this profile adds on top of either
 

@@ -82,7 +82,11 @@ def approve_in_background(client: httpx.Client) -> None:
             time.sleep(1.5)
             try:
                 pending = client.get(f"{AS_INTERNAL}/owner/pending", headers=hdrs, timeout=10.0).json()
-            except httpx.HTTPError:
+            except (httpx.HTTPError, ValueError):
+                # A reply that is not JSON is as transient as one that never
+                # arrived: an edge still routing, a proxy's error page. Caught
+                # only as the former, one such reply ended the thread and left
+                # the agent waiting for an answer nobody was going to give.
                 continue
             if pending:
                 p = pending[0]

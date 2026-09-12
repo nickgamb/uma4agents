@@ -76,6 +76,19 @@ inside the grant. Otherwise the party being checked supplies the standard it
 is checked against — one genuine verdict beside a mandate saying one is
 enough would pass, with every signature verifying.
 
+Reading it from the tally is safe for one reason: each owner's verdict names
+the **digest of the mandate she agreed to**. A published mandate with a weight
+moved or an issuer swapped has a different digest, and no verdict was given
+under it.
+
+**It cannot put genuine verdicts behind a different grant.** The enforcement
+point sees the grant and the verdicts, never the agreement, so a verdict that
+said only "yes" would fit inside any grant. An allow verdict therefore states
+what that owner's authority verified: the key that signed, the scopes and
+lifetime agreed, and the one operation if there was one. A grant bound to
+another key, or wider, or longer, or no longer bound to that operation, is
+refused.
+
 **It cannot weaken anybody's terms.** It folds every owner's terms into the
 one document an agent signs, and each owner's authority independently compares
 what was signed against what she published — refusing on any difference in

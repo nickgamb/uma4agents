@@ -432,6 +432,38 @@ because:
 exp:
 : REQUIRED. Short.
 
+cnf_jkt:
+: REQUIRED in an `allow`. The JWK thumbprint (RFC 7638) of the key that signed
+  the agreement.
+
+scope:
+: REQUIRED in an `allow`. The scopes the agreement carries.
+
+expires_in:
+: REQUIRED in an `allow`. The lifetime the agreement carries.
+
+operation:
+: REQUIRED in an `allow` whose agreement names an operation. Its `tool` and
+  `params_s256`, as in the `operation` claim of {{U4ACore}}.
+
+mandate_s256:
+: REQUIRED in an `allow`. The digest of the mandate the holder agreed to, as
+  {{mandate-digest}}.
+
+An `allow` verdict MUST carry `cnf_jkt`, `scope`, `expires_in` and
+`mandate_s256`, and MUST carry `operation` where the agreement names one. A
+verdict that said only "yes, to this agreement" could be carried inside any grant
+the tally chose to issue beside it, because the enforcement point checks
+verdicts against the grant and never sees the agreement. Stating the grant's
+material facts as the holder's authority verified them is what lets the
+enforcement point refuse a grant that is not the one agreed to.
+
+A holder's authorization server that has recorded the owner's approval of one
+agreement MUST NOT issue an `allow` verdict about a different agreement, or a
+different resource, under the same negotiation. The tally asks again with
+whatever it holds, and matching on the negotiation alone would turn her approval
+of one document into an approval of any.
+
 A verdict is bound to one negotiation and one agreement so that it cannot carry
 a later request. Before answering `allow`, a holder's authorization server MUST
 compare the folded document the agent signed against the terms she published,
@@ -449,11 +481,37 @@ folding party be untrusted.
   "resource_id": "joint-brokerage-1/get_positions",
   "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
   "effect": "allow",
+  "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+  "scope": ["positions:read"],
+  "expires_in": 3600,
+  "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
   "iat": 1789430000,
   "exp": 1789430300
 }
 ~~~
 {: title="A verdict's claims."}
+
+## The Mandate Digest {#mandate-digest}
+
+The digest of a mandate is `s256:` followed by the base64url encoding, without
+padding, of the SHA-256 hash of the JSON serialization — members sorted by name,
+no insignificant whitespace — of an object with exactly three members:
+
+holders:
+: Each holder reduced to `owner`, `issuer` with any trailing slash removed, and
+  `weight`, ordered by `owner`.
+
+resources:
+: The mandate's resources, sorted.
+
+rule:
+: `kind`, and the numeric `threshold` that kind implies.
+
+Holders' authorization servers and enforcement points MUST compute the digest
+this way. It covers what decides a count and nothing else, so a tally that
+publishes a summary beside the mandate, or lists holders in another order,
+publishes the same digest, while one that moves a weight, swaps an issuer or
+changes the rule does not.
 
 Where the holder's policy asks her, the verdict is withheld until she answers,
 and the tally holds the negotiation pending as {{UMAGrant}} `request_submitted`.
@@ -493,6 +551,12 @@ verdicts:
 tally:
 : OPTIONAL. The tally's own count, for display.
 
+The grant MUST also carry, as a `family` claim, the negotiation identifier its
+verdicts name, and the tally's introspection response MUST return it. Without it
+the enforcement point cannot establish which negotiation the grant was issued
+for, and a verdict about one negotiation would be as good as a verdict about
+any.
+
 ~~~ json
 {
   "joint": {
@@ -521,17 +585,31 @@ An enforcement point protecting a jointly held resource MUST, before allowing a
 call under such a grant:
 
 1. fetch the mandate from where the tally publishes it, and MUST NOT use the
-   copy embedded in the grant;
+   copy embedded in the grant, and refuse unless it covers the resource being
+   accessed;
 2. verify each verdict against the keys published by the issuer the *published*
    mandate names for that holder;
 3. establish that each verdict names this negotiation and this agreement;
-4. re-run the count of {{count}} and refuse unless it allows.
+4. establish, for each `allow` verdict, that its `mandate_s256` is the digest of
+   the published mandate, and that the grant is bound to the key `cnf_jkt`
+   names, carries no scope beyond `scope`, lasts no longer than `expires_in`,
+   and, where the verdict names an `operation`, is single-use and bound to that
+   operation;
+5. re-run the count of {{count}} and refuse unless it allows.
 
 The `tally` member of the grant is for display and MUST NOT be trusted.
 
+An enforcement point protecting a jointly held resource MUST refuse a grant that
+carries no `joint` claim.
+
 Reading the mandate from the grant would let the party being checked supply the
 standard it is checked against: a single genuine verdict beside a rewritten
-threshold would pass with every signature verifying. Carrying the verdicts in
+threshold would pass with every signature verifying. Reading it from where the
+tally publishes it is safe only because every verdict names the digest of the
+mandate its holder agreed to; a published mandate with a different electorate is
+one no verdict was given under. The tally issues its grant from the agreement,
+bounded by the folded terms, so that an honest grant is always one step 4 can
+re-derive. Carrying the verdicts in
 the grant and re-verifying them at the resource is what makes the tally an
 ordinary service rather than a ledger — there is no ordered history here to
 agree on and no long-lived state a fork could damage.

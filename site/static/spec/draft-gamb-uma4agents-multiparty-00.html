@@ -1247,7 +1247,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 15 March 2027</td>
+<td class="center">Expires 16 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1260,12 +1260,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-multiparty-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-11" class="published">11 September 2026</time>
+<time datetime="2026-09-12" class="published">12 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-15">15 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1317,7 +1317,7 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1405,19 +1405,22 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-verdicts" class="internal xref">Verdicts</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
-                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-verdicts-are-not-claims" class="internal xref">Verdicts Are Not Claims</a></p>
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-the-mandate-digest" class="internal xref">The Mandate Digest</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.6">
-                <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-the-count" class="internal xref">The Count</a></p>
+                <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-verdicts-are-not-claims" class="internal xref">Verdicts Are Not Claims</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.7">
-                <p id="section-toc.1-1.3.2.7.1"><a href="#section-3.7" class="auto internal xref">3.7</a>.  <a href="#name-the-grant-carries-the-verdi" class="internal xref">The Grant Carries the Verdicts</a></p>
+                <p id="section-toc.1-1.3.2.7.1"><a href="#section-3.7" class="auto internal xref">3.7</a>.  <a href="#name-the-count" class="internal xref">The Count</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.8">
-                <p id="section-toc.1-1.3.2.8.1"><a href="#section-3.8" class="auto internal xref">3.8</a>.  <a href="#name-re-verification-at-the-enfo" class="internal xref">Re-Verification at the Enforcement Point</a></p>
+                <p id="section-toc.1-1.3.2.8.1"><a href="#section-3.8" class="auto internal xref">3.8</a>.  <a href="#name-the-grant-carries-the-verdi" class="internal xref">The Grant Carries the Verdicts</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.9">
-                <p id="section-toc.1-1.3.2.9.1"><a href="#section-3.9" class="auto internal xref">3.9</a>.  <a href="#name-no-organization-reaches-a-j" class="internal xref">No Organization Reaches a Jointly Held Resource</a></p>
+                <p id="section-toc.1-1.3.2.9.1"><a href="#section-3.9" class="auto internal xref">3.9</a>.  <a href="#name-re-verification-at-the-enfo" class="internal xref">Re-Verification at the Enforcement Point</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.10">
+                <p id="section-toc.1-1.3.2.10.1"><a href="#section-3.10" class="auto internal xref">3.10</a>. <a href="#name-no-organization-reaches-a-j" class="internal xref">No Organization Reaches a Jointly Held Resource</a></p>
 </li>
             </ul>
 </li>
@@ -1923,17 +1926,57 @@ of <code>u4a-verdict+jwt</code>, carrying:<a href="#section-3.4-1" class="pilcro
           <dd style="margin-left: 1.5em" id="section-3.4-2.14">
             <p id="section-3.4-2.14.1"><span class="bcp14">REQUIRED</span>. Short.<a href="#section-3.4-2.14.1" class="pilcrow">¶</a></p>
 </dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.15">cnf_jkt:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.16">
+            <p id="section-3.4-2.16.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The JWK thumbprint (RFC 7638) of the key that signed
+the agreement.<a href="#section-3.4-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.17">scope:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.18">
+            <p id="section-3.4-2.18.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The scopes the agreement carries.<a href="#section-3.4-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.19">expires_in:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.20">
+            <p id="section-3.4-2.20.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The lifetime the agreement carries.<a href="#section-3.4-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.21">operation:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.22">
+            <p id="section-3.4-2.22.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code> whose agreement names an operation. Its <code>tool</code> and
+<code>params_s256</code>, as in the <code>operation</code> claim of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>.<a href="#section-3.4-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.23">mandate_s256:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.24">
+            <p id="section-3.4-2.24.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The digest of the mandate the holder agreed to, as
+<a href="#mandate-digest" class="auto internal xref">Section 3.5</a>.<a href="#section-3.4-2.24.1" class="pilcrow">¶</a></p>
+</dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-3.4-3">A verdict is bound to one negotiation and one agreement so that it cannot carry
+<p id="section-3.4-3">An <code>allow</code> verdict <span class="bcp14">MUST</span> carry <code>cnf_jkt</code>, <code>scope</code>, <code>expires_in</code> and
+<code>mandate_s256</code>, and <span class="bcp14">MUST</span> carry <code>operation</code> where the agreement names one. A
+verdict that said only "yes, to this agreement" could be carried inside any grant
+the tally chose to issue beside it, because the enforcement point checks
+verdicts against the grant and never sees the agreement. Stating the grant's
+material facts as the holder's authority verified them is what lets the
+enforcement point refuse a grant that is not the one agreed to.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+<p id="section-3.4-4">A holder's authorization server that has recorded the owner's approval of one
+agreement <span class="bcp14">MUST NOT</span> issue an <code>allow</code> verdict about a different agreement, or a
+different resource, under the same negotiation. The tally asks again with
+whatever it holds, and matching on the negotiation alone would turn her approval
+of one document into an approval of any.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<p id="section-3.4-5">A verdict is bound to one negotiation and one agreement so that it cannot carry
 a later request. Before answering <code>allow</code>, a holder's authorization server <span class="bcp14">MUST</span>
 compare the folded document the agent signed against the terms she published,
 and <span class="bcp14">MUST</span> refuse on any difference in the direction of <em>more</em>: a longer expiry,
 an extra scope, a dropped prohibition. Differences in the direction of <em>less</em>
 are expected, since another holder's terms were folded in. This is what lets the
-folding party be untrusted.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+folding party be untrusted.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
 <span id="name-a-verdicts-claims"></span><figure id="figure-1">
-          <div class="lang-json sourcecode" id="section-3.4-4.1">
+          <div class="lang-json sourcecode" id="section-3.4-6.1">
 <pre>
 {
   "iss": "https://alice-as.example",
@@ -1943,6 +1986,10 @@ folding party be untrusted.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
   "resource_id": "joint-brokerage-1/get_positions",
   "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
   "effect": "allow",
+  "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+  "scope": ["positions:read"],
+  "expires_in": 3600,
+  "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
   "iat": 1789430000,
   "exp": 1789430300
 }
@@ -1951,66 +1998,104 @@ folding party be untrusted.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
 <figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
 <a href="#name-a-verdicts-claims" class="selfRef">A verdict's claims.</a>
           </figcaption></figure>
-<p id="section-3.4-5">Where the holder's policy asks her, the verdict is withheld until she answers,
-and the tally holds the negotiation pending as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> <code>request_submitted</code>.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="not-claims">
+<div id="mandate-digest">
 <section id="section-3.5">
-        <h3 id="name-verdicts-are-not-claims">
-<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-verdicts-are-not-claims" class="section-name selfRef">Verdicts Are Not Claims</a>
+        <h3 id="name-the-mandate-digest">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-the-mandate-digest" class="section-name selfRef">The Mandate Digest</a>
         </h3>
-<p id="section-3.5-1">A verdict <span class="bcp14">MUST</span> travel from the holder's authorization server to the tally. It
-<span class="bcp14">MUST NOT</span> be gathered by the requesting agent and presented as a claim.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">A claim the requesting party gathers is a claim it can decline to gather. A
-holder's refusal has to reach the decision point without the cooperation of the
-party it refuses, and claims-gathering cannot carry it. The general boundary:
-claims work when the requesting party is the only one who holds the fact, and
-fail when the fact may be adverse to it.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="count">
-<section id="section-3.6">
-        <h3 id="name-the-count">
-<a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-the-count" class="section-name selfRef">The Count</a>
-        </h3>
-<p id="section-3.6-1">The tally <span class="bcp14">MUST</span> sum the weight of holders whose verdict is <code>allow</code> and compare it
-to the threshold. It <span class="bcp14">MUST</span> refuse the moment the weight still outstanding cannot
-carry the request over the threshold — under <code>all</code>, the first refusal ends it —
-rather than waiting for every holder. Silence and unreachability <span class="bcp14">MUST</span> both fail
-closed; only the record distinguishes them.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="joint-grant">
-<section id="section-3.7">
-        <h3 id="name-the-grant-carries-the-verdi">
-<a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-the-grant-carries-the-verdi" class="section-name selfRef">The Grant Carries the Verdicts</a>
-        </h3>
-<p id="section-3.7-1">A grant the tally issues <span class="bcp14">MUST</span> carry a <code>joint</code> claim with:<a href="#section-3.7-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-3.7-2">
-          <dt id="section-3.7-2.1">account:</dt>
-          <dd style="margin-left: 1.5em" id="section-3.7-2.2">
-            <p id="section-3.7-2.2.1"><span class="bcp14">REQUIRED</span>. The jointly held resource.<a href="#section-3.7-2.2.1" class="pilcrow">¶</a></p>
+<p id="section-3.5-1">The digest of a mandate is <code>s256:</code> followed by the base64url encoding, without
+padding, of the SHA-256 hash of the JSON serialization — members sorted by name,
+no insignificant whitespace — of an object with exactly three members:<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.5-2">
+          <dt id="section-3.5-2.1">holders:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-2.2">
+            <p id="section-3.5-2.2.1">Each holder reduced to <code>owner</code>, <code>issuer</code> with any trailing slash removed, and
+<code>weight</code>, ordered by <code>owner</code>.<a href="#section-3.5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.7-2.3">mandate:</dt>
-          <dd style="margin-left: 1.5em" id="section-3.7-2.4">
-            <p id="section-3.7-2.4.1"><span class="bcp14">REQUIRED</span>. The mandate as the tally holds it.<a href="#section-3.7-2.4.1" class="pilcrow">¶</a></p>
+<dt id="section-3.5-2.3">resources:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-2.4">
+            <p id="section-3.5-2.4.1">The mandate's resources, sorted.<a href="#section-3.5-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.7-2.5">verdicts:</dt>
-          <dd style="margin-left: 1.5em" id="section-3.7-2.6">
-            <p id="section-3.7-2.6.1"><span class="bcp14">REQUIRED</span>. Every verdict received, as issued.<a href="#section-3.7-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-3.7-2.7">tally:</dt>
-          <dd style="margin-left: 1.5em" id="section-3.7-2.8">
-            <p id="section-3.7-2.8.1"><span class="bcp14">OPTIONAL</span>. The tally's own count, for display.<a href="#section-3.7-2.8.1" class="pilcrow">¶</a></p>
+<dt id="section-3.5-2.5">rule:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-2.6">
+            <p id="section-3.5-2.6.1"><code>kind</code>, and the numeric <code>threshold</code> that kind implies.<a href="#section-3.5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-3.5-3">Holders' authorization servers and enforcement points <span class="bcp14">MUST</span> compute the digest
+this way. It covers what decides a count and nothing else, so a tally that
+publishes a summary beside the mandate, or lists holders in another order,
+publishes the same digest, while one that moves a weight, swaps an issuer or
+changes the rule does not.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+<p id="section-3.5-4">Where the holder's policy asks her, the verdict is withheld until she answers,
+and the tally holds the negotiation pending as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> <code>request_submitted</code>.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="not-claims">
+<section id="section-3.6">
+        <h3 id="name-verdicts-are-not-claims">
+<a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-verdicts-are-not-claims" class="section-name selfRef">Verdicts Are Not Claims</a>
+        </h3>
+<p id="section-3.6-1">A verdict <span class="bcp14">MUST</span> travel from the holder's authorization server to the tally. It
+<span class="bcp14">MUST NOT</span> be gathered by the requesting agent and presented as a claim.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
+<p id="section-3.6-2">A claim the requesting party gathers is a claim it can decline to gather. A
+holder's refusal has to reach the decision point without the cooperation of the
+party it refuses, and claims-gathering cannot carry it. The general boundary:
+claims work when the requesting party is the only one who holds the fact, and
+fail when the fact may be adverse to it.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="count">
+<section id="section-3.7">
+        <h3 id="name-the-count">
+<a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-the-count" class="section-name selfRef">The Count</a>
+        </h3>
+<p id="section-3.7-1">The tally <span class="bcp14">MUST</span> sum the weight of holders whose verdict is <code>allow</code> and compare it
+to the threshold. It <span class="bcp14">MUST</span> refuse the moment the weight still outstanding cannot
+carry the request over the threshold — under <code>all</code>, the first refusal ends it —
+rather than waiting for every holder. Silence and unreachability <span class="bcp14">MUST</span> both fail
+closed; only the record distinguishes them.<a href="#section-3.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="joint-grant">
+<section id="section-3.8">
+        <h3 id="name-the-grant-carries-the-verdi">
+<a href="#section-3.8" class="section-number selfRef">3.8. </a><a href="#name-the-grant-carries-the-verdi" class="section-name selfRef">The Grant Carries the Verdicts</a>
+        </h3>
+<p id="section-3.8-1">A grant the tally issues <span class="bcp14">MUST</span> carry a <code>joint</code> claim with:<a href="#section-3.8-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.8-2">
+          <dt id="section-3.8-2.1">account:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.8-2.2">
+            <p id="section-3.8-2.2.1"><span class="bcp14">REQUIRED</span>. The jointly held resource.<a href="#section-3.8-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.8-2.3">mandate:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.8-2.4">
+            <p id="section-3.8-2.4.1"><span class="bcp14">REQUIRED</span>. The mandate as the tally holds it.<a href="#section-3.8-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.8-2.5">verdicts:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.8-2.6">
+            <p id="section-3.8-2.6.1"><span class="bcp14">REQUIRED</span>. Every verdict received, as issued.<a href="#section-3.8-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.8-2.7">tally:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.8-2.8">
+            <p id="section-3.8-2.8.1"><span class="bcp14">OPTIONAL</span>. The tally's own count, for display.<a href="#section-3.8-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-3.8-3">The grant <span class="bcp14">MUST</span> also carry, as a <code>family</code> claim, the negotiation identifier its
+verdicts name, and the tally's introspection response <span class="bcp14">MUST</span> return it. Without it
+the enforcement point cannot establish which negotiation the grant was issued
+for, and a verdict about one negotiation would be as good as a verdict about
+any.<a href="#section-3.8-3" class="pilcrow">¶</a></p>
 <span id="name-the-joint-claim-on-a-grant"></span><figure id="figure-2">
-          <div class="lang-json sourcecode" id="section-3.7-3.1">
+          <div class="lang-json sourcecode" id="section-3.8-4.1">
 <pre>
 {
   "joint": {
@@ -2038,49 +2123,64 @@ closed; only the record distinguishes them.<a href="#section-3.6-1" class="pilcr
 </section>
 </div>
 <div id="reverify">
-<section id="section-3.8">
+<section id="section-3.9">
         <h3 id="name-re-verification-at-the-enfo">
-<a href="#section-3.8" class="section-number selfRef">3.8. </a><a href="#name-re-verification-at-the-enfo" class="section-name selfRef">Re-Verification at the Enforcement Point</a>
+<a href="#section-3.9" class="section-number selfRef">3.9. </a><a href="#name-re-verification-at-the-enfo" class="section-name selfRef">Re-Verification at the Enforcement Point</a>
         </h3>
-<p id="section-3.8-1">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span>, before allowing a
-call under such a grant:<a href="#section-3.8-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-3.8-2">
-<li id="section-3.8-2.1">
-            <p id="section-3.8-2.1.1">fetch the mandate from where the tally publishes it, and <span class="bcp14">MUST NOT</span> use the
-copy embedded in the grant;<a href="#section-3.8-2.1.1" class="pilcrow">¶</a></p>
+<p id="section-3.9-1">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span>, before allowing a
+call under such a grant:<a href="#section-3.9-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.9-2">
+<li id="section-3.9-2.1">
+            <p id="section-3.9-2.1.1">fetch the mandate from where the tally publishes it, and <span class="bcp14">MUST NOT</span> use the
+copy embedded in the grant, and refuse unless it covers the resource being
+accessed;<a href="#section-3.9-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.8-2.2">
-            <p id="section-3.8-2.2.1">verify each verdict against the keys published by the issuer the <em>published</em>
-mandate names for that holder;<a href="#section-3.8-2.2.1" class="pilcrow">¶</a></p>
+          <li id="section-3.9-2.2">
+            <p id="section-3.9-2.2.1">verify each verdict against the keys published by the issuer the <em>published</em>
+mandate names for that holder;<a href="#section-3.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.8-2.3">
-            <p id="section-3.8-2.3.1">establish that each verdict names this negotiation and this agreement;<a href="#section-3.8-2.3.1" class="pilcrow">¶</a></p>
+          <li id="section-3.9-2.3">
+            <p id="section-3.9-2.3.1">establish that each verdict names this negotiation and this agreement;<a href="#section-3.9-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.8-2.4">
-            <p id="section-3.8-2.4.1">re-run the count of <a href="#count" class="auto internal xref">Section 3.6</a> and refuse unless it allows.<a href="#section-3.8-2.4.1" class="pilcrow">¶</a></p>
+          <li id="section-3.9-2.4">
+            <p id="section-3.9-2.4.1">establish, for each <code>allow</code> verdict, that its <code>mandate_s256</code> is the digest of
+the published mandate, and that the grant is bound to the key <code>cnf_jkt</code>
+names, carries no scope beyond <code>scope</code>, lasts no longer than <code>expires_in</code>,
+and, where the verdict names an <code>operation</code>, is single-use and bound to that
+operation;<a href="#section-3.9-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.9-2.5">
+            <p id="section-3.9-2.5.1">re-run the count of <a href="#count" class="auto internal xref">Section 3.7</a> and refuse unless it allows.<a href="#section-3.9-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.8-3">The <code>tally</code> member of the grant is for display and <span class="bcp14">MUST NOT</span> be trusted.<a href="#section-3.8-3" class="pilcrow">¶</a></p>
-<p id="section-3.8-4">Reading the mandate from the grant would let the party being checked supply the
+<p id="section-3.9-3">The <code>tally</code> member of the grant is for display and <span class="bcp14">MUST NOT</span> be trusted.<a href="#section-3.9-3" class="pilcrow">¶</a></p>
+<p id="section-3.9-4">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span> refuse a grant that
+carries no <code>joint</code> claim.<a href="#section-3.9-4" class="pilcrow">¶</a></p>
+<p id="section-3.9-5">Reading the mandate from the grant would let the party being checked supply the
 standard it is checked against: a single genuine verdict beside a rewritten
-threshold would pass with every signature verifying. Carrying the verdicts in
+threshold would pass with every signature verifying. Reading it from where the
+tally publishes it is safe only because every verdict names the digest of the
+mandate its holder agreed to; a published mandate with a different electorate is
+one no verdict was given under. The tally issues its grant from the agreement,
+bounded by the folded terms, so that an honest grant is always one step 4 can
+re-derive. Carrying the verdicts in
 the grant and re-verifying them at the resource is what makes the tally an
 ordinary service rather than a ledger — there is no ordered history here to
-agree on and no long-lived state a fork could damage.<a href="#section-3.8-4" class="pilcrow">¶</a></p>
+agree on and no long-lived state a fork could damage.<a href="#section-3.9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="no-org-joint">
-<section id="section-3.9">
+<section id="section-3.10">
         <h3 id="name-no-organization-reaches-a-j">
-<a href="#section-3.9" class="section-number selfRef">3.9. </a><a href="#name-no-organization-reaches-a-j" class="section-name selfRef">No Organization Reaches a Jointly Held Resource</a>
+<a href="#section-3.10" class="section-number selfRef">3.10. </a><a href="#name-no-organization-reaches-a-j" class="section-name selfRef">No Organization Reaches a Jointly Held Resource</a>
         </h3>
-<p id="section-3.9-1">A charter claim <span class="bcp14">MUST NOT</span> match a jointly held resource, and a holder's
+<p id="section-3.10-1">A charter claim <span class="bcp14">MUST NOT</span> match a jointly held resource, and a holder's
 authorization server <span class="bcp14">MUST</span> refuse to apply an organization's envelope or decision
 to one regardless. A jointly held resource <span class="bcp14">MUST NOT</span> share a policy unit with any
 other resource, since a ceiling applies to a whole unit once it reaches any
-resource in it.<a href="#section-3.9-1" class="pilcrow">¶</a></p>
-<p id="section-3.9-2">Peers compose horizontally; an authority above them clamps vertically. The two
-are orthogonal rather than rival, and this document keeps them apart.<a href="#section-3.9-2" class="pilcrow">¶</a></p>
+resource in it.<a href="#section-3.10-1" class="pilcrow">¶</a></p>
+<p id="section-3.10-2">Peers compose horizontally; an authority above them clamps vertically. The two
+are orthogonal rather than rival, and this document keeps them apart.<a href="#section-3.10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2128,7 +2228,7 @@ with parties that have nothing to do with it.<a href="#section-4.2-1" class="pil
         <h3 id="name-the-mandate-is-read-where-i">
 <a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-the-mandate-is-read-where-i" class="section-name selfRef">The Mandate Is Read Where It Is Published</a>
         </h3>
-<p id="section-4.4-1">See <a href="#reverify" class="auto internal xref">Section 3.8</a>. This is the single check that makes the tally untrusted.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-1">See <a href="#reverify" class="auto internal xref">Section 3.9</a>. This is the single check that makes the tally untrusted.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="silence-is-not-consent">
@@ -2136,7 +2236,7 @@ with parties that have nothing to do with it.<a href="#section-4.2-1" class="pil
         <h3 id="name-silence-is-not-consent">
 <a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-silence-is-not-consent" class="section-name selfRef">Silence Is Not Consent</a>
         </h3>
-<p id="section-4.5-1">See <a href="#count" class="auto internal xref">Section 3.6</a>. A holder who has not answered and a holder who cannot be reached
+<p id="section-4.5-1">See <a href="#count" class="auto internal xref">Section 3.7</a>. A holder who has not answered and a holder who cannot be reached
 both count for nothing.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2261,7 +2361,7 @@ established by <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<
           <dd class="break"></dd>
 <dt id="section-6.2-2.7">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-6.2-2.8">
-            <p id="section-6.2-2.8.1"><a href="#joint-grant" class="auto internal xref">Section 3.7</a> of this document<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.8.1"><a href="#joint-grant" class="auto internal xref">Section 3.8</a> of this document<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.2-2.9">Claim Name:</dt>

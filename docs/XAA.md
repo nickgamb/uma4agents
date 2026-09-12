@@ -95,6 +95,12 @@ resource, and which scope to ask for — all of it in the `required_claims`
 object. Only then does it go. The resource side names the identity provider it
 will accept, which is the same shape as every other beat in this profile.
 
+It does not name where the agent's credentials go. `Enterprise(issuer=...)`
+pins the provider they belong to, and `id_jag_request` refuses a challenge that
+names another provider, or a token endpoint off that provider's origin, before
+the employee's token or the application's secret leaves the agent. `make
+client-test` covers each refusal.
+
 An agent that carries no enterprise credentials gets a clear refusal at that
 point rather than a puzzle.
 

@@ -1178,15 +1178,29 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
     if (conn := await st(owner).connection(rec.get("handle") or "")) is not None:
         if conn["status"] != "active":
             return claims, rec, "connection_revoked"
-    if claims.get("single_use") and rec["consumed"]:
-        return claims, rec, "already_consumed"
+    if rec["consumed"]:
+        if claims.get("single_use"):
+            return claims, rec, "already_consumed"
+        # A reusable grant is marked spent by one thing: the revocation of
+        # the connection it was issued under. Checking only the connection's
+        # current status would bring every such grant back the moment she
+        # admitted the same agent again — a new relationship reviving the
+        # authority she ended with the old one.
+        return claims, rec, "revoked"
     return claims, rec, ""
 
 
 @app.post("/introspect")
 async def introspect(request: Request, token: str = Form(...), consume: str = Form(None)) -> dict:
-    await require_pat(request)
+    pat_owner = await require_pat(request)
     claims, rec, err = await _decode_rpt(token)
+    if not err and (claims.get("owner") or DEFAULT_OWNER) != pat_owner:
+        # The PAT says whose resources this resource server is asking about.
+        # A grant against somebody else's is not one it may learn anything
+        # about — not whether it is live, not whose it is — so the answer is
+        # the one an unknown token gets. `/consume` draws the same line.
+        event("rpt.introspected", corr=None, result="owner_mismatch")
+        return {"active": False, "error": "unknown_token"}
     if err:
         # RFC 7662 permits additional members. Without a reason the PEP cannot
         # tell "come back after re-negotiating" from "the owner revoked you and
@@ -2493,10 +2507,16 @@ def connection_handle(identity: dict, signer_jwk: dict) -> str:
     if identity.get("level") == "identified":
         from urllib.parse import urlparse
 
-        sub, host = identity["sub"], urlparse(identity["iss"]).netloc
-        # Qualify by issuer so two issuers' subjects can never collide —
-        # unless the issuer already writes its host into the subject.
-        return sub if sub.endswith(f"@{host}") else f"{sub}@{host}"
+        issuer = urlparse(identity["iss"])
+        # Qualify by the whole issuer, path included, so two issuers' subjects
+        # can never collide — unless the issuer already writes that qualifier
+        # into the subject. The host alone is not an issuer: a multi-tenant
+        # provider serves every tenant from one host and tells them apart by
+        # path, and qualifying by host would make one tenant's `agent` the
+        # same connection as another's, with its standing and its approvals.
+        where = issuer.netloc + issuer.path.rstrip("/")
+        sub = identity["sub"]
+        return sub if sub.endswith(f"@{where}") else f"{sub}@{where}"
     return jwk_thumbprint(signer_jwk)
 
 
@@ -3165,8 +3185,16 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
         raise ValueError("purpose was altered")
     if not set(template["prohibited"]).issubset(set(contract.get("prohibited", []))):
         raise ValueError("prohibited-actions list was weakened")
-    if contract.get("expires_in", 0) > template["expires_in"]:
+    agreed_for = contract.get("expires_in")
+    if not isinstance(agreed_for, int) or isinstance(agreed_for, bool) or agreed_for <= 0:
+        raise ValueError("expires_in must be a positive number of seconds")
+    if agreed_for > template["expires_in"]:
         raise ValueError("expiry was extended beyond dictated terms")
+    # The agent may agree to less than was offered and never to more. A scope
+    # it added is not one she offered; recording it in the agreement would
+    # make the signed record say something the grant does not.
+    if not set(contract.get("scope") or []) <= set(template.get("scope") or []):
+        raise ValueError("scope was widened beyond the proffered terms")
     if template.get("per_operation") and not contract.get("operation"):
         raise ValueError("per-operation tier requires a proposed operation in the contract")
 
@@ -3229,7 +3257,14 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     family = rec["family"]
     owner = rec["owner"]
     tier = (await st(owner).tiers())[rec["tier"]]
-    exp = int(now()) + min(3600, tier["terms"]["expires_in"])
+    # As long as the terms allow, and no longer than the agent agreed to. An
+    # agreement for a shorter time is a promise about how long the access
+    # will be used; issuing past it would make the receipt and the grant
+    # disagree about what was agreed.
+    lifetime = tier["terms"]["expires_in"]
+    if (agreed := int((rec.get("contract") or {}).get("expires_in") or 0)) > 0:
+        lifetime = min(lifetime, agreed)
+    exp = int(now()) + min(3600, lifetime)
     jti = f"rpt_{uuid.uuid4().hex[:12]}"
     claims = {
         "iss": ISSUER,
@@ -3246,7 +3281,7 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
             {
                 "resource_id": rec["resource_id"],
                 "resource_scopes": rec["resource_scopes"],
-                "exp": int(now()) + tier["terms"]["expires_in"],
+                "exp": int(now()) + lifetime,
             }
         ],
         "contract": contract_hash,
@@ -3307,6 +3342,31 @@ def joint_verdict_jws(claims: dict) -> str:
     return jwt.encode({**claims, "iss": ISSUER, "iat": int(now())},
                       SIGNING_KEY, algorithm="EdDSA",
                       headers={"typ": "u4a-verdict+jwt", "kid": KID})
+
+
+def joint_binding(contract: dict, signer_jwk: dict, mandate: dict) -> dict:
+    """What an allow verdict commits this holder to, beyond "yes".
+
+    A verdict that named only the agreement's digest could be carried inside
+    any grant a tally cared to mint: the enforcement point checks verdicts
+    against the grant, and has never seen the agreement. So the verdict
+    states the grant's material facts as this authority verified them — the
+    key that signed, the scopes and lifetime agreed, the one operation if
+    there was one — and the mandate this holder is counting under. A grant
+    the enforcement point cannot re-derive from those is refused there.
+    """
+    out = {
+        "cnf_jkt": jwk_thumbprint(signer_jwk),
+        "scope": sorted(contract.get("scope") or []),
+        "expires_in": int(contract.get("expires_in") or 0),
+        "mandate_s256": uma4a_joint.mandate_digest(mandate),
+    }
+    if op := contract.get("operation"):
+        out["operation"] = {
+            "tool": op["tool"],
+            "params_s256": s256(json.dumps(op.get("params", {}), sort_keys=True).encode()),
+        }
+    return out
 
 
 def tally_claims(jws: str, issuer: str) -> dict:
@@ -3423,6 +3483,17 @@ async def joint_verdict(request: Request) -> dict:
     # the tally polls, and a question she has decided must not be re-asked or
     # re-judged against a policy she has edited in the meantime.
     pended = await st(owner).negotiation(negotiation)
+    if pended is not None and pended.get("decision") == "approved" and (
+            claims.get("contract") != pended.get("contract_hash")
+            or resource_id != pended.get("resource_id")):
+        # Her approval is of one agreement over one resource. The tally asks
+        # again with whatever it holds, and signing that because the family
+        # matches would turn her yes to one document into a yes to any.
+        # Left pending rather than closed: the question she answered is
+        # still the one a faithful tally will ask.
+        event("joint.verdict", owner=owner, negotiation=negotiation,
+              effect="refuse", why="not-what-she-approved")
+        return refuse("this holder approved a different agreement")
     if pended is not None and pended.get("decision") in ("approved", "denied"):
         await close_negotiation(pended)
         if pended["decision"] == "denied":
@@ -3437,7 +3508,8 @@ async def joint_verdict(request: Request) -> dict:
         return {"verdict": joint_verdict_jws({
             "holder": owner, "account": account, "negotiation": negotiation,
             "resource_id": resource_id, "contract": claims.get("contract"),
-            "effect": "allow", "exp": int(now()) + 300})}
+            "effect": "allow", "exp": int(now()) + 300,
+            **joint_binding(pended["contract"], pended["signer_jwk"], mandate)})}
     if pended is not None:
         return {"pending": True, "family": negotiation}
 
@@ -3514,6 +3586,11 @@ async def joint_verdict(request: Request) -> dict:
             "resource_scopes": list(contract.get("scope") or []),
             "handle": handle,
             "contract": {**contract, "_identity": identity},
+            # What she is being asked about, exactly: the digest the approval
+            # will be checked against when the tally asks again, and the key
+            # the verdict will name.
+            "contract_hash": claims.get("contract"),
+            "signer_jwk": signer_jwk,
             "template": {"enforced": {}},
             "assurance": axes,
             "assurance_notes": assurance.describe(axes, identity),
@@ -3546,7 +3623,8 @@ async def joint_verdict(request: Request) -> dict:
     return {"verdict": joint_verdict_jws({
         "holder": owner, "account": account, "negotiation": negotiation,
         "resource_id": resource_id, "contract": claims.get("contract"),
-        "effect": "allow", "exp": int(now()) + 300})}
+        "effect": "allow", "exp": int(now()) + 300,
+        **joint_binding(contract, signer_jwk, mandate)})}
 
 
 @app.post("/token")
@@ -4057,12 +4135,14 @@ async def pending_poll(rec: dict) -> JSONResponse:
             # Only when she answered it herself. That is the only kind of fact
             # a relaxation is allowed to rest on, and an administrator at her
             # organization answering on her behalf is emphatically not it —
-            # see `decide_pending`.
-            if not rec.get("decided_by"):
+            # see `decide_pending`. Read as "names her", not as "names nobody
+            # else": a decision whose author is missing relaxes nothing.
+            by = rec.get("decided_by") or {}
+            if by.get("kind") == "owner" and by.get("owner") == rec["owner"]:
                 await st(rec["owner"]).note_tier_approval(handle, rec["tier"])
             else:
                 event("policy.evaluated", corr=family, result="decided-by-org",
-                      tier=rec["tier"], by=rec["decided_by"].get("admin"))
+                      tier=rec["tier"], by=by.get("admin"))
         granted = await issue_rpt(rec, rec["contract_hash"], rec["signer_jwk"],
                                   rec["contract"].get("operation"))
         await close_negotiation(rec)
@@ -4144,7 +4224,19 @@ async def decide_pending(owner: str, family: str, decision: str,
     # portals open on the same request, must produce one decision. It is also
     # what makes co-administration safe: she and an administrator answering
     # the same request at the same moment produce one answer, not two.
-    if not await st(owner).decide(family, decision):
+    #
+    # Who decided is written by the same step. This is not bookkeeping.
+    # `standing.approved_at_tier` is one of the few facts allowed to *relax*
+    # one of her rules, and it exists because "she personally approved
+    # something here" is a decision of hers. An administrator's approval must
+    # never become that fact: it would let somebody else's decision, taken
+    # once, loosen her policy for every request afterwards. `pending_poll`
+    # reads `decided_by` and records the approval only when it names her —
+    # and a poll can land at any moment after the decision, so there is no
+    # moment at which the decision exists without its author.
+    decided_by = ({"kind": "owner", "owner": owner} if actor is None
+                  else {"kind": "administrator", **actor})
+    if not await st(owner).decide(family, decision, decided_by):
         raise HTTPException(status_code=404, detail="no pending negotiation for that family")
     event("owner.decision", corr=family, decision=decision,
           by=(actor or {}).get("admin") or owner)
@@ -4153,18 +4245,6 @@ async def decide_pending(owner: str, family: str, decision: str,
     # negotiation survives its own decision — `close_negotiation` runs when the
     # grant is issued — so the handle it was pending under is still there.
     pended = await st(owner).negotiation(family)
-    if pended is not None and actor:
-        # Who decided, on the record the grant loop will read back.
-        #
-        # This is not bookkeeping. `standing.approved_at_tier` is one of the
-        # few facts allowed to *relax* one of her rules, and it exists because
-        # "she personally approved something here" is a decision of hers. An
-        # administrator's approval must never become that fact: it would let
-        # somebody else's decision, taken once, loosen her policy for every
-        # request afterwards. So the actor is persisted here and read in
-        # `pending_poll`, which is the only place that records the approval.
-        pended["decided_by"] = actor
-        await st(owner).save_negotiation(pended)
     # Record both outcomes: "what did I decide" is an audit question, and a
     # denial is as much a decision as an approval.
     await ledger_add(owner, "approved" if decision == "approved" else "denied", family,

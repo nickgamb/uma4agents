@@ -133,9 +133,29 @@ class OwnerAuthority:
         r.raise_for_status()
         return [Request.from_pending(p) for p in r.json()]
 
-    def decide(self, client: httpx.Client, family: str, approved: bool) -> None:
-        self._call(client, "POST", f"/owner/pending/{family}/decision",
-                   {"decision": "approved" if approved else "denied"})
+    def decide(self, client: httpx.Client, family: str, approved: bool) -> str:
+        """Send her answer. "sent", "moot", or "retry".
+
+        Moot is her authority saying nothing is pending under that family any
+        more — somebody else answered, or it expired — and there is nothing
+        left to send. Retry is everything else that is not a yes from her
+        authority: unreachable, or a server error. The answer is hers and it
+        is kept, so it is sent again rather than asked again.
+        """
+        try:
+            r = self._call(client, "POST", f"/owner/pending/{family}/decision",
+                           {"decision": "approved" if approved else "denied"})
+        except httpx.HTTPError as exc:
+            self.host.log("decision.unsent", {"family": family, "error": str(exc)})
+            return "retry"
+        if r.status_code == 404:
+            self.host.log("decision.moot", {"family": family})
+            return "moot"
+        if r.status_code >= 300:
+            self.host.log("decision.unsent", {"family": family,
+                                              "status": r.status_code})
+            return "retry"
+        return "sent"
 
     def enrol(self) -> bytes:
         """Her public key, for the one-time enrolment with an authority."""
@@ -160,10 +180,28 @@ class OwnerAuthority:
         to reach the network; it should be the one that says so.
         """
         seen: set[str] = set()
+        # Answers she gave that her authority has not yet recorded, with the
+        # record to write once it has. A family is marked seen when she is
+        # asked, so without this an answer lost to one failed request was
+        # never sent again — and was logged as decided while the request
+        # went on waiting for her.
+        unsent: dict[str, tuple[bool, str, dict]] = {}
         owned = client is None
         client = client or httpx.Client()
+
+        def send(family: str, approved: bool, record: str, detail: dict) -> None:
+            outcome = self.decide(client, family, approved)
+            if outcome == "retry":
+                unsent[family] = (approved, record, detail)
+                return
+            unsent.pop(family, None)
+            if outcome == "sent":
+                self.host.log(record, detail)
+
         try:
             while not (should_stop and should_stop()):
+                for family, (approved, record, detail) in list(unsent.items()):
+                    send(family, approved, record, detail)
                 try:
                     waiting = self.pending(client)
                 except Exception as exc:                       # noqa: BLE001
@@ -176,16 +214,14 @@ class OwnerAuthority:
                         continue
                     seen.add(req.family)
                     if req.tier in self.auto:
-                        self.host.log("decided.standing",
-                                      {"family": req.family, "tier": req.tier})
-                        self.decide(client, req.family, True)
+                        send(req.family, True, "decided.standing",
+                             {"family": req.family, "tier": req.tier})
                         continue
                     self.host.log("asking", {"family": req.family,
                                              "summary": req.summary()})
                     approved = self.host.ask(req)
-                    self.decide(client, req.family, approved)
-                    self.host.log("decided",
-                                  {"family": req.family, "approved": approved})
+                    send(req.family, approved, "decided",
+                         {"family": req.family, "approved": approved})
 
                 time.sleep(poll_seconds)
         finally:
