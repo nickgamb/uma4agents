@@ -6,7 +6,7 @@ description: What breaks when the party who owns a resource is not the party who
 next:
   - title: The three parties
     to: /docs/overview/parties/
-    blurb: Owner, requesting party, requesting agent — and why collapsing them costs you.
+    blurb: Owner, requesting party, client — and why collapsing them costs you.
   - title: Architecture
     to: /docs/overview/architecture/
     blurb: Where each responsibility lives.

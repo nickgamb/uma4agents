@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 17 March 2027                                      Venn Factory
+                                                       13 September 2026
 
 
     Model Context Protocol Binding for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 17 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 17 March 2027                 [Page 1]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 17 March 2027                 [Page 2]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 17 March 2027                 [Page 3]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 17 March 2027                 [Page 4]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 17 March 2027                 [Page 5]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -296,8 +296,8 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
    A client implementing this binding MUST recognise both encodings and
    MUST negotiate identically after either.  The reference
-   implementation's requesting agent does, and the two hosting shapes
-   run against one authorization server.
+   implementation's client does, and the two hosting shapes run against
+   one authorization server.
 
 4.  The Negotiation and the Call
 
@@ -311,6 +311,9 @@ Internet-Draft             MCP Binding for UMA            September 2026
    and signed as [U4ACore] Section 6.  Where the enforcement point is in
    process, the signature components are the HTTP request that carried
    the JSON-RPC message.
+
+   For a single-use grant ([U4ACore] Section 7.2), the operation is the
+   call's params.name and its parameters are params.arguments.
 
 5.  Waiting
 
@@ -330,10 +333,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
+Gamb & Maler              Expires 17 March 2027                 [Page 6]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -364,7 +364,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
    Where an enforcement point is hosted behind a gateway that forwards a
    bounded prefix of the request body, it MUST detect that the body it
    received was truncated and MUST refuse with a reason naming the
-   truncation, as [U4ACore] Section 12.7.  A truncated JSON-RPC body
+   truncation, as [U4ACore] Section 13.7.  A truncated JSON-RPC body
    does not parse, the method disappears, and deny-by-default catches it
    under the wrong name.
 
@@ -389,7 +389,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 17 March 2027                 [Page 7]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 17 March 2027                 [Page 8]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -501,7 +501,7 @@ Appendix A.  Implementation Status
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
+Gamb & Maler              Expires 17 March 2027                 [Page 9]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -509,13 +509,13 @@ Internet-Draft             MCP Binding for UMA            September 2026
    The reference implementation [U4ALAB] runs both hosting shapes of
    Section 3 against one authorization server — an external
    authorization service ahead of an unmodified MCP server, and an MCP
-   server extension applying the profile in process — and one requesting
-   agent negotiates through either.  The routing-header hazard of
-   Section 6 was found by sending the mismatched pair and watching a
-   header-trusting enforcement point wave it through; the reference MCP
-   SDK independently rejects the same pair.  The truncation of Section 8
-   was found by sending a body one byte over a gateway's limit and
-   reading the refusal it produced.
+   server extension applying the profile in process — and one client
+   negotiates through either.  The routing-header hazard of Section 6
+   was found by sending the mismatched pair and watching a header-
+   trusting enforcement point wave it through; the reference MCP SDK
+   independently rejects the same pair.  The truncation of Section 8 was
+   found by sending a body one byte over a gateway's limit and reading
+   the refusal it produced.
 
 Acknowledgments
 
@@ -557,4 +557,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 17 March 2027                [Page 10]

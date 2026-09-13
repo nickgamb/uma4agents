@@ -17,10 +17,6 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, k8s-smoke-test]
     asserts: ["uma_profiles_supported: OK", "it names the profile it implements, and everything it accepts"]
-  - text: "An authorization server implementing [U4ATerms] MUST include it."
-    verified: check
-    targets: [smoke-test]
-    asserts: ["uma-as: OK"]
   - text: "MUST NOT advertise a grant type or claim token format it will not accept, and MUST advertise every grant type and claim token format it will"
     verified: check
     targets: [smoke-test, k8s-smoke-test]
@@ -40,7 +36,7 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, k8s-smoke-test]
     asserts: ["gateway challenge: OK", "an unauthorized tool call is refused with a ticket"]
-  - text: "A requesting agent MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
+  - text: "A client MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
     verified: check
     targets: [multi-owner-check, k8s-smoke-test]
     asserts: ["no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
@@ -83,7 +79,7 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [assurance-check]
     asserts: ["metadata that does not resolve buys nothing", "and is still worth nothing on the second try"]
-  - text: "A requesting agent MUST prove possession of the confirmed key on every request to the protected resource, and an enforcement point MUST verify it."
+  - text: "A client MUST prove possession of the confirmed key on every request to the protected resource, and an enforcement point MUST verify it."
     verified: check
     targets: [sig-test, smoke-test, k8s-policy-test]
     asserts: ["baseline round trip", "gateway challenge: OK", "the requesting party cannot reach the vault directly"]
@@ -147,7 +143,11 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [as-test]
     asserts: ["two tenants of one provider are two connections", "an issuer with no path names connections as it always has"]
-  - text: "A requesting agent MUST send the credentials it exchanges for such an assertion only to the identity provider they belong to"
+  - text: "The handle MUST be the subject, followed by @ and the issuer identifier with its scheme and any trailing / removed"
+    verified: check
+    targets: [as-test]
+    asserts: ["two tenants of one provider are two connections", "a subject already qualified by its issuer keeps its name", "an issuer with no path names connections as it always has"]
+  - text: "A client MUST send the credentials it exchanges for such an assertion only to the identity provider they belong to"
     verified: check
     targets: [client-test]
     asserts: ["a challenge naming a different provider is refused", "a token endpoint off the provider's origin is refused", "credentials that name no provider are sent nowhere"]
@@ -336,7 +336,7 @@ draft-gamb-uma4agents-fedauthz-00:
     verified: check
     targets: [store-test, embedded-check]
     asserts: ["rpt: a later burn still loses", "and spent, it cannot be spent again"]
-  - text: "An enforcement point MUST NOT be told, and MUST NOT report, the identity handle of the requesting agent."
+  - text: "An enforcement point MUST NOT be told, and MUST NOT report, the identity handle of the client."
     verified: check
     targets: [store-test, intent-check]
     asserts: ["test_an_allowed_call_can_be_traced_to_its_agent", "every call is filed under the tier it was made against"]
@@ -590,7 +590,7 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [joint-check]
     asserts: ["each signed by that holder's own authority, not the tally's"]
-  - text: "It MUST NOT be gathered by the requesting agent and presented as a claim."
+  - text: "It MUST NOT be gathered by the client and presented as a claim."
     verified: check
     targets: [joint-check]
     asserts: ["a grant nobody's authority signed is refused"]
@@ -700,7 +700,7 @@ draft-gamb-uma4agents-policy-00:
     verified: check
     targets: [rules-test]
     asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching"]
-  - text: "An authorization server MUST NOT evaluate any rule until it has established that the requesting agent holds a standing connection"
+  - text: "An authorization server MUST NOT evaluate any rule until it has established that the client holds a standing connection"
     verified: check
     targets: [first-party-check, assurance-check]
     asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate"]
@@ -772,7 +772,7 @@ draft-gamb-uma4agents-policy-00:
     verified: check
     targets: [intent-check, assurance-check]
     asserts: ["one agent's trajectory is one agent's", "and an agent of that operator is refused by name"]
-  - text: "Every entry in the record that concerns a requesting agent MUST carry that agent's connection handle as an indexed attribute of the row"
+  - text: "Every entry in the record that concerns a client MUST carry that client's connection handle as an indexed attribute of the row"
     verified: check
     targets: [store-test, intent-check]
     asserts: ["test_the_ledger_names_the_agent", "one agent's trajectory is one agent's", "and holds none of the other's"]
@@ -794,6 +794,10 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["the operator's own directory raised accountability to 2", "the operator publishing this agent's key is worth more than saying so"]
 
 draft-gamb-uma4agents-terms-00:
+  - text: "An authorization server implementing this document MUST include it."
+    verified: check
+    targets: [smoke-test]
+    asserts: ["uma-as: OK"]
   - text: "MUST serve, for each set of terms it proffers, a document at a URI that resolves for as long as the authorization server serves the owner"
     verified: check
     targets: [multi-owner-check, store-test]
@@ -846,7 +850,7 @@ draft-gamb-uma4agents-terms-00:
     verified: check
     targets: [as-test]
     asserts: ["a grant lasts no longer than the agent agreed to", "and neither does its permission"]
-  - text: "the agreement MUST carry an operation member naming the operation proposed and the parameters proposed for it"
+  - text: "the agreement MUST carry an operation member: an object whose tool member names the operation proposed"
     verified: check
     targets: [shim-test]
     asserts: ["tier 3 pends, Alice approves, trade executes"]
@@ -966,7 +970,7 @@ draft-gamb-uma4agents-aauth-00:
     verified: check
     targets: [flow-check, k8s-smoke-test, smoke-test]
     asserts: ["expected two identity levels", "the identity authority is discoverable", "person-server: OK"]
-  - text: "The connection handle is the credential's sub, qualified by the host of its iss as sub@host, and MUST NOT be derived from the key."
+  - text: "The connection handle is formed from the credential's sub and iss as [U4ACore] Section 5.1 specifies, and MUST NOT be derived from the key."
     verified: check
     targets: [flow-check]
     asserts: ["expected two identity levels"]

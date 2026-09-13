@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 17 March 2027                                      Venn Factory
+                                                       13 September 2026
 
 
 Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 17 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 17 March 2027                 [Page 1]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 17 March 2027                 [Page 2]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 17 March 2027                 [Page 3]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 17 March 2027                 [Page 4]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -254,9 +254,9 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
    A recorded decision MUST NOT be undone by a later write of the
    negotiation it decides.  The writer is routinely holding a copy read
-   before the decision was made — a requesting agent's poll rotating its
-   ticket — and writing that copy back would put a request she has
-   answered back in front of her.
+   before the decision was made — the client's poll rotating its ticket
+   — and writing that copy back would put a request she has answered
+   back in front of her.
 
 3.2.  What May Only Tighten
 
@@ -277,7 +277,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 17 March 2027                 [Page 5]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -304,9 +304,9 @@ Internet-Draft           Owner Policy for Agents          September 2026
    the one an owner would not choose.
 
    An authorization server MUST NOT evaluate any rule until it has
-   established that the requesting agent holds a standing connection
-   with the owner, and MUST put a first contact to the owner regardless
-   of what the rules would decide.  No rule skips the first question.
+   established that the client holds a standing connection with the
+   owner, and MUST put a first contact to the owner regardless of what
+   the rules would decide.  No rule skips the first question.
 
 3.4.  Publication
 
@@ -333,7 +333,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
+Gamb & Maler              Expires 17 March 2027                 [Page 6]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -389,7 +389,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 17 March 2027                 [Page 7]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 17 March 2027                 [Page 8]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -501,7 +501,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
+Gamb & Maler              Expires 17 March 2027                 [Page 9]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -515,9 +515,9 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 8.3.  The Row Names the Counterparty
 
-   Every entry in the record that concerns a requesting agent MUST carry
-   that agent's connection handle as an indexed attribute of the row,
-   and MUST do so for refusals and denials as well as grants.  A denied
+   Every entry in the record that concerns a client MUST carry that
+   client's connection handle as an indexed attribute of the row, and
+   MUST do so for refusals and denials as well as grants.  A denied
    negotiation issues no token, so nothing downstream links that entry
    to an agent; if the row does not carry the handle, the question
    owners most want answered — _this agent has asked four times and I
@@ -557,7 +557,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 17 March 2027                [Page 10]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -613,7 +613,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 11]
+Gamb & Maler              Expires 17 March 2027                [Page 11]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 17 March 2027                [Page 12]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -725,7 +725,7 @@ Appendix A.  A Condition Vocabulary
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 13]
+Gamb & Maler              Expires 17 March 2027                [Page 13]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -781,7 +781,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 14]
+Gamb & Maler              Expires 17 March 2027                [Page 14]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -837,7 +837,7 @@ Appendix C.  Implementation Status
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 15]
+Gamb & Maler              Expires 17 March 2027                [Page 15]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
@@ -893,4 +893,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 16]
+Gamb & Maler              Expires 17 March 2027                [Page 16]

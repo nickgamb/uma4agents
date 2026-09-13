@@ -2,7 +2,7 @@
 title: "Federated Authorization for Autonomous Agents"
 abbrev: "FedAuthz for Agents"
 docname: draft-gamb-uma4agents-fedauthz-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -373,7 +373,7 @@ server, naming the negotiation it was made under and what was reached, so that
 the owner's record holds what was done alongside what was promised.
 
 An enforcement point MUST NOT be told, and MUST NOT report, the identity handle
-of the requesting agent. The authorization server resolves it from the
+of the client. The authorization server resolves it from the
 negotiation. The enforcement point is the resource server's component, and the
 owner's record of which agent did what is not the resource server's to hold.
 
@@ -425,70 +425,23 @@ authority already knew.
 
 # IANA Considerations
 
-## OAuth Protected Resource Metadata Registration
-
-IANA is asked to register the following in the "OAuth Protected Resource
-Metadata" registry established by {{RFC9728}}.
-
-Metadata Name:
-: `tool_surfaces`
-
-Metadata Description:
-: Operations the resource offers, each with the scopes it requires
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{public-layer}} of this document
-
-Metadata Name:
-: `owner_resources_endpoint`
-
-Metadata Description:
-: URL of the protected listing of owner-bound resource instances
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{protected-layer}} of this document
-
-## OAuth Authorization Server Metadata Registration
-
-IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" registry established by {{RFC8414}}.
-
-Metadata Name:
-: `consume_endpoint`
-
-Metadata Description:
-: URL of the operation that spends a single-use requesting party token
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{non-consuming}} of this document
-
-## OAuth Token Introspection Response Registration
-
-IANA is asked to register the following in the "OAuth Token Introspection
-Response" registry established by {{RFC7662}}.
-
-Name:
-: `error`
-
-Description:
-: Why an inactive token is inactive; see {{introspection}} of this document
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{introspection}} of this document
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
 
 --- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
+| Name | Kind | Meaning | Defined in |
+|---|---|---|---|
+| `tool_surfaces` | Protected resource metadata {{RFC9728}} | Operations the resource offers, each with the scopes it requires | {{public-layer}} |
+| `owner_resources_endpoint` | Protected resource metadata {{RFC9728}} | URL of the protected listing of owner-bound resource instances | {{protected-layer}} |
+| `consume_endpoint` | Authorization server metadata {{RFC8414}} | URL of the operation that spends a single-use requesting party token | {{non-consuming}} |
+| `error` | Token introspection response {{RFC7662}} | Why an inactive token is inactive | {{introspection}} |
+{: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}
 

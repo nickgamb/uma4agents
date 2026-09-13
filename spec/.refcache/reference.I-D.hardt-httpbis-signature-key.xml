@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.hardt-httpbis-signature-key" target="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-08">
+<reference anchor="I-D.hardt-httpbis-signature-key" target="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-09">
    <front>
       <title>HTTP Signature Keys</title>
       <author initials="D." surname="Hardt" fullname="Dick Hardt">
@@ -8,7 +8,7 @@
       <author initials="T." surname="Meunier" fullname="Thibault Meunier">
          <organization>Cloudflare</organization>
       </author>
-      <date month="August" day="5" year="2026" />
+      <date month="September" day="13" year="2026" />
       <abstract>
 	 <t>   This document defines five HTTP header fields for use with HTTP
    Message Signatures as defined in RFC 9421.  The Signature-Key request
@@ -32,6 +32,6 @@
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-hardt-httpbis-signature-key-08" />
+   <seriesInfo name="Internet-Draft" value="draft-hardt-httpbis-signature-key-09" />
    
 </reference>

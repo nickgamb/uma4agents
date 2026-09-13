@@ -2,7 +2,7 @@
 title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
 abbrev: "Owner Policy for Agents"
 docname: draft-gamb-uma4agents-policy-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -216,7 +216,7 @@ from an administrator's.
 
 A recorded decision MUST NOT be undone by a later write of the negotiation it
 decides. The writer is routinely holding a copy read before the decision was
-made — a requesting agent's poll rotating its ticket — and writing that copy back
+made — the client's poll rotating its ticket — and writing that copy back
 would put a request she has answered back in front of her.
 
 ## What May Only Tighten {#tightening}
@@ -252,7 +252,7 @@ relaxation as a refusal, and the first of those is the one an owner would not
 choose.
 
 An authorization server MUST NOT evaluate any rule until it has established that
-the requesting agent holds a standing connection with the owner, and MUST put a
+the client holds a standing connection with the owner, and MUST put a
 first contact to the owner regardless of what the rules would decide. No rule
 skips the first question.
 
@@ -413,8 +413,8 @@ deployment with enforcement switched off.
 
 ## The Row Names the Counterparty {#counterparty}
 
-Every entry in the record that concerns a requesting agent MUST carry that
-agent's connection handle as an indexed attribute of the row, and MUST do so
+Every entry in the record that concerns a client MUST carry that
+client's connection handle as an indexed attribute of the row, and MUST do so
 for refusals and denials as well as grants. A denied negotiation issues no
 token, so nothing downstream links that entry to an agent; if the row does not
 carry the handle, the question owners most want answered — *this agent has

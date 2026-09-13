@@ -20,6 +20,26 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 13 2026
+
+### v2026.09.9
+
+#### Enhancements
+
+- **Specification:** all nine drafts are declared informational individual submissions (`category: info`) rather than standards-track.
+- **Specification:** IANA Considerations request no actions. Each draft lists the identifiers it defines in an informative appendix instead of registration templates.
+- **Specification:** the core draft's abstract, introduction and roles are rewritten. The software making a request is UMA's client; "Requesting Agent" is left to UMA's legal work, where it names a party; the client operator is defined; and the list of departures says whether each one profiles, extends or diverges from UMA 2.0.
+- **Specification:** `terms_endpoint` is defined by the terms draft rather than the core draft.
+- **Specification:** the exact form of an identified connection handle, the `contract` claim, the parameters an operation binding covers, and the octets an agreement digest is computed over are specified.
+- **Docs:** the parties, concepts, glossary, architecture and comparison pages use client for the software making a request, and no longer say UMA 2.0 merged the requesting party with it.
+
+#### Bug fixes
+
+- **Specification:** the AAuth binding qualified identified connection handles by issuer host alone, contradicting the core draft.
+- **Specification:** the multiparty verdict's `cnf_jkt` was defined as a bare thumbprint while its example carried the `jkt:` prefix; it is now `jkt(k)`.
+- **Specification:** four cross-document section references pointed at the wrong sections.
+- **Docs:** the specification page cited §11 for the core draft's register of departures, which is §12.
+
 ## September 12 2026
 
 ### v2026.09.8

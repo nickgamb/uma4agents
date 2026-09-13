@@ -2,7 +2,7 @@
 title: "The Resource Owner's API for User-Managed Access (UMA) 2.0"
 abbrev: "Owner API for UMA"
 docname: draft-gamb-uma4agents-owner-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -112,7 +112,7 @@ informative:
 
 This document specifies the interface a resource owner uses to operate her
 own User-Managed Access (UMA) 2.0 authorization server: to answer the requests
-that wait on her, to see and end her relationships with requesting agents and
+that wait on her, to see and end her relationships with clients and
 with the operators behind them, to write the policy and terms her server
 decides from, and to read the record of what it did.
 
@@ -128,7 +128,7 @@ operates.
 # Introduction
 
 Every requirement in the rest of this set is placed on the authorization
-server, the enforcement point, or the requesting agent. The one party they
+server, the enforcement point, or the client. The one party they
 serve has no wire surface of her own in UMA 2.0 {{UMAGrant}}. The owner's
 decisions arrive through whatever the deployment built.
 
@@ -213,7 +213,7 @@ because:
 : The rule conditions that caused the request to wait, where a rule did.
 
 handle:
-: The requesting agent's connection handle, or null before first contact.
+: The client's connection handle, or null before first contact.
 
 organization:
 : Where a layer above the owner had a say ({{U4AMultiParty}}), what it said,
@@ -321,7 +321,7 @@ terms versions MUST NOT be deleted with it.
 of objects each carrying `condition` (the name, with its level where the
 condition is one sentence per level), `takes` (`duration`, `count` or null),
 `label` (the sentence shown to the owner), and `may_relax`. This is the
-publication {{U4APolicy}} Section 3.6 requires; a surface that offers the
+publication {{U4APolicy}} Section 3.4 requires; a surface that offers the
 owner a condition it does not list will compose a rule the server refuses.
 
 # The Record {#record}
@@ -404,24 +404,20 @@ owner's server before it answers.
 
 # IANA Considerations
 
-## OAuth Authorization Server Metadata Registration
-
-IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" registry established by {{RFC8414}}.
-
-Metadata Name:
-: `owner_endpoint`
-
-Metadata Description:
-: URL of the resource owner's API
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{discovery}} of this document
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
 
 --- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
+| Name | Kind | Meaning | Defined in |
+|---|---|---|---|
+| `owner_endpoint` | Authorization server metadata {{RFC8414}} | URL of the resource owner's API | {{discovery}} |
+{: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}
 

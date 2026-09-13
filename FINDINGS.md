@@ -89,9 +89,9 @@ Internet-Drafts in [`spec/`](spec/README.md). The map:
 
 
 **1. A core "UMA for agents" grant spec, transport-agnostic.**
-Carry forward the party model (owner, requesting party, and — reviving the
-2010 term — *requesting agent*), the ticket/negotiation loop, offline grants,
-and owner-dictated claims. Write it against *properties* ("a requesting agent
+Carry forward the party model (owner, requesting party, and the client acting
+for the requesting party), the ticket/negotiation loop, offline grants,
+and owner-dictated claims. Write it against *properties* ("a client
 with verifiable identity," "proof-of-possession on requests"), not a specific
 wire protocol, so no single vendor's roadmap can strand it. This is the UMA 2.0
 maneuver run again: recompose as a grant layer, not a rival stack.
@@ -685,9 +685,9 @@ replayed grant.
 degenerate one, and the contrast invites an implementation to branch. It should
 not, and a profile that has to is telling you its party model is wrong.
 
-The reason is the party the 2010 drafts named and 2.0 dropped. When Alice's own
+The reason is the entity UMA 2.0 already keeps apart from both. When Alice's own
 agent asks for Alice's resources the *requesting party* collapses into the
-owner, and the **requesting agent** does not: she is still not present, it still
+owner, and the **client** does not: she is still not present, it still
 holds its own key, it still signs her terms, and her policy still answers every
 request. Everything the profile does for a stranger's agent it does here, for
 the same reasons and through the same messages. Building it confirmed that —

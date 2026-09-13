@@ -2,7 +2,7 @@
 title: "Model Context Protocol Binding for User-Managed Access (UMA) 2.0"
 abbrev: "MCP Binding for UMA"
 docname: draft-gamb-uma4agents-mcp-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -232,8 +232,7 @@ A refusal for any other reason MUST use code `-32002`, with `data` carrying
 ## A Client Reads Both {#client}
 
 A client implementing this binding MUST recognise both encodings and MUST
-negotiate identically after either. The reference implementation's requesting
-agent does, and the two hosting shapes run against one authorization server.
+negotiate identically after either. The reference implementation's client does, and the two hosting shapes run against one authorization server.
 
 # The Negotiation and the Call {#negotiation}
 
@@ -245,6 +244,9 @@ The eventual call is the original `tools/call`, re-sent with the requesting
 party token in an `Authorization` header with the `PoP` scheme and signed as
 {{U4ACore}} Section 6. Where the enforcement point is in process, the signature
 components are the HTTP request that carried the JSON-RPC message.
+
+For a single-use grant ({{U4ACore}} Section 7.2), the operation is the call's
+`params.name` and its parameters are `params.arguments`.
 
 # Waiting {#waiting}
 
@@ -285,7 +287,7 @@ refuse a request from an origin it does not serve.
 Where an enforcement point is hosted behind a gateway that forwards a bounded
 prefix of the request body, it MUST detect that the body it received was
 truncated and MUST refuse with a reason naming the truncation, as {{U4ACore}}
-Section 12.7. A truncated JSON-RPC body does not parse, the method disappears,
+Section 13.7. A truncated JSON-RPC body does not parse, the method disappears,
 and deny-by-default catches it under the wrong name.
 
 # Security Considerations
@@ -336,7 +338,7 @@ This section records the status of known implementations in the sense of
 The reference implementation {{U4ALAB}} runs both hosting shapes of
 {{challenge}} against one authorization server — an external authorization
 service ahead of an unmodified MCP server, and an MCP server extension
-applying the profile in process — and one requesting agent negotiates through
+applying the profile in process — and one client negotiates through
 either. The routing-header hazard of {{routing-headers}} was found by sending
 the mismatched pair and watching a header-trusting enforcement point wave it
 through; the reference MCP SDK independently rejects the same pair. The

@@ -2,7 +2,7 @@
 title: "Multi-Party Authorization for User-Managed Access (UMA) 2.0"
 abbrev: "Multi-Party Authorization"
 docname: draft-gamb-uma4agents-multiparty-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -139,7 +139,7 @@ in UMA 2.0 to put the answer.
 
 This document adds two arrangements. In both, the four beats of {{U4ACore}} are
 untouched: the challenge, the ticket, the proffered terms, the agreement and the
-grant are the same on a shared resource as on a personal one. A requesting agent
+grant are the same on a shared resource as on a personal one. A client
 cannot tell the difference and does not need to. Everything added is either a
 document one party publishes or a question asked of a party that already
 existed.
@@ -303,7 +303,7 @@ an agent's reach to claimed resources. When it does:
   only, held in the membership record so that it ends when the membership does,
   and its standing with the member over her own resources is untouched;
 - an introspection response for a grant so affected carries `error` of
-  `organization_revoked` ({{U4AFedAuthz}} Section 6).
+  `organization_revoked` ({{U4AFedAuthz}} Section 5).
 
 ## Enrolment and Leaving {#enrolment}
 
@@ -354,7 +354,7 @@ Holder:
 Tally:
 : A party that publishes the mandate, folds the holders' terms into one
   document, collects verdicts, and issues a grant carrying them. It speaks the
-  authorization-server surface of {{U4ACore}} to the requesting agent, which
+  authorization-server surface of {{U4ACore}} to the client, which
   cannot tell it from an authorization server and does not need to.
 
 With no party above the holders, the decision cannot be put anywhere without
@@ -393,7 +393,7 @@ leaves it to configuration.
 
 ## The Fold {#fold}
 
-When a requesting agent presents a ticket for a jointly held resource, the tally
+When a client presents a ticket for a jointly held resource, the tally
 MUST obtain each holder's terms over it from her authorization server and MUST
 fold them into one terms document: the shortest expiry, the intersection of
 scopes, the union of prohibitions, and ask-me if any holder asks. It proffers
@@ -433,8 +433,8 @@ exp:
 : REQUIRED. Short.
 
 cnf_jkt:
-: REQUIRED in an `allow`. The JWK thumbprint (RFC 7638) of the key that signed
-  the agreement.
+: REQUIRED in an `allow`. `jkt(k)`, as {{U4ACore}} defines it, of the key `k`
+  that signed the agreement.
 
 scope:
 : REQUIRED in an `allow`. The scopes the agreement carries.
@@ -519,7 +519,7 @@ and the tally holds the negotiation pending as {{UMAGrant}} `request_submitted`.
 ## Verdicts Are Not Claims {#not-claims}
 
 A verdict MUST travel from the holder's authorization server to the tally. It
-MUST NOT be gathered by the requesting agent and presented as a claim.
+MUST NOT be gathered by the client and presented as a claim.
 
 A claim the requesting party gathers is a claim it can decline to gather. A
 holder's refusal has to reach the decision point without the cooperation of the
@@ -681,68 +681,26 @@ be held to, and this document prefers the disclosure.
 
 # IANA Considerations
 
-## Media Type Registration
-
-IANA is asked to register `application/u4a-verdict+jwt`,
-`application/u4a-membership+jwt`, `application/u4a-org-notice+jwt` and
-`application/u4a-org-admin+jwt` in the "Media Types" registry, each with:
-
-Required parameters:
-: N/A
-
-Optional parameters:
-: N/A
-
-Encoding considerations:
-: binary; a JWT in compact serialization
-
-Security considerations:
-: See {{security-considerations}} of this document
-
-Interoperability considerations:
-: N/A
-
-Applications that use this media type:
-: Applications implementing UMA 2.0 with this extension
-
-Change controller:
-: IETF
-
-and with the following published specifications: {{verdict}} for
-`u4a-verdict+jwt`; {{enrolment}} for `u4a-membership+jwt` and
-`u4a-org-notice+jwt`; {{org-acting}} for `u4a-org-admin+jwt`.
-
-## JSON Web Token Claims Registration
-
-IANA is asked to register the following in the "JSON Web Token Claims" registry
-established by {{RFC7519}}.
-
-Claim Name:
-: `joint`
-
-Claim Description:
-: The mandate and verdicts under which a jointly held resource was released
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{joint-grant}} of this document
-
-Claim Name:
-: `break_glass`
-
-Claim Description:
-: That a grant was issued by an organization under its emergency clause, and
-  the justification
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{break-glass}} of this document
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
 
 --- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `application/u4a-verdict+jwt` | Media type | {{verdict}} |
+| `application/u4a-membership+jwt` | Media type | {{enrolment}} |
+| `application/u4a-org-notice+jwt` | Media type | {{enrolment}} |
+| `application/u4a-org-admin+jwt` | Media type | {{org-acting}} |
+| `joint` | JWT claim {{RFC7519}} | {{joint-grant}} |
+| `family` | JWT claim {{RFC7519}} | {{joint-grant}} |
+| `break_glass` | JWT claim {{RFC7519}} | {{break-glass}} |
+{: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}
 

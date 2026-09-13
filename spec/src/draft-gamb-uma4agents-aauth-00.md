@@ -2,7 +2,7 @@
 title: "AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"
 abbrev: "AAuth Binding for UMA"
 docname: draft-gamb-uma4agents-aauth-00
-category: std
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -120,7 +120,7 @@ Its identifying URI is `https://u4a.ai/spec/aauth/1.0`.
 
 # The Identified Agent {#agent}
 
-A requesting agent presenting itself at the identified level of {{U4ACore}}
+A client presenting itself at the identified level of {{U4ACore}}
 Section 5.1 under this binding carries an AAuth agent credential — a JWT
 {{RFC7519}} with `typ` of `aa-agent+jwt` — in the `agent_token` header of the
 agreement JWS of {{U4ATerms}} Section 4.1.
@@ -136,8 +136,8 @@ The authorization server MUST:
 - treat `cnf.jwk` as the key that signed the agreement and that the grant is
   confirmed to.
 
-The connection handle is the credential's `sub`, qualified by the host of its
-`iss` as `sub@host`, and MUST NOT be derived from the key. AAuth binds a fresh
+The connection handle is formed from the credential's `sub` and `iss` as
+{{U4ACore}} Section 5.1 specifies, and MUST NOT be derived from the key. AAuth binds a fresh
 key per session; the subject is what persists.
 
 Where the credential carries an `act` claim {{RFC8693}} naming another agent's

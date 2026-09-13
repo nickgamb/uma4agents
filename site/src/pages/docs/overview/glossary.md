@@ -27,6 +27,13 @@ than the endpoint names.
 **Claim token** — what the agent presents to satisfy the authorization server's
 demand for information. Here it carries the signed agreement.
 
+**Client** — the software making the request, acting for the requesting party. In
+this profile it is usually an autonomous agent that holds a key.
+
+**Client operator** — the party that runs a client and publishes the keys its
+clients hold. UMA's legal work calls it the Client Operator; the lab and the
+drafts often say "operator".
+
 **Connection** — a standing relationship between one agent and one owner,
 created when she first approves it. Keyed by the agent's identity, so revoking
 one touches no other.
@@ -76,9 +83,9 @@ holding it can spend.
 The connection handle is the key's [RFC 7638](https://www.rfc-editor.org/rfc/rfc7638.html)
 thumbprint.
 
-**Requesting agent** — the software making the request. Distinct from the
-requesting party. A 2010-era UMA term, revived here because the distinction has
-started to matter again.
+**Requesting agent** — in UMA's legal work, the party that seeks access through a
+client on the requesting party's behalf. The profile does not use the term for
+software; the software is the client.
 
 **Requesting party (RqP)** — the human or organisation on whose behalf the agent
 asks. Accountable; not present at the keyboard. **RO ≠ RqP** is the shorthand

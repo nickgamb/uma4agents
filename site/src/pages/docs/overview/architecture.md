@@ -57,7 +57,7 @@ point is refused Alice's policy, and allowed her published keys.
 ## The requesting side
 
 The **requesting party** is the human or organisation asking — Bob, the advisor.
-The **requesting agent** is the software doing the asking. Keeping them distinct
+The **client** is the software doing the asking, usually an autonomous agent. Keeping them distinct
 matters: the terms are signed by the agent, the identity attested is the
 agent's, and the party who is accountable is Bob.
 

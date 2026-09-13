@@ -24,7 +24,7 @@ UMA 2.0. Listed in reading order.
 - [Overview · Concepts](https://u4a.ai/docs/overview/concepts.md): Every idea the rest of the documentation assumes, each in a paragraph, in the order the pieces meet each other.
 - [Overview · Standards this composes](https://u4a.ai/docs/overview/standards.md): Every specification U4A builds on, what each one supplies, and where it appears in the flow.
 - [Overview · The four beats](https://u4a.ai/docs/overview/four-beats.md): Challenge, attempt, commit, grant — the whole negotiation, and what each exchange is for.
-- [Overview · The three parties](https://u4a.ai/docs/overview/parties.md): Owner, requesting party, requesting agent — and what it costs to treat the last two as one.
+- [Overview · The three parties](https://u4a.ai/docs/overview/parties.md): Owner, requesting party, client — and what it costs to treat an agent and the party behind it as one.
 - [Overview · Terms as first-class](https://u4a.ai/docs/overview/terms.md): The owner does not just decide — she states what she requires, and the agent signs it.
 - [Overview · The two intents](https://u4a.ai/docs/overview/two-intents.md): Who decides whether an AI agent is doing what it said it would — the agent's operator, or the owner of the data it is touching. How U4A answers that, and what the owner can check for herself.
 - [Overview · Her own agent](https://u4a.ai/docs/overview/first-party.md): The case where the person asking and the person who owns the data are the same. Why it needs the same protocol anyway, and what changes when she activated the agent herself.
@@ -82,6 +82,7 @@ UMA 2.0. Listed in reading order.
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [September 13 2026 · v2026.09.9](https://u4a.ai/changelog.md): Specification: all nine drafts are declared informational individual submissions (`category: info`) rather than standards-track.
 - [September 12 2026 · v2026.09.8](https://u4a.ai/changelog.md): Enforcement point: a permission's own scopes, `exp` and `nbf` are checked, not only its resource.
 - [September 11 2026 · v2026.09.7](https://u4a.ai/changelog.md): Blog: [An Agent Is Not a Principal](/blog/2026-09-11-an-agent-is-not-a-principal/) — why delegating a delegation is a category error, why an enterprise identity provider has no standing over a resource it does not own, how lineage is attested rather than transferred, and what the owner decides. Ends with a tutorial for implementing sub-agent grants on either side, with the refusals an implementer will meet and what each one means.
 - [September 11 2026 · v2026.09.6](https://u4a.ai/changelog.md): Specification: nine Internet-Drafts profiling and extending UMA 2.0 for autonomous agents, in `spec/src` and rendered to `site/static/spec/`: `draft-gamb-uma4agents-core-00` (the grant profile), `-terms-00` (owner-proffered terms), `-fedauthz-00` (federated authorization for agents), `-policy-00` (owner policy, assurance and attention), `-lineage-00` (agent lineage), `-multiparty-00` (organizations and co-ownership), `-owner-00` (the resource owner's API), `-mcp-00` (the MCP binding) and `-aauth-00` (the AAuth binding). `make spec` renders them through kramdown-rfc and xml2rfc in a container. Each has an identifying URI under `https://u4a.ai/spec/` that dereferences to the draft.
@@ -93,7 +94,6 @@ most days.
 - [August 26 2026 · v2026.08.26](https://u4a.ai/changelog.md): Cross App Access: `identity_provider.subject_map` in the charter — what a provider asserts, mapped to the member it means. A real tenant's `sub` is local to that tenant, so somebody has to say who it is, and the organization is the party that knows.
 - [August 26 2026 · v2026.08.25](https://u4a.ai/changelog.md): Cross App Access: an organization may federate identity to an enterprise identity provider. Its charter names the provider; a member's authority then asks an agent whose employee it acts for, as an ID-JAG (`draft-ietf-oauth-identity-assertion-authz-grant`) carried in the UMA claim it already had a slot for. Identity is asked for before terms, because which terms apply follows from which member it is.
 - [August 25 2026 · v2026.08.24](https://u4a.ai/changelog.md): Docs: search moved from the docs tab bar into the site navigation. It already covered the blog and the changelog; now it is reachable from them.
-- [August 25 2026 · v2026.08.23](https://u4a.ai/changelog.md): Docs: a changelog at `/changelog/`, back to the first release. In `⌘K` search as one row per release, in `llms.txt`, in the sitemap, published as `/changelog.md`, and readable over MCP with a new `listChangelog` tool.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts

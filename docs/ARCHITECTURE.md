@@ -94,7 +94,7 @@ server, the same ticket and the same terms — MCP SDK 2.x exposes
 | `alice-portal` | Meridian Wealth: dashboard, holdings, trade, and Settings → Security → Agent Authorization | Python / FastAPI + vanilla SPA |
 | `keycloak` | The identity provider, with a realm per owner and an OIDC login for the portal. Neither owner's: an authority that accepts another party's tokens for its owner is only partly hers | Keycloak |
 | `person-server` | AAuth Person/Agent server — the agent-identity component for the identified-level path (the demo default signs pseudonymously) | upstream (pinned) |
-| `agent-shim` | The U4A adapter: lets an unmodified MCP client be the requesting agent. Runs as a local stdio subprocess beside Claude Code, or as a network service (`UMA4A_SHIM_TRANSPORT=streamable-http`) when the agent is not a local process. Holds the requesting side's key and runs all four beats, so what sits above it needs no U4A code at all | Python / MCP SDK |
+| `agent-shim` | The U4A adapter: lets an unmodified MCP client act as the U4A client. Runs as a local stdio subprocess beside Claude Code, or as a network service (`UMA4A_SHIM_TRANSPORT=streamable-http`) when the agent is not a local process. Holds the requesting side's key and runs all four beats, so what sits above it needs no U4A code at all | Python / MCP SDK |
 | `kagent` | An agent framework, unmodified, pointed at that adapter — the adoption case rather than a protocol one. Off by default; it brings a model with it (in-cluster Ollama, or a hosted provider). Kubernetes only. See [KAGENT.md](KAGENT.md) | upstream (pinned) |
 | `paios` | Kwaai's pAI-OS with the U4A ability installed: Alice's personal AI, holding her key and answering her authorization server. Off by default — an alternative surface to her portal, not a layer under it. See [DEMOS.md](DEMOS.md) | upstream (pinned) + `kwaai/abilities/` |
 | observability | Grafana + Loki + Promtail; one structured event per protocol step, ticket = correlation id | Grafana stack |
@@ -173,7 +173,7 @@ granting requires asking her:
 - **Tier 3 — trade execution**: `ask_me` — pends for per-operation approval and
   yields a single-use, operation-bound grant.
 
-Each tier may also carry **rules** — policy that faces the requesting agent
+Each tier may also carry **rules** — policy that faces the client
 without naming one. They read what the authorization server could establish
 about the agent (`assurance.*`, in `services/uma-as/assurance.py`) and what
 Alice has herself seen of it (`standing.*`), and only the second kind may ever

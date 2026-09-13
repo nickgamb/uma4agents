@@ -79,7 +79,7 @@ Very little. Holding the key and asking the person is all of it:
 | sign requests with her key | implement the grant |
 | show a request in terms a person can act on | hold the terms roster |
 | take approve or deny, with an unbounded wait | issue or verify tokens |
-| keep a record | be reachable by the requesting agent |
+| keep a record | be reachable by the client |
 
 The ticket, the terms, the signed agreement, the proof-of-possession token, the
 single-use burn and the ledger all stay with the authorization server. A
