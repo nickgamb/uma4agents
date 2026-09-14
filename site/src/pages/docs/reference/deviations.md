@@ -19,7 +19,7 @@ explicit extension.
 Everything not listed here is intended to be stock UMA 2.0 or stock AAuth.
 
 Each entry names where the [specification set](/docs/reference/specification/)
-states it normatively. The numbering is the one Core §11 uses; entries 1–22 are that table.
+states it normatively. The numbering is the one Core §12 uses; entries 1–22 are that table.
 
 ## 1. Terms proffered inside `required_claims`
 

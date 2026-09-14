@@ -38,7 +38,7 @@ release within that month. One entry per release.
 - **Specification:** the AAuth binding qualified identified connection handles by issuer host alone, contradicting the core draft.
 - **Specification:** the multiparty verdict's `cnf_jkt` was defined as a bare thumbprint while its example carried the `jkt:` prefix; it is now `jkt(k)`.
 - **Specification:** four cross-document section references pointed at the wrong sections.
-- **Docs:** the specification page cited §11 for the core draft's register of departures, which is §12.
+- **Docs:** the specification page, the deviations page and `docs/PROTOCOL.md` cited §11 for the core draft's register of departures, which is §12.
 - **Specification:** the core draft's design rule listed the `WWW-Authenticate: UMA` header as reused unchanged, contradicting its own departure 8; it now says the header is kept over HTTP but is no longer the only encoding.
 - **Specification:** the federated authorization draft cited RFC 9728 §2.1 for `signed_metadata` (it is §2.2), and the terms draft cited UMA Grant §3.3.4 for `need_info` (it is §3.3.6).
 - **Specification:** the policy draft now states that its `429` refusal at the pending-queue bound departs from UMA Grant's `403` for `request_denied`, and why.

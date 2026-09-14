@@ -628,7 +628,7 @@ reference](https://u4a.ai/docs/reference/events/#the-row-and-every-kind-of-entry
 The normative statement of each departure is in the [specification
 set](../spec/README.md); this table is the implementation's index into it,
 numbered as [draft-gamb-uma4agents-core-00](../site/static/spec/draft-gamb-uma4agents-core-00.txt)
-section 11 numbers them. The site's
+section 12 numbers them. The site's
 [deviations page](https://u4a.ai/docs/reference/deviations/) carries the same
 list with the baseline and the reasoning for each.
 
