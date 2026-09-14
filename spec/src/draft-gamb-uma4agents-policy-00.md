@@ -355,6 +355,10 @@ that hold no standing connection. Past the bound it MUST refuse with `429` and
 `error` of `request_denied`, and MUST NOT queue. An agent that holds an active
 connection MUST NOT be counted against the bound and MUST NOT be refused for it.
 
+{{UMAGrant}} Section 3.3.6 answers `request_denied` with `403`. The bound uses
+`429` because the refusal reports the state of the owner's queue rather than a
+decision about the request, and a client should not read it as one.
+
 ## Two Lanes {#lanes}
 
 The bound MUST be applied in two lanes, split on whether the agent is at level 2

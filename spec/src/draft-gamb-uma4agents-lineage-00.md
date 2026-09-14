@@ -368,9 +368,10 @@ This document has no IANA actions. The identifiers it uses are listed in
 This appendix lists the identifiers this document defines. It is informative and
 requests no registration.
 
-| Media type | Defined in |
-|---|---|
-| `application/u4a-introduction-v1+jws` | {{introduction-document}} |
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `application/u4a-introduction-v1+jws` | Media type | {{introduction-document}} |
+| `introduction` | Agreement claim ({{U4ATerms}}) | {{introduction-document}} |
 {: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}

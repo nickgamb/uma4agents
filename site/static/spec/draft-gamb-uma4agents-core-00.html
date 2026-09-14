@@ -1241,7 +1241,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 17 March 2027</td>
+<td class="center">Expires 18 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1254,12 +1254,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-core-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-13" class="published">13 September 2026</time>
+<time datetime="2026-09-14" class="published">14 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-17">17 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-18">18 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1306,7 +1306,7 @@ a negotiation is specified as a set of parameters rather than as an HTTP header.
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1523,6 +1523,9 @@ a negotiation is specified as a set of parameters rather than as an HTTP header.
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3">
                 <p id="section-toc.1-1.17.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-authorization-details-type" class="internal xref">Authorization Details Type</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.4">
+                <p id="section-toc.1-1.17.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-other-values" class="internal xref">Other Values</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
@@ -1569,20 +1572,20 @@ can use it.<a href="#section-1-2" class="pilcrow">¶</a></p>
 departure explicit. The following are used as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> specifies them:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-2.1">
-            <p id="section-1.1-2.1.1">the <code>WWW-Authenticate: UMA</code> challenge over HTTP;<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-2.1.1">the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> grant type;<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.2">
-            <p id="section-1.1-2.2.1">the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> grant type;<a href="#section-1.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-2.2.1">the <code>need_info</code> and <code>request_submitted</code> responses;<a href="#section-1.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.3">
-            <p id="section-1.1-2.3.1">the <code>need_info</code> and <code>request_submitted</code> responses;<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.1-2.4">
-            <p id="section-1.1-2.4.1">the <code>permissions</code> array of the introspection response.<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-2.3.1">the <code>permissions</code> array of the introspection response.<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-1.1-3"><a href="#profiles-and-extensions" class="auto internal xref">Section 12</a> lists every departure. Anything not listed there is
-intended to be UMA 2.0 as specified.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+<p id="section-1.1-3">Over HTTP the challenge keeps UMA 2.0's <code>WWW-Authenticate: UMA</code> header
+(<a href="#challenge-http" class="auto internal xref">Section 3.2</a>), but the header is no longer its only encoding
+(<a href="#challenge-parameters" class="auto internal xref">Section 3.1</a>).<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+<p id="section-1.1-4"><a href="#profiles-and-extensions" class="auto internal xref">Section 12</a> lists every departure. Anything not listed there is
+intended to be UMA 2.0 as specified.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-other-authorization-work">
@@ -1834,7 +1837,8 @@ that decides. Same value as the <code>as_uri</code> parameter.<a href="#section-
     "actions": ["execute_trade"],
     "datatypes": ["trades:execute"]
   }],
-  "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwfXJ8m",
+  "authorization_reference":
+    "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
   "authorization_server": "https://alice-as.example",
   "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
 }
@@ -2193,7 +2197,7 @@ agreement's <code>operation</code> <span>[<a href="#U4ATerms" class="cite xref">
   "single_use": true,
   "operation": {
     "tool": "execute_trade",
-    "params_s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
   }
 }
 </pre><a href="#section-7.2-3" class="pilcrow">¶</a>
@@ -2849,6 +2853,22 @@ decision, which makes the same request answerable two ways. See <span>[<a href="
 <a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span> and <span class="refAuthor">E. Smith</span>, <span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-client-id-metadata-document-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-identity-assertion-authz-grant">[I-D.ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-rar-metadata-remediation">[I-D.ietf-oauth-rar-metadata-remediation]</dt>
+        <dd>
+<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.meunier-webbotauth-registry">[I-D.meunier-webbotauth-registry]</dt>
+        <dd>
+<span class="refAuthor">Guerreiro, M.</span>, <span class="refAuthor">Kirazci, U.</span>, and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"Registry and Signature Agent card for Web bot auth"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-registry-03</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2930,25 +2950,9 @@ decision, which makes the same request answerable two ways. See <span>[<a href="
         <dd>
 <span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-protocol-02</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
-        <dd>
-<span class="refAuthor">Parecki, A.</span> and <span class="refAuthor">E. Smith</span>, <span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-client-id-metadata-document-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-identity-assertion-authz-grant">[I-D.ietf-oauth-identity-assertion-authz-grant]</dt>
-        <dd>
-<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-rar-metadata-remediation">[I-D.ietf-oauth-rar-metadata-remediation]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.meunier-webbotauth-httpsig-protocol">[I-D.meunier-webbotauth-httpsig-protocol]</dt>
         <dd>
 <span class="refAuthor">Meunier, T.</span> and <span class="refAuthor">S. Major</span>, <span class="refTitle">"HTTP Message Signatures for automated traffic"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-httpsig-protocol-02</span>, <time datetime="2026-08-18" class="refDate">18 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.meunier-webbotauth-registry">[I-D.meunier-webbotauth-registry]</dt>
-        <dd>
-<span class="refAuthor">Guerreiro, M.</span>, <span class="refAuthor">Kirazci, U.</span>, and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"Registry and Signature Agent card for Web bot auth"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-registry-03</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
@@ -3189,6 +3193,66 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
                 <code>urn:uma4agents:authorization-details:tool-call</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">An attempted invocation of one named operation on a protected resource</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="other-values">
+<section id="appendix-A.4">
+        <h3 id="name-other-values">
+<a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-other-values" class="section-name selfRef">Other Values</a>
+        </h3>
+<span id="name-other-values-used-by-this-d"></span><table class="center" id="table-5">
+          <caption>
+<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#name-other-values-used-by-this-d" class="selfRef">Other values used by this document.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Kind</th>
+              <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>insufficient_authorization</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Error value of the challenge</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#challenge-parameters" class="auto internal xref">Section 3.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>PoP</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Token type</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>authorization_server</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>ticket</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <a href="#remediation" class="auto internal xref">Section 3.3</a>
 </td>

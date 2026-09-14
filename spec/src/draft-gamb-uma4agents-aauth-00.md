@@ -179,7 +179,7 @@ profile requires. `sub` is the agent credential's `sub`, or the literal
     "resource_scopes": ["positions:read"],
     "exp": 1789602800
   }],
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s"
 }
 ~~~
 {: title="A requesting party token under this binding."}

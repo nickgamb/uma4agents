@@ -46,13 +46,13 @@ normative:
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
+informative:
   IEEE7012:
     title: "IEEE Standard for Machine Readable Personal Privacy Terms"
     date: 2025
     seriesinfo:
       IEEE: Std 7012-2025
     target: https://standards.ieee.org/ieee/7012/7192/
-informative:
   ODRL:
     title: "ODRL Information Model 2.2"
     author:
@@ -121,7 +121,7 @@ that both parties hold identical records of what was agreed.
 
 # Introduction
 
-{{UMAGrant}} Section 3.3.4 lets an authorization server tell a client what claims
+{{UMAGrant}} Section 3.3.6 lets an authorization server tell a client what claims
 it needs by naming claim types and acceptable formats. The client then gathers
 those claims from wherever it can and presents them. The authorization server
 asks *what can you tell me about yourself*.
@@ -335,7 +335,7 @@ and whose `params` member is a JSON object holding the parameters proposed for i
   "reason": "Suitability review before Thursday's client meeting.",
   "mission": {
     "approver": "https://ps.example",
-    "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "s256": "s256:zrAKkVJdpk-xcbEDrjDvO4F_o7x47N6ZuITu2-kTEAM"
   }
 }
 ~~~
@@ -412,12 +412,12 @@ family:
 ~~~ json
 {
   "iss": "https://alice-as.example",
-  "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+  "sub": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "iat": 1789430010,
   "family": "fam_8f3aQ2Xc",
   "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
   "template_id": "alice/advisor/v2",
-  "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "agreement": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
 }
 ~~~
@@ -520,6 +520,8 @@ requests no registration.
 | Identifier | Kind | Defined in |
 |---|---|---|
 | `terms_endpoint` | Authorization server metadata | {{terms-metadata}} |
+| `decline` | Token endpoint request parameter | {{declining}} |
+| `receipt` | Token endpoint response member | {{receipt}} |
 | `application/myterms-agreement-v1+jws` | Media type | {{agreement}} |
 | `application/myterms-receipt+jws` | Media type | {{receipt}} |
 | `urn:uma4agents:claim:myterms-agreement` | URN | {{proffering}} |

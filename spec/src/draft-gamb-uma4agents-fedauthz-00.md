@@ -141,7 +141,7 @@ tool_surfaces:
 owner_resources_endpoint:
 : REQUIRED. The URL of the protected listing of {{protected-layer}}.
 
-The document MUST carry `signed_metadata` as {{RFC9728}} Section 2.1, signed by
+The document MUST carry `signed_metadata` as {{RFC9728}} Section 2.2, signed by
 a key published at the resource's own `jwks_uri`, so that a relayed copy stays
 attributable to the resource.
 
@@ -235,7 +235,8 @@ The request MUST carry a `Content-Digest` {{RFC9530}} covered by the signature.
 POST /rs/register HTTP/1.1
 Host: alice-as.example
 Content-Type: application/json
-Content-Digest: sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDU=:
+Content-Digest: sha-256=
+  :Tmn1PBTGYjBHkU9XV2NHLt2YstMuZTPQqpEBaE28JJM=:
 Signature-Input: sig1=("@method" "@authority" "@path"
   "authorization" "content-digest");created=1789430000;
   keyid="rs-1";alg="ed25519"

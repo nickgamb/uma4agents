@@ -5,8 +5,8 @@
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
 Intended status: Informational                                  E. Maler
-Expires: 17 March 2027                                      Venn Factory
-                                                       13 September 2026
+Expires: 18 March 2027                                      Venn Factory
+                                                       14 September 2026
 
 
         Owner-Proffered Terms for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 17 March 2027.
+   This Internet-Draft will expire on 18 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 1]
+Gamb & Maler              Expires 18 March 2027                 [Page 1]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -97,11 +97,11 @@ Table of Contents
    Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
    Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
-   [UMAGrant] Section 3.3.4 lets an authorization server tell a client
+   [UMAGrant] Section 3.3.6 lets an authorization server tell a client
    what claims it needs by naming claim types and acceptable formats.
    The client then gathers those claims from wherever it can and
    presents them.  The authorization server asks _what can you tell me
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 2]
+Gamb & Maler              Expires 18 March 2027                 [Page 2]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 3]
+Gamb & Maler              Expires 18 March 2027                 [Page 3]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 4]
+Gamb & Maler              Expires 18 March 2027                 [Page 4]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 5]
+Gamb & Maler              Expires 18 March 2027                 [Page 5]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 6]
+Gamb & Maler              Expires 18 March 2027                 [Page 6]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -363,7 +363,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
      "reason": "Suitability review before Thursday's client meeting.",
      "mission": {
        "approver": "https://ps.example",
-       "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+       "s256": "s256:zrAKkVJdpk-xcbEDrjDvO4F_o7x47N6ZuITu2-kTEAM"
      }
    }
 
@@ -389,7 +389,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 7]
+Gamb & Maler              Expires 18 March 2027                 [Page 7]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 8]
+Gamb & Maler              Expires 18 March 2027                 [Page 8]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -456,12 +456,12 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
    {
      "iss": "https://alice-as.example",
-     "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+     "sub": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
      "iat": 1789430010,
      "family": "fam_8f3aQ2Xc",
      "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
      "template_id": "alice/advisor/v2",
-     "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+     "agreement": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
      "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
    }
 
@@ -501,7 +501,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                 [Page 9]
+Gamb & Maler              Expires 18 March 2027                 [Page 9]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -557,7 +557,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 17 March 2027                [Page 10]
+Gamb & Maler              Expires 18 March 2027                [Page 10]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -586,10 +586,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 10.1.  Normative References
 
-   [IEEE7012] "IEEE Standard for Machine Readable Personal Privacy
-              Terms", IEEE Std 7012-2025, 2025,
-              <https://standards.ieee.org/ieee/7012/7192/>.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -607,21 +603,20 @@ Internet-Draft            Owner-Proffered Terms           September 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-
-
-
-
-
-
-Gamb & Maler              Expires 17 March 2027                [Page 11]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
+
+
+
+
+
+
+Gamb & Maler              Expires 18 March 2027                [Page 11]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
@@ -630,6 +625,10 @@ Internet-Draft            Owner-Proffered Terms           September 2026
               grant-2.0.html>.
 
 10.2.  Informative References
+
+   [IEEE7012] "IEEE Standard for Machine Readable Personal Privacy
+              Terms", IEEE Std 7012-2025, 2025,
+              <https://standards.ieee.org/ieee/7012/7192/>.
 
    [ODRL]     Iannella, R. and S. Villata, "ODRL Information Model 2.2",
               W3C Recommendation, 15 February 2018,
@@ -669,29 +668,36 @@ Appendix A.  Identifiers Used by This Document
 
 
 
-Gamb & Maler              Expires 17 March 2027                [Page 12]
+
+Gamb & Maler              Expires 18 March 2027                [Page 12]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
 
-     +================================+=================+============+
-     | Identifier                     | Kind            | Defined in |
-     +================================+=================+============+
-     | terms_endpoint                 | Authorization   | Section    |
-     |                                | server metadata | 3.1        |
-     +--------------------------------+-----------------+------------+
-     | application/myterms-agreement- | Media type      | Section 4  |
-     | v1+jws                         |                 |            |
-     +--------------------------------+-----------------+------------+
-     | application/myterms-           | Media type      | Section 5  |
-     | receipt+jws                    |                 |            |
-     +--------------------------------+-----------------+------------+
-     | urn:uma4agents:claim:myterms-  | URN             | Section 3  |
-     | agreement                      |                 |            |
-     +--------------------------------+-----------------+------------+
-     | urn:uma4agents:format:myterms- | URN             | Section 4  |
-     | agreement-v1+jws               |                 |            |
-     +--------------------------------+-----------------+------------+
+    +================================+===================+============+
+    | Identifier                     | Kind              | Defined in |
+    +================================+===================+============+
+    | terms_endpoint                 | Authorization     | Section    |
+    |                                | server metadata   | 3.1        |
+    +--------------------------------+-------------------+------------+
+    | decline                        | Token endpoint    | Section 6  |
+    |                                | request parameter |            |
+    +--------------------------------+-------------------+------------+
+    | receipt                        | Token endpoint    | Section 5  |
+    |                                | response member   |            |
+    +--------------------------------+-------------------+------------+
+    | application/myterms-agreement- | Media type        | Section 4  |
+    | v1+jws                         |                   |            |
+    +--------------------------------+-------------------+------------+
+    | application/myterms-           | Media type        | Section 5  |
+    | receipt+jws                    |                   |            |
+    +--------------------------------+-------------------+------------+
+    | urn:uma4agents:claim:myterms-  | URN               | Section 3  |
+    | agreement                      |                   |            |
+    +--------------------------------+-------------------+------------+
+    | urn:uma4agents:format:myterms- | URN               | Section 4  |
+    | agreement-v1+jws               |                   |            |
+    +--------------------------------+-------------------+------------+
 
                 Table 1: Identifiers used by this document.
 
@@ -717,17 +723,18 @@ Acknowledgments
    rule and the dual-record requirement, and the divergences in
    Section 8 are stated in its terms rather than around them.
 
+
+
+Gamb & Maler              Expires 18 March 2027                [Page 13]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 Authors' Addresses
 
    Nick Gamb
    MindGarden LLC
    Email: nickgamb@gmail.com
-
-
-
-Gamb & Maler              Expires 17 March 2027                [Page 13]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
 
 
    Eve Maler
@@ -774,11 +781,4 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-
-
-
-
-
-
-
-Gamb & Maler              Expires 17 March 2027                [Page 14]
+Gamb & Maler              Expires 18 March 2027                [Page 14]

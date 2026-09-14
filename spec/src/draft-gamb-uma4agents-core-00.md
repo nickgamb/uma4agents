@@ -20,6 +20,10 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
+  I-D.ietf-oauth-client-id-metadata-document:
+  I-D.meunier-webbotauth-registry:
+  I-D.ietf-oauth-identity-assertion-authz-grant:
+  I-D.ietf-oauth-rar-metadata-remediation:
   RFC6750:
   RFC7515:
   RFC7517:
@@ -82,11 +86,7 @@ normative:
 informative:
   RFC9635:
   RFC9449:
-  I-D.ietf-oauth-rar-metadata-remediation:
-  I-D.ietf-oauth-identity-assertion-authz-grant:
   I-D.meunier-webbotauth-httpsig-protocol:
-  I-D.meunier-webbotauth-registry:
-  I-D.ietf-oauth-client-id-metadata-document:
   I-D.hardt-aauth-protocol:
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
@@ -210,10 +210,13 @@ The requirements in this document are exercised by a reference implementation
 This profile uses UMA 2.0's wire surface wherever it fits and makes each
 departure explicit. The following are used as {{UMAGrant}} specifies them:
 
-- the `WWW-Authenticate: UMA` challenge over HTTP;
 - the `urn:ietf:params:oauth:grant-type:uma-ticket` grant type;
 - the `need_info` and `request_submitted` responses;
 - the `permissions` array of the introspection response.
+
+Over HTTP the challenge keeps UMA 2.0's `WWW-Authenticate: UMA` header
+({{challenge-http}}), but the header is no longer its only encoding
+({{challenge-parameters}}).
 
 {{profiles-and-extensions}} lists every departure. Anything not listed there is
 intended to be UMA 2.0 as specified.
@@ -403,7 +406,8 @@ ticket:
     "actions": ["execute_trade"],
     "datatypes": ["trades:execute"]
   }],
-  "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwfXJ8m",
+  "authorization_reference":
+    "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
   "authorization_server": "https://alice-as.example",
   "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
 }
@@ -690,7 +694,7 @@ operation:
   "single_use": true,
   "operation": {
     "tool": "execute_trade",
-    "params_s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
   }
 }
 ~~~
@@ -1071,6 +1075,16 @@ identifying URI. The identifying URIs of this set are:
 |---|---|---|
 | `urn:uma4agents:authorization-details:tool-call` | An attempted invocation of one named operation on a protected resource | {{remediation}} |
 {: title="Authorization details type used by this document."}
+
+## Other Values
+
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `insufficient_authorization` | Error value of the challenge | {{challenge-parameters}} |
+| `PoP` | Token type | {{rpt}} |
+| `authorization_server` | Member of `authorization_remediation` | {{remediation}} |
+| `ticket` | Member of `authorization_remediation` | {{remediation}} |
+{: title="Other values used by this document."}
 
 # Implementation Status {#implementation-status}
 

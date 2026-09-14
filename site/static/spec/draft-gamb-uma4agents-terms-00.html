@@ -1240,7 +1240,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 17 March 2027</td>
+<td class="center">Expires 18 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1253,12 +1253,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-terms-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-13" class="published">13 September 2026</time>
+<time datetime="2026-09-14" class="published">14 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-17">17 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-18">18 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1304,7 +1304,7 @@ that both parties hold identical records of what was agreed.<a href="#section-ab
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1443,7 +1443,7 @@ that both parties hold identical records of what was agreed.<a href="#section-ab
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.4 lets an authorization server tell a client what claims
+<p id="section-1-1"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.6 lets an authorization server tell a client what claims
 it needs by naming claim types and acceptable formats. The client then gathers
 those claims from wherever it can and presents them. The authorization server
 asks <em>what can you tell me about yourself</em>.<a href="#section-1-1" class="pilcrow">¶</a></p>
@@ -1728,7 +1728,7 @@ and whose <code>params</code> member is a JSON object holding the parameters pro
   "reason": "Suitability review before Thursday's client meeting.",
   "mission": {
     "approver": "https://ps.example",
-    "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "s256": "s256:zrAKkVJdpk-xcbEDrjDvO4F_o7x47N6ZuITu2-kTEAM"
   }
 }
 </pre>
@@ -1831,12 +1831,12 @@ compact serialization obtained by decoding the claim token.<a href="#section-5-3
 <pre>
 {
   "iss": "https://alice-as.example",
-  "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+  "sub": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "iat": 1789430010,
   "family": "fam_8f3aQ2Xc",
   "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
   "template_id": "alice/advisor/v2",
-  "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "agreement": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
 }
 </pre>
@@ -1976,10 +1976,6 @@ not hers alone" is information it can act on.<a href="#section-8.2-2" class="pil
 <a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="IEEE7012">[IEEE7012]</dt>
-        <dd>
-<span class="refTitle">"IEEE Standard for Machine Readable Personal Privacy Terms"</span>, <span class="seriesInfo">IEEE Std 7012-2025</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://standards.ieee.org/ieee/7012/7192/">https://standards.ieee.org/ieee/7012/7192/</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2013,6 +2009,10 @@ not hers alone" is information it can act on.<a href="#section-8.2-2" class="pil
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="IEEE7012">[IEEE7012]</dt>
+        <dd>
+<span class="refTitle">"IEEE Standard for Machine Readable Personal Privacy Terms"</span>, <span class="seriesInfo">IEEE Std 7012-2025</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://standards.ieee.org/ieee/7012/7192/">https://standards.ieee.org/ieee/7012/7192/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="ODRL">[ODRL]</dt>
         <dd>
 <span class="refAuthor">Iannella, R.</span> and <span class="refAuthor">S. Villata</span>, <span class="refTitle">"ODRL Information Model 2.2"</span>, <span class="seriesInfo">W3C Recommendation</span>, <time datetime="2018-02-15" class="refDate">15 February 2018</time>, <span>&lt;<a href="https://www.w3.org/TR/odrl-model/">https://www.w3.org/TR/odrl-model/</a>&gt;</span>. </dd>
@@ -2069,6 +2069,24 @@ requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">Authorization server metadata</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#terms-metadata" class="auto internal xref">Section 3.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>decline</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Token endpoint request parameter</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#declining" class="auto internal xref">Section 6</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>receipt</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Token endpoint response member</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#receipt" class="auto internal xref">Section 5</a>
 </td>
           </tr>
           <tr>

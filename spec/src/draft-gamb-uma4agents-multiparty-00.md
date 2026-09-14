@@ -22,7 +22,6 @@ author:
 normative:
   RFC7515:
   RFC7519:
-  RFC9728:
   UMAGrant:
     title: "User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"
     author:
@@ -81,6 +80,7 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-policy-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
 informative:
+  RFC9728:
   PP2PI:
     title: "Solving Data Sharing Challenges with UMA: The Julie Adams Healthcare Use Case from PP2PI"
     author:
@@ -305,6 +305,13 @@ an agent's reach to claimed resources. When it does:
 - an introspection response for a grant so affected carries `error` of
   `organization_revoked` ({{U4AFedAuthz}} Section 5).
 
+The organization conveys each such action to the member's authorization server
+as a short-lived JWT with `typ` of `u4a-org-admin+jwt`, signed by the
+organization, naming the member as `sub`, the organization as `org` and the
+acting administrator as `admin`. The member's authorization server verifies it
+against the keys of the organization she enrolled with, and refuses one that
+does not name her.
+
 ## Enrolment and Leaving {#enrolment}
 
 A member's authorization server MUST NOT enrol her with an organization without
@@ -479,12 +486,12 @@ folding party be untrusted.
   "account": "joint-brokerage-1",
   "negotiation": "fam_8f3aQ2Xc",
   "resource_id": "joint-brokerage-1/get_positions",
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "effect": "allow",
-  "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+  "cnf_jkt": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "scope": ["positions:read"],
   "expires_in": 3600,
-  "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
+  "mandate_s256": "s256:2Vm2OGY_mn3mY6G-N-Obxdgg49uzoxsK8brUPgw5_Gk",
   "iat": 1789430000,
   "exp": 1789430300
 }
@@ -700,6 +707,9 @@ requests no registration.
 | `joint` | JWT claim {{RFC7519}} | {{joint-grant}} |
 | `family` | JWT claim {{RFC7519}} | {{joint-grant}} |
 | `break_glass` | JWT claim {{RFC7519}} | {{break-glass}} |
+| `org` | JWT claim {{RFC7519}} | {{enrolment}}, {{org-acting}} |
+| `kind` | JWT claim {{RFC7519}} | {{enrolment}} |
+| `admin` | JWT claim {{RFC7519}} | {{org-acting}} |
 {: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}

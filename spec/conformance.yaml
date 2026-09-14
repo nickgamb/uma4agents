@@ -256,7 +256,7 @@ draft-gamb-uma4agents-fedauthz-00:
     verified: check
     targets: [k8s-policy-test]
     asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
-  - text: "The document MUST carry signed_metadata as [RFC9728] Section 2.1"
+  - text: "The document MUST carry signed_metadata as [RFC9728] Section 2.2"
     verified: check
     targets: [k8s-smoke-test]
     asserts: ["each owner's resource publishes signed RFC 9728 metadata naming her own AS"]

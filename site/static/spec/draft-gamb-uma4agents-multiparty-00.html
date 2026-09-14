@@ -1247,7 +1247,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 17 March 2027</td>
+<td class="center">Expires 18 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1260,12 +1260,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-multiparty-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-13" class="published">13 September 2026</time>
+<time datetime="2026-09-14" class="published">14 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-17">17 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-18">18 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1317,7 +1317,7 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1745,6 +1745,12 @@ and its standing with the member over her own resources is untouched;<a href="#s
 <code>organization_revoked</code> (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5).<a href="#section-2.7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-2.7-3">The organization conveys each such action to the member's authorization server
+as a short-lived JWT with <code>typ</code> of <code>u4a-org-admin+jwt</code>, signed by the
+organization, naming the member as <code>sub</code>, the organization as <code>org</code> and the
+acting administrator as <code>admin</code>. The member's authorization server verifies it
+against the keys of the organization she enrolled with, and refuses one that
+does not name her.<a href="#section-2.7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enrolment">
@@ -1979,12 +1985,12 @@ folding party be untrusted.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
   "account": "joint-brokerage-1",
   "negotiation": "fam_8f3aQ2Xc",
   "resource_id": "joint-brokerage-1/get_positions",
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "effect": "allow",
-  "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+  "cnf_jkt": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "scope": ["positions:read"],
   "expires_in": 3600,
-  "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
+  "mandate_s256": "s256:2Vm2OGY_mn3mY6G-N-Obxdgg49uzoxsK8brUPgw5_Gk",
   "iat": 1789430000,
   "exp": 1789430300
 }
@@ -2312,10 +2318,6 @@ be held to, and this document prefers the disclosure.<a href="#section-5.2-1" cl
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC9728">[RFC9728]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="U4ACore">[U4ACore]</dt>
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-core-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html</a>&gt;</span>. </dd>
@@ -2352,6 +2354,10 @@ be held to, and this document prefers the disclosure.<a href="#section-5.2-1" cl
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4ALAB">[U4ALAB]</dt>
       <dd>
@@ -2446,6 +2452,36 @@ requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#break-glass" class="auto internal xref">Section 2.9</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>org</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>, <a href="#org-acting" class="auto internal xref">Section 2.7</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>kind</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>admin</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#org-acting" class="auto internal xref">Section 2.7</a>
 </td>
           </tr>
         </tbody>

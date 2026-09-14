@@ -20,6 +20,7 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
+  I-D.ietf-oauth-rar-metadata-remediation:
   RFC6454:
   RFC9728:
   MCP:
@@ -58,7 +59,6 @@ normative:
     target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
 informative:
   I-D.hardt-aauth-protocol:
-  I-D.ietf-oauth-rar-metadata-remediation:
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:
@@ -199,7 +199,7 @@ for want of authorization with a JSON-RPC error {{JSONRPC}} whose `code` is
       "as_uri": "https://alice-as.example",
       "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
       "resource_metadata":
-        "https://rs.example/.well-known/oauth-protected-resource",
+      "https://rs.example/.well-known/oauth-protected-resource/mcp",
       "scope": "trades:execute",
       "authorization_remediation": {
         "authorization_details": [{
@@ -209,7 +209,8 @@ for want of authorization with a JSON-RPC error {{JSONRPC}} whose `code` is
           "actions": ["execute_trade"],
           "datatypes": ["trades:execute"]
         }],
-        "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwf",
+        "authorization_reference":
+          "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
         "authorization_server": "https://alice-as.example",
         "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
       }
