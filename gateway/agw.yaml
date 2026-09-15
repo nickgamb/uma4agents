@@ -72,6 +72,7 @@ binds:
                   - authorization
                   - signature
                   - signature-input
+                  - content-digest
                   - host
                   - content-type
                   - mcp-method
@@ -108,6 +109,7 @@ binds:
                   - authorization
                   - signature
                   - signature-input
+                  - content-digest
                   - host
                   - content-type
                   - mcp-method
@@ -147,6 +149,7 @@ binds:
                   - authorization
                   - signature
                   - signature-input
+                  - content-digest
                   - host
                   - content-type
                   - mcp-method
@@ -197,6 +200,7 @@ binds:
                   - authorization
                   - signature
                   - signature-input
+                  - content-digest
                   - host
                   - content-type
                   # SEP-2243 mirrors the JSON-RPC method and target into

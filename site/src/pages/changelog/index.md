@@ -54,6 +54,8 @@ release within that month. One entry per release.
 - **Authorization server:** a sub-agent admitted while its introducing agent was being revoked was written active after the revocation had swept, and kept working. The parent is checked again immediately before the child is written.
 - **Enforcement point:** a break-glass override bound to no operation was accepted for a tool the deployment treats as single-use. It is refused like any other grant without the binding.
 - **Tests:** `make pep-test` signs one holder's verdict with a key she never published and asserts it is not counted.
+- **Authorization server:** the pulled resource registry is one process's copy for every owner it serves, and the owner's resource listing, tier creation, the organization views and `/perm` read all of it. Each now reads only the entries for that owner, so one owner's tool id never resolves against another's.
+- **Gateway:** the ext_authz header allowlists in compose and Kubernetes did not forward `content-digest`, so a signature covering the body could never be checked and requiring one refused every call. The header is forwarded.
 
 ## September 12 2026
 

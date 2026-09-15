@@ -353,6 +353,17 @@ STORE: store.Store = store.make_store()
 RESOURCES: dict[str, dict] = {}
 
 
+def resources_for(owner: str) -> dict[str, dict]:
+    """The pulled registry, as one owner may see and govern it.
+
+    `RESOURCES` is one process's copy of every listing it has pulled, for
+    every owner it serves. An entry that names another owner is not hers to
+    list, write a tier over, or ask a permission against.
+    """
+    return {rid: d for rid, d in RESOURCES.items()
+            if d.get("owner") in (None, owner)}
+
+
 def jwk_thumbprint(jwk: dict) -> str:
     """RFC 7638 thumbprint (OKP profile)."""
     canonical = json.dumps(
@@ -1114,7 +1125,7 @@ async def register_permission(request: Request) -> JSONResponse:
     body = await request.json()
     rid = body.get("resource_id")
     # FedAuthz §4.1: the AS only issues tickets against its own registry.
-    registered = RESOURCES.get(rid)
+    registered = resources_for(owner).get(rid)
     if registered is None:
         # An unknown id means our pulled copy may be stale, so re-read what
         # the RS publishes. Staleness is the price of declarative
@@ -1130,7 +1141,7 @@ async def register_permission(request: Request) -> JSONResponse:
             except Exception as exc:
                 event("resources.pull_retry", client_id=client_id,
                       error=str(exc)[:200])
-        registered = RESOURCES.get(rid)
+        registered = resources_for(owner).get(rid)
     if registered is None:
         event("permission.rejected", resource_id=rid, reason="invalid_resource_id")
         return JSONResponse(
@@ -1451,7 +1462,7 @@ async def clamp_to_envelope(owner: str, envelope: dict,
     client = _ORG.get(owner)
     if client is not None:
         await client.report(org.compliance(
-            await st(owner).tiers(), envelope, list(RESOURCES),
+            await st(owner).tiers(), envelope, list(resources_for(owner)),
             clamped_fields=[c["field"] for c in changed]))
     return changed
 
@@ -4652,13 +4663,13 @@ async def owner_resources(request: Request) -> list:
     # that is merely short or merely long — nothing is missing to notice — so
     # those need the clock.
     granted = envelope.get("grants") or []
-    absent = any(not any(org.claims_match(rid, [g]) for rid in RESOURCES)
+    absent = any(not any(org.claims_match(rid, [g]) for rid in resources_for(owner))
                  for g in granted)
     if absent or _LAST_PULL.get(owner, 0) < time.time() - RESOURCE_REFRESH_S:
         await pull_registrations_now(owner)
     tiers = await st(owner).tiers()
     out = []
-    for rid, desc in RESOURCES.items():
+    for rid, desc in resources_for(owner).items():
         tier_id, tier = policy.tier_for_resource(tiers, rid)
         # Whose resource this is. Hers unless an organization claims it, in
         # which case she administers it rather than owning it — and her
@@ -4714,7 +4725,7 @@ async def owner_create_policy(request: Request) -> dict:
     tier_id = (spec.get("id") or "").strip()
     try:
         tier = policy.new_tier(tier_id, spec, await st(owner).tiers(),
-                               set(RESOURCES), await jointly_held(owner),
+                               set(resources_for(owner)), await jointly_held(owner),
                                owner=owner)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -4863,7 +4874,7 @@ async def owner_organization(request: Request) -> dict:
         "tiers": {tid: view for tid, tier in tiers.items()
                   if (view := org.tier_view(tier, envelope))},
         "governed_resources": sorted(
-            rid for rid in RESOURCES if org.reaches(rid, envelope)),
+            rid for rid in resources_for(owner) if org.reaches(rid, envelope)),
     }
 
 
@@ -4940,7 +4951,7 @@ async def owner_organization_preview(request: Request) -> dict:
             "powers": envelope.get("powers") or {},
             "changes": would,
             "governed_resources": sorted(
-                rid for rid in RESOURCES if org.reaches(rid, envelope))}
+                rid for rid in resources_for(owner) if org.reaches(rid, envelope))}
 
 
 @app.post("/owner/organization")
