@@ -99,3 +99,18 @@ spec:
   selector: { app: paios }
   ports:
     - { name: https, port: 8443, targetPort: 8443 }
+---
+# Her personal AI only calls out: to her authorization server and to the
+# model. Nothing in the lab calls in, and the pod holds her device key, so
+# the waypoint admits nobody. An ALLOW policy with no rules matches nothing,
+# which denies every inbound request at the Service's waypoint; the
+# namespace-wide default-deny does not reach a waypoint-bound Service.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: paios-no-inbound
+  namespace: alice
+spec:
+  targetRefs:
+    - { kind: Service, group: "", name: paios }
+  action: ALLOW

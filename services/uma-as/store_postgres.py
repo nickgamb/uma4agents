@@ -712,6 +712,15 @@ class PostgresOwnerStore:
             "ON CONFLICT (owner) DO UPDATE SET record = EXCLUDED.record",
             self._o, json.dumps(record))
 
+    async def update_organization(self, fields: dict) -> bool:
+        # One statement merging only the keys given, so a membership refresh
+        # writing the envelope and an administrator's block writing `blocked`
+        # cannot overwrite each other from different replicas.
+        row = await self._pool.fetchrow(
+            "UPDATE organizations SET record = (record::jsonb || $2::jsonb)::json "
+            "WHERE owner = $1 RETURNING owner", self._o, json.dumps(fields))
+        return row is not None
+
     async def clear_organization(self) -> bool:
         row = await self._pool.fetchrow(
             "DELETE FROM organizations WHERE owner = $1 RETURNING owner", self._o)

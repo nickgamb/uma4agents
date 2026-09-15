@@ -41,8 +41,6 @@ shows a fragment. Correlate by family, not by process.
 
 | Event | Emitted when |
 |---|---|
-| `resource.registered` | A resource lands in the authority's registry |
-| `resources.registered_at_startup` | The startup pull completes |
 | `terms.published` | A terms document version is published |
 | `terms.declined` | The requesting side refuses the proffered terms |
 
@@ -95,11 +93,28 @@ shows a fragment. Correlate by family, not by process.
 | Event | Emitted when |
 |---|---|
 | `resource_server.registered` | One introduces itself. Carries the status it landed in, and the one it was in before |
-| `resource_server.approved` | The owner lets it use her Protection API |
 | `resource_server.revoked` | She withdraws it |
 | `resource_server.registration_refused` | The signature was not from a key that origin publishes |
 | `resource_server.metadata_rejected` | The document resolved and did not check out — it claimed another resource, named another authority, or pointed its keys elsewhere. The reasons are in the event |
-| `resource_server.metadata_unreachable` | It could not be fetched, which here is a refusal rather than a shrug: the document *is* the credential |
+
+### Every other event
+
+Emitted beside the ones above, listed by the component that emits them. Names
+are stable; the `details` of each are what the emitting code puts there.
+
+**`kwaai/ability`:** `authority.unreachable`, `decision.moot`, `decision.unsent`
+
+**`lib`:** `challenge.awaiting_owner`, `joint.jwks_unreachable`, `joint.mandate_unreadable`, `org.membership_unreadable`, `permission.mint_failed`, `resource_server.establish`
+
+**`services/joint-tally`:** `access.reported`, `mandates.loaded`, `quote.none`, `quote.unreachable`, `ticket.awaiting_holders`, `ticket.minted`, `verdict.other_mandate`, `verdict.pending`, `verdict.recorded`, `verdict.refused_to_answer`, `verdict.unreachable`, `verdict.unverifiable`, `verdict.unverified`
+
+**`services/org-authority`:** `admin.static_credential_enabled`, `break_glass.granted`, `break_glass.opened`, `break_glass.replay_refused`, `break_glass.spent`, `break_glass.used`, `break_glass.voided`, `charter.published`, `engine.loaded`, `engine.unreachable`, `engine.waiting`, `invitation.declined`, `invitation.sent`, `invitation.withdrawn`, `invoker_directory.unresolved`, `join_code.rotated`, `member.administered`, `member.compliance`, `member.joined`, `member.left`, `member.notified`, `member.removed`, `member.role_set`, `notice.failed`, `role.default_set`, `role.removed`, `role.saved`
+
+**`services/uma-as`:** `client_metadata.resolved`, `client_metadata.unresolved`, `identity.asserted`, `identity.rejected`, `joint.fold_rejected`, `joint.joined`, `joint.left`, `joint.pending`, `joint.quoted`, `joint.verdict`, `need_info.identity_required`, `operator.claimed`, `operator.disclaimed`, `org.agent_blocked`, `org.charter_changed`, `org.clamped`, `org.client_stale`, `org.invitation_declined`, `org.invitation_unreadable`, `org.joined`, `org.membership_ended`, `org.notice`, `org.operator_blocked`, `org.record_unusable`, `org.unreachable`, `pat.issued`, `permission.rejected`, `resources.pull_failed`, `resources.pull_retry`, `resources.pulled`, `resources.unshared`, `resources.unshared_skipped`, `rpt.consume_refused`
+
+**`services/uma-pep`:** `mandate.unreachable`, `owner_resources.denied`, `owner_resources.served`, `registration.declarative`, `upstream.unreachable`
+
+**`services/xaa-broker`:** `connection.configured`, `connection.withdrawn`, `exchange.issued`, `exchange.refused`
 
 ## The ledger, as a projection
 

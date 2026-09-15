@@ -355,6 +355,12 @@ class MemoryOwnerStore:
     async def set_organization(self, record: dict) -> None:
         self._organization = copy.deepcopy(record)
 
+    async def update_organization(self, fields: dict) -> bool:
+        if self._organization is None:
+            return False
+        self._organization.update(copy.deepcopy(fields))
+        return True
+
     async def clear_organization(self) -> bool:
         had = self._organization is not None
         self._organization = None

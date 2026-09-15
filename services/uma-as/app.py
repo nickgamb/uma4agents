@@ -1435,7 +1435,9 @@ async def org_client(owner: str) -> org.OrgClient | None:
         return None
     known = (record.get("envelope") or {}).get("charter_version")
     record["envelope"] = envelope
-    await st(owner).set_organization(record)
+    if not await st(owner).update_organization({"envelope": envelope}):
+        _ORG.pop(owner, None)
+        return None
     if envelope.get("charter_version") != known:
         # The organization edited its charter. Her terms are re-clamped to
         # the new ceiling here rather than at the next request, because the
@@ -1900,7 +1902,7 @@ async def org_block(owner: str, *, handle: str = None, operator: str = None,
     elif value not in blocked[key]:
         blocked[key].append(value)
     record["blocked"] = blocked
-    await st(owner).set_organization(record)
+    await st(owner).update_organization({"blocked": blocked})
     return blocked
 
 

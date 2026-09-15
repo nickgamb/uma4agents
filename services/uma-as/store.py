@@ -401,6 +401,10 @@ class OwnerStore(Protocol):
     async def set_organization(self, record: dict) -> None:
         """Store or replace the enrolment."""
 
+    async def update_organization(self, fields: dict) -> bool:
+        """Merge these top-level keys into the membership record, atomically.
+        False when there is no record to update."""
+
     async def clear_organization(self) -> bool:
         """Drop it. False if she was not enrolled.
 
