@@ -332,6 +332,10 @@ def event(name: str, corr: str | None = None, **details) -> None:
     )
 
 
+# The largest request body this host reads to decide a call.
+MAX_BODY_BYTES = int(os.environ.get("UMA_PEP_MAX_BODY_BYTES", str(1024 * 1024)))
+
+
 def deny(status: int, body: dict, headers: dict | None = None) -> Response:
     return Response(
         status_code=status,
@@ -595,8 +599,21 @@ async def check(request: Request, rest: str = "") -> Response:
     for this host means a status line and, on a challenge, the UMA header.
     """
     original_path = rest or "/"
-    body = await request.body()
     h = request.headers
+    # Bounded before anything reads it. Unbounded, one request can hold as
+    # much memory as it likes before any credential is looked at.
+    declared = h.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+        return deny(413, {"error": "invalid_request",
+                          "error_description": "request body too large"})
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_BODY_BYTES:
+            return deny(413, {"error": "invalid_request",
+                              "error_description": "request body too large"})
+        chunks.append(chunk)
+    body = b"".join(chunks)
 
     # The gateway buffers the body up to a configured ceiling and, past it,
     # forwards a prefix with this header set rather than refusing the call.

@@ -99,6 +99,9 @@ async def owner_token(request: Request) -> str | None:
     if tok["expires_at"] > time.time() + 15:
         return tok["access_token"]
     if not tok.get("refresh_token"):
+        # A session with no live token is not a login; forgetting it here is
+        # what makes every route see that, not only the owner-API ones.
+        TOKENS.pop(request.session.get("sid", ""), None)
         return None
     metadata = await oauth.keycloak.load_server_metadata()
     async with httpx.AsyncClient() as c:
@@ -109,6 +112,8 @@ async def owner_token(request: Request) -> str | None:
                   "client_id": OIDC_CLIENT_ID},
         )
     if r.status_code != 200:
+        # Refused by the provider: her session there has ended, so it ends here.
+        TOKENS.pop(request.session.get("sid", ""), None)
         return None
     fresh = r.json()
     tok.update(
@@ -224,6 +229,9 @@ def _enrich(positions: list[dict]) -> dict:
 async def portfolio(request: Request):
     if (r := require_login(request)):
         return JSONResponse({"error": "auth"}, status_code=401)
+    if AUTH_MODE == "oidc" and await owner_token(request) is None:
+        # A session whose token cannot be refreshed has ended at the provider.
+        return JSONResponse({"error": "auth"}, status_code=401)
     data = await vault.call_tool("get_positions")
     enriched = _enrich(data["positions"])
     enriched["as_of"] = data["as_of"]
@@ -234,12 +242,18 @@ async def portfolio(request: Request):
 async def transactions(request: Request, account: str = "brokerage-main"):
     if require_login(request):
         return JSONResponse({"error": "auth"}, status_code=401)
+    if AUTH_MODE == "oidc" and await owner_token(request) is None:
+        # A session whose token cannot be refreshed has ended at the provider.
+        return JSONResponse({"error": "auth"}, status_code=401)
     return await vault.call_tool("get_transactions", {"account": account})
 
 
 @app.post("/api/trade")
 async def trade(request: Request):
     if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if AUTH_MODE == "oidc" and await owner_token(request) is None:
+        # A session whose token cannot be refreshed has ended at the provider.
         return JSONResponse({"error": "auth"}, status_code=401)
     body = await request.json()
     result = await vault.call_tool(
@@ -530,12 +544,29 @@ async def agent_events(request: Request):
     if require_login(request):
         return JSONResponse({"error": "auth"}, status_code=401)
 
+    # Opened before answering, so a refusal upstream is answered as one. A
+    # 200 with an empty stream made the page reconnect forever and show
+    # nothing, while alerts she needed never arrived.
+    client = httpx.AsyncClient(timeout=None)
+    upstream = await client.send(
+        client.build_request("GET", f"{UMA_AS}/owner/events",
+                             headers=await owner_headers(request)),
+        stream=True)
+    if upstream.status_code != 200:
+        status = upstream.status_code
+        await upstream.aclose()
+        await client.aclose()
+        if status in (401, 403):
+            return JSONResponse({"error": "auth"}, status_code=401)
+        return JSONResponse({"error": "events_unavailable"}, status_code=502)
+
     async def stream():
-        async with httpx.AsyncClient(timeout=None) as c:
-            async with c.stream("GET", f"{UMA_AS}/owner/events",
-                                headers=await owner_headers(request)) as r:
-                async for chunk in r.aiter_raw():
-                    yield chunk
+        try:
+            async for chunk in upstream.aiter_raw():
+                yield chunk
+        finally:
+            await upstream.aclose()
+            await client.aclose()
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 

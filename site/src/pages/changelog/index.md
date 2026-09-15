@@ -66,6 +66,11 @@ release within that month. One entry per release.
 - **XAA broker:** without `XAA_IDP_ISSUER` set, the broker trusted a different realm from the one compose configures as the employee directory. The default is the employee directory.
 - **Authorization server:** blocking an operator revoked its agents' connections but not the sub-agents they had introduced. Those are revoked too.
 - **Authorization server:** a request refused because no tier covered the resource, or because the owner's queue was full, left no entry in her record. Both are recorded.
+- **Owner portal:** a failed token refresh left the session signed in, and the portfolio, transactions and trade routes never checked the token, so the portal kept reading and trading her vault after her provider session ended. A failed refresh ends the session, and those routes require a live token.
+- **Owner portal:** the live-events proxy answered 200 with an empty stream when her authority refused the token, so the page reconnected indefinitely and alerts never arrived. The refusal is passed on.
+- **Joint tally:** a holder authority refusing to answer (4xx) was treated as unreachable, leaving the request pending with no end. It is counted as her refusal. A failure fetching her keys to check a verdict escaped `/token` as a 500 after the ticket was spent; the request now stays pending.
+- **Enforcement point:** the sidecar read a request body of any size before authorizing it. Bodies over `UMA_PEP_MAX_BODY_BYTES` (default 1 MiB) are refused with 413.
+- **Agent library:** the trust store for the identity provider was written to a fixed path under `/tmp`, where another local user could add a CA. It is a private temporary file.
 
 ## September 12 2026
 

@@ -335,6 +335,20 @@ async def collect(rec: dict, doc: dict) -> dict:
                 "owner": owner, "account": rec["account"],
                 "negotiation": rec["family"], "resource_id": rec["resource_id"],
                 "contract": rec["contract_hash"], "agreement": rec["agreement"]})
+        except httpx.HTTPStatusError as exc:
+            # She answered, and the answer was a refusal to take part. That is
+            # not an outage to wait out: counted as her refusal, so the
+            # request ends instead of pending with no deadline.
+            if 400 <= exc.response.status_code < 500:
+                rec["verdicts"][owner] = "refuse"
+                rec["because"][owner] = [
+                    f"her authority refused to answer ({exc.response.status_code})"]
+                event("verdict.refused_to_answer", corr=rec["family"], holder=owner,
+                      status=exc.response.status_code)
+                continue
+            event("verdict.unreachable", corr=rec["family"], holder=owner,
+                  error=str(exc)[:160])
+            continue
         except httpx.HTTPError as exc:
             # Unreachable is not a no. It is also not a yes, and under any
             # rule that needs this holder the request does not proceed — the
@@ -349,7 +363,15 @@ async def collect(rec: dict, doc: dict) -> dict:
         jws = answer.get("verdict")
         if not jws:
             continue
-        claims = verify_verdict(jws, h, rec)
+        try:
+            claims = verify_verdict(jws, h, rec)
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            # Her keys could not be read to check the answer. Not counted yet,
+            # and not an error out of /token after the ticket was spent: the
+            # request stays pending and the verdict is asked for again.
+            event("verdict.unverifiable", corr=rec["family"], holder=owner,
+                  error=str(exc)[:160])
+            continue
         if claims is None:
             continue
         rec["verdicts"][owner] = claims["effect"]

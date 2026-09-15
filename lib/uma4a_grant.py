@@ -423,8 +423,12 @@ def provider_trust(ca_bundle: str = ""):
         return True
     try:
         import certifi
-        combined = "/tmp/u4a-agent-provider-trust.pem"
-        with open(combined, "w") as out:
+        import tempfile
+        # A private file, not a fixed shared path: anyone who could write a
+        # predictable /tmp name could add a CA this agent then trusts for its
+        # enterprise credentials.
+        fd, combined = tempfile.mkstemp(prefix="u4a-provider-trust-", suffix=".pem")
+        with os.fdopen(fd, "w") as out:
             out.write(open(certifi.where()).read())
             out.write("\n")
             out.write(open(private).read())
