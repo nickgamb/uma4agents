@@ -698,9 +698,13 @@ function charterForm(view, doc) {
     <div id="charterError"></div>`;
   wireTabs(view);
   CHARTER = doc.charter;
+  // The version the form was built from; publishing sends it so a charter
+  // changed underneath this page is refused rather than overwritten.
+  CHARTER_VERSION = doc.version ?? null;
 }
 
 let CHARTER = null;
+let CHARTER_VERSION = null;
 const list = (id) => $(id).value.split(",").map(s => s.trim()).filter(Boolean);
 
 window.saveForm = async () => {
@@ -740,7 +744,7 @@ window.saveForm = async () => {
       invokers: list("#c-glass-inv"),
     },
   };
-  await publishCharter(doc);
+  await publishCharter({ ...doc, base_version: CHARTER_VERSION });
 };
 
 async function publishCharter(doc) {
