@@ -5,8 +5,8 @@
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
 Intended status: Informational                                  E. Maler
-Expires: 18 March 2027                                      Venn Factory
-                                                       14 September 2026
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
       User-Managed Access (UMA) 2.0 Profile for Autonomous Agents
@@ -44,7 +44,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 5]
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 6]
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -389,7 +389,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 8]
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -501,15 +501,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                 [Page 9]
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 4.2.  Responses
 
-   The authorization server's responses are those of [UMAGrant]
-   Section 3.3.1.  Two are constrained by this profile.
+   The authorization server's responses are those of [UMAGrant] Sections
+   3.3.5 and 3.3.6.  Two are constrained by this profile.
 
    A request_submitted response indicates that the owner has been asked
    and has not yet answered.  The authorization server MUST distinguish
@@ -557,7 +557,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 10]
+Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -613,7 +613,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 11]
+Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -725,7 +725,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 13]
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -781,7 +781,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 14]
+Gamb & Maler              Expires 19 March 2027                [Page 14]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -837,7 +837,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 15]
+Gamb & Maler              Expires 19 March 2027                [Page 15]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -878,7 +878,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    be tested for in a single-process deployment — which is where the
    specification has to carry it, because the implementation will not.
 
-   [UMAGrant] Section 3.3.1 says a permission ticket is single-use and
+   [UMAGrant] Section 5.5 says a permission ticket is single-use and
    does not say where in enforcement it is spent, nor what "single-use"
    means when the authorization server has more than one replica.  Both
    are stated here.
@@ -893,7 +893,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 16]
+Gamb & Maler              Expires 19 March 2027                [Page 16]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -949,7 +949,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 17]
+Gamb & Maler              Expires 19 March 2027                [Page 17]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1005,7 +1005,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 18]
+Gamb & Maler              Expires 19 March 2027                [Page 18]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1061,7 +1061,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 19]
+Gamb & Maler              Expires 19 March 2027                [Page 19]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1117,7 +1117,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 20]
+Gamb & Maler              Expires 19 March 2027                [Page 20]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1173,7 +1173,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 21]
+Gamb & Maler              Expires 19 March 2027                [Page 21]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1229,7 +1229,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 22]
+Gamb & Maler              Expires 19 March 2027                [Page 22]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1285,7 +1285,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 23]
+Gamb & Maler              Expires 19 March 2027                [Page 23]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1341,7 +1341,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 24]
+Gamb & Maler              Expires 19 March 2027                [Page 24]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1397,7 +1397,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 25]
+Gamb & Maler              Expires 19 March 2027                [Page 25]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1453,7 +1453,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 26]
+Gamb & Maler              Expires 19 March 2027                [Page 26]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1509,7 +1509,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 27]
+Gamb & Maler              Expires 19 March 2027                [Page 27]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1565,7 +1565,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 28]
+Gamb & Maler              Expires 19 March 2027                [Page 28]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1621,7 +1621,7 @@ A.1.  Profile Identifiers
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 29]
+Gamb & Maler              Expires 19 March 2027                [Page 29]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1677,7 +1677,7 @@ A.3.  Authorization Details Type
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 30]
+Gamb & Maler              Expires 19 March 2027                [Page 30]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1733,7 +1733,7 @@ B.1.  UMA for Agents Reference Implementation
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 31]
+Gamb & Maler              Expires 19 March 2027                [Page 31]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1789,4 +1789,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 18 March 2027                [Page 32]
+Gamb & Maler              Expires 19 March 2027                [Page 32]

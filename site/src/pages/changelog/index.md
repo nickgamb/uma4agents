@@ -40,7 +40,7 @@ release within that month. One entry per release.
 - **Specification:** four cross-document section references pointed at the wrong sections.
 - **Docs:** the specification page, the deviations page and `docs/PROTOCOL.md` cited §11 for the core draft's register of departures, which is §12.
 - **Specification:** the core draft's design rule listed the `WWW-Authenticate: UMA` header as reused unchanged, contradicting its own departure 8; it now says the header is kept over HTTP but is no longer the only encoding.
-- **Specification:** the federated authorization draft cited RFC 9728 §2.1 for `signed_metadata` (it is §2.2), and the terms draft cited UMA Grant §3.3.4 for `need_info` (it is §3.3.6).
+- **Specification:** the federated authorization draft cited RFC 9728 §2.1 for `signed_metadata` (it is §2.2), and the terms draft cited UMA Grant §3.3.4 for `need_info` (it is §3.3.6). The core draft and the deviations page cited UMA Grant §3.3.1 for single-use permission tickets (§5.5) and for the authorization server's responses (§3.3.5 and §3.3.6).
 - **Specification:** the policy draft now states that its `429` refusal at the pending-queue bound departs from UMA Grant's `403` for `request_denied`, and why.
 - **Specification:** the identifier appendices were incomplete. Added: core's `insufficient_authorization`, `PoP` and the remediation members; terms' `decline` and `receipt`; lineage's `introduction` claim; multiparty's `org`, `kind` and `admin` claims. The multiparty draft now defines the `u4a-org-admin+jwt` credential it listed.
 - **Specification:** example digests and thumbprints are full length, the MCP binding's remediation example matches the core draft's, and references a conforming implementation needs are normative.

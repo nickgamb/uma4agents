@@ -144,7 +144,7 @@ one stack means the claim is measured rather than argued.
 
 ## 10. Consumption ordering made normative
 
-**Baseline.** UMA 2.0 §3.3.1 does not say where in enforcement a single-use
+**Baseline.** UMA 2.0 §5.5 makes permission tickets single-use but does not say where in enforcement a single-use
 token is spent.
 
 **Here.** Introspect (non-consuming) → permissions → proof-of-possession →

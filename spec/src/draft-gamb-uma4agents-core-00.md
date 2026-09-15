@@ -482,7 +482,8 @@ first, because which terms apply follows from which party the agent acts for.
 
 ## Responses
 
-The authorization server's responses are those of {{UMAGrant}} Section 3.3.1.
+The authorization server's responses are those of {{UMAGrant}} Sections 3.3.5
+and 3.3.6.
 Two are constrained by this profile.
 
 A `request_submitted` response indicates that the owner has been asked and has
@@ -772,7 +773,7 @@ under replication, and it cannot be tested for in a single-process deployment â€
 which is where the specification has to carry it, because the implementation will
 not.
 
-{{UMAGrant}} Section 3.3.1 says a permission ticket is single-use and does not say
+{{UMAGrant}} Section 5.5 says a permission ticket is single-use and does not say
 where in enforcement it is spent, nor what "single-use" means when the
 authorization server has more than one replica. Both are stated here.
 
