@@ -29,6 +29,7 @@ release within that month. One entry per release.
 - **Organization authority:** a policy engine that answered with no decision — what OPA returns after a restart that lost the pushed policy — was read as allow. It is now treated as the engine failing: a recent decision for the same request stands for the grace window, and otherwise the request is refused.
 - **Organization authority:** joining under a name already enrolled replaced that member's record, moving her notices and break-glass alerts to whatever authority the caller named. It is now refused with 409.
 - **Enforcement point:** a request path under `/mcp/` whose first segment was not a known owner, shared resource or account was judged under the primary owner's authority. The owner is now read from the path prefix the gateway routes on, and an unknown path is refused with `invalid_resource_id`.
+- **Kubernetes:** the edge's single wildcard listener admitted routes from every party namespace for any hostname, so one party could attach a more specific route to another's name and serve its own keys there. Each hostname now has its own listener that admits only the namespace owning it.
 
 ## September 12 2026
 

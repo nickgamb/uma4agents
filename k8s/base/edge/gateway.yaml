@@ -2,9 +2,9 @@
 #
 # This replaces the Envoy container the compose stack runs, and the routes
 # below are a one-for-one translation of edge/envoy.yaml's virtual hosts. The
-# interesting difference is that cross-namespace backends now require the
-# target namespace to *grant* the reference (see referencegrants.yaml) — the
-# edge cannot route to a service just because it knows its name.
+# interesting difference is that each party publishes its route beside its own
+# workloads, and the listener for a hostname admits only the namespace that
+# owns it, so no party can answer for another's name.
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -40,24 +40,179 @@ spec:
       kind: GatewayParameters
       name: edge-params
   listeners:
-    - name: https
+    # One listener per hostname, each admitting routes only from the namespace
+    # that owns that name. A single wildcard listener open to every party
+    # namespace let one party attach a more specific route to another's
+    # hostname, because nothing tied a hostname to a namespace. A hostname not
+    # listed here has no listener, so a route for it attaches nowhere.
+    - name: agent
       protocol: HTTPS
       port: 443
-      hostname: "*.uma.lab"
+      hostname: agent.uma.lab
       tls:
         mode: Terminate
         certificateRefs:
           - name: edge-server-tls
       allowedRoutes:
-        # Routes live beside the workloads they front, in the namespace that
-        # owns them, rather than all being written here by whoever runs the
-        # edge. Each party publishes its own front door.
         namespaces:
           from: Selector
           selector:
-            matchExpressions:
-              - key: u4a.ai/party
-                operator: Exists
+            matchLabels:
+              kubernetes.io/metadata.name: sterling-vance
+    - name: alice-agent
+      protocol: HTTPS
+      port: 443
+      hostname: alice-agent.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: alice
+    - name: alice-as
+      protocol: HTTPS
+      port: 443
+      hostname: alice-as.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: alice
+    - name: carol-as
+      protocol: HTTPS
+      port: 443
+      hostname: carol-as.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: carol
+    - name: carol-portal
+      protocol: HTTPS
+      port: 443
+      hostname: carol-portal.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: carol
+    - name: gateway
+      protocol: HTTPS
+      port: 443
+      hostname: gateway.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: meridian
+    - name: joint-tally
+      protocol: HTTPS
+      port: 443
+      hostname: joint-tally.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: tally
+    - name: keycloak
+      protocol: HTTPS
+      port: 443
+      hostname: keycloak.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: idp
+    - name: northwind-org
+      protocol: HTTPS
+      port: 443
+      hostname: northwind-org.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: northwind
+    - name: org-console
+      protocol: HTTPS
+      port: 443
+      hostname: org-console.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: northwind
+    - name: portal
+      protocol: HTTPS
+      port: 443
+      hostname: portal.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: alice
+    - name: ps
+      protocol: HTTPS
+      port: 443
+      hostname: ps.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: aauth
 ---
 # kgateway provisions a Service for the Gateway; pin it to the NodePort the
 # kind cluster maps to the host's :443, so https://portal.uma.lab works in a
