@@ -659,7 +659,7 @@ def traceparent() -> str | None:
 
 
 def signed_headers(method: str, authority: str, path: str, rpt: str,
-                   keys: AgentKeys) -> dict[str, str]:
+                   keys: AgentKeys, body: bytes | None = None) -> dict[str, str]:
     """Authorization + RFC 9421 signature headers for a resource request.
 
     When the agent has published its key, the signature also covers a Web Bot
@@ -669,8 +669,12 @@ def signed_headers(method: str, authority: str, path: str, rpt: str,
     where that key was published.
     """
     authorization = f"PoP {rpt}"
+    # With the body, the signature covers an RFC 9530 Content-Digest over the
+    # exact bytes sent, so nothing between the agent and the enforcement point
+    # can change a call's arguments without breaking the signature.
     sig = sign(method, authority, path, authorization, keys.key, keys.keyid,
-               signature_agent=keys.signature_agent, tag="web-bot-auth")
+               signature_agent=keys.signature_agent, tag="web-bot-auth",
+               body=body)
     headers = {"Authorization": authorization, **sig}
     # W3C Trace Context: deliberately *not* covered by the signature. It is
     # diagnostic metadata a proxy may legitimately rewrite, and binding it

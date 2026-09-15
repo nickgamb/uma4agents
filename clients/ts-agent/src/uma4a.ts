@@ -162,28 +162,39 @@ export async function runGrant(fetchFn: typeof fetch, ch: Challenge, keys: Agent
 // ---- Beat 4: proof of possession on the call ----------------------------------
 
 /** RFC 9421 over @method @authority @path authorization, label sig1, alg ed25519. */
-export function signRequest(method: string, authority: string, path: string, authorization: string, keys: AgentKeys): Record<string, string> {
+/** With `body`, the signature also covers an RFC 9530 Content-Digest over those exact bytes. */
+export function signRequest(method: string, authority: string, path: string, authorization: string, keys: AgentKeys,
+  body?: string): Record<string, string> {
   const created = Math.floor(Date.now() / 1000);
   const covered = ['"@method"', '"@authority"', '"@path"', '"authorization"'];
+  const lines = [`"@method": ${method}`, `"@authority": ${authority}`, `"@path": ${path}`, `"authorization": ${authorization}`];
+  const digest = body === undefined ? undefined : `sha-256=:${createHash("sha256").update(body).digest("base64")}:`;
+  if (digest) { covered.push('"content-digest"'); lines.push(`"content-digest": ${digest}`); }
   const params = `(${covered.join(" ")});created=${created};keyid="${keys.keyid}";alg="ed25519"`;
-  const base = [`"@method": ${method}`, `"@authority": ${authority}`, `"@path": ${path}`,
-    `"authorization": ${authorization}`, `"@signature-params": ${params}`].join("\n");
+  const base = [...lines, `"@signature-params": ${params}`].join("\n");
   const sig = sign(null, Buffer.from(base), keys.key);
-  return { Authorization: authorization, "Signature-Input": `sig1=${params}`, Signature: `sig1=:${sig.toString("base64")}:` };
+  const out: Record<string, string> = { Authorization: authorization, "Signature-Input": `sig1=${params}`, Signature: `sig1=:${sig.toString("base64")}:` };
+  if (digest) out["Content-Digest"] = digest;
+  return out;
 }
 
 // ---- MCP over streamable HTTP ----------------------------------------------------
 
 export async function mcpCall(fetchFn: typeof fetch, url: string, method: string, params: Record<string, unknown>,
-  headers: Record<string, string> = {}): Promise<{ status: number; headers: Headers; body: Record<string, any> | null }> {
+  headers: Record<string, string> | ((body: string) => Record<string, string>) = {}): Promise<{ status: number; headers: Headers; body: Record<string, any> | null }> {
+  const meta0 = { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+    "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "uma4a-ts-agent", version: "0.1" } };
+  const payload = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta0 } });
+  const extra = typeof headers === "function" ? headers(payload) : headers;
   const h: Record<string, string> = {
     "content-type": "application/json", accept: "application/json, text/event-stream",
-    "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, "Mcp-Method": method, ...headers,
+    "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, "Mcp-Method": method, ...extra,
   };
   if (method === "tools/call") h["Mcp-Name"] = String(params.name ?? "");
   const meta = { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
     "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "uma4a-ts-agent", version: "0.1" } };
-  const r = await fetchFn(url, { method: "POST", headers: h, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta } }) });
+  void meta;
+  const r = await fetchFn(url, { method: "POST", headers: h, body: payload });
   const text = await r.text();
   const line = text.split("\n").find((l) => l.startsWith("data:"));
   let body: Record<string, any> | null = null;

@@ -220,7 +220,8 @@ class Upstream:
                     "continuing challenge-driven")
         return self._prm
 
-    async def _post(self, msg: dict, headers: dict | None = None) -> httpx.Response:
+    async def _post(self, msg: dict, headers: dict | None = None,
+                    content: bytes | None = None) -> httpx.Response:
         # No session id: 2026-07-28 removed sessions, and all the state a
         # server needs rides in the message.
         h = {"accept": "application/json, text/event-stream",
@@ -236,6 +237,8 @@ class Upstream:
             h["Mcp-Name"] = name
         if headers:
             h.update(headers)
+        if content is not None:
+            return await self.client.post(GATEWAY, content=content, headers=h)
         return await self.client.post(GATEWAY, json=msg, headers=h)
 
     @staticmethod
@@ -255,14 +258,25 @@ class Upstream:
             ) from None
 
     async def request(self, method: str, params: dict | None = None,
-                      headers: dict | None = None, notification: bool = False):
+                      headers: dict | None = None, notification: bool = False,
+                      sign: tuple | None = None):
         p = dict(params or {})
         p["_meta"] = {**CLIENT_META, **(p.get("_meta") or {})}
         msg: dict = {"jsonrpc": "2.0", "method": method, "params": p}
         if not notification:
             self._id += 1
             msg["id"] = self._id
-        r = await self._post(msg, headers)
+        if sign is not None:
+            # Signed over the bytes that are sent: serialise once, sign those,
+            # post those.
+            rpt, keys = sign
+            content = json.dumps(msg, separators=(",", ":")).encode()
+            headers = {**(headers or {}),
+                       **signed_headers("POST", AUTHORITY, MCP_PATH, rpt, keys,
+                                        body=content)}
+            r = await self._post(msg, headers, content=content)
+        else:
+            r = await self._post(msg, headers)
         return r, self._payload(r)
 
     async def ensure_discovered(self) -> None:
@@ -389,9 +403,8 @@ class Upstream:
                 raise PendingHandback(held["as_uri"], held["ticket"])
             if state == "granted" and resumed is not None:
                 OUTSTANDING.pop(key, None)
-                headers = signed_headers("POST", AUTHORITY, MCP_PATH, resumed, keys)
                 r, payload = await self.request("tools/call", params,
-                                                headers=headers)
+                                                sign=(resumed, keys))
                 if r.status_code == 200 and not (payload or {}).get("error"):
                     try:
                         return payload["result"]["content"][0]["text"]
@@ -456,8 +469,7 @@ class Upstream:
                 OUTSTANDING[key] = {"as_uri": pend.as_uri, "ticket": pend.ticket}
                 raise
             OUTSTANDING.pop(key, None)
-            headers = signed_headers("POST", AUTHORITY, MCP_PATH, rpt, keys)
-            r, payload = await self.request("tools/call", params, headers=headers)
+            r, payload = await self.request("tools/call", params, sign=(rpt, keys))
 
         if r.status_code != 200:
             raise RuntimeError(f"call failed: {r.status_code} {r.text[:300]}")

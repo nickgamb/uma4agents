@@ -76,10 +76,11 @@ async function main(): Promise<number> {
 
   console.log("\n== The call, proof of possession ==");
   const ok = await mcpCall(fetchLab, GATEWAY, "tools/call", { name: "get_positions", arguments: {} },
-    signRequest("POST", AUTHORITY, "/mcp", `PoP ${rpt}`, keys));
+    (body) => signRequest("POST", AUTHORITY, "/mcp", `PoP ${rpt}`, keys, body));
   check("the signed call is served", ok.status === 200 && ok.body?.result !== undefined, `${ok.status} ${JSON.stringify(ok.body)?.slice(0, 100)}`);
 
-  const forged = signRequest("POST", AUTHORITY, "/mcp", `PoP ${rpt}`, AgentKeys.loadOrCreate(`${KEYS}/ts-forger.pem`, "forger"));
+  const forgerKeys = AgentKeys.loadOrCreate(`${KEYS}/ts-forger.pem`, "forger");
+  const forged = (body: string) => signRequest("POST", AUTHORITY, "/mcp", `PoP ${rpt}`, forgerKeys, body);
   const bad = await mcpCall(fetchLab, GATEWAY, "tools/call", { name: "get_positions", arguments: {} }, forged);
   check("the same grant under another key is refused", bad.status === 401, `${bad.status}`);
 

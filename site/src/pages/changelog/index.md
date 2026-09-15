@@ -56,6 +56,7 @@ release within that month. One entry per release.
 - **Tests:** `make pep-test` signs one holder's verdict with a key she never published and asserts it is not counted.
 - **Authorization server:** the pulled resource registry is one process's copy for every owner it serves, and the owner's resource listing, tier creation, the organization views and `/perm` read all of it. Each now reads only the entries for that owner, so one owner's tool id never resolves against another's.
 - **Gateway:** the ext_authz header allowlists in compose and Kubernetes did not forward `content-digest`, so a signature covering the body could never be checked and requiring one refused every call. The header is forwarded.
+- **Agent shim, TypeScript agent:** tool calls were signed without covering their body, so anything between the agent and the enforcement point could change a call's arguments without breaking the signature. Both now sign an RFC 9530 `Content-Digest` over the exact bytes they send, and `signed_headers` in the agent library takes the body.
 
 ## September 12 2026
 
