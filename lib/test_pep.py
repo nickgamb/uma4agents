@@ -238,7 +238,7 @@ MANDATE = {"account": "joint", "resources": ["joint/*"], "rule": {"kind": "all"}
                        for n in HOLDERS]}
 
 
-def verdict(name: str, **over) -> str:
+def verdict(name: str, key=None, **over) -> str:
     at = int(time.time())
     claims = {"iss": f"https://{name}.example", "holder": name, "account": "joint",
               "negotiation": "fam_j", "resource_id": "joint/read",
@@ -246,7 +246,7 @@ def verdict(name: str, **over) -> str:
               "cnf_jkt": key_thumbprint(AGENT_JWK), "scope": ["read"],
               "expires_in": 300, "mandate_s256": mandate_digest(MANDATE)}
     claims.update(over)
-    return jwt.encode(claims, HOLDERS[name], algorithm="EdDSA",
+    return jwt.encode(claims, key or HOLDERS[name], algorithm="EdDSA",
                       headers={"typ": "u4a-verdict+jwt"})
 
 
@@ -272,6 +272,14 @@ def jointly(info: dict, published: dict | None = None) -> Enforcer:
 
 def refused_jointly(d: Decision) -> bool:
     return d.outcome == "deny" and d.error == "joint_mandate_unsatisfied"
+
+
+# One holder's verdict signed by a key she never published, everything else
+# genuine: only the verdict signature check can refuse this.
+d = present(jointly(joint_grant(verdicts=[
+    verdict("alice", key=Ed25519PrivateKey.generate()), verdict("carol")])), tool="read")
+check("a verdict signed by a key its holder never published is not counted",
+      refused_jointly(d), d.error)
 
 
 d = present(jointly(joint_grant()), tool="read")

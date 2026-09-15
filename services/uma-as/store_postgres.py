@@ -162,6 +162,26 @@ class PostgresStore:
         """
         self._listener = await asyncpg.connect(self._dsn)
         await self._listener.add_listener("owner_events", self._on_event)
+        # A failover or restart closes this connection, and nothing else would
+        # notice: the owner's live feed would simply stop. Reconnect and
+        # listen again.
+        self._listener.add_termination_listener(self._on_listener_closed)
+
+    def _on_listener_closed(self, _conn) -> None:
+        asyncio.create_task(self._relisten())
+
+    async def _relisten(self) -> None:
+        delay = 1.0
+        while True:
+            try:
+                await self._start_listener()
+                print(json.dumps({"event": "store.listener_reconnected"}), flush=True)
+                return
+            except Exception as exc:                            # noqa: BLE001
+                print(json.dumps({"event": "store.listener_reconnect_failed",
+                                  "error": str(exc)[:160]}), flush=True)
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 30.0)
 
     def _on_event(self, _conn, _pid, _channel, payload: str) -> None:
         # asyncpg calls this from the event loop but not as a coroutine, so

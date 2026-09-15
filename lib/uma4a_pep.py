@@ -932,11 +932,11 @@ class Enforcer:
         if f.tool in self.single_use_tools or info.get("single_use"):
             op = info.get("operation") or {}
             actual = s256(json.dumps(f.args or {}, sort_keys=True).encode())
-            if not op and f.tool in self.single_use_tools and not override:
+            if not op and f.tool in self.single_use_tools:
                 # A tool this deployment treats as single-use takes a grant
-                # bound to one operation. A grant without the binding is
-                # authority to perform the tool, which is what the tool being
-                # listed here exists to prevent.
+                # bound to one operation, and a break-glass override is no
+                # exception: the organization's clause is for one act, and an
+                # override naming no operation is authority over the tool.
                 self.event("access.denied", reason="operation-binding-missing",
                            tool=f.tool)
                 return Decision(outcome="deny", status=403, error="operation_required",

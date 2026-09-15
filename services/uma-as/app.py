@@ -2331,8 +2331,11 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     # them by" — which is the organization's to say, and nobody else's.
     named = (idp.get("subject_claim")
              and [claims.get(idp["subject_claim"])]
-             or [claims.get("preferred_username"), claims.get("email"),
-                 (claims.get("email") or "").split("@")[0], claims.get("sub")])
+             or [claims.get("preferred_username"),
+                 # An address the provider has not verified is one the employee
+                 # typed, and the part before the @ is anyone's to choose.
+                 claims.get("email") if claims.get("email_verified") is True else None,
+                 claims.get("sub")])
     named = [n for n in named if n]
     mapped = idp.get("subject_map") or {}
     resolved = [mapped.get(n, n) for n in named]
@@ -4036,6 +4039,18 @@ async def token(request: Request) -> JSONResponse:
     # — without one they are silent no-ops and `standing.first_at_tier` would
     # stay true forever, asking her again at the same tier every time.
     if introduced_conn is not None:
+        # The introduction was honoured against the parent as it stood when
+        # this request began, and several awaits have passed since. A parent
+        # revoked in that window must not leave a child written active after
+        # the revocation cascade has already swept.
+        parent = await st(rec["owner"]).connection(introduced_by) if introduced_by else None
+        if (parent or {}).get("status") != "active":
+            event("connection.introduction_refused", corr=family, handle=handle,
+                  because="the introducing connection is no longer active")
+            await close_negotiation(rec)
+            return JSONResponse({"error": "request_denied",
+                                 "error_description": "the agent that introduced "
+                                 "this one is no longer connected"}, status_code=403)
         await st(rec["owner"]).put_connection(introduced_conn)
         await ledger_add(rec["owner"], "connected", family,
                          {"identity": contract["_identity"],

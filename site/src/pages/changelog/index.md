@@ -48,6 +48,12 @@ release within that month. One entry per release.
 - **Enforcement point:** while the organization or the joint tally was unreachable, an organization answer or a mandate of any age was used, and with nothing cached the organization's ceiling was dropped. A stale answer now stands only for `UMA_PEP_STALE_GRACE_S` (default 300 s); after that the resource is refused.
 - **Agent library:** an identity requirement naming any audience was honoured, so a resource could have the agent fetch an assertion meant for a different authorization server. An ask whose audience is not the server being negotiated with is refused.
 - **Agent shim:** a poll that failed in transit was treated as a dead ticket, and negotiating again put a second request in front of the owner. It is now treated as still waiting.
+- **Authorization server:** an assertion's member was matched against the username, the email address, the part of the email before the @ or the subject, so an employee who edited their email could be taken for another member. An email counts only when the provider has verified it, and the local part never does.
+- **Organization authority:** a charter's `identity_provider.subject_claim` was dropped when the charter was saved, so the organization could not pin which claim names a member. It is kept.
+- **Authorization server:** after a database failover the connection listening for owner events closed and nothing reopened it, so live updates to the owner stopped. It now reconnects.
+- **Authorization server:** a sub-agent admitted while its introducing agent was being revoked was written active after the revocation had swept, and kept working. The parent is checked again immediately before the child is written.
+- **Enforcement point:** a break-glass override bound to no operation was accepted for a tool the deployment treats as single-use. It is refused like any other grant without the binding.
+- **Tests:** `make pep-test` signs one holder's verdict with a key she never published and asserts it is not counted.
 
 ## September 12 2026
 

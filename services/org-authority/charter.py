@@ -388,6 +388,11 @@ def validate(charter: dict) -> dict:
             # endpoints and keep them agreeing.
             "directory": directory,
             "subject_map": subject_map,
+            # Which one claim names the member. Kept, because without it the
+            # authorization server falls back to matching several claims, some
+            # of which an employee can edit.
+            **({"subject_claim": idp["subject_claim"]}
+               if isinstance(idp.get("subject_claim"), str) and idp.get("subject_claim") else {}),
             # Whether the provider vouching for her is enough to enrol,
             # instead of an enrolment code.
             "enrol": bool(idp.get("enrol", True)),
