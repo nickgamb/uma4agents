@@ -86,6 +86,10 @@ release within that month. One entry per release.
 - **Authorization server:** owner authentication verified OIDC tokens synchronously on the event loop, fetching the realm's keys there. It runs off the loop.
 - **Kubernetes:** `policy-test` counted any transport error as the mesh refusing, so a database answering an HTTP request by closing the connection, a stopped service or a wrong port all passed as refusals. Only a 403 or a reset connection counts.
 - **Tests:** the organization-unreachable requirement cited a check that runs with the organization up. `make as-test` now makes it unreachable and asserts the refusal, and the register cites that. The lineage `act` claim was tested against a copy of the extraction; it is now `introduction.act_of`, which both the authorization server and the test call. `joint-check`, `xaa-check` and the live Okta check restore the lab however they exit.
+- **Personal AI ability:** a standing answer for a tier also approved agents meeting her for the first time at that tier. First contact is always put to her.
+- **Authorization server:** an introduced agent's pending bound counted operation requests from every connected agent, so traffic from agents never bound by it could refuse a sub-agent. Only operation requests from introduced connections count.
+- **Authorization server:** joining a jointly held account did not check her tiers, so one tier could govern the account's resources and her own together. Joining is refused until such a tier is split.
+- **Kubernetes:** the sterling-vance key job's comments said its Role could never rotate an existing key and named the wrong script. They now describe `agent-keys.py`, the keys it rotates on purpose, and that the script rather than RBAC keeps the long-lived keys stable.
 - **Docs:** run-the-lab and KUBERNETES quoted a policy-test pair no check prints and an out-of-date count. Both give the count the suite has and say what a refusal means.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 

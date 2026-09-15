@@ -7,9 +7,10 @@
 # whole of accountability level 2, and it only holds because the two halves
 # came from one generation rather than from an agent registering itself.
 #
-# The script is k8s/scripts/keygen.py, loaded here as a ConfigMap by
-# Makefile.k8s. It creates the Secret only if absent, so re-applying the lab
-# never rotates a key underneath a running pod.
+# The script is k8s/scripts/agent-keys.py, loaded here as a ConfigMap by
+# Makefile.k8s. It creates the Secret if absent and adds any agent not yet in
+# it. The names it is told to --rotate are regenerated on every run, on
+# purpose; every other key is left as it is.
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -25,12 +26,11 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
-    # get to check, create to make, patch to extend. Deliberately no update
-    # and no delete: those replace or remove the whole Secret, and this job
-    # must never be able to rotate a key that already exists. patch is here
-    # so a newly named agent can be added to a Secret that already exists —
-    # the script sends a JSON Patch of `add` operations for absent fields
-    # only, so no existing private key is ever named by the request.
+    # get to check, create to make, patch to add agents and rotate the
+    # --rotate names. No update and no delete. RBAC cannot limit what a patch
+    # changes, so this Role does not stop an existing key being replaced:
+    # what keeps the long-lived keys (lead, attested, newcomer) stable is the
+    # script, which only replaces the names it is given.
     verbs: ["get", "create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

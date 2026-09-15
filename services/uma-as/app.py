@@ -4088,10 +4088,22 @@ async def token(request: Request) -> JSONResponse:
                    else ("connection",))
         lane = policy.pend_lane(axes)
         budget = policy.pend_budget(lane)
-        waiting = sum(
-            1 for p in await st(rec["owner"]).pending_negotiations()
-            if p.get("pending_kind") in counted and p["family"] != family
-            and policy.pend_lane(p.get("assurance") or {}) == lane)
+        # An operation request counts only when it comes from an introduced
+        # connection. Policy exempts agents holding an active connection;
+        # the introduced ones are the exception lineage carves out, and
+        # counting every connected agent's requests would refuse a sub-agent
+        # for traffic that was never hers to bound.
+        waiting = 0
+        for p in await st(rec["owner"]).pending_negotiations():
+            if p["family"] == family or p.get("pending_kind") not in counted:
+                continue
+            if policy.pend_lane(p.get("assurance") or {}) != lane:
+                continue
+            if p.get("pending_kind") == "operation":
+                pconn = await st(rec["owner"]).connection(p.get("handle") or "")
+                if not (pconn or {}).get("parent_handle"):
+                    continue
+            waiting += 1
         if waiting >= budget:
             event("policy.evaluated", corr=family, result="attention-budget",
                   lane=lane, waiting=waiting, budget=budget)
@@ -5194,6 +5206,19 @@ async def owner_joint_join(request: Request) -> dict:
     if not any(h.get("owner") == owner for h in mandate.get("holders") or []):
         raise HTTPException(status_code=403,
                             detail="that mandate does not name you as a holder")
+    # A tier that governs some of the account's resources and something else
+    # besides would put one set of terms over a resource with several owners
+    # and one with a single owner. Her co-owners' say would then reach her
+    # own resources, or hers would not reach the account.
+    shared = mandate.get("resources") or []
+    for tier_id, tier in (await st(owner).tiers()).items():
+        patterns = tier.get("resources") or []
+        joint_side = [r for r in patterns if org.claims_match(r, shared)]
+        if joint_side and len(joint_side) != len(patterns):
+            raise HTTPException(
+                status_code=409,
+                detail=f"your tier {tier_id!r} covers some of this account's "
+                       "resources and others as well; split it before joining")
     await st(owner).set_mandate(account, joint.record_of(account, tally, mandate))
     # The resources this mandate names have to exist at this authority before
     # she can write terms over them, and they arrive from the resource

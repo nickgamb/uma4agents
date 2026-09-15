@@ -213,7 +213,10 @@ class OwnerAuthority:
                     if req.family in seen:
                         continue
                     seen.add(req.family)
-                    if req.tier in self.auto:
+                    # A standing answer covers operations at a tier, never an
+                    # agent's first contact: meeting a stranger is hers to
+                    # decide, whatever the tier would otherwise allow.
+                    if req.tier in self.auto and req.kind != "connection":
                         send(req.family, True, "decided.standing",
                              {"family": req.family, "tier": req.tier})
                         continue
