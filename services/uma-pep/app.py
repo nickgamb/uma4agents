@@ -252,7 +252,18 @@ def route_of(path: str) -> tuple[str, str]:
         return tail.split("/", 1)[1], "shared"
     if tail.startswith(f"{joint_leaf}/"):
         return tail.split("/", 1)[1], "joint"
-    return (tail if tail in ALL_OWNERS else OWNER), "own"
+    if not tail:
+        return OWNER, "own"
+    first = tail.split("/", 1)[0]
+    if first in ALL_OWNERS:
+        # Named the way the gateway routes: an owner's path prefix covers
+        # everything beneath it, so a suffix stays with the owner whose
+        # backend the gateway forwards it to.
+        return first, "own"
+    # Not an owner, a shared resource or a jointly held account this gateway
+    # knows. Never the primary owner: a path the gateway sends elsewhere must
+    # not be judged under her authority.
+    return first, "unknown"
 
 
 def owner_for_path(path: str) -> str:
@@ -627,6 +638,11 @@ async def check(request: Request, rest: str = "") -> Response:
         content_digest=h.get("content-digest"),
     )
     owner, kind = route_of(original_path)
+    if kind == "unknown":
+        event("access.denied", reason="unknown-route", path=original_path)
+        return deny(404, {"error": "invalid_resource_id",
+                          "error_description": "this gateway serves no "
+                          "owner, shared resource or account at that path"})
     if kind == "joint":
         enforcer = joint_enforcer(owner)
         if enforcer is None:

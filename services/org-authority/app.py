@@ -299,7 +299,15 @@ async def org_decision(member: str, request_facts: dict,
     try:
         r = await opa("POST", "/v1/data/u4a/org/decision", json=payload)
         r.raise_for_status()
-        decision = r.json().get("result") or {"effect": "allow", "because": []}
+        body = r.json()
+        if not isinstance(body.get("result"), dict):
+            # A 200 with no result is the engine answering a query for a
+            # policy it does not hold — what OPA says after a restart that
+            # lost the pushed modules. That is the engine failing, not the
+            # organization allowing, so it takes the same path as unreachable.
+            raise RuntimeError("the policy engine returned no decision; "
+                               "its policy is not loaded")
+        decision = body["result"]
         _OPA_CACHE[key] = (now(), decision)
         del_stale = [k for k, (t, _) in _OPA_CACHE.items()
                      if t < now() - OPA_GRACE_S]
@@ -712,6 +720,13 @@ async def member_join(request: Request) -> dict:
     as_uri = (body.get("as_uri") or "").strip()
     if not owner:
         raise HTTPException(status_code=400, detail="which member is joining?")
+    if owner in MEMBERS:
+        # Enrolment creates a membership; it never replaces one. A second
+        # join under a name already enrolled would move her notices and
+        # break-glass alerts to whatever authority the caller names.
+        raise HTTPException(status_code=409,
+                            detail="that name is already a member of this "
+                                   "organization")
     how = _authorize_enrolment(owner, body.get("code") or "",
                                body.get("assertion") or "")
     if how == "invitation":

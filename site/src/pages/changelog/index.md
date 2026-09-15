@@ -20,6 +20,16 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 14 2026
+
+### v2026.09.10
+
+#### Bug fixes
+
+- **Organization authority:** a policy engine that answered with no decision — what OPA returns after a restart that lost the pushed policy — was read as allow. It is now treated as the engine failing: a recent decision for the same request stands for the grace window, and otherwise the request is refused.
+- **Organization authority:** joining under a name already enrolled replaced that member's record, moving her notices and break-glass alerts to whatever authority the caller named. It is now refused with 409.
+- **Enforcement point:** a request path under `/mcp/` whose first segment was not a known owner, shared resource or account was judged under the primary owner's authority. The owner is now read from the path prefix the gateway routes on, and an unknown path is refused with `invalid_resource_id`.
+
 ## September 12 2026
 
 ### v2026.09.8
