@@ -43,6 +43,11 @@ release within that month. One entry per release.
 - **Compose:** the edge's `:443` and DNS `:53` were published on every interface, so anyone on the same network reached the lab and its fixed credentials. Both are bound to loopback.
 - **Authorization server:** resource servers still pending or already revoked kept writing the owner's registry on every pull. Only approved resource servers are pulled.
 - **Authorization server:** a tier an owner created got an `alice/` terms id whoever the owner was, so another owner's terms link resolved to Alice's store. The id now carries the owner.
+- **Authorization server:** a grant carried the scopes the resource registered for the attempt, not narrowed to what the terms offered or the agent agreed to. It now carries only scopes all three allow, and a request left with none is refused.
+- **Authorization server:** an approval the agent had not yet collected survived the owner blocking its operator, and the next poll issued the grant. The poll now refuses once the operator is blocked.
+- **Enforcement point:** while the organization or the joint tally was unreachable, an organization answer or a mandate of any age was used, and with nothing cached the organization's ceiling was dropped. A stale answer now stands only for `UMA_PEP_STALE_GRACE_S` (default 300 s); after that the resource is refused.
+- **Agent library:** an identity requirement naming any audience was honoured, so a resource could have the agent fetch an assertion meant for a different authorization server. An ask whose audience is not the server being negotiated with is refused.
+- **Agent shim:** a poll that failed in transit was treated as a dead ticket, and negotiating again put a second request in front of the owner. It is now treated as still waiting.
 
 ## September 12 2026
 

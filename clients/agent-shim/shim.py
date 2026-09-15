@@ -314,8 +314,12 @@ class Upstream:
                 data={"grant_type": GRANT_TYPE, "ticket": held["ticket"]})
             body = r.json()
         except Exception as exc:                                # noqa: BLE001
-            log(f"could not poll the held ticket: {type(exc).__name__}")
-            return "gone", None
+            # A poll that did not arrive says nothing about the ticket. The AS
+            # spends the ticket on a poll it answers, so dropping it here and
+            # negotiating again would put a second request in front of her.
+            log(f"could not poll the held ticket: {type(exc).__name__}; "
+                "still waiting")
+            return "waiting", None
         if body.get("error") == "request_submitted":
             # The AS rotates the ticket on every poll; keep the current one or
             # the next check is presenting something already spent.

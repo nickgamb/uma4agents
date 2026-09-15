@@ -483,7 +483,8 @@ def identity_ask(body: dict) -> dict | None:
     return None
 
 
-def id_jag_request(ask: dict, enterprise: "Enterprise") -> tuple[str, dict]:
+def id_jag_request(ask: dict, enterprise: "Enterprise",
+                   as_uri: str | None = None) -> tuple[str, dict]:
     """Where to go and what to ask for.
 
     The resource side contributes everything about where an assertion will
@@ -495,6 +496,15 @@ def id_jag_request(ask: dict, enterprise: "Enterprise") -> tuple[str, dict]:
     """
     from urllib.parse import urlparse
 
+    # The assertion is minted for an audience, and it is only ever sent back
+    # to the server this agent is negotiating with. An ask naming another
+    # audience would have this agent fetch an assertion meant for a different
+    # authorization server and hand it to whoever asked.
+    if as_uri is not None and (ask.get("audience") or "").rstrip("/") != as_uri.rstrip("/"):
+        raise GrantDenied(
+            f"the resource asks for an assertion addressed to "
+            f"{ask.get('audience') or 'no audience'}, not to {as_uri}, the "
+            "authorization server this agent is negotiating with")
     idp = ask.get("identity_provider") or {}
     pinned = (enterprise.issuer or "").rstrip("/")
     named = (idp.get("issuer") or "").rstrip("/")
@@ -575,7 +585,7 @@ def run_grant(
             raise GrantDenied(
                 "this resource is governed by an organization that federates "
                 "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise)
+        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
         on_status(f"identity required — exchanging at {endpoint}")
         # A client of its own, trusting the provider's world as well as this
         # deployment's — see `provider_trust`.
@@ -709,7 +719,7 @@ async def run_grant_async(
             raise GrantDenied(
                 "this resource is governed by an organization that federates "
                 "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise)
+        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
         on_status(f"identity required — exchanging at {endpoint}")
         async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
                                      timeout=30.0) as idp:

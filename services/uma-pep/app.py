@@ -534,7 +534,12 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
     enforcer = SHARED.get(owner)
     if enforcer is None:
         enforcer = SHARED[owner] = _shared_enforcer_for(owner)
-    doc = await enforcer.membership(fresh=fresh)
+    try:
+        doc = await enforcer.membership(fresh=fresh)
+    except Exception:                                           # noqa: BLE001
+        # Unreachable past the grace window: nothing is shared that cannot be
+        # established as shared.
+        return None
     if not doc.get("member"):
         return None
     enforcer.tools = shared_tools(doc.get("grants") or [])

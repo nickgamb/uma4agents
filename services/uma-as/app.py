@@ -3273,6 +3273,18 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     if (agreed := int((rec.get("contract") or {}).get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
     exp = int(now()) + min(3600, lifetime)
+    # The grant carries what was asked for, narrowed to what she offered and
+    # what the agent agreed to. The ticket's scopes alone were whatever the
+    # resource registered for the attempt, which can be more than either.
+    offered = set(tier["terms"].get("scope") or [])
+    agreed = set((rec.get("contract") or {}).get("scope") or [])
+    scopes = [s for s in rec["resource_scopes"]
+              if (not offered or s in offered) and (not agreed or s in agreed)]
+    if not scopes:
+        raise HTTPException(status_code=403, detail={
+            "error": "request_denied",
+            "error_description": "the agreement covers none of the scopes "
+                                 "this request needs"})
     jti = f"rpt_{uuid.uuid4().hex[:12]}"
     claims = {
         "iss": ISSUER,
@@ -3288,7 +3300,7 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         "permissions": [
             {
                 "resource_id": rec["resource_id"],
-                "resource_scopes": rec["resource_scopes"],
+                "resource_scopes": scopes,
                 "exp": int(now()) + lifetime,
             }
         ],
@@ -4106,6 +4118,16 @@ async def token(request: Request) -> JSONResponse:
 async def pending_poll(rec: dict) -> JSONResponse:
     family = rec["family"]
     if rec.get("decision") == "approved":
+        # An approval waits here until the agent polls. If she has shut out the
+        # agent's operator since, the approval does not outlive the block:
+        # blocking is meant to end what that operator's agents can reach, and a
+        # yes she gave before it is not a yes to what she has now refused.
+        origin = operator_origin((rec.get("contract") or {}).get("_identity") or {})
+        if origin and origin in await st(rec["owner"]).blocked_operators():
+            event("access.denied", corr=family, reason="operator-blocked-after-approval")
+            return JSONResponse({"error": "request_denied",
+                                 "error_description": "the operator behind this "
+                                 "agent has been blocked"}, status_code=403)
         if rec.get("pending_kind") == "connection":
             handle = rec["handle"]
             identity = rec["contract"]["_identity"]

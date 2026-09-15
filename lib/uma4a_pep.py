@@ -71,6 +71,9 @@ CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 # Short: a holder leaving should stop counting in seconds, not at a
 # restart.
 MANDATE_TTL_S = float(os.environ.get("UMA_PEP_MANDATE_TTL_S", "30"))
+# How long past its expiry a cached organization or mandate answer may stand
+# while its source is unreachable. After that the answer is refused.
+STALE_GRACE_S = float(os.environ.get("UMA_PEP_STALE_GRACE_S", "300"))
 # How long a co-owner's published keys are reused for verifying her verdicts.
 # The window is a rotated-away key still verifying, which is the ordinary key
 # rotation window and can be longer than the electorate's.
@@ -85,6 +88,10 @@ CLOCK_SKEW_S = float(os.environ.get("UMA_PEP_CLOCK_SKEW_S", "60"))
 REQUIRE_CONTENT_DIGEST = os.environ.get(
     "UMA_PEP_REQUIRE_CONTENT_DIGEST", "").lower() in ("1", "true", "yes")
 
+
+
+class MembershipUnavailable(Exception):
+    """The organization could not be read and no recent answer stands."""
 
 class Pending(Exception):
     """The authority knows this resource server and the owner has not yet
@@ -484,12 +491,13 @@ class Enforcer:
         except httpx.HTTPError as exc:
             self.event("org.membership_unreadable", owner=self.owner,
                        error=str(exc))
-            # The previous answer stands rather than either extreme. Treating
-            # an unreachable organization as "no organization" would drop the
-            # ceiling exactly when something is wrong; treating it as a denial
-            # would make the organization's uptime a precondition for every
-            # owner's grant loop, including owners who are not members.
-            return cached
+            # A recent answer stands for a grace window, so a brief outage is
+            # not a precondition for every grant. Past it, or with nothing
+            # cached, there is no answer: reading that as "no organization"
+            # would drop the ceiling exactly when something is wrong.
+            if cached_at and cached_at > time.time() - MEMBERSHIP_TTL_S - STALE_GRACE_S:
+                return cached
+            raise MembershipUnavailable(str(exc)) from exc
         self._membership = (time.time(), doc)
         return doc
 
@@ -684,7 +692,12 @@ class Enforcer:
         except (httpx.HTTPError, ValueError) as exc:
             self.event("joint.mandate_unreadable", account=account,
                        error=str(exc)[:160])
-            return cached[1] if cached else None
+            # A mandate that expired a moment ago still says who counts; one
+            # past the grace window may not, and an electorate that cannot be
+            # established is refused rather than taken from an old copy.
+            if cached and cached[0] > time.time() - STALE_GRACE_S:
+                return cached[1]
+            return None
         self._mandates[account] = (time.time() + MANDATE_TTL_S, doc)
         return doc
 
@@ -738,7 +751,11 @@ class Enforcer:
         server, which she chose and may run herself, issuing more than the
         organization's charter allows over the organization's own resources.
         """
-        doc = await self.membership()
+        try:
+            doc = await self.membership()
+        except MembershipUnavailable:
+            return ("the organization could not be reached to establish the "
+                    "ceiling over this resource")
         if not doc.get("member") or not claims_match(rid, doc.get("claims")):
             return None
         for permission in info.get("permissions", []):
