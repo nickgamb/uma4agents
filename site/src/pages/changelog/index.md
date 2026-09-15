@@ -78,6 +78,11 @@ release within that month. One entry per release.
 - **kagent check:** a failed read of her ledger counted as zero touches, so a failed baseline passed the check's decisive assertion. It now fails the check.
 - **Conformance tool:** `integrations/conformance.py` accepted a metadata document for any resource on the same host, its proof-of-possession check could not fail, and an upstream that refused a direct call with 403 was scored as reachable. It now requires the exact resource URL, sends an unsigned proof-of-possession request, and counts a refusal as refused.
 - **Tests:** the signature test for another authority also changed the `Authorization` header, so it would pass even if the authority were ignored. It changes only the authority.
+- **Enforcement point:** when the authorization server could not be reached, introspection raised a 500 or sent the agent to negotiate a grant it already held, and a failed spend was reported as `already_consumed`. Both now answer 503 `temporarily_unavailable`.
+- **Enforcement point:** the sidecar answered one 502 whether the resource never received a call or received it and did not answer, and an agent retrying the second could act twice. A call that was not delivered is 502; one delivered without an answer is 504 and says it may have been carried out.
+- **Authorization server:** an unauthenticated client-credentials request created records for whatever owner it named. Records are created only after the resource server authenticates.
+- **Authorization server:** verifying an identity assertion fetched the provider's keys on the event loop, stalling every request while the provider was slow. It runs off the loop. Each assertion is now spent once in the shared store rather than in one process's memory, so it cannot be replayed at another replica.
+- **Authorization server:** the recurring registration pull fetched whatever URLs a resource server's metadata named, without the size limit or origin checks registration applies. Each fetch is capped at 1 MiB, and `jwks_uri` and the owner-resources endpoint must be https on the resource's own origin.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 
 ## September 12 2026

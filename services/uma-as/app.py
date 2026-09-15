@@ -1009,22 +1009,39 @@ def pull_registrations(client_id: str, rs: dict) -> int:
     from uma4a_http_sig import sign as http_sign
 
     resource_uri = rs["resource_uri"]
-    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=10.0) as client:
-        prm = client.get(well_known_prm_url(resource_uri))
-        prm.raise_for_status()
-        doc = prm.json()
+    # The same limits the one-shot registration applies, on every pull: a
+    # resource server names these URLs itself, including one still pending.
+    LIMIT = 1024 * 1024
+
+    def fetch(client, url, **kw):
+        with client.stream("GET", url, **kw) as r:
+            r.raise_for_status()
+            data = b""
+            for chunk in r.iter_bytes():
+                data += chunk
+                if len(data) > LIMIT:
+                    raise ValueError(f"{url} returned more than {LIMIT} bytes")
+        return json.loads(data)
+
+    def own_https(url, what):
+        if not url.startswith("https://") or not same_origin(url, resource_uri):
+            raise ValueError(f"{what} {url!r} is not https on the resource's own origin")
+
+    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=10.0,
+                      follow_redirects=False) as client:
+        doc = fetch(client, well_known_prm_url(resource_uri))
         if doc.get("resource") != resource_uri:
             raise ValueError(f"metadata is for {doc.get('resource')!r}")
         if ISSUER not in doc.get("authorization_servers", []):
             raise ValueError("the RS's metadata does not name this AS")
 
-        jwks = client.get(doc["jwks_uri"])
-        jwks.raise_for_status()
+        own_https(doc.get("jwks_uri") or "", "jwks_uri")
+        jwks_doc = fetch(client, doc["jwks_uri"])
         signed = doc.get("signed_metadata")
         if not signed:
             raise ValueError("published metadata is not signed")
         verified = None
-        for jwk_dict in jwks.json()["keys"]:
+        for jwk_dict in jwks_doc["keys"]:
             try:
                 verified = jwt.decode(signed, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                       algorithms=["EdDSA"],
@@ -1041,12 +1058,11 @@ def pull_registrations(client_id: str, rs: dict) -> int:
             raise ValueError("no owner_resources_endpoint in signed metadata")
         from urllib.parse import urlparse
 
+        own_https(endpoint, "owner_resources_endpoint")
         u = urlparse(endpoint)
         headers = http_sign(method="GET", authority=u.netloc, path=u.path,
                             authorization="", key=SIGNING_KEY, keyid=KID)
-        listing = client.get(endpoint, headers=headers)
-        listing.raise_for_status()
-        body = listing.json()
+        body = fetch(client, endpoint, headers=headers)
 
     # The listing replaces what this resource server publishes for this
     # owner rather than merging into it.
@@ -3738,6 +3754,9 @@ async def token(request: Request) -> JSONResponse:
                 status_code=403)
         if scope != "uma_protection":
             return JSONResponse({"error": "invalid_scope"}, status_code=400)
+        # Only now, with the client authenticated: an unauthenticated request
+        # must not be able to create an owner's records.
+        await st(pat_owner).seed()
         return JSONResponse(await issue_pat(pat_owner, client_id))
 
     if grant_type != "urn:ietf:params:oauth:grant-type:uma-ticket":
@@ -3812,8 +3831,22 @@ async def token(request: Request) -> JSONResponse:
     if idp and not rec.get("asserted"):
         if claim_token_format == ID_JAG_FORMAT and claim_token:
             try:
-                asserted = verify_id_jag(claim_token, idp, rec["owner"],
-                                         rec["resource_id"])
+                # Off the event loop: it fetches the provider's keys, and a slow
+                # provider would otherwise stall every request this process serves.
+                asserted = await asyncio.to_thread(
+                    verify_id_jag, claim_token, idp, rec["owner"], rec["resource_id"])
+                # Spent once across every replica, in the shared store rather
+                # than this process's memory: a second insert of the same key,
+                # or a second burn of it, is a replay.
+                spent_key = f"id-jag:{asserted.get('jti', '')}"
+                if await st(rec["owner"]).rpt(spent_key) is not None:
+                    raise ValueError("that assertion has already been used")
+                try:
+                    await st(rec["owner"]).record_rpt(spent_key, family, "", None)
+                except Exception as exc:                        # noqa: BLE001
+                    raise ValueError("that assertion has already been used") from exc
+                if await st(rec["owner"]).consume_rpt(spent_key) is None:
+                    raise ValueError("that assertion has already been used")
             except ValueError as exc:
                 event("identity.rejected", corr=family, reason=str(exc))
                 await ledger_add(rec["owner"], "identity_refused", family,

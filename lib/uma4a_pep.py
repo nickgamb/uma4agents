@@ -431,9 +431,17 @@ class Enforcer:
                 return r.json()
         except Pending:
             return {"active": False}
+        except (httpx.HTTPError, ValueError):
+            # Not an answer about the token. Told apart from an inactive one,
+            # so the caller neither errors out nor sends the agent to
+            # negotiate a grant it may already hold.
+            return {"active": False, "error": "introspection_unavailable"}
 
-    async def consume(self, token: str) -> bool:
-        """Burn a single-use RPT, once everything else has verified."""
+    async def consume(self, token: str) -> bool | None:
+        """Burn a single-use RPT, once everything else has verified.
+
+        True when this call spent it, False when it was already spent, None
+        when the authorization server could not be asked."""
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.post(
@@ -444,7 +452,9 @@ class Enforcer:
                 )
                 r.raise_for_status()
                 return bool(r.json().get("consumed"))
-        except (httpx.HTTPError, Pending):
+        except (httpx.HTTPError, ValueError):
+            return None
+        except Pending:
             return False
 
     async def report_access(self, family: str, tool: str, summary: str) -> None:
@@ -841,6 +851,10 @@ class Enforcer:
             if reason == "connection_revoked":
                 return Decision(outcome="deny", status=403, error="access_revoked",
                                 description="the resource owner revoked this agent")
+            if reason == "introspection_unavailable":
+                return Decision(outcome="deny", status=503, error="temporarily_unavailable",
+                                description="the authorization server could not be "
+                                            "asked about this grant")
             return await self.challenge(f.tool, rid, scopes)
 
         # 2. Does the grant cover this resource, with the scopes this tool
@@ -951,6 +965,11 @@ class Enforcer:
             # 5. Only now spend it. Check-then-act, so the burn is last and
             #    atomic; losing the race means someone else got there first.
             spent = await (self.org_consume(rpt) if override else self.consume(rpt))
+            if spent is None:
+                self.event("access.denied", reason="consume-unavailable", tool=f.tool)
+                return Decision(outcome="deny", status=503, error="temporarily_unavailable",
+                                description="the grant could not be spent because the "
+                                            "authorization server could not be reached")
             if not spent:
                 self.event("access.denied", reason="consume-lost-race", tool=f.tool)
                 return Decision(outcome="deny", status=403, error="already_consumed",

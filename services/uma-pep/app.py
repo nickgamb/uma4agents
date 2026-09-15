@@ -809,11 +809,23 @@ async def sidecar(request: Request, rest: str = "") -> Response:
                 headers=headers,
                 params=dict(request.query_params),
             )
-    except httpx.RequestError as exc:
-        event("upstream.unreachable", error=str(exc))
+    except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+        # Never delivered. The grant was spent deciding the call, but the
+        # resource did not receive it.
+        event("upstream.unreachable", error=str(exc), delivered=False)
         return deny(502, {"error": "upstream_unreachable",
-                          "error_description": "the protected resource did not "
-                                               "answer"})
+                          "error_description": "the protected resource could not "
+                                               "be reached; the call was not "
+                                               "delivered"})
+    except httpx.RequestError as exc:
+        # Sent, and no answer came back. The resource may have acted on it, so
+        # this must not read the same as a call that never left: an agent that
+        # retried this blindly could execute a trade twice.
+        event("upstream.unreachable", error=str(exc), delivered=True)
+        return deny(504, {"error": "upstream_timeout",
+                          "error_description": "the call was delivered and no "
+                                               "answer came back; it may have "
+                                               "been carried out"})
     # `up.content` has already been decoded, so the upstream's
     # content-encoding and content-length describe a body that no longer
     # exists — forwarding them has the client decompress a second time and
