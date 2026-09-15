@@ -2,6 +2,7 @@
 title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
 abbrev: "Owner-Proffered Terms"
 docname: draft-gamb-uma4agents-terms-00
+date: 2026-09-12
 category: std
 submissiontype: IETF
 ipr: trust200902

@@ -2,6 +2,7 @@
 title: "The Resource Owner's API for User-Managed Access (UMA) 2.0"
 abbrev: "Owner API for UMA"
 docname: draft-gamb-uma4agents-owner-00
+date: 2026-09-12
 category: std
 submissiontype: IETF
 ipr: trust200902

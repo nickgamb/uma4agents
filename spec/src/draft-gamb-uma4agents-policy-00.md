@@ -2,6 +2,7 @@
 title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
 abbrev: "Owner Policy for Agents"
 docname: draft-gamb-uma4agents-policy-00
+date: 2026-09-12
 category: std
 submissiontype: IETF
 ipr: trust200902

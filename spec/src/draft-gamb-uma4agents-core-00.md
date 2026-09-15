@@ -2,6 +2,7 @@
 title: "User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"
 abbrev: "UMA 2.0 for Agents"
 docname: draft-gamb-uma4agents-core-00
+date: 2026-09-12
 category: std
 submissiontype: IETF
 ipr: trust200902
