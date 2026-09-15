@@ -254,9 +254,10 @@ at the pseudonymous level and this binding changes nothing about that.</t>
 </section>
 <section anchor="iana-considerations"><name>IANA Considerations</name>
 
-<t>This document makes no request of IANA. The media types <spanx style="verb">aa-agent+jwt</spanx>,
-<spanx style="verb">aa-auth+jwt</spanx> and <spanx style="verb">aauth-resource+jwt</spanx> are defined by
-<xref target="I-D.hardt-aauth-protocol"/>.</t>
+<t>This document makes no request of IANA. The media types <spanx style="verb">aa-agent+jwt</spanx> and
+<spanx style="verb">aa-auth+jwt</spanx> are defined by <xref target="I-D.hardt-aauth-protocol"/>. The <spanx style="verb">typ</spanx> value
+<spanx style="verb">aauth-resource+jwt</spanx>, used here for signed resource metadata, is this binding's
+and is not an AAuth media type.</t>
 
 </section>
 
@@ -516,7 +517,7 @@ at the pseudonymous level and this binding changes nothing about that.</t>
 </references>
 
 
-<?line 283?>
+<?line 284?>
 
 <section anchor="implementation-status"><name>Implementation Status</name>
 
@@ -626,15 +627,15 @@ EGntrylCIZASpGSZ8FuFQO14SNNzKd0QmsJgoHxzd9JWBy8NEO9NKAL+COyB
 jFRK3nGoOHrhQyvTFLhNpeCdhisQV2w3VQftiALNT08cRFBrGku01UaYulpo
 V+ZymgiTfKmb3qj4F/kAm5hT4HZvzd3VUKcntBCgaFfu7a7uq073hhsn/cYm
 XC1sdwPpTqYuKfKftxSfVdiYZkVXda4HTOIkYXkrHiwF7hvaRTUvyP0CNaWr
-nGBneTx5O9mhuW4neqmueX6IPNIiTXP5AXKliitGu9Vs7IuNesz3Ae6nNm51
-+94FUc/PRaW/PZyq+Jql3yya3+MTmrh9tFlMDyw/DyBpfUyVOuYLgHClU7N/
-MAPdqsbt9j0FZPyKOq7Pjg5QgjieY72pSr001LGaarAm7QI79nyIMQETh6FA
-3n1D79tDkxeEJnVuNy3aaSn6Arldh/pbjVP2ZZHmebg2m6Wf8LUuLLUKl9gb
-dR9zeyoyydHv3W9T+8Ydjtez7iat6auGVO7DqiH6d+IezyCciBc6vg7H8TQq
-13ODcHPKqdz6zbUuO7TlPotC4VJWtm1Wcmrtd/qWgYm013ouZPh2nVcEhQQ5
-R1HD+y/Z+ycxmTvTyZwpEyqvvF5O6e+mft+bqcxqKqo+myX8tWnorG7cS7Pm
-QrNJdO/8NyPUEQDLCNhyKjMlrfuex8LffLqwEe1Fq9qVf307+V/crw7FPwHs
-QvPdHCoAAA==
+nGBneTx5O9mhuW4neqmueX6IPNIiTXP5AXKliitGu91sJEDbKMm4qe27FBRA
+n4s/X4dzTrxRWa3F7rTIV0HcyqFiySfJe9eYfWeGVi+AbmYnTtNNj7U9jb+n
+nKr4mvW0WZ6/xyd0fvtos2wfWH4e4Nj66C11zFcN4fKoZk9krrtV99vtGxFE
+2lfU2312dIBiR3qZnVOUemmoNzbVOLp2EBJ75sXog4nDUIrv/lsA34iavCDc
+qvNNHXWbl74Ub9ehTlrj/n1ZpHkeLuhm6Sd8rQtLTckl9kaFyVUEWYhC6t5N
+OjWK3OF4Pevu7JoObiANPoCbkuJO3GM0hEjxQsfX4TiesOV6bhDYTjmVW7+5
+QObQcQ6hUCKVlW3bopzE+50OaeA87QWiC06+x+cVQVZRBqB84v2XHGeTmMyd
+6WTO5Aw1Xl4vp/QXWr/vzVRmNZVvn81H/oI29HA3bsBZc6GtJbp/XbCJBY5q
+WMbalr2ZKWndd1cW/o7VBZBor3TVrkzvG9f/4iZ3KP4JvNeN4YYqAAA=
 
 -->
 

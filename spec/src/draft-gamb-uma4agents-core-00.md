@@ -622,6 +622,10 @@ Where a request carries meaning in its body, the signature MUST cover a
 `Content-Digest` {{RFC9530}} header, and the verifier MUST recompute the digest
 from the received body as well as verifying the signature over it.
 
+A request carries meaning in its body whenever it has one. That includes every
+tool call, whose operation and arguments are in the body, and every request to
+the owner or protection API that sends a body.
+
 The four required components say who is asking and what they are asking of. They
 say nothing about the bytes. That is adequate for a request whose meaning is in
 its URL and unsafe for one whose meaning is in its body — and the endpoints where
@@ -654,6 +658,12 @@ On success the authorization server responds as {{UMAGrant}} Section 3.3.5, with
   "expires_in": 3600
 }
 ~~~
+
+A client presents the token in the `Authorization` header as `PoP` followed by
+a space and the token, on a request signed as {{signature-profile}} specifies.
+The `PoP` scheme is this profile's; it is not registered in the HTTP
+Authentication Scheme Registry, and a binding that carries the token elsewhere
+says where.
 
 The requesting party token MUST be a JWT {{RFC7519}} signed by the authorization
 server, and MUST carry:

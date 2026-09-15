@@ -1570,7 +1570,9 @@ an introduction it will parse; the reference implementation refuses one over
 lineage instead, by placing the introducing agent's subject identifier in an
 <code>act</code> claim <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> of the introduced agent's credential. No second document
 is needed; the authorization server reads the claim it already verified.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
-<p id="section-2.2-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> defines this use of <code>act</code> in its agent credential.
+<p id="section-2.2-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> uses <code>act</code> on its auth token to record a delegation
+chain, not in its agent credential. Its agent token permits additional claims,
+and this document uses the same claim there.
 Nothing new is defined here; the claim is read.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>

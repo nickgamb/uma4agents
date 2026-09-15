@@ -258,9 +258,10 @@ at the pseudonymous level and this binding changes nothing about that.
 
 # IANA Considerations
 
-This document makes no request of IANA. The media types `aa-agent+jwt`,
-`aa-auth+jwt` and `aauth-resource+jwt` are defined by
-{{I-D.hardt-aauth-protocol}}.
+This document makes no request of IANA. The media types `aa-agent+jwt` and
+`aa-auth+jwt` are defined by {{I-D.hardt-aauth-protocol}}. The `typ` value
+`aauth-resource+jwt`, used here for signed resource metadata, is this binding's
+and is not an AAuth media type.
 
 --- back
 

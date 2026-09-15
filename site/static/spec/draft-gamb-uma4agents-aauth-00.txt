@@ -305,9 +305,10 @@ Internet-Draft            AAuth Binding for UMA           September 2026
 
 9.  IANA Considerations
 
-   This document makes no request of IANA.  The media types aa-
-   agent+jwt, aa-auth+jwt and aauth-resource+jwt are defined by
-   [I-D.hardt-aauth-protocol].
+   This document makes no request of IANA.  The media types aa-agent+jwt
+   and aa-auth+jwt are defined by [I-D.hardt-aauth-protocol].  The typ
+   value aauth-resource+jwt, used here for signed resource metadata, is
+   this binding's and is not an AAuth media type.
 
 10.  References
 
@@ -326,10 +327,9 @@ Internet-Draft            AAuth Binding for UMA           September 2026
               <https://datatracker.ietf.org/doc/html/draft-hardt-
               httpbis-signature-key-09>.
 
-   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119,
-              DOI 10.17487/RFC2119, March 1997,
-              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+
+
 
 
 
@@ -337,6 +337,11 @@ Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft            AAuth Binding for UMA           September 2026
 
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
 
    [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
               (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
@@ -379,11 +384,6 @@ Internet-Draft            AAuth Binding for UMA           September 2026
 
 10.2.  Informative References
 
-   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
-              Code: The Implementation Status Section", BCP 205,
-              RFC 7942, DOI 10.17487/RFC7942, July 2016,
-              <https://www.rfc-editor.org/rfc/rfc7942>.
-
 
 
 
@@ -393,6 +393,11 @@ Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft            AAuth Binding for UMA           September 2026
 
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
 
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
@@ -433,11 +438,6 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
-
-
-
-
-
 
 
 

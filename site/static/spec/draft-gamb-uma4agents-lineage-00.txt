@@ -75,14 +75,14 @@ Table of Contents
    2.  Asserting a Lineage . . . . . . . . . . . . . . . . . . . . .   3
      2.1.  By Introduction Document  . . . . . . . . . . . . . . . .   3
      2.2.  By Issuer Attestation . . . . . . . . . . . . . . . . . .   4
-   3.  Admission . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   3.  Admission . . . . . . . . . . . . . . . . . . . . . . . . . .   5
      3.1.  What the Document Settles . . . . . . . . . . . . . . . .   5
      3.2.  What the Owner's Record Settles . . . . . . . . . . . . .   5
      3.3.  Failure Falls Back  . . . . . . . . . . . . . . . . . . .   6
      3.4.  The Introduced Connection . . . . . . . . . . . . . . . .   6
    4.  Policy Over a Lineage . . . . . . . . . . . . . . . . . . . .   6
      4.1.  Approval Belongs to the Lineage . . . . . . . . . . . . .   6
-     4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   6
+     4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   7
      4.3.  The Ceiling . . . . . . . . . . . . . . . . . . . . . . .   7
    5.  Attention . . . . . . . . . . . . . . . . . . . . . . . . . .   7
    6.  Revocation  . . . . . . . . . . . . . . . . . . . . . . . . .   7
@@ -210,10 +210,10 @@ Internet-Draft                Agent Lineage               September 2026
    agent's credential.  No second document is needed; the authorization
    server reads the claim it already verified.
 
-   [I-D.hardt-aauth-protocol] defines this use of act in its agent
-   credential.  Nothing new is defined here; the claim is read.
-
-3.  Admission
+   [I-D.hardt-aauth-protocol] uses act on its auth token to record a
+   delegation chain, not in its agent credential.  Its agent token
+   permits additional claims, and this document uses the same claim
+   there.  Nothing new is defined here; the claim is read.
 
 
 
@@ -225,6 +225,8 @@ Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+3.  Admission
 
 3.1.  What the Document Settles
 
@@ -270,9 +272,7 @@ Internet-Draft                Agent Lineage               September 2026
    6.  The introducing agent has fewer live introduced agents than a
        deployment ceiling.
 
-   Check 5 exists because an agent cannot be allowed to point at a
-   second directory it runs itself.  The directory that attests the
-   child is the one that must also attest the parent.
+
 
 
 
@@ -281,6 +281,10 @@ Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   Check 5 exists because an agent cannot be allowed to point at a
+   second directory it runs itself.  The directory that attests the
+   child is the one that must also attest the parent.
 
 3.3.  Failure Falls Back
 
@@ -323,12 +327,8 @@ Internet-Draft                Agent Lineage               September 2026
    member earned it.  A worker that was approved to trade means the
    orchestrator that spawned it need not be asked again to trade.
 
-4.2.  Three Postures
 
-   An owner MUST be able to express each of the following per policy
-   unit, using the conditions of [U4APolicy]:
 
-   Per agent:  Every agent is asked once at this unit, introduced or
 
 
 
@@ -338,6 +338,12 @@ Gamb & Maler              Expires 19 March 2027                 [Page 6]
 Internet-Draft                Agent Lineage               September 2026
 
 
+4.2.  Three Postures
+
+   An owner MUST be able to express each of the following per policy
+   unit, using the conditions of [U4APolicy]:
+
+   Per agent:  Every agent is asked once at this unit, introduced or
       not.  This is the default and what happens when she writes
       nothing.
 
@@ -379,12 +385,6 @@ Internet-Draft                Agent Lineage               September 2026
    cascade cannot find it active and be admitted behind it, and MUST
    report the number of connections and grants the cascade ended.
 
-   Because depth is one (Section 3.2 check 3), the cascade need not
-   recurse.
-
-
-
-
 
 
 
@@ -393,6 +393,9 @@ Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   Because depth is one (Section 3.2 check 3), the cascade need not
+   recurse.
 
    Every introduced agent's live grants stop working on its next call,
    through the introspection of [U4ACore] Section 8.2, with no action
@@ -438,9 +441,6 @@ Internet-Draft                Agent Lineage               September 2026
    published a key.  Two keys in two directories at two origins prove
    two operators, or one operator and an impostor.  The check is that
    one directory holds both.
-
-
-
 
 
 

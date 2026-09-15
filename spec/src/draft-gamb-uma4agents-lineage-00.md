@@ -172,7 +172,9 @@ lineage instead, by placing the introducing agent's subject identifier in an
 `act` claim {{RFC8693}} of the introduced agent's credential. No second document
 is needed; the authorization server reads the claim it already verified.
 
-{{I-D.hardt-aauth-protocol}} defines this use of `act` in its agent credential.
+{{I-D.hardt-aauth-protocol}} uses `act` on its auth token to record a delegation
+chain, not in its agent credential. Its agent token permits additional claims,
+and this document uses the same claim there.
 Nothing new is defined here; the claim is read.
 
 # Admission {#admission}
