@@ -1077,8 +1077,10 @@ async def pull_at_startup() -> None:
     async def attempt_loop():
         for _ in range(60):
             owners = await STORE.owners() or [DEFAULT_OWNER]
+            # Only a resource server she has approved writes her registry.
             pairs = [(o, cid, rs) for o in owners
-                     for cid, rs in (await st(o).resource_servers()).items()]
+                     for cid, rs in (await st(o).resource_servers()).items()
+                     if rs.get("status", "active") == "active"]
             for owner, client_id, rs in pairs:
                 try:
                     # Off the event loop: the RS authenticates this AS's
@@ -1121,6 +1123,8 @@ async def register_permission(request: Request) -> JSONResponse:
         # (to_thread: see pull_at_startup — the pull triggers a JWKS
         # back-call from the RS and must not block this event loop.)
         for client_id, rs in (await st(owner).resource_servers()).items():
+            if rs.get("status", "active") != "active":
+                continue
             try:
                 await asyncio.to_thread(pull_registrations, client_id, rs)
             except Exception as exc:
@@ -1465,6 +1469,8 @@ async def pull_registrations_now(owner: str) -> None:
     """
     _LAST_PULL[owner] = time.time()
     for client_id, rs in (await st(owner).resource_servers()).items():
+        if rs.get("status", "active") != "active":
+            continue
         try:
             await asyncio.to_thread(pull_registrations, client_id, rs)
         except Exception as exc:                                # noqa: BLE001
@@ -1488,6 +1494,8 @@ async def resync_shared(owner: str, envelope: dict | None,
     old grant gets an unregistered resource rather than her terms.
     """
     for client_id, rs in (await st(owner).resource_servers()).items():
+        if rs.get("status", "active") != "active":
+            continue
         try:
             await asyncio.to_thread(pull_registrations, client_id, rs)
         except Exception as exc:                                # noqa: BLE001
@@ -4669,7 +4677,8 @@ async def owner_create_policy(request: Request) -> dict:
     tier_id = (spec.get("id") or "").strip()
     try:
         tier = policy.new_tier(tier_id, spec, await st(owner).tiers(),
-                               set(RESOURCES), await jointly_held(owner))
+                               set(RESOURCES), await jointly_held(owner),
+                               owner=owner)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     # Terms she is writing for the first time are refused rather than

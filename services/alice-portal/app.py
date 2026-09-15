@@ -19,7 +19,7 @@ import time
 import httpx
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse
@@ -164,6 +164,12 @@ async def login(request: Request):
 async def auth_callback(request: Request):
     token = await oauth.keycloak.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
+    # This portal acts for one owner. Anyone else the identity provider can
+    # sign in is not her, and a session for them would read and trade her
+    # vault, which the owner API behind it refuses but these routes do not.
+    if userinfo.get("preferred_username") != OWNER:
+        return HTMLResponse("This portal belongs to another account.",
+                            status_code=403)
     # Whoever signed in, never a name this process assumed. One image serves
     # any owner; the only thing that says which is the token that came back.
     request.session["user"] = (userinfo.get("name")

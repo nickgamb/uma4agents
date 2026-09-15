@@ -38,6 +38,11 @@ release within that month. One entry per release.
 - **TypeScript agent:** corroboration fetched whatever metadata URL the challenge named, so a forged challenge could vouch for its own authorization server. The URL is now formed from the resource called, and a challenge naming any other is refused.
 - **Agent shim:** when the resource's metadata could not be read, the shim negotiated with the challenge's authorization server uncorroborated. It now refuses.
 - **XAA broker:** administration accepted a realm token for an administrator issued to any client, including the public research agent. It now requires the token to be issued to `XAA_IDP_ADMIN_CLIENT`.
+- **Owner portal:** signing in accepted any account the identity provider knows, and that session could read and trade the owner's vault. A sign-in whose username is not the portal's owner is refused.
+- **Agent library:** every agent's key id defaulted to `agent-req-1`, so a second agent publishing to the same operator directory replaced the first's key and cost it its operator attribution. The default is now derived from the key.
+- **Compose:** the edge's `:443` and DNS `:53` were published on every interface, so anyone on the same network reached the lab and its fixed credentials. Both are bound to loopback.
+- **Authorization server:** resource servers still pending or already revoked kept writing the owner's registry on every pull. Only approved resource servers are pulled.
+- **Authorization server:** a tier an owner created got an `alice/` terms id whoever the owner was, so another owner's terms link resolved to Alice's store. The id now carries the owner.
 
 ## September 12 2026
 

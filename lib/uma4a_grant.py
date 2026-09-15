@@ -101,7 +101,9 @@ class AgentKeys:
     """
 
     key: Ed25519PrivateKey = field(default_factory=Ed25519PrivateKey.generate)
-    keyid: str = "agent-req-1"
+    # Defaults to one derived from the key, so two agents publishing to the
+    # same operator directory never overwrite each other's entry.
+    keyid: str = ""
     agent_token: str | None = None  # aa-agent+jwt when enrolled
     stable: Ed25519PrivateKey | None = None  # long-term key (identified mode)
     # Optional CIMD URL describing who operates this agent. Display metadata
@@ -161,6 +163,14 @@ class AgentKeys:
         Enroll with uma4a_enroll.enroll() to obtain the agent_token."""
         return cls(key=Ed25519PrivateKey.generate(),
                    stable=cls._load_or_create_key(path))
+
+    def __post_init__(self) -> None:
+        if not self.keyid:
+            import base64, hashlib
+            from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+            raw = self.key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+            self.keyid = "agent-" + base64.urlsafe_b64encode(
+                hashlib.sha256(raw).digest()).rstrip(b"=").decode()[:16]
 
     def public_jwk(self) -> dict:
         return json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))

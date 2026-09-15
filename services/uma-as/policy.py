@@ -619,7 +619,8 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
 
 
 def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
-             registered: set[str], jointly_held: set[str] | None = None) -> dict:
+             registered: set[str], jointly_held: set[str] | None = None,
+             owner: str = "alice") -> dict:
     """Build a tier Alice is adding, or raise ValueError saying why not.
 
     Three checks, and the middle one is the one with teeth:
@@ -685,7 +686,7 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
         "terms": {
             # v1 because this document has never been served before. Every
             # later edit bumps it, and every version stays dereferenceable.
-            "template_id": f"alice/{tier_id}/v1",
+            "template_id": f"{owner}/{tier_id}/v1",
             "purpose": terms["purpose"],
             "scope": list(terms.get("scope") or []),
             "expires_in": int(terms["expires_in"]),
