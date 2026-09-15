@@ -223,6 +223,21 @@ async def test_a_deleted_default_stays_deleted(store) -> None:
     await store.create_tier("tier1", original)
 
 
+async def test_organization_fields_merge(store) -> None:
+    await store.set_organization({"issuer": "https://org.example", "token": "t",
+                                  "envelope": {"charter_version": 1}})
+    await store.update_organization({"blocked": {"handles": ["h1"], "operators": []}})
+    await store.update_organization({"envelope": {"charter_version": 2}})
+    rec = await store.organization() or {}
+    check("updating one key of the membership record keeps the others",
+          rec.get("blocked", {}).get("handles") == ["h1"]
+          and rec.get("envelope", {}).get("charter_version") == 2
+          and rec.get("token") == "t", str(rec))
+    await store.clear_organization()
+    check("and there is nothing to update once the membership is gone",
+          await store.update_organization({"blocked": {}}) is False)
+
+
 async def test_revoke_burns_live_grants(store) -> None:
     """Revocation deactivates the connection and every live token under it in
     one step. If the two halves could come apart, a revoked agent would keep
@@ -659,6 +674,7 @@ async def test_claimed_origins_round_trip(store) -> None:
 
 
 TESTS = [
+    test_organization_fields_merge,
     test_ticket_is_spent_once,
     test_save_creates_an_unseen_negotiation,
     test_negotiation_survives_its_ticket,

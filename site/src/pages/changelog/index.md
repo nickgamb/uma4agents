@@ -92,6 +92,9 @@ release within that month. One entry per release.
 - **Kubernetes:** the sterling-vance key job's comments said its Role could never rotate an existing key and named the wrong script. They now describe `agent-keys.py`, the keys it rotates on purpose, and that the script rather than RBAC keeps the long-lived keys stable.
 - **Organization authority:** enrolment did not record which charter a member had been shown, so one published between her preview and her join applied to her unseen. The portal sends the previewed version, and a join against a newer charter is refused with 409.
 - **Organization authority:** charter and group edits read the charter, awaited the policy engine, then appended, so two edits at once could each overwrite the other's change. Publishing now happens one at a time, and group edits and charter writes that carry `base_version` are refused with 409 when the charter has moved on.
+- **Authorization server:** a membership refresh and an organization block each rewrote the whole membership record, so running together they could undo each other. Each now updates only its own key in one statement.
+- **Kubernetes:** nothing at the waypoint restricted who could call her personal AI, whose pod holds her device key. A policy on its Service admits no inbound calls.
+- **Docs:** the event register listed four events nothing emits and left out most that are. The phantom rows are removed and every other emitted event is listed by component.
 - **Docs:** run-the-lab and KUBERNETES quoted a policy-test pair no check prints and an out-of-date count. Both give the count the suite has and say what a refusal means.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 
