@@ -189,7 +189,14 @@ def note(name: str, **fields) -> None:
     event(name, **fields)
 
 
-async def publish_charter(doc: dict, by: str) -> dict:
+# Publishing reads the charter in force, awaits the engine, then appends. Two
+# of those interleaved would let the second overwrite the first's change, so
+# they run one at a time, and a write that says which version it was built
+# from is refused when that is no longer the one in force.
+_PUBLISH_LOCK = asyncio.Lock()
+
+
+async def publish_charter(doc: dict, by: str, base_version: int | None = None) -> dict:
     """Validate, load the admin's rules into the engine, then version it.
 
     The order is the whole of it. A charter whose Rego does not compile must
@@ -197,15 +204,22 @@ async def publish_charter(doc: dict, by: str) -> dict:
     whose decision half cannot be evaluated, and every one of their grants
     would fail closed at once.
     """
-    validated = charter_mod.validate(doc)
-    await load_custom_rego(validated.get("rego") or "")
-    entry = {
-        "version": len(CHARTERS) + 1,
-        "charter": validated,
-        "published_at": utcstamp(),
-        "by": by,
-    }
-    CHARTERS.append(entry)
+    async with _PUBLISH_LOCK:
+        if base_version is not None and int(base_version) != current()["version"]:
+            raise HTTPException(
+                status_code=409,
+                detail=f"the charter is now v{current()['version']}, not the "
+                       f"v{base_version} this change was made against; reload "
+                       "and make it again")
+        validated = charter_mod.validate(doc)
+        await load_custom_rego(validated.get("rego") or "")
+        entry = {
+            "version": len(CHARTERS) + 1,
+            "charter": validated,
+            "published_at": utcstamp(),
+            "by": by,
+        }
+        CHARTERS.append(entry)
     note("charter.published", version=entry["version"], by=by,
          rego=bool(validated.get("rego")))
     return entry
@@ -727,6 +741,15 @@ async def member_join(request: Request) -> dict:
         raise HTTPException(status_code=409,
                             detail="that name is already a member of this "
                                    "organization")
+    agreed_to = body.get("charter_version")
+    if agreed_to is not None and str(agreed_to) != str(current()["version"]):
+        # She agreed to the charter she was shown. One published since is a
+        # different bargain, and she has to see it before it applies to her.
+        raise HTTPException(
+            status_code=409,
+            detail=f"the charter changed from v{agreed_to} to "
+                   f"v{current()['version']} after you previewed it; look again "
+                   "before joining")
     how = _authorize_enrolment(owner, body.get("code") or "",
                                body.get("assertion") or "")
     if how == "invitation":
@@ -1318,8 +1341,9 @@ async def admin_put_charter(request: Request) -> dict:
     """
     admin = require_admin(request)
     doc = await request.json()
+    base = doc.pop("base_version", None) if isinstance(doc, dict) else None
     try:
-        entry = await publish_charter(doc, by=admin)
+        entry = await publish_charter(doc, by=admin, base_version=base)
     except ValueError as exc:
         # The console shows this text. It is either the charter validator
         # saying which field is wrong, or OPA's own compiler saying which
@@ -1461,6 +1485,7 @@ async def admin_put_role(role_id: str, request: Request) -> dict:
     body = await request.json()
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="expected an object")
+    base = current()["version"]
     doc = copy.deepcopy(current()["charter"])
     roles = doc.setdefault("roles", {})
     existed = role_id in roles
@@ -1472,7 +1497,7 @@ async def admin_put_role(role_id: str, request: Request) -> dict:
     if body.get("default"):
         doc["default_role"] = role_id
     try:
-        entry = await publish_charter(doc, by=admin)
+        entry = await publish_charter(doc, by=admin, base_version=base)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     note("role.saved", role=role_id, by=admin,
@@ -1495,6 +1520,7 @@ async def admin_delete_role(role_id: str, request: Request) -> dict:
     did on purpose, to named people.
     """
     admin = require_admin(request)
+    base = current()["version"]
     doc = copy.deepcopy(current()["charter"])
     roles = doc.get("roles") or {}
     if role_id not in roles:
@@ -1511,7 +1537,7 @@ async def admin_delete_role(role_id: str, request: Request) -> dict:
     if doc.get("default_role") == role_id:
         doc["default_role"] = None
     try:
-        entry = await publish_charter(doc, by=admin)
+        entry = await publish_charter(doc, by=admin, base_version=base)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     note("role.removed", role=role_id, by=admin, version=entry["version"])
@@ -1533,10 +1559,11 @@ async def admin_default_role(request: Request) -> dict:
     admin = require_admin(request)
     body = await request.json()
     role_id = (body.get("role") or "").strip() or None
+    base = current()["version"]
     doc = copy.deepcopy(current()["charter"])
     doc["default_role"] = role_id
     try:
-        entry = await publish_charter(doc, by=admin)
+        entry = await publish_charter(doc, by=admin, base_version=base)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     note("role.default_set", role=role_id, by=admin, version=entry["version"])

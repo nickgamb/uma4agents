@@ -90,6 +90,8 @@ release within that month. One entry per release.
 - **Authorization server:** an introduced agent's pending bound counted operation requests from every connected agent, so traffic from agents never bound by it could refuse a sub-agent. Only operation requests from introduced connections count.
 - **Authorization server:** joining a jointly held account did not check her tiers, so one tier could govern the account's resources and her own together. Joining is refused until such a tier is split.
 - **Kubernetes:** the sterling-vance key job's comments said its Role could never rotate an existing key and named the wrong script. They now describe `agent-keys.py`, the keys it rotates on purpose, and that the script rather than RBAC keeps the long-lived keys stable.
+- **Organization authority:** enrolment did not record which charter a member had been shown, so one published between her preview and her join applied to her unseen. The portal sends the previewed version, and a join against a newer charter is refused with 409.
+- **Organization authority:** charter and group edits read the charter, awaited the policy engine, then appended, so two edits at once could each overwrite the other's change. Publishing now happens one at a time, and group edits and charter writes that carry `base_version` are refused with 409 when the charter has moved on.
 - **Docs:** run-the-lab and KUBERNETES quoted a policy-test pair no check prints and an out-of-date count. Both give the count the suite has and say what a refusal means.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 

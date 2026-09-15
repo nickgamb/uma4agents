@@ -5068,7 +5068,8 @@ async def owner_join_organization(request: Request) -> dict:
                    "agree to it explicitly, before this can go ahead.")
     try:
         joined = await org.join(ORG_ISSUER, body.get("code") or "", owner,
-                               ORG_CALLBACK, body.get("assertion") or "")
+                               ORG_CALLBACK, body.get("assertion") or "",
+                               body.get("charter_version"))
     except Exception as exc:                                    # noqa: BLE001
         raise HTTPException(status_code=400, detail=_org_error(exc))
     token = joined.pop("membership_token")
