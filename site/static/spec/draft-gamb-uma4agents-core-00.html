@@ -1666,7 +1666,9 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-1.5-1" class="pilcrow">¶</a></p>
 <p id="section-1.5-2">Base64url encoding is as defined in <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 2, without padding.<a href="#section-1.5-2" class="pilcrow">¶</a></p>
 <p id="section-1.5-3">The notation <code>s256(x)</code> denotes the string <code>"s256:"</code> followed by the base64url
-encoding, without padding, of the SHA-256 digest of the octets <code>x</code>.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
+encoding, without padding, of the SHA-256 digest of the octets <code>x</code>. Where <code>x</code> is
+a JSON value, the octets are its serialization under the JSON Canonicalization
+Scheme <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, so that independent implementations compute the same digest.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 <p id="section-1.5-4">The notation <code>jkt(k)</code> denotes the string <code>"jkt:"</code> followed by the JWK Thumbprint
 <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the JSON Web Key <code>k</code>. The value after the prefix is the same
 thumbprint DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> carries in its <code>jkt</code> confirmation method; the prefix
@@ -1809,9 +1811,8 @@ was attempted.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
           <dd class="break"></dd>
 <dt id="section-3.3-2.3">authorization_reference:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.4">
-            <p id="section-3.3-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over the canonical JSON serialization of
-<code>authorization_details</code>, with object keys sorted and no insignificant
-whitespace.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.3-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over <code>authorization_details</code>, serialized as
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.3-2.5">authorization_server:</dt>
@@ -2067,19 +2068,25 @@ request to the protected resource, and an enforcement point <span class="bcp14">
 <p id="section-6.1-2">A signature <span class="bcp14">MUST</span> cover at least the components <code>"@method"</code>, <code>"@authority"</code>,
 <code>"@path"</code> and <code>"authorization"</code>. A signer <span class="bcp14">MAY</span> cover more, and a verifier <span class="bcp14">MUST</span>
 accept a superset rather than requiring an exact set.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.1-3">Requiring an exact list is the intuitive implementation and it is wrong. It makes
+<p id="section-6.1-3">On a request that carries no <code>Authorization</code> header, such as a resource server
+introducing itself or an owner's own signed request, the <code>"authorization"</code>
+component is covered with the empty string as its value, so the covered set is
+the same on every request. <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> Section 2.5 would otherwise treat covering
+an absent field as an error; this is a departure from it, and the signer and the
+verifier apply it identically.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Requiring an exact list is the intuitive implementation and it is wrong. It makes
 this profile and <span>[<a href="#I-D.meunier-webbotauth-httpsig-protocol" class="cite xref">I-D.meunier-webbotauth-httpsig-protocol</a>]</span> unable to coexist on
 one request, because each adds a component the other did not expect. Covering
-<code>"authorization"</code> is the security property; an exact list was never one.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-<p id="section-6.1-4">A verifier <span class="bcp14">MUST</span> reconstruct the signature base using the <code>@authority</code> value it is
+<code>"authorization"</code> is the security property; an exact list was never one.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">A verifier <span class="bcp14">MUST</span> reconstruct the signature base using the <code>@authority</code> value it is
 configured with, and <span class="bcp14">MUST NOT</span> take it from the <code>Host</code> header or from any
 forwarded header. An authority read from the request is an authority the caller
 chose. This is a security rule and a portability rule with one cause: an
 enforcement point that recovers its authority from the routing layer breaks
 silently when the routing layer changes, with signatures failing to verify for a
-reason nothing in its logs names.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
-<p id="section-6.1-5">A verifier <span class="bcp14">MUST</span> echo the received <code>@signature-params</code> value verbatim when
-reconstructing the base, rather than re-serializing it from parsed components.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+reason nothing in its logs names.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.1-6">A verifier <span class="bcp14">MUST</span> echo the received <code>@signature-params</code> value verbatim when
+reconstructing the base, rather than re-serializing it from parsed components.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="content-digest">
@@ -2186,9 +2193,9 @@ Such a token <span class="bcp14">MUST</span> carry:<a href="#section-7.2-1" clas
 <dt id="section-7.2-2.3">operation:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.4">
             <p id="section-7.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object with a <code>tool</code> member naming the operation and a
-<code>params_s256</code> member carrying <code>s256</code> over the JSON serialization, with object
-keys sorted, of the parameters approved: the <code>params</code> member of the
-agreement's <code>operation</code> <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+<code>params_s256</code> member carrying <code>s256</code> over the parameters approved, serialized
+as <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>: the <code>params</code> member of the agreement's <code>operation</code>
+              <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2905,6 +2912,10 @@ decision, which makes the same request answerable two ways. See <span>[<a href="
 <dt id="RFC8414">[RFC8414]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+        <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9396">[RFC9396]</dt>
         <dd>

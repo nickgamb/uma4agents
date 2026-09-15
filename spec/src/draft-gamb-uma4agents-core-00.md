@@ -20,6 +20,7 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
+  RFC8785:
   I-D.ietf-oauth-client-id-metadata-document:
   I-D.meunier-webbotauth-registry:
   I-D.ietf-oauth-identity-assertion-authz-grant:
@@ -281,7 +282,9 @@ Enforcement point:
 Base64url encoding is as defined in {{RFC7515}} Section 2, without padding.
 
 The notation `s256(x)` denotes the string `"s256:"` followed by the base64url
-encoding, without padding, of the SHA-256 digest of the octets `x`.
+encoding, without padding, of the SHA-256 digest of the octets `x`. Where `x` is
+a JSON value, the octets are its serialization under the JSON Canonicalization
+Scheme {{RFC8785}}, so that independent implementations compute the same digest.
 
 The notation `jkt(k)` denotes the string `"jkt:"` followed by the JWK Thumbprint
 {{RFC7638}} of the JSON Web Key `k`. The value after the prefix is the same
@@ -386,9 +389,8 @@ authorization_details:
   was attempted.
 
 authorization_reference:
-: REQUIRED. `s256` over the canonical JSON serialization of
-  `authorization_details`, with object keys sorted and no insignificant
-  whitespace.
+: REQUIRED. `s256` over `authorization_details`, serialized as
+  {{RFC8785}}.
 
 authorization_server:
 : REQUIRED by this profile. The issuer identifier of the authorization server
@@ -591,6 +593,13 @@ A signature MUST cover at least the components `"@method"`, `"@authority"`,
 `"@path"` and `"authorization"`. A signer MAY cover more, and a verifier MUST
 accept a superset rather than requiring an exact set.
 
+On a request that carries no `Authorization` header, such as a resource server
+introducing itself or an owner's own signed request, the `"authorization"`
+component is covered with the empty string as its value, so the covered set is
+the same on every request. {{RFC9421}} Section 2.5 would otherwise treat covering
+an absent field as an error; this is a departure from it, and the signer and the
+verifier apply it identically.
+
 Requiring an exact list is the intuitive implementation and it is wrong. It makes
 this profile and {{I-D.meunier-webbotauth-httpsig-protocol}} unable to coexist on
 one request, because each adds a component the other did not expect. Covering
@@ -686,9 +695,9 @@ single_use:
 
 operation:
 : REQUIRED. An object with a `tool` member naming the operation and a
-  `params_s256` member carrying `s256` over the JSON serialization, with object
-  keys sorted, of the parameters approved: the `params` member of the
-  agreement's `operation` {{U4ATerms}}.
+  `params_s256` member carrying `s256` over the parameters approved, serialized
+  as {{RFC8785}}: the `params` member of the agreement's `operation`
+  {{U4ATerms}}.
 
 ~~~ json
 {

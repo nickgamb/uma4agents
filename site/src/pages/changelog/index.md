@@ -43,6 +43,7 @@ release within that month. One entry per release.
 - **Specification:** the federated authorization draft cited RFC 9728 §2.1 for `signed_metadata` (it is §2.2), and the terms draft cited UMA Grant §3.3.4 for `need_info` (it is §3.3.6). The core draft and the deviations page cited UMA Grant §3.3.1 for single-use permission tickets (§5.5) and for the authorization server's responses (§3.3.5 and §3.3.6).
 - **Specification:** the policy draft now states that its `429` refusal at the pending-queue bound departs from UMA Grant's `403` for `request_denied`, and why.
 - **Specification:** the identifier appendices were incomplete. Added: core's `insufficient_authorization`, `PoP` and the remediation members; terms' `decline` and `receipt`; lineage's `introduction` claim; multiparty's `org`, `kind` and `admin` claims. The multiparty draft now defines the `u4a-org-admin+jwt` credential it listed.
+- **Specification:** the core draft said digests are taken over "canonical JSON" without defining it, and `params_s256` did not rule out whitespace. Digests over JSON values are now over the RFC 8785 serialization. Core §6.1 also states that a request with no `Authorization` header covers the `authorization` component with the empty string, and that this departs from RFC 9421 §2.5.
 - **Specification:** example digests and thumbprints are full length, the MCP binding's remediation example matches the core draft's, and references a conforming implementation needs are normative.
 
 ## September 12 2026
