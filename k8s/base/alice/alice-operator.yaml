@@ -67,6 +67,9 @@ spec:
               value: https://alice-agent.uma.lab
             - name: AGENT_OPERATOR_NAME
               value: Alice's own agent
+            - name: AGENT_OPERATOR_REGISTER_TOKEN
+              valueFrom:
+                secretKeyRef: { name: operator-register, key: token }
           startupProbe:
             httpGet: { path: /health, port: 9030 }
             periodSeconds: 2

@@ -45,7 +45,8 @@ spec:
             - name: PYTHONUNBUFFERED
               value: "1"
             - name: PS_ADMIN_TOKEN
-              value: uma4agents-ps-admin
+              valueFrom:
+                secretKeyRef: { name: ps-admin, key: token }
           volumeMounts:
             - { name: driver, mountPath: /driver/driver.py, subPath: driver.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }

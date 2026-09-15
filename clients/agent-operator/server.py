@@ -34,6 +34,7 @@ correct. The way to make a service horizontally scalable is usually to stop
 it holding state, not to replicate the state.
 """
 
+import hmac
 import json
 import os
 
@@ -43,6 +44,10 @@ from fastapi.responses import JSONResponse
 ORIGIN = os.environ.get("AGENT_OPERATOR_ORIGIN", "https://agent.uma.lab")
 NAME = os.environ.get("AGENT_OPERATOR_NAME", "Sterling & Vance — Advisory Agent")
 KEYS_FILE = os.environ.get("AGENT_OPERATOR_KEYS_FILE")
+# Set wherever the directory speaks for an owner: a key it lists is how her
+# authorization server recognises her own agents, so publishing one takes a
+# credential. Unset only for a directory nothing grants standing on.
+REGISTER_TOKEN = os.environ.get("AGENT_OPERATOR_REGISTER_TOKEN")
 
 app = FastAPI(title="agent-operator")
 
@@ -118,8 +123,10 @@ async def register(request: Request) -> JSONResponse:
     Real operators publish keys they already hold, which is what
     AGENT_OPERATOR_KEYS_FILE is. This exists because the toy stack generates
     its agent keys per run and something has to publish them. It is
-    deliberately unauthenticated and local-only — nothing downstream trusts
-    this directory for authorization, only for discovery.
+    authenticated by AGENT_OPERATOR_REGISTER_TOKEN wherever that is set,
+    because a key listed here is how an owner's authorization server
+    recognises her own agents: an open directory lets any agent claim to be
+    one of them.
 
     **Refused once the operator is seeded from a file**, and that is the
     interesting line rather than a safety rail. This endpoint writes to one
@@ -139,6 +146,13 @@ async def register(request: Request) -> JSONResponse:
                         "read-only and identical across replicas. Provision "
                         "the key into that document instead.")},
             status_code=409)
+    if REGISTER_TOKEN:
+        given = request.headers.get("authorization", "")
+        if not hmac.compare_digest(given, f"Bearer {REGISTER_TOKEN}"):
+            return JSONResponse({"registered": False,
+                                 "error": "this directory publishes keys only "
+                                          "for callers holding its registration "
+                                          "credential"}, status_code=401)
     body = await request.json()
     jwk = body.get("jwk") or {}
     keyid = body.get("keyid") or jwk.get("kid")

@@ -120,8 +120,11 @@ class AgentKeys:
         authorization server attribute a key it has never seen before.
         """
         try:
+            import os
+            token = os.environ.get("UMA4A_OPERATOR_REGISTER_TOKEN")
             r = client.post(f"{operator_origin}/register",
                             json={"keyid": self.keyid, "jwk": self.public_jwk()},
+                            headers={"Authorization": f"Bearer {token}"} if token else None,
                             timeout=5.0)
             r.raise_for_status()
             return f"{operator_origin}/.well-known/http-message-signatures-directory"

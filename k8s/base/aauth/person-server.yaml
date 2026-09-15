@@ -60,9 +60,11 @@ spec:
             - name: AAUTH_AS_SERVER_DOMAIN
               value: ps.uma.lab
             - name: AAUTH_PS_ADMIN_TOKEN
-              value: uma4agents-ps-admin
+              valueFrom:
+                secretKeyRef: { name: ps-admin, key: token }
             - name: AAUTH_AS_PERSON_TOKEN
-              value: uma4agents-ps-admin
+              valueFrom:
+                secretKeyRef: { name: ps-admin, key: token }
             - name: AAUTH_PS_INSECURE_DEV
               value: "true"
             - name: AAUTH_AS_INSECURE_DEV

@@ -46,6 +46,8 @@ spec:
             - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
             - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
             - { name: UMA4A_ALICE_OPERATOR, value: "https://alice-agent.uma.lab" }
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom: { secretKeyRef: { name: operator-register, key: token } }
             # Read from the same value the gateway is configured with, so a
             # wait here cannot drift into a flaky one.
             - { name: UMA_PEP_MEMBERSHIP_TTL_S, value: "10" }

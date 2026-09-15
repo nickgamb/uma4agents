@@ -30,6 +30,8 @@ release within that month. One entry per release.
 - **Organization authority:** joining under a name already enrolled replaced that member's record, moving her notices and break-glass alerts to whatever authority the caller named. It is now refused with 409.
 - **Enforcement point:** a request path under `/mcp/` whose first segment was not a known owner, shared resource or account was judged under the primary owner's authority. The owner is now read from the path prefix the gateway routes on, and an unknown path is refused with `invalid_resource_id`.
 - **Kubernetes:** the edge's single wildcard listener admitted routes from every party namespace for any hostname, so one party could attach a more specific route to another's name and serve its own keys there. Each hostname now has its own listener that admits only the namespace owning it.
+- **Agent operator:** `/register` accepted any caller's key, and a key listed in Alice's directory is how her authorization server recognises her own agents, so any agent could claim first-party standing. With `AGENT_OPERATOR_REGISTER_TOKEN` set, publishing a key takes that bearer credential; Alice's operator sets it in compose and Kubernetes, and the agent library sends `UMA4A_OPERATOR_REGISTER_TOKEN`.
+- **Kubernetes:** the person server's admin token and Alice's operator registration token were committed literals reachable through the public edge. `make kind-up` now generates both as Secrets once per cluster.
 
 ## September 12 2026
 

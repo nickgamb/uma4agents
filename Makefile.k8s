@@ -104,6 +104,20 @@ k8s-apply:
 	@kubectl -n sterling-vance create configmap agent-keys-script \
 		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@# Credentials the public edge can reach are generated per cluster, never
+	@# committed: the person server's admin token, and the token Alice's operator
+	@# directory requires to publish a key. Created once; re-applying keeps them.
+	@for pair in "ps-admin:aauth sterling-vance" "operator-register:alice sterling-vance"; do \
+		name=$${pair%%:*}; nss=$${pair#*:}; tok=""; \
+		for ns in $$nss; do \
+			[ -n "$$tok" ] || tok=$$(kubectl -n $$ns get secret $$name -o jsonpath='{.data.token}' 2>/dev/null | base64 -d); \
+		done; \
+		[ -n "$$tok" ] || tok=$$(openssl rand -hex 24); \
+		for ns in $$nss; do \
+			kubectl -n $$ns get secret $$name >/dev/null 2>&1 || \
+			kubectl -n $$ns create secret generic $$name --from-literal=token=$$tok >/dev/null; \
+		done; \
+	done
 	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
 		--from-file=carol-realm.json=keycloak/carol-realm.json \

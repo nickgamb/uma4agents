@@ -37,6 +37,9 @@ spec:
               value: "1"
             - name: UMA4A_ALICE_OPERATOR
               value: https://alice-agent.uma.lab
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom:
+                secretKeyRef: { name: operator-register, key: token }
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
             # Flipped to "0" by `make k8s-subagent-demo`, where she decides

@@ -302,6 +302,8 @@ and why rec 9 in [FINDINGS.md](../FINDINGS.md) exists: single-use has to mean
 
 **The key directory is provisioned, not collected.** Sterling & Vance's
 operator runs two replicas, and that is only correct because
+Alice's operator directory requires `AGENT_OPERATOR_REGISTER_TOKEN` to publish a key, from the `operator-register` Secret `make kind-up` generates; the person server's admin token comes from the generated `ps-admin` Secret. Neither is committed.
+
 `AGENT_OPERATOR_KEYS_FILE` hands it a published JWKS to serve: the directory
 is read-only, identical on every replica, and the server refuses
 `POST /register` outright once it has one. The agent is given the private half

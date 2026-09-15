@@ -36,6 +36,9 @@ spec:
               value: "1"
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom:
+                secretKeyRef: { name: operator-register, key: token }
             # The private halves of the keys this operator publishes.
             # Present only in the replicated shape, where the directory is a
             # provisioned document and registering a key at runtime is
