@@ -64,7 +64,7 @@ ISSUER = os.environ.get("XAA_ISSUER", "https://northwind-xaa.uma.lab")
 # The realm holding Northwind's employee directory. A subject token signed by
 # anything else is not an employee assertion, whatever it claims.
 IDP_ISSUER = os.environ.get("XAA_IDP_ISSUER",
-                            "https://keycloak.uma.lab/realms/northwind")
+                            "https://northwind-idp.uma.lab/realms/employees")
 KEY_PATH = os.environ.get("XAA_KEY_PATH", "/keys/xaa-ed25519.pem")
 CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE") or os.environ.get("UMA4A_CACERT")
 # Short by construction. An ID-JAG is spent immediately at one authorization
@@ -187,7 +187,7 @@ def verify_subject_token(token: str, client_id: str) -> dict:
 
     aud = claims.get("aud")
     aud = [aud] if isinstance(aud, str) else list(aud or [])
-    if client_id not in aud and claims.get("azp") != client_id:
+    if claims.get("azp") != client_id or claims.get("typ", "ID") != "ID":
         raise ValueError("subject token was not issued to this client")
     if not claims.get("sub"):
         raise ValueError("subject token has no subject")

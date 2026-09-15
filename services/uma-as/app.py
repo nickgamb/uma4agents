@@ -1682,6 +1682,10 @@ def issuer_keys(issuer: str, fresh: bool = False) -> list:
     return keys
 
 
+# jti -> exp of organization notices already acted on.
+_ORG_NOTICES_SEEN: dict[str, float] = {}
+
+
 @app.post("/org/notice")
 async def org_notice(request: Request) -> dict:
     """Something the organization wants this owner told.
@@ -1714,7 +1718,8 @@ async def org_notice(request: Request) -> dict:
             claims = jwt.decode(body["notice"],
                                 OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                 algorithms=["EdDSA"], issuer=issuer,
-                                options={"verify_aud": False})
+                                options={"verify_aud": False,
+                                         "require": ["exp", "iat", "jti"]})
             break
         except jwt.InvalidTokenError:
             continue
@@ -1722,6 +1727,17 @@ async def org_notice(request: Request) -> dict:
         raise HTTPException(status_code=401,
                             detail="that notice is not signed by this owner's "
                                    "organization")
+    if jwt.get_unverified_header(body["notice"]).get("typ") != "u4a-org-notice+jwt":
+        raise HTTPException(status_code=401, detail="that is not an organization notice")
+    # Each notice acts once. A captured one posted again would add a second
+    # break-glass entry to her record, or end a membership twice.
+    seen = _ORG_NOTICES_SEEN
+    cutoff = now()
+    for j in [j for j, e in seen.items() if e < cutoff]:
+        seen.pop(j, None)
+    if claims["jti"] in seen:
+        raise HTTPException(status_code=409, detail="that notice was already received")
+    seen[claims["jti"]] = float(claims["exp"])
 
     kind = claims.get("kind")
     event("org.notice", owner=owner, kind=kind)
@@ -3777,6 +3793,11 @@ async def token(request: Request) -> JSONResponse:
                                              rec["resource_id"])
     if tier_id is None:
         event("policy.evaluated", corr=family, result="no-tier")
+        # A refusal is a record too; she should see what was turned away and why.
+        await ledger_add(rec["owner"], "refused", family,
+                         {"reason": "no tier of hers covers this resource",
+                          "resource_id": rec["resource_id"]},
+                         handle=rec.get("handle"))
         await close_negotiation(rec)
         return JSONResponse({"error": "request_denied"}, status_code=403)
 
@@ -4038,6 +4059,10 @@ async def token(request: Request) -> JSONResponse:
         if waiting >= budget:
             event("policy.evaluated", corr=family, result="attention-budget",
                   lane=lane, waiting=waiting, budget=budget)
+            await ledger_add(rec["owner"], "refused", family,
+                             {"reason": "her queue of agent requests is full",
+                              "lane": lane, "waiting": waiting, "budget": budget},
+                             handle=handle)
             await close_negotiation(rec)
             return JSONResponse(
                 {"error": "request_denied",
@@ -4599,6 +4624,15 @@ async def block_operator_for(owner: str, origin: str,
         killed = await st(owner).revoke_connection(conn["handle"])
         if killed is not None:
             revoked, tokens = revoked + 1, tokens + killed
+        # And the agents it introduced, as revoking it by hand would: a
+        # sub-agent's standing came from this connection, so blocking its
+        # operator cannot leave the sub-agent connected.
+        for child in await st(owner).connections():
+            if child.get("parent_handle") != conn["handle"] or child.get("status") != "active":
+                continue
+            child_killed = await st(owner).revoke_connection(child["handle"])
+            if child_killed is not None:
+                revoked, tokens = revoked + 1, tokens + child_killed
     event("operator.blocked", operator=origin, connections_revoked=revoked,
           rpts_deactivated=tokens, by=(actor or {}).get("admin") or owner)
     await ledger_add(owner, "revoked", "-", {"operator": origin,

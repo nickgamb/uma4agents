@@ -983,7 +983,7 @@ def _thumbprint(jwk: dict) -> str:
         hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
 
 
-async def notify_member(owner: str, payload: dict) -> None:
+async def notify_member(owner: str, payload: dict) -> bool:
     """Tell a member's authority something, signed.
 
     Signed rather than merely posted, because the receiving side has to be
@@ -994,26 +994,31 @@ async def notify_member(owner: str, payload: dict) -> None:
     member = MEMBERS.get(owner) or {}
     as_uri = member.get("as_uri")
     if not as_uri:
-        return
+        return False
+    # Short-lived and single-use, so a captured notice cannot be posted again.
     notice = jwt.encode({"iss": ISSUER, "sub": owner, "org": ORG_ID,
-                         "iat": int(now()), **payload},
+                         "iat": int(now()), "exp": int(now()) + 300,
+                         "jti": uuid.uuid4().hex, **payload},
                         SIGNING_KEY, algorithm="EdDSA",
                         headers={"typ": "u4a-org-notice+jwt", "kid": KID})
     try:
         async with httpx.AsyncClient(verify=CA_BUNDLE or True, timeout=5.0) as c:
             r = await c.post(f"{as_uri.rstrip('/')}/org/notice",
                              json={"notice": notice})
-        event("member.notified", member=owner, notice=payload.get("kind"),
-              status=r.status_code)
+        if r.is_success:
+            event("member.notified", member=owner, notice=payload.get("kind"),
+                  status=r.status_code)
+            return True
+        note("notice.failed", member=owner, notice=payload.get("kind"),
+             error=f"her authority answered {r.status_code}")
+        return False
     except Exception as exc:                                    # noqa: BLE001
-        # Worth being precise about what this failure means. The notice is
-        # how a member learns; it is not what authorises the grant, and
-        # holding the grant back until she can be reached would make an
-        # unreachable member into an outage. So the grant stands, the failure
-        # is recorded here, and her authority reconciles when it next reads
-        # this organization's record.
+        # A notice that did not arrive is recorded where the administrator
+        # sees it. Nothing re-sends it later, so a caller whose act must not
+        # be quiet decides for itself what an undelivered notice means.
         note("notice.failed", member=owner, notice=payload.get("kind"),
              error=str(exc))
+        return False
 
 
 @app.post("/break-glass")
@@ -1145,7 +1150,7 @@ async def break_glass(request: Request) -> JSONResponse:
                   "reason": reason, "authorised_by": authorised_by}
     note("break_glass.granted", member=owner, resource=resource_id, jti=jti,
          authorised_by=authorised_by, expires_in=ttl)
-    await notify_member(owner, {
+    told = await notify_member(owner, {
         "kind": "break_glass",
         "resource_id": resource_id,
         "scopes": scopes,
@@ -1155,6 +1160,16 @@ async def break_glass(request: Request) -> JSONResponse:
         "jti": jti,
         "charter_version": current()["version"],
     })
+    if not told:
+        # Break-glass is an exception the member is always told about. One
+        # her authority could not be told of is not issued: the override is
+        # voided before it is handed out, rather than usable in silence.
+        GLASS[jti]["spent"] = True
+        note("break_glass.voided", member=owner, jti=jti,
+             reason="the member's authority could not be told")
+        raise HTTPException(status_code=503, detail=(
+            "the member's authorization server could not be told of this "
+            "override, and break-glass is not granted quietly"))
     return JSONResponse({"access_token": token, "token_type": "PoP",
                          "expires_in": ttl, "break_glass": claims["break_glass"]})
 
@@ -1533,12 +1548,15 @@ async def admin_default_role(request: Request) -> dict:
 @app.delete("/admin/members/{owner}")
 async def admin_remove_member(owner: str, request: Request) -> dict:
     admin = require_admin(request)
-    if MEMBERS.pop(owner, None) is None:
+    if owner not in MEMBERS:
         raise HTTPException(status_code=404, detail="not a member")
-    note("member.removed", member=owner, by=admin)
     # Her authority stops clamping when it learns this, and what was clamped
     # stays clamped. Removal withdraws a ceiling; it never re-opens access.
+    # Told first: the notice is addressed from her record, so removing the
+    # record first left nowhere to send it.
     await notify_member(owner, {"kind": "membership_ended", "by": admin})
+    MEMBERS.pop(owner, None)
+    note("member.removed", member=owner, by=admin)
     return {"removed": owner}
 
 

@@ -59,6 +59,13 @@ release within that month. One entry per release.
 - **Agent shim, TypeScript agent:** tool calls were signed without covering their body, so anything between the agent and the enforcement point could change a call's arguments without breaking the signature. Both now sign an RFC 9530 `Content-Digest` over the exact bytes they send, and `signed_headers` in the agent library takes the body.
 - **Authorization server, enforcement point, joint tally:** an operation's `params_s256` was computed over Python's default JSON output, with spaces after separators, while `authorization_reference` used the compact form; an implementation in another language could not reproduce either without copying that detail. All of them now hash the compact, key-sorted UTF-8 form (RFC 8785 for the values these carry).
 - **Tests:** joint-check's two forgery probes were re-signed by the script, so tally introspection refused them before any verdict was counted, and the conformance register cited them as proof of the verdict and mandate checks. The probes are renamed to what they prove, and the register rows now cite `make pep-test`'s verdict-signature and published-mandate cases and a new `make as-test` case comparing a folded agreement against a holder's terms.
+- **Organization authority:** removing a member deleted her record before sending the `membership_ended` notice, so it was never sent. The notice goes first.
+- **Organization authority:** a notice her authority answered with an error was logged as delivered, and break-glass was issued whether or not she could be told. A notice now counts as delivered only on success, and a break-glass override her authority could not be told of is voided and refused with 503.
+- **Authorization server:** organization notices carried no expiry or identifier and were acted on however many times they were posted. Notices now carry `exp` and `jti`, and one already received, expired or of the wrong type is refused.
+- **XAA broker:** an access token, or a token issued to another client that listed this one in its audience, was accepted as an employee's ID token. The token must be an ID token issued to the client presenting it.
+- **XAA broker:** without `XAA_IDP_ISSUER` set, the broker trusted a different realm from the one compose configures as the employee directory. The default is the employee directory.
+- **Authorization server:** blocking an operator revoked its agents' connections but not the sub-agents they had introduced. Those are revoked too.
+- **Authorization server:** a request refused because no tier covered the resource, or because the owner's queue was full, left no entry in her record. Both are recorded.
 
 ## September 12 2026
 
