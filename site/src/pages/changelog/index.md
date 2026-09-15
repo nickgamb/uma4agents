@@ -33,6 +33,11 @@ release within that month. One entry per release.
 - **Agent operator:** `/register` accepted any caller's key, and a key listed in Alice's directory is how her authorization server recognises her own agents, so any agent could claim first-party standing. With `AGENT_OPERATOR_REGISTER_TOKEN` set, publishing a key takes that bearer credential; Alice's operator sets it in compose and Kubernetes, and the agent library sends `UMA4A_OPERATOR_REGISTER_TOKEN`.
 - **Kubernetes:** the person server's admin token and Alice's operator registration token were committed literals reachable through the public edge. `make kind-up` now generates both as Secrets once per cluster.
 - **Specification:** the drafts carried no date, so rendering them on any later day produced different output from what is committed and the check comparing the two failed. Each draft now states its date.
+- **Owner portal:** notification toasts inserted their title and detail as markup, so an organization's break-glass reason or name ran as script in the owner's session. They are escaped.
+- **Organization console:** a group id was placed inside inline event handlers and element ids, and a member's grants were shown unescaped, so either could run script in another administrator's console. The id is read from a data attribute and both are escaped.
+- **TypeScript agent:** corroboration fetched whatever metadata URL the challenge named, so a forged challenge could vouch for its own authorization server. The URL is now formed from the resource called, and a challenge naming any other is refused.
+- **Agent shim:** when the resource's metadata could not be read, the shim negotiated with the challenge's authorization server uncorroborated. It now refuses.
+- **XAA broker:** administration accepted a realm token for an administrator issued to any client, including the public research agent. It now requires the token to be issued to `XAA_IDP_ADMIN_CLIENT`.
 
 ## September 12 2026
 

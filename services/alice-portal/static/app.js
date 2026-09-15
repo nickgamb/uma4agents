@@ -33,7 +33,7 @@ async function api(path, opts) {
 }
 
 function toast(title, detail, kind = "") {
-  const t = el(`<div class="toast ${kind}"><div class="t">${title}</div><div class="d">${detail || ""}</div></div>`);
+  const t = el(`<div class="toast ${esc(kind)}"><div class="t">${esc(title)}</div><div class="d">${esc(detail)}</div></div>`);
   $("#toasts").appendChild(t);
   setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 300); }, 5200);
 }

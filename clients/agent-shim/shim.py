@@ -410,13 +410,20 @@ class Upstream:
             # already in front of her rather than starting a second one.
             log(f"challenged by {as_uri}; negotiating")
             prm = await self.resource_metadata()
-            if prm is not None:
-                try:
-                    validate_resource_metadata(prm, GATEWAY, as_uri)
-                    log("challenge corroborated against the resource's "
-                        "published metadata")
-                except DiscoveryMismatch as exc:
-                    raise RuntimeError(f"refusing to negotiate: {exc}")
+            if prm is None:
+                # Without the resource's own metadata nothing corroborates the
+                # authority the challenge named, and core requires refusing
+                # rather than negotiating with an uncorroborated as_uri.
+                raise RuntimeError("refusing to negotiate: the resource's "
+                                   "metadata could not be read, so the "
+                                   f"authorization server {as_uri} is "
+                                   "uncorroborated")
+            try:
+                validate_resource_metadata(prm, GATEWAY, as_uri)
+                log("challenge corroborated against the resource's "
+                    "published metadata")
+            except DiscoveryMismatch as exc:
+                raise RuntimeError(f"refusing to negotiate: {exc}")
             # 2026-07-28 deprecated the logging capability (SEP-2577), which
             # was the only way to narrate progress to the requesting human
             # mid-call. Nothing replaces it for narration — the structural

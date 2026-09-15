@@ -80,7 +80,14 @@ export function parseJsonRpcChallenge(error: { code?: number; data?: Record<stri
 /** RFC 9728 §3.3 plus Core §3.4: the document must be for this resource and must list as_uri. */
 export async function corroborate(fetchFn: typeof fetch, resourceUrl: string, ch: Challenge): Promise<void> {
   if (!ch.resourceMetadata) throw new Error("challenge names no resource_metadata");
-  const doc = (await (await fetchFn(ch.resourceMetadata)).json()) as { resource?: string; authorization_servers?: string[] };
+  // The document is found from the resource this client called, as RFC 9728 §3
+  // forms it, never from where the challenge points: a forged challenge can name
+  // a document on its own host that lists its own authorization server.
+  const r = new URL(resourceUrl);
+  const expected = `${r.origin}/.well-known/oauth-protected-resource${r.pathname === "/" ? "" : r.pathname.replace(/\/$/, "")}`;
+  if (ch.resourceMetadata !== expected)
+    throw new Error(`challenge names metadata at ${ch.resourceMetadata}, not ${expected}`);
+  const doc = (await (await fetchFn(expected)).json()) as { resource?: string; authorization_servers?: string[] };
   if (doc.resource !== resourceUrl) throw new Error(`metadata is for ${doc.resource}, not ${resourceUrl}`);
   if (!(doc.authorization_servers ?? []).some((s) => s.replace(/\/$/, "") === ch.asUri.replace(/\/$/, "")))
     throw new Error(`the resource never published ${ch.asUri} as an authorization server`);

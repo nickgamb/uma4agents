@@ -179,14 +179,14 @@ function groupFields(id, role) {
     `<option value="${v}"${d === v ? " selected" : ""}>${label}</option>`;
   return `
     <label class="fld"><div class="lbl">Group id</div>
-      <input type="text" id="g-id-${id}" value="${id === "new" ? "" : esc(id)}"
+      <input type="text" id="g-id-${esc(id)}" value="${id === "new" ? "" : esc(id)}"
         ${id === "new" ? `placeholder="trader"` : "readonly"}></label>
     <label class="fld"><div class="lbl">Name members are shown</div>
-      <input type="text" id="g-name-${id}" value="${esc(role.name || "")}"></label>
+      <input type="text" id="g-name-${esc(id)}" value="${esc(role.name || "")}"></label>
     <label class="fld"><div class="lbl">Grants — resources this group may reach (comma-separated)</div>
-      <input type="text" id="g-grants-${id}" value="${esc((role.grants || []).join(", "))}"></label>
+      <input type="text" id="g-grants-${esc(id)}" value="${esc((role.grants || []).join(", "))}"></label>
     <label class="fld"><div class="lbl">Whose agent may act on them</div>
-      <select id="g-deleg-${id}">
+      <select id="g-deleg-${esc(id)}">
         ${opt("none", "Nobody's — only the member herself")}
         ${opt("first-party-only", "Only agents she operates herself")}
         ${opt("any-agent", "Any agent, if her own terms allow it")}
@@ -202,10 +202,10 @@ function groupCard(id, role, members, defaultRole) {
       <span class="chip">${members.length} member${members.length === 1 ? "" : "s"}</span></div>
     ${groupFields(id, role)}
     <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-      <button class="btn sm" onclick="saveGroup('${esc(id)}')">Save</button>
+      <button class="btn sm" data-group="${esc(id)}" onclick="saveGroup(this.dataset.group)">Save</button>
       ${isDefault ? "" :
-        `<button class="btn ghost sm" onclick="makeDefault('${esc(id)}')">Make default</button>`}
-      <button class="btn ghost sm" onclick="deleteGroup('${esc(id)}')">Delete</button>
+        `<button class="btn ghost sm" data-group="${esc(id)}" onclick="makeDefault(this.dataset.group)">Make default</button>`}
+      <button class="btn ghost sm" data-group="${esc(id)}" onclick="deleteGroup(this.dataset.group)">Delete</button>
     </div>
     ${members.length ? `<div style="margin-top:14px">
       <div class="lbl">In this group</div>
@@ -305,7 +305,7 @@ route("members", async (view) => {
           <option value=""${m.role ? "" : " selected"}>no access</option>
           ${Object.entries(ROLES).map(([id, r]) =>
             `<option value="${esc(id)}"${id === m.role ? " selected" : ""}>${esc(r.name || id)}</option>`).join("")}
-        </select><div class="cell-sub mono">${(m.grants || []).join(", ") || "—"}</div></td>
+        </select><div class="cell-sub mono">${esc((m.grants || []).join(", ")) || "—"}</div></td>
         <td>${DELEGATION[m.delegation] || esc(m.delegation)}</td>
         <td class="nowrap" title="${esc((m.joined || "").replace("T", " ").replace("Z", ""))}">${
           esc((m.joined || "").slice(0, 10))}</td>

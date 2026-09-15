@@ -127,6 +127,10 @@ CLIENTS: dict[str, str] = {}
 # A dev token so the lab can seed connections without driving a login. The
 # same affordance org-authority ships, and the same caveat: it is a lab.
 ADMIN_TOKEN = os.environ.get("XAA_ADMIN_TOKEN", "xaa-admin-dev-token")
+# The client administration tokens are issued to. A token for Dana from any
+# other client of the realm — the public research agent, say — is not an
+# administrator acting at this console.
+ADMIN_CLIENT = os.environ.get("XAA_IDP_ADMIN_CLIENT", "northwind-idp-admin")
 
 _JWKS_CACHE: tuple[float, list] = (0.0, [])
 JWKS_TTL = 300
@@ -378,6 +382,9 @@ def require_admin(request: Request) -> str:
                                 algorithms=[head.get("alg", "RS256")],
                                 issuer=IDP_ISSUER,
                                 options={"verify_aud": False})
+            if claims.get("azp") != ADMIN_CLIENT:
+                raise ValueError("that token was not issued to the "
+                                 "administration client")
             who = claims.get("preferred_username") or claims.get("sub") or ""
             if who in ADMINS:
                 return who
