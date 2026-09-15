@@ -129,19 +129,13 @@ action she personally approved. **Click** Revoke on the agent — then re-run
 ### 5. The part that needs a cluster
 
 ```bash
-make k8s-policy-test            # expect 11 passed, 0 failed
+make k8s-policy-test            # expect 22 passed, 0 failed
 ```
 
-**Notice** the eight refusals. A policy suite that only proves the allows
-passes on a cluster with no policy at all. The sharpest line:
-
-```
-ok   cannot read Alice's policy
-```
-
-The enforcement point **can** reach `/jwks` on that same port and workload,
-and is refused `/owner/*`. Same service, different path — that is what the
-waypoint is for.
+**Notice** how many of them are refusals. A policy suite that only proves the
+allows passes on a cluster with no policy at all. A refusal counts only when the
+mesh actually refused, with a 403 or a reset connection; a service that is down
+or a port that answers nothing fails the check instead of passing for one.
 
 ```bash
 make k8s-load                   # 24 agents at once; expect 3 passed

@@ -524,8 +524,8 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a custom rule that tries to *allow* is refused, not ignored"]
   - text: "the member's authorization server MUST refuse requests over claimed resources; a ceiling nobody can read is not a ceiling"
     verified: check
-    targets: [org-check]
-    asserts: ["and an organization that cannot be reached does not stop that"]
+    targets: [as-test]
+    asserts: ["an organization that cannot be reached refuses the request"]
   - text: "A request over a resource the charter does not claim MUST NOT be sent to the organization."
     verified: check
     targets: [org-test, org-check]

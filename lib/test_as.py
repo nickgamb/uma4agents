@@ -230,6 +230,17 @@ async def a_holders_verdict() -> None:
                                              hers, "joint/read")))
 
 
+async def an_unreachable_organization() -> None:
+    print("\n== an organization that cannot be reached ==")
+    import org as org_mod
+    # Nothing listens on port 9, so the call fails as an outage would.
+    gone = org_mod.OrgClient("https://127.0.0.1:9", "membership-token", {})
+    decision = await gone.decide({"resource_id": "northwind/book/get_positions"})
+    check("an organization that cannot be reached refuses the request",
+          decision.get("effect") == "refuse" and decision.get("governed") is True,
+          str(decision))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
@@ -237,6 +248,7 @@ async def main() -> int:
     await agreements_and_grants()
     await whose_approval()
     await a_holders_verdict()
+    await an_unreachable_organization()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 

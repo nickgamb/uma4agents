@@ -63,17 +63,12 @@ settling — wait a minute and run it again.
 make k8s-policy-test
 ```
 
-Expect **11 passed, 0 failed**, and note that eight of them are *refusals*. The
-sharpest pair is two assertions against the same port on the same workload:
-
-```
-ok   the enforcement point cannot read Alice's policy      403
-ok   the enforcement point can reach her published keys    200
-```
-
-That pair is the entire cross-principal argument, expressed as something CI can
-fail on. A policy suite that only proved the allows would pass on a cluster with
-no policy at all.
+Expect **22 passed, 0 failed**, and note that most of them are *refusals*: the
+requesting party's workloads trying Alice's authorization server, her policy, her
+database and her portal, and being turned away by the mesh. A refusal counts only
+when the mesh actually refused, with a 403 or a reset connection, so a service
+that is simply down does not pass for one. A policy suite that only proved the
+allows would pass on a cluster with no policy at all.
 
 ## Watch an owner decide
 

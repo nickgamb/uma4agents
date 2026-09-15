@@ -161,3 +161,15 @@ def admit(parent_conn: dict | None, child_prior: dict | None,
     if live_children >= fanout:
         raise Refused(f"the introducing agent already has {live_children} "
                       f"sub-agents, which is the limit ({fanout})")
+
+
+def act_of(agent_claims: dict) -> dict | None:
+    """The spawning agent an issuer names in a verified agent token's `act`.
+
+    Only a subject that is a non-empty string counts; anything else in the
+    claim is ignored rather than guessed at.
+    """
+    act = agent_claims.get("act")
+    if isinstance(act, dict) and isinstance(act.get("sub"), str) and act["sub"]:
+        return {"sub": act["sub"]}
+    return None

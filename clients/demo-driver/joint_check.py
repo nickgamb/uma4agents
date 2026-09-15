@@ -340,7 +340,7 @@ def _live_body(c: httpx.Client, wait_s: int) -> int:
     return 0
 
 
-def main() -> int:                                            # noqa: C901
+def _main() -> int:                                           # noqa: C901
     with httpx.Client(verify=VERIFY, timeout=30.0) as c:
         print("\n-- 1. the mandate is published, and says what it takes --")
         doc = c.get(f"{TALLY}/mandate/{BOTH}", timeout=15.0).json()
@@ -636,6 +636,30 @@ def main() -> int:                                            # noqa: C901
     print("      again at the door from signatures the counting party could not")
     print("      forge, and either of them could stop it.")
     return 0
+
+
+def _restore() -> None:
+    """Leave the lab as it was found, however the run ended."""
+    try:
+        with httpx.Client(verify=VERIFY, timeout=30.0) as c:
+            for owner in ("alice", "carol"):
+                for account in (BOTH, EITHER):
+                    for step in (leave, drop_terms):
+                        try:
+                            step(c, owner, account)
+                        except Exception:                       # noqa: BLE001
+                            pass
+    except Exception:                                           # noqa: BLE001
+        pass
+
+
+def main() -> int:
+    # A check that stops part-way through must not leave both holders joined
+    # to a shared account for the next suite to trip over.
+    try:
+        return _main()
+    finally:
+        _restore()
 
 
 if __name__ == "__main__":

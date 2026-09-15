@@ -83,6 +83,10 @@ release within that month. One entry per release.
 - **Authorization server:** an unauthenticated client-credentials request created records for whatever owner it named. Records are created only after the resource server authenticates.
 - **Authorization server:** verifying an identity assertion fetched the provider's keys on the event loop, stalling every request while the provider was slow. It runs off the loop. Each assertion is now spent once in the shared store rather than in one process's memory, so it cannot be replayed at another replica.
 - **Authorization server:** the recurring registration pull fetched whatever URLs a resource server's metadata named, without the size limit or origin checks registration applies. Each fetch is capped at 1 MiB, and `jwks_uri` and the owner-resources endpoint must be https on the resource's own origin.
+- **Authorization server:** owner authentication verified OIDC tokens synchronously on the event loop, fetching the realm's keys there. It runs off the loop.
+- **Kubernetes:** `policy-test` counted any transport error as the mesh refusing, so a database answering an HTTP request by closing the connection, a stopped service or a wrong port all passed as refusals. Only a 403 or a reset connection counts.
+- **Tests:** the organization-unreachable requirement cited a check that runs with the organization up. `make as-test` now makes it unreachable and asserts the refusal, and the register cites that. The lineage `act` claim was tested against a copy of the extraction; it is now `introduction.act_of`, which both the authorization server and the test call. `joint-check` restores the lab however it exits.
+- **Docs:** run-the-lab and KUBERNETES quoted a policy-test pair no check prints and an out-of-date count. Both give the count the suite has and say what a refusal means.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 
 ## September 12 2026

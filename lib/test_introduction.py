@@ -160,11 +160,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "services", "um
 
 
 def identity_from(claims: dict) -> dict:
-    """The identity `contract_identity` builds from verified token claims."""
+    """The identity `contract_identity` builds from verified token claims,
+    using the same `introduction.act_of` it calls."""
     ident = {"level": "identified", "iss": claims["iss"], "sub": claims.get("sub")}
-    if isinstance(act := claims.get("act"), dict) and isinstance(act.get("sub"), str):
-        if act["sub"]:
-            ident["act"] = {"sub": act["sub"]}
+    if act := introduction.act_of(claims):
+        ident["act"] = act
     return ident
 
 

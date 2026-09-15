@@ -48,9 +48,20 @@ data:
             return False, "the call succeeded — this should have been refused"
         except urllib.error.HTTPError as exc:
             return exc.code == 403, f"HTTP {exc.code} (expected a refusal)"
-        except (urllib.error.URLError, socket.timeout, ConnectionError):
-            # ztunnel refuses at L4 by resetting; there is no status line.
-            return True, ""
+        except Exception as exc:                                  # noqa: BLE001
+            # ztunnel refuses at L4 by resetting the connection; there is no
+            # status line. Only that counts as the mesh refusing. A server
+            # that accepted the connection and closed it without answering
+            # (what a database does to an HTTP request), nothing listening, a
+            # timeout or a name that does not resolve is not a refusal, and
+            # counting it as one passed this suite on a cluster with no policy.
+            import http.client
+            reason = getattr(exc, "reason", exc)
+            if isinstance(reason, http.client.RemoteDisconnected):
+                return False, f"the connection was accepted and closed: {reason!r}"
+            if isinstance(reason, ConnectionResetError):
+                return True, ""
+            return False, f"transport error, not a refusal: {reason!r}"
 
     print("\n== the requesting party is shut out of the owner's side ==")
     check("cannot reach Alice's authorization server directly",

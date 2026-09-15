@@ -907,7 +907,11 @@ async def require_owner(request: Request) -> str:
     best: HTTPException | None = None
     for mode in OWNER_AUTH:
         try:
-            result = VERIFY_OWNER[mode](request)
+            verify = VERIFY_OWNER[mode]
+            # A synchronous verifier fetches keys over the network; run on the
+            # event loop it would stall every request while a provider is slow.
+            result = (verify(request) if asyncio.iscoroutinefunction(verify)
+                      else await asyncio.to_thread(verify, request))
             if hasattr(result, "__await__"):
                 owner = await result
             else:
@@ -3175,9 +3179,8 @@ def contract_identity(claim_token_b64: str,
         # asserted by the issuer that signs that credential rather than by a
         # sibling agent. That is a better attestation than anything the
         # requesting side could construct for itself.
-        if isinstance(act := agent_claims.get("act"), dict):
-            if isinstance(act.get("sub"), str) and act["sub"]:
-                identity["act"] = {"sub": act["sub"]}
+        if act := introduction.act_of(agent_claims):
+            identity["act"] = act
     else:
         raise ValueError("contract JWS must carry jwk or agent_token in its header")
 
