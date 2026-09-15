@@ -122,8 +122,7 @@ must_fail("and one dated far in the future is too",
 # request, and a verifier that read the authority off the wire could be
 # handed one that matches.
 must_fail("a signature over another authority is rejected",
-          lambda: verify(method="POST", authority="other.example", path="/mcp",
-                         authorization="PoP TOKEN",
+          lambda: verify(**{**A, "authority": "other.example"},
                          signature_input=h["Signature-Input"],
                          signature=h["Signature"], public_key=pub))
 

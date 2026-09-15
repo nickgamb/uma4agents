@@ -150,7 +150,7 @@ def main(base: str, upstream: str | None) -> int:
         # other than the one it is accessing. This is the single most common
         # way one of these deployments is subtly broken.
         check("and that matches the URL agents actually use",
-              bool(resource) and urlparse(resource).netloc == urlparse(base).netloc,
+              bool(resource) and resource.rstrip("/") == base.rstrip("/"),
               f"the document claims {resource!r}, which an agent reaching "
               f"{base} is required by RFC 9728 to reject. Set the sidecar's "
               f"public base to the URL agents type.")
@@ -191,8 +191,11 @@ def main(base: str, upstream: str | None) -> int:
         # A structurally valid but unsigned request. The grant is bound to a
         # key; without a signature over the request there is nothing tying the
         # call to the holder of that key.
+        unsigned = mcp_call(client, base, tool,
+                            {"Authorization": "PoP not-a-real-grant"})
         check("and neither does one without a proof-of-possession signature",
-              bad.status_code in (401, 403) and "signature" not in bad.request.headers)
+              unsigned.status_code in (401, 403),
+              f"got {unsigned.status_code} for an unsigned PoP presentation")
 
         print("\n== 4 · The enforcement point cannot be walked around ==")
         if not upstream:
@@ -203,7 +206,8 @@ def main(base: str, upstream: str | None) -> int:
         else:
             try:
                 direct = mcp_call(client, upstream.rstrip("/"), tool)
-                reachable = direct.status_code < 500
+                # A refusal is the resource defending itself, not reachability.
+                reachable = direct.status_code < 400
             except httpx.RequestError:
                 reachable = False
             check("the resource itself refuses a call that did not come "

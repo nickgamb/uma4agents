@@ -79,8 +79,11 @@ def touched_count() -> int:
             h = {"Authorization": f"Bearer {owner_token(c)}"}
             led = c.get(f"{AS_PUBLIC}/owner/ledger", headers=h).json()
             return sum(1 for e in led if e.get("kind") == "touched")
-    except Exception:                                              # noqa: BLE001
-        return -1
+    except Exception as exc:                                       # noqa: BLE001
+        # An unreadable ledger is not a count. Returning a sentinel made a
+        # failed baseline read compare as "fewer before than after" and pass
+        # the one assertion that proves a tool was called.
+        raise RuntimeError(f"could not read her ledger: {exc}") from exc
 
 
 def simulate_alice(seconds: float) -> threading.Event:

@@ -52,7 +52,7 @@ OIDC_METADATA_URL = os.environ.get(
 # browser cannot return to, and the authorization server rejects it as
 # unregistered.
 PORTAL_PUBLIC_URL = os.environ.get("PORTAL_PUBLIC_URL", "").rstrip("/")
-OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "meridian-portal")
+OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "alice-portal")
 # Whose portal this instance is. One per owner: the authority, the identity
 # provider and the vault below are all hers, and nothing else here differs
 # between one owner's instance and another's.

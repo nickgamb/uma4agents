@@ -100,7 +100,7 @@ log "Allowing the portal's forwarded origin as a redirect target"
 # name here would fail silently into a fallback that only looked correct.
 KC_ADMIN_PASS="$(kubectl -n idp get deploy/keycloak -o jsonpath=\
 '{.spec.template.spec.containers[0].env[?(@.name=="KC_BOOTSTRAP_ADMIN_PASSWORD")].value}')"
-KC_ADMIN_USER="$(kubectl -n alice get deploy/keycloak -o jsonpath=\
+KC_ADMIN_USER="$(kubectl -n idp get deploy/keycloak -o jsonpath=\
 '{.spec.template.spec.containers[0].env[?(@.name=="KC_BOOTSTRAP_ADMIN_USERNAME")].value}')"
 
 kubectl -n idp exec deploy/keycloak -- sh -c "

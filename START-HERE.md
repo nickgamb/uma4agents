@@ -404,7 +404,7 @@ case, and the one adoption turns on:
 [kagent](https://kagent.dev), unmodified, which has never heard of UMA.
 
 ```bash
-make kagent          # brings a model with it, so it is opt-in
+make kagent          # a hosted model by default; see below for one in the cluster
 make kagent-check
 make kagent-down
 ```
@@ -418,8 +418,9 @@ Alice treats it exactly as she treated your MCP client: a stranger, held on
 first contact, appearing in Connected Agents with its own terms and its own
 revoke button. Being a framework earns it nothing.
 
-`make kagent MODEL=anthropic` or `MODEL=openai` uses a hosted model instead,
-reading the key from your environment. [docs/KAGENT.md](docs/KAGENT.md) has the
+`make kagent` uses Anthropic by default and reads `ANTHROPIC_API_KEY` from your
+environment; `MODEL=openai` uses OpenAI, and `MODEL=ollama` runs a model in the
+cluster with no account. [docs/KAGENT.md](docs/KAGENT.md) has the
 rest.
 
 ## 11. Give Alice her own AI

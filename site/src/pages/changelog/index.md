@@ -71,6 +71,14 @@ release within that month. One entry per release.
 - **Joint tally:** a holder authority refusing to answer (4xx) was treated as unreachable, leaving the request pending with no end. It is counted as her refusal. A failure fetching her keys to check a verdict escaped `/token` as a 500 after the ticket was spent; the request now stays pending.
 - **Enforcement point:** the sidecar read a request body of any size before authorizing it. Bodies over `UMA_PEP_MAX_BODY_BYTES` (default 1 MiB) are refused with 413.
 - **Agent library:** the trust store for the identity provider was written to a fixed path under `/tmp`, where another local user could add a CA. It is a private temporary file.
+- **Compose:** `make smoke-test` printed FAIL for a failed check but exited 0, so `check-live` and `check-all` reported success. A failed check now fails the target.
+- **Compose:** `make demo-all ACT=tier1 SIM=0` ignored `ACT` and treated `SIM=0` as asking to simulate Alice, so nothing reached her portal. Both now mean what the docs say.
+- **Codespaces:** `.devcontainer/expose-web.sh` read the Keycloak admin user from the `alice` namespace, where Keycloak does not run, and stopped part-way through. It reads from `idp`.
+- **Owner portal:** the default `OIDC_CLIENT_ID` was `meridian-portal`; it is `alice-portal`, the client her realm defines and the configuration reference names.
+- **kagent check:** a failed read of her ledger counted as zero touches, so a failed baseline passed the check's decisive assertion. It now fails the check.
+- **Conformance tool:** `integrations/conformance.py` accepted a metadata document for any resource on the same host, its proof-of-possession check could not fail, and an upstream that refused a direct call with 403 was scored as reachable. It now requires the exact resource URL, sends an unsigned proof-of-possession request, and counts a refusal as refused.
+- **Tests:** the signature test for another authority also changed the `Authorization` header, so it would pass even if the authority were ignored. It changes only the authority.
+- **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 
 ## September 12 2026
 

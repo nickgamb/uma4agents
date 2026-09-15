@@ -315,7 +315,7 @@ demo-tier2:
 demo-tier3:
 	docker compose --profile demo run --rm demo-driver --act tier3 $(if $(SIM),--simulate-alice)
 demo-all:
-	docker compose --profile demo run --rm demo-driver --act all $(if $(SIM),--simulate-alice)
+	docker compose --profile demo run --rm demo-driver --act $(or $(ACT),all) $(if $(filter 1 true yes,$(SIM)),--simulate-alice)
 
 ## audit: print Alice's activity ledger (promised / touched / personally approved)
 # Logs in as Alice for real (direct-access grant at her IdP) — the owner API
@@ -353,11 +353,11 @@ smoke-test:
 	@echo "==> uma-as discovery..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma4agents-configuration | grep -q token_endpoint \
 		&& $(CURL) https://alice-as.uma.lab/.well-known/uma4agents-configuration | grep -q terms_endpoint \
-		&& echo "  uma-as: OK" || echo "  uma-as: FAIL"
+		&& echo "  uma-as: OK" || { echo "  uma-as: FAIL"; exit 1; }
 	@echo "==> ... at UMA 2.0's well-known path, naming the profile it implements..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
 		| grep -q '"uma_profiles_supported": *\[[^]]*https://u4a.ai/spec/core/1.0' \
-		&& echo "  uma_profiles_supported: OK" || echo "  uma_profiles_supported: FAIL"
+		&& echo "  uma_profiles_supported: OK" || { echo "  uma_profiles_supported: FAIL"; exit 1; }
 	@echo "==> ... and every grant type and claim format the token endpoint accepts..."
 	@$(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
 		| grep -q 'client_credentials' \
@@ -367,32 +367,32 @@ smoke-test:
 		| grep -q 'consume_endpoint' \
 		&& $(CURL) https://alice-as.uma.lab/.well-known/uma2-configuration \
 		| grep -q 'owner_endpoint' \
-		&& echo "  advertised formats: OK" || echo "  advertised formats: FAIL"
+		&& echo "  advertised formats: OK" || { echo "  advertised formats: FAIL"; exit 1; }
 	@echo "==> uma-as JWKS..."
-	@$(CURL) https://alice-as.uma.lab/jwks | grep -q Ed25519 && echo "  jwks: OK" || echo "  jwks: FAIL"
+	@$(CURL) https://alice-as.uma.lab/jwks | grep -q Ed25519 && echo "  jwks: OK" || { echo "  jwks: FAIL"; exit 1; }
 	@echo "==> Keycloak alice realm..."
 	@$(CURL) https://keycloak.uma.lab/realms/alice/.well-known/openid-configuration | grep -q issuer \
-		&& echo "  keycloak: OK" || echo "  keycloak: FAIL"
+		&& echo "  keycloak: OK" || { echo "  keycloak: FAIL"; exit 1; }
 	@echo "==> Protected Resource Metadata (RFC 9728) at the gateway..."
 	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/alice \
 		| grep -q '"authorization_servers":\["https://alice-as.uma.lab"\]' \
-		&& echo "  resource metadata (alice): OK" || echo "  resource metadata (alice): FAIL"
+		&& echo "  resource metadata (alice): OK" || { echo "  resource metadata (alice): FAIL"; exit 1; }
 	@echo "==> and the other owner's, naming a different authority..."
 	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/carol \
 		| grep -q '"authorization_servers":\["https://carol-as.uma.lab"\]' \
-		&& echo "  resource metadata (carol): OK" || echo "  resource metadata (carol): FAIL"
+		&& echo "  resource metadata (carol): OK" || { echo "  resource metadata (carol): FAIL"; exit 1; }
 	@echo "==> AAuth resource metadata (R3 vocabulary, same public layer)..."
 	@$(CURL) https://gateway.uma.lab/.well-known/aauth-resource.json | grep -q r3_vocabularies \
-		&& echo "  aauth-resource: OK" || echo "  aauth-resource: FAIL"
+		&& echo "  aauth-resource: OK" || { echo "  aauth-resource: FAIL"; exit 1; }
 	@echo "==> Gateway challenges an unauthorized tool call (expect 401 + UMA ticket)..."
 	@RESP=$$($(CURL) -i https://gateway.uma.lab/mcp -X POST \
 		-H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
 		-d '{"jsonrpc":"2.0","method":"tools/call","id":1,"params":{"name":"get_positions","arguments":{}}}'); \
 		echo "$$RESP" | grep -qi 'www-authenticate: UMA' && echo "$$RESP" | grep -q 'ticket=' \
-		&& echo "  gateway challenge: OK" || { echo "  gateway challenge: FAIL"; }; \
+		&& echo "  gateway challenge: OK" || { echo "  gateway challenge: FAIL"; exit 1; }; \
 		echo "==> ext_authz denial body reaches the client verbatim..."; \
 		echo "$$RESP" | grep -q 'uma_challenge' \
-		&& echo "  ext_authz body passthrough: OK" || echo "  ext_authz body passthrough: FAIL"
+		&& echo "  ext_authz body passthrough: OK" || { echo "  ext_authz body passthrough: FAIL"; exit 1; }
 	@echo "==> A truncated authorization body fails closed, by name..."
 	@docker compose exec -T uma-pep python -c "\
 	import urllib.request, json; \
@@ -404,25 +404,25 @@ smoke-test:
 	exec('try:\n    urllib.request.urlopen(req)\nexcept urllib.error.HTTPError as e:\n    code, body = e.code, e.read()'); \
 	print('  truncated body: OK' if code == 413 and b'request_body_too_large' in body else '  truncated body: FAIL (%s %s)' % (code, body[:120]))"
 	@echo "==> Alice's portal..."
-	@$(CURL) https://portal.uma.lab/health | grep -q ok && echo "  portal: OK" || echo "  portal: FAIL"
+	@$(CURL) https://portal.uma.lab/health | grep -q ok && echo "  portal: OK" || { echo "  portal: FAIL"; exit 1; }
 	@echo "==> and the other owner's, which is the same image..."
 	@$(CURL) https://carol-portal.uma.lab/health | grep -q ok \
-		&& echo "  carol portal: OK" || echo "  carol portal: FAIL"
+		&& echo "  carol portal: OK" || { echo "  carol portal: FAIL"; exit 1; }
 	@echo "==> Agent operator: CIMD document (self-referential client_id)..."
 	@$(CURL) https://agent.uma.lab/agent.json | grep -q '"client_id": *"https://agent.uma.lab/agent.json"' \
-		&& echo "  agent CIMD: OK" || echo "  agent CIMD: FAIL"
+		&& echo "  agent CIMD: OK" || { echo "  agent CIMD: FAIL"; exit 1; }
 	@echo "==> Agent operator: Web Bot Auth key directory..."
 	@$(CURL) -i https://agent.uma.lab/.well-known/http-message-signatures-directory \
 		| grep -qi 'application/http-message-signatures-directory+json' \
-		&& echo "  signatures directory: OK" || echo "  signatures directory: FAIL"
+		&& echo "  signatures directory: OK" || { echo "  signatures directory: FAIL"; exit 1; }
 	@echo "==> Person server discovery..."
 	@$(CURL) https://ps.uma.lab/.well-known/aauth-person.json | grep -q token_endpoint \
-		&& echo "  person-server: OK" || echo "  person-server: FAIL"
+		&& echo "  person-server: OK" || { echo "  person-server: FAIL"; exit 1; }
 	@echo "==> Grafana..."
-	@$(CURL) https://grafana.uma.lab/api/health | grep -q ok && echo "  grafana: OK" || echo "  grafana: FAIL"
+	@$(CURL) https://grafana.uma.lab/api/health | grep -q ok && echo "  grafana: OK" || { echo "  grafana: FAIL"; exit 1; }
 	@echo "==> Loki has protocol events..."
 	@docker compose exec -T loki wget -qO- 'http://localhost:3100/loki/api/v1/query_range?query=%7Bevent%3D%22challenge.issued%22%7D&limit=1' 2>/dev/null \
-		| grep -q challenge.issued && echo "  loki events: OK" || echo "  loki events: FAIL (may need a challenge first + a few seconds)"
+		| grep -q challenge.issued && echo "  loki events: OK" || { echo "  loki events: FAIL (may need a challenge first + a few seconds)"; exit 1; }
 
 ## reset: rewind demo state without tearing the stack down
 # Grant-layer state (tickets, contracts, ledger) is in-memory by design;
