@@ -59,7 +59,7 @@ def portal(c):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def main() -> int:
+def _main() -> int:
     c = httpx.Client(verify=CA, timeout=45.0)
     alice = portal(c)
 
@@ -173,6 +173,26 @@ def main() -> int:
               "      for a resource Okta does not own, on terms Okta never saw —\n"
               "      and Okta's assertion was what got it through the door.")
     return 1 if FAIL else 0
+
+
+def _restore() -> None:
+    """Put the charter back, however the run ended."""
+    try:
+        with httpx.Client(verify=CA, timeout=30.0) as c:
+            base = c.get(f"{ORG}/admin/charter/versions/1", headers=ADMIN,
+                         timeout=15.0).json()["charter"]
+            c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
+    except Exception:                                           # noqa: BLE001
+        pass
+
+
+def main() -> int:
+    # A check that stops part-way through must not leave Northwind's charter
+    # federated, or Alice enrolled, for every other check to negotiate against.
+    try:
+        return _main()
+    finally:
+        _restore()
 
 
 if __name__ == "__main__":

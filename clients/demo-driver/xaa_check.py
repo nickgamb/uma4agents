@@ -175,7 +175,7 @@ def negotiate(c: httpx.Client, path: str, keys: AgentKeys,
         return None, str(exc)[:200], said
 
 
-def main() -> int:                                            # noqa: C901
+def _main() -> int:                                            # noqa: C901
     c = httpx.Client(verify=CA, timeout=30.0)
     alice = portal(c, "alice", "alice", os.environ.get("ALICE_PASSWORD", "alice-demo"))
 
@@ -418,6 +418,29 @@ def main() -> int:                                            # noqa: C901
               "said what\n      could be done on whose terms. Neither could "
               "answer the other's\n      question, and neither had to.")
     return 1 if FAIL else 0
+
+
+def _restore() -> None:
+    """Put the charter back and take Alice out, however the run ended."""
+    try:
+        with httpx.Client(verify=CA, timeout=30.0) as c:
+            base = c.get(f"{ORG}/admin/charter/versions/1", headers=ADMIN,
+                         timeout=15.0).json()["charter"]
+            c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
+            alice = portal(c, "alice", "alice",
+                           os.environ.get("ALICE_PASSWORD", "alice-demo"))
+            leave_org(c, alice)
+    except Exception:                                           # noqa: BLE001
+        pass
+
+
+def main() -> int:
+    # A check that stops part-way through must not leave Northwind's charter
+    # federated, or Alice enrolled, for every other check to negotiate against.
+    try:
+        return _main()
+    finally:
+        _restore()
 
 
 if __name__ == "__main__":
