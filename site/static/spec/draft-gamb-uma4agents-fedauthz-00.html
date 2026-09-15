@@ -1241,7 +1241,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 16 March 2027</td>
+<td class="center">Expires 19 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1254,12 +1254,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-fedauthz-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-12" class="published">12 September 2026</time>
+<time datetime="2026-09-15" class="published">15 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-19">19 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1306,7 +1306,7 @@ further negotiation might change from one it cannot.<a href="#section-abstract-2
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1415,17 +1415,6 @@ further negotiation might change from one it cannot.<a href="#section-abstract-2
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata Registration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-oauth-token-introspection-r" class="internal xref">OAuth Token Introspection Response Registration</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-references" class="internal xref">References</a></p>
@@ -1439,13 +1428,16 @@ further negotiation might change from one it cannot.<a href="#section-abstract-2
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-identifiers-used-by-this-do" class="internal xref">Identifiers Used by This Document</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1525,7 +1517,7 @@ Structural only.<a href="#section-2.1-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-2.1-4">The document <span class="bcp14">MUST</span> carry <code>signed_metadata</code> as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 2.1, signed by
+<p id="section-2.1-4">The document <span class="bcp14">MUST</span> carry <code>signed_metadata</code> as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 2.2, signed by
 a key published at the resource's own <code>jwks_uri</code>, so that a relayed copy stays
 attributable to the resource.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 <p id="section-2.1-5">A resource server <span class="bcp14">MAY</span> publish the same structural facts in more than one
@@ -1645,7 +1637,8 @@ sending a request naming the owner and the resource it serves, signed with
 POST /rs/register HTTP/1.1
 Host: alice-as.example
 Content-Type: application/json
-Content-Digest: sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDU=:
+Content-Digest: sha-256=
+  :Tmn1PBTGYjBHkU9XV2NHLt2YstMuZTPQqpEBaE28JJM=:
 Signature-Input: sig1=("@method" "@authority" "@path"
   "authorization" "content-digest");created=1789430000;
   keyid="rs-1";alg="ed25519"
@@ -1830,7 +1823,7 @@ accompanied by an <code>error</code> member saying which.<a href="#section-5.1-2
 server, naming the negotiation it was made under and what was reached, so that
 the owner's record holds what was done alongside what was promised.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">An enforcement point <span class="bcp14">MUST NOT</span> be told, and <span class="bcp14">MUST NOT</span> report, the identity handle
-of the requesting agent. The authorization server resolves it from the
+of the client. The authorization server resolves it from the
 negotiation. The enforcement point is the resource server's component, and the
 owner's record of which agent did what is not the resource server's to hold.<a href="#section-6-2" class="pilcrow">¶</a></p>
 </section>
@@ -1903,119 +1896,8 @@ authority already knew.<a href="#section-8-2" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<div id="oauth-protected-resource-metadata-registration">
-<section id="section-9.1">
-        <h3 id="name-oauth-protected-resource-me">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-oauth-protected-resource-me" class="section-name selfRef">OAuth Protected Resource Metadata Registration</a>
-        </h3>
-<p id="section-9.1-1">IANA is asked to register the following in the "OAuth Protected Resource
-Metadata" registry established by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
-          <dt id="section-9.1-2.1">Metadata Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
-            <p id="section-9.1-2.2.1"><code>tool_surfaces</code><a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.3">Metadata Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
-            <p id="section-9.1-2.4.1">Operations the resource offers, each with the scopes it requires<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.6">
-            <p id="section-9.1-2.6.1">IETF<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.8">
-            <p id="section-9.1-2.8.1"><a href="#public-layer" class="auto internal xref">Section 2.1</a> of this document<a href="#section-9.1-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.9">Metadata Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.10">
-            <p id="section-9.1-2.10.1"><code>owner_resources_endpoint</code><a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.11">Metadata Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.12">
-            <p id="section-9.1-2.12.1">URL of the protected listing of owner-bound resource instances<a href="#section-9.1-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.13">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.14">
-            <p id="section-9.1-2.14.1">IETF<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.15">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.16">
-            <p id="section-9.1-2.16.1"><a href="#protected-layer" class="auto internal xref">Section 2.2</a> of this document<a href="#section-9.1-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
-<div id="oauth-authorization-server-metadata-registration">
-<section id="section-9.2">
-        <h3 id="name-oauth-authorization-server-">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata Registration</a>
-        </h3>
-<p id="section-9.2-1">IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.2-2">
-          <dt id="section-9.2-2.1">Metadata Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.2-2.2">
-            <p id="section-9.2-2.2.1"><code>consume_endpoint</code><a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.2-2.3">Metadata Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.2-2.4">
-            <p id="section-9.2-2.4.1">URL of the operation that spends a single-use requesting party token<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.2-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.2-2.6">
-            <p id="section-9.2-2.6.1">IETF<a href="#section-9.2-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.2-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-9.2-2.8">
-            <p id="section-9.2-2.8.1"><a href="#non-consuming" class="auto internal xref">Section 5.1</a> of this document<a href="#section-9.2-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
-<div id="oauth-token-introspection-response-registration">
-<section id="section-9.3">
-        <h3 id="name-oauth-token-introspection-r">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-oauth-token-introspection-r" class="section-name selfRef">OAuth Token Introspection Response Registration</a>
-        </h3>
-<p id="section-9.3-1">IANA is asked to register the following in the "OAuth Token Introspection
-Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.3-2">
-          <dt id="section-9.3-2.1">Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-2.2">
-            <p id="section-9.3-2.2.1"><code>error</code><a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.3-2.3">Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-2.4">
-            <p id="section-9.3-2.4.1">Why an inactive token is inactive; see <a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.3-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.3-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-2.6">
-            <p id="section-9.3-2.6.1">IETF<a href="#section-9.3-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.3-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-2.8">
-            <p id="section-9.3-2.8.1"><a href="#introspection" class="auto internal xref">Section 5</a> of this document<a href="#section-9.3-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
+<p id="section-9-1">This document has no IANA actions. The identifiers it uses are listed in
+<a href="#used-identifiers" class="auto internal xref">Appendix A</a>.<a href="#section-9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2099,35 +1981,104 @@ Response" registry established by <span>[<a href="#RFC7662" class="cite xref">RF
 </div>
 </section>
 </div>
-<div id="implementation-status">
+<div id="used-identifiers">
 <section id="appendix-A">
-      <h2 id="name-implementation-status">
-<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      <h2 id="name-identifiers-used-by-this-do">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-identifiers-used-by-this-do" class="section-name selfRef">Identifiers Used by This Document</a>
       </h2>
-<p id="appendix-A-1">This section records the status of known implementations in the sense of
-<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements this document in full. Both
+<p id="appendix-A-1">This appendix lists the identifiers this document defines. It is informative and
+requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span id="name-identifiers-used-by-this-doc"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-identifiers-used-by-this-doc" class="selfRef">Identifiers used by this document.</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Name</th>
+            <th class="text-left" rowspan="1" colspan="1">Kind</th>
+            <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+            <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>tool_surfaces</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Protected resource metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Operations the resource offers, each with the scopes it requires</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#public-layer" class="auto internal xref">Section 2.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>owner_resources_endpoint</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Protected resource metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">URL of the protected listing of owner-bound resource instances</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#protected-layer" class="auto internal xref">Section 2.2</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>consume_endpoint</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">URL of the operation that spends a single-use requesting party token</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#non-consuming" class="auto internal xref">Section 5.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>error</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Token introspection response <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Why an inactive token is inactive</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#introspection" class="auto internal xref">Section 5</a>
+</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="implementation-status">
+<section id="appendix-B">
+      <h2 id="name-implementation-status">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      </h2>
+<p id="appendix-B-1">This section records the status of known implementations in the sense of
+<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements this document in full. Both
 registration methods — declarative pull and the classic push endpoint of
 <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> — were built against an otherwise identical stack and measured
 before push was retired to a preserved branch. The deadlock of <a href="#liveness" class="auto internal xref">Section 3.2</a> and
 the fail-open reading that <a href="#rs-register" class="auto internal xref">Section 4.1</a> warns against were both found by
-running it.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+running it.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This document rests on <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>, whose separation of resource server from
+<p id="appendix-C-1">This document rests on <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>, whose separation of resource server from
 authorization server is the arrangement everything here depends on.
 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> supplied the public half of discovery, and the observation that a
 resource may name its authorization servers is what made the split in
-<a href="#discovery" class="auto internal xref">Section 2</a> possible.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<a href="#discovery" class="auto internal xref">Section 2</a> possible.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>

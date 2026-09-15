@@ -29,12 +29,13 @@ signs them; the server issues a grant. Everything else is detail hung off those
 four exchanges.
 [Read more →](/docs/overview/four-beats/)
 
-## Owner, requesting party, requesting agent
+## Owner, requesting party, client
 
 Three roles, not two. The **owner** decides. The **requesting party** is the
-human or organisation asking. The **requesting agent** is the software that does
-the asking. UMA 2.0 collapsed the last two, which was reasonable when the client
-was a web app somebody was sitting in front of.
+human or organisation asking. The **client** is the software that does the
+asking — in this profile, usually an autonomous agent. When the client was a web
+app somebody sat in front of, the requesting party and the client shared a
+session; an agent separates them.
 [Read more →](/docs/overview/parties/)
 
 ## Terms as an artifact

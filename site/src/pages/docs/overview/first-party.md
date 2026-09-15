@@ -31,7 +31,7 @@ cross-principal case becomes a policy change rather than a rebuild.
 ## Her agent is still not her
 
 The three parties are what make this work without a special case. Alice is the
-owner. Alice is also the requesting party. The **requesting agent** is a third
+owner. Alice is also the requesting party. The **client**, her agent, is a third
 thing, and it stays third: she is not at the keyboard, it holds its own key, it
 signs her terms, and her policy answers every request it makes.
 

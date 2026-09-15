@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
         Owner-Proffered Terms for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -76,32 +76,32 @@ Table of Contents
      2.1.  Versions Are Immutable  . . . . . . . . . . . . . . . . .   4
      2.2.  Representations . . . . . . . . . . . . . . . . . . . . .   4
    3.  Proffering  . . . . . . . . . . . . . . . . . . . . . . . . .   5
+     3.1.  Authorization Server Metadata . . . . . . . . . . . . . .   6
    4.  The Agreement . . . . . . . . . . . . . . . . . . . . . . . .   6
      4.1.  The Signing Key . . . . . . . . . . . . . . . . . . . . .   6
      4.2.  Claims  . . . . . . . . . . . . . . . . . . . . . . . . .   6
-     4.3.  What the Requesting Side May Author . . . . . . . . . . .   7
+     4.3.  What the Requesting Side May Author . . . . . . . . . . .   8
    5.  The Receipt . . . . . . . . . . . . . . . . . . . . . . . . .   8
    6.  Declining . . . . . . . . . . . . . . . . . . . . . . . . . .   9
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
-     7.1.  The Agreement Binds the Key That Will Act . . . . . . . .   9
+     7.1.  The Agreement Binds the Key That Will Act . . . . . . . .  10
      7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .  10
      7.3.  Terms Are Not a Sandbox . . . . . . . . . . . . . . . . .  10
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  10
      8.1.  The Roster Is the Owner's . . . . . . . . . . . . . . . .  10
      8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  11
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
-     9.1.  Media Type Registration . . . . . . . . . . . . . . . . .  11
-     9.2.  URN Sub-namespace Registration  . . . . . . . . . . . . .  12
-   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
-     10.1.  Normative References . . . . . . . . . . . . . . . . . .  12
-     10.2.  Informative References . . . . . . . . . . . . . . . . .  13
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
-   [UMAGrant] Section 3.3.4 lets an authorization server tell a client
+   [UMAGrant] Section 3.3.6 lets an authorization server tell a client
    what claims it needs by naming claim types and acceptable formats.
    The client then gathers those claims from wherever it can and
    presents them.  The authorization server asks _what can you tell me
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -290,12 +290,22 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    protocol that let the requesting side propose amendments would make
    the owner a party to a conversation she is not present for.
 
+3.1.  Authorization Server Metadata
+
+   This document adds the following member to the authorization server
+   metadata of [U4ACore] Section 2:
+
+   terms_endpoint:  The URL of the owner's terms roster.  An
+      authorization server implementing this document MUST include it.
+
 4.  The Agreement
 
    The requesting side agrees by presenting a claim token whose
    claim_token_format is urn:uma4agents:format:myterms-agreement-v1+jws
    and whose value is the base64url encoding of a JWS [RFC7515] in
-   compact serialization with a typ of myterms-agreement-v1+jws.
+   compact serialization with a typ of myterms-agreement-v1+jws.  The
+   compact serialization is encoded as a whole, so decoding the claim
+   token yields the JWS.
 
 4.1.  The Signing Key
 
@@ -304,9 +314,9 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    jwk:  A public JWK [RFC7517], where the requesting side is
       pseudonymous.
 
-   agent_token:  A credential from an issuer that asserts the requesting
-      agent's identity and names the signing key, where the requesting
-      side is identified.
+   agent_token:  A credential from an issuer that asserts the client's
+      identity and names the signing key, where the requesting side is
+      identified.
 
    The authorization server MUST verify the JWS against the key so
    named, and MUST refuse an agreement carrying neither.  The key that
@@ -320,23 +330,22 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    purpose, nonce and family of the proffered template, and MUST carry
    an aud naming the authorization server that proffered them.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
    It MUST carry a positive expires_in no greater than the template's, a
    scope array that is a subset of the template's, and a prohibited
    array that is a superset of the template's.
 
    Where the template's per_operation is true, the agreement MUST carry
-   an operation member naming the operation proposed and the parameters
-   proposed for it.
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
+   an operation member: an object whose tool member names the operation
+   proposed and whose params member is a JSON object holding the
+   parameters proposed for it.
 
    {
      "iss": "agent:6cR6qTmCj6s0S95M",
@@ -354,7 +363,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
      "reason": "Suitability review before Thursday's client meeting.",
      "mission": {
        "approver": "https://ps.example",
-       "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+       "s256": "s256:zrAKkVJdpk-xcbEDrjDvO4F_o7x47N6ZuITu2-kTEAM"
      }
    }
 
@@ -375,6 +384,16 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    long the access will be used, and a grant issued past it would leave
    the receipt and the grant disagreeing about what was agreed.
 
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 4.3.  What the Requesting Side May Author
 
    The agreement MAY carry the following, and MUST NOT carry anything
@@ -386,14 +405,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
       its content affect the decision.
 
    mission:  OPTIONAL.  An object citing a mandate the requesting side
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
       is acting under, with an approver member that is an https URL and
       an s256 member that is a content digest.  The authorization server
       MUST record the citation and MUST NOT dereference it.
@@ -429,35 +440,28 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    template_id:  REQUIRED.  The version that was agreed to.
 
    agreement:  REQUIRED. s256 over the octets of the agreement as
-      transmitted.
+      transmitted: the JWS compact serialization obtained by decoding
+      the claim token.
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
    agreement_jws:  REQUIRED.  The complete agreement JWS, as received.
 
    family:  REQUIRED.  The negotiation this receipt completes.
 
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
    {
      "iss": "https://alice-as.example",
-     "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+     "sub": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
      "iat": 1789430010,
      "family": "fam_8f3aQ2Xc",
      "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
      "template_id": "alice/advisor/v2",
-     "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+     "agreement": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
      "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
    }
 
@@ -489,22 +493,25 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 7.  Security Considerations
 
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 7.1.  The Agreement Binds the Key That Will Act
 
    See Section 4.1.  If the agreement could be signed by one key and the
    grant confirmed to another, the party that agreed and the party that
    acts would be different parties, and the agreement would say nothing
    about the requests made under it.
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 7.2.  The Digest Is Over the Transmitted Octets
 
@@ -550,14 +557,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -579,67 +579,12 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 9.  IANA Considerations
 
-9.1.  Media Type Registration
-
-   IANA is asked to register the following in the "Media Types"
-   registry.
-
-   Type name:  application
-
-   Subtype name:  myterms-agreement-v1+jws
-
-   Required parameters:  N/A
-
-   Optional parameters:  N/A
-
-   Encoding considerations:  binary; a JWS in compact serialization
-
-   Security considerations:  See Section 7 of this document
-
-   Interoperability considerations:  N/A
-
-   Published specification:  Section 4 of this document
-
-   Applications that use this media type:  Applications implementing UMA
-      2.0 with this extension
-
-   Change controller:  IETF
-
-   IANA is asked to register application/myterms-receipt+jws in the same
-   registry, with the same considerations and with Section 5 of this
-   document as its published specification.
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 11]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
-9.2.  URN Sub-namespace Registration
-
-   IANA is asked to record the following identifiers, which are defined
-   by this document within the urn:uma4agents: namespace:
-
-      +================================================+============+
-      | Identifier                                     | Defined in |
-      +================================================+============+
-      | urn:uma4agents:claim:myterms-agreement         | Section 3  |
-      +------------------------------------------------+------------+
-      | urn:uma4agents:format:myterms-agreement-v1+jws | Section 4  |
-      +------------------------------------------------+------------+
-
-               Table 1: Identifiers defined by this document.
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 10.  References
 
 10.1.  Normative References
-
-   [IEEE7012] "IEEE Standard for Machine Readable Personal Privacy
-              Terms", IEEE Std 7012-2025, 2025,
-              <https://standards.ieee.org/ieee/7012/7192/>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -668,8 +613,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -681,6 +625,10 @@ Internet-Draft            Owner-Proffered Terms           September 2026
               grant-2.0.html>.
 
 10.2.  Informative References
+
+   [IEEE7012] "IEEE Standard for Machine Readable Personal Privacy
+              Terms", IEEE Std 7012-2025, 2025,
+              <https://standards.ieee.org/ieee/7012/7192/>.
 
    [ODRL]     Iannella, R. and S. Villata, "ODRL Information Model 2.2",
               W3C Recommendation, 15 February 2018,
@@ -713,7 +661,47 @@ Internet-Draft            Owner-Proffered Terms           September 2026
               Maler, E. and P. Bryan, "Simple Access Authorization
               Claims", April 2010.
 
-Appendix A.  Implementation Status
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
+    +================================+===================+============+
+    | Identifier                     | Kind              | Defined in |
+    +================================+===================+============+
+    | terms_endpoint                 | Authorization     | Section    |
+    |                                | server metadata   | 3.1        |
+    +--------------------------------+-------------------+------------+
+    | decline                        | Token endpoint    | Section 6  |
+    |                                | request parameter |            |
+    +--------------------------------+-------------------+------------+
+    | receipt                        | Token endpoint    | Section 5  |
+    |                                | response member   |            |
+    +--------------------------------+-------------------+------------+
+    | application/myterms-agreement- | Media type        | Section 4  |
+    | v1+jws                         |                   |            |
+    +--------------------------------+-------------------+------------+
+    | application/myterms-           | Media type        | Section 5  |
+    | receipt+jws                    |                   |            |
+    +--------------------------------+-------------------+------------+
+    | urn:uma4agents:claim:myterms-  | URN               | Section 3  |
+    | agreement                      |                   |            |
+    +--------------------------------+-------------------+------------+
+    | urn:uma4agents:format:myterms- | URN               | Section 4  |
+    | agreement-v1+jws               |                   |            |
+    +--------------------------------+-------------------+------------+
+
+                Table 1: Identifiers used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
@@ -722,14 +710,6 @@ Appendix A.  Implementation Status
    implements this extension in full, including all three
    representations of Section 2.2, the immutability requirement of
    Section 2.1, the receipt of Section 5 and the unattributed refusal
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 13]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
    record of Section 6.  It was checked clause by clause against
    [IEEE7012]; the divergences found are the ones stated in this
    document rather than a longer list kept elsewhere.
@@ -742,6 +722,13 @@ Acknowledgments
    supplied the pattern, the three representations, the single-choice
    rule and the dual-record requirement, and the divergences in
    Section 8 are stated in its terms rather than around them.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 13]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
 Authors' Addresses
 
@@ -781,4 +768,17 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 14]
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]

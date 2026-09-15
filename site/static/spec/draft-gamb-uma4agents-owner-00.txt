@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
        The Resource Owner's API for User-Managed Access (UMA) 2.0
@@ -17,9 +17,9 @@ Abstract
    This document specifies the interface a resource owner uses to
    operate her own User-Managed Access (UMA) 2.0 authorization server:
    to answer the requests that wait on her, to see and end her
-   relationships with requesting agents and with the operators behind
-   them, to write the policy and terms her server decides from, and to
-   read the record of what it did.
+   relationships with clients and with the operators behind them, to
+   write the policy and terms her server decides from, and to read the
+   record of what it did.
 
    UMA 2.0 leaves this surface to the deployment, which was right when
    the authorization server belonged to a service she had a session
@@ -43,7 +43,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -93,11 +93,11 @@ Table of Contents
      8.4.  Revocation Reports Its Reach  . . . . . . . . . . . . . .   8
    9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
    10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
-     10.1.  OAuth Authorization Server Metadata Registration . . . .   9
    11. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
      11.1.  Normative References . . . . . . . . . . . . . . . . . .   9
      11.2.  Informative References . . . . . . . . . . . . . . . . .  10
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  11
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  11
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  11
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  11
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -117,8 +117,8 @@ Internet-Draft              Owner API for UMA             September 2026
 1.  Introduction
 
    Every requirement in the rest of this set is placed on the
-   authorization server, the enforcement point, or the requesting agent.
-   The one party they serve has no wire surface of her own in UMA 2.0
+   authorization server, the enforcement point, or the client.  The one
+   party they serve has no wire surface of her own in UMA 2.0
    [UMAGrant].  The owner's decisions arrive through whatever the
    deployment built.
 
@@ -165,7 +165,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -212,8 +212,8 @@ Internet-Draft              Owner API for UMA             September 2026
    because:  The rule conditions that caused the request to wait, where
       a rule did.
 
-   handle:  The requesting agent's connection handle, or null before
-      first contact.
+   handle:  The client's connection handle, or null before first
+      contact.
 
    organization:  Where a layer above the owner had a say
       ([U4AMultiParty]), what it said, separately from her own rules.
@@ -221,7 +221,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -356,7 +356,7 @@ Internet-Draft              Owner API for UMA             September 2026
    array of objects each carrying condition (the name, with its level
    where the condition is one sentence per level), takes (duration,
    count or null), label (the sentence shown to the owner), and
-   may_relax.  This is the publication [U4APolicy] Section 3.6 requires;
+   may_relax.  This is the publication [U4APolicy] Section 3.4 requires;
    a surface that offers the owner a condition it does not list will
    compose a rule the server refuses.
 
@@ -389,7 +389,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft              Owner API for UMA             September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft              Owner API for UMA             September 2026
 
@@ -464,18 +464,8 @@ Internet-Draft              Owner API for UMA             September 2026
 
 10.  IANA Considerations
 
-10.1.  OAuth Authorization Server Metadata Registration
-
-   IANA is asked to register the following in the "OAuth Authorization
-   Server Metadata" registry established by [RFC8414].
-
-   Metadata Name:  owner_endpoint
-
-   Metadata Description:  URL of the resource owner's API
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 2 of this document
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 11.  References
 
@@ -499,13 +489,6 @@ Internet-Draft              Owner API for UMA             September 2026
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
    [RFC9530]  Polli, R. and L. Pardue, "Digest Fields", RFC 9530,
               DOI 10.17487/RFC9530, February 2024,
               <https://www.rfc-editor.org/rfc/rfc9530>.
@@ -514,6 +497,14 @@ Internet-Draft              Owner API for UMA             September 2026
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
    [U4APolicy]
               Gamb, N. and E. Maler, "Owner Policy, Assurance and
@@ -555,13 +546,6 @@ Internet-Draft              Owner API for UMA             September 2026
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
 
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 10]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
    [U4AMultiParty]
               Gamb, N. and E. Maler, "Multi-Party Authorization for
               User-Managed Access (UMA) 2.0", Work in Progress,
@@ -569,7 +553,32 @@ Internet-Draft              Owner API for UMA             September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
 
-Appendix A.  Implementation Status
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+     +================+======================+=============+=========+
+     | Name           | Kind                 | Meaning     | Defined |
+     |                |                      |             | in      |
+     +================+======================+=============+=========+
+     | owner_endpoint | Authorization server | URL of the  | Section |
+     |                | metadata [RFC8414]   | resource    | 2       |
+     |                |                      | owner's API |         |
+     +----------------+----------------------+-------------+---------+
+
+                Table 1: Identifiers used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
@@ -604,13 +613,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 11]
+Gamb & Maler              Expires 19 March 2027                [Page 11]

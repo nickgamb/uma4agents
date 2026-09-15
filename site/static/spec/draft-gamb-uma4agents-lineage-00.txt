@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
             Agent Lineage for User-Managed Access (UMA) 2.0
@@ -41,7 +41,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft                Agent Lineage               September 2026
 
@@ -75,14 +75,14 @@ Table of Contents
    2.  Asserting a Lineage . . . . . . . . . . . . . . . . . . . . .   3
      2.1.  By Introduction Document  . . . . . . . . . . . . . . . .   3
      2.2.  By Issuer Attestation . . . . . . . . . . . . . . . . . .   4
-   3.  Admission . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   3.  Admission . . . . . . . . . . . . . . . . . . . . . . . . . .   5
      3.1.  What the Document Settles . . . . . . . . . . . . . . . .   5
      3.2.  What the Owner's Record Settles . . . . . . . . . . . . .   5
      3.3.  Failure Falls Back  . . . . . . . . . . . . . . . . . . .   6
      3.4.  The Introduced Connection . . . . . . . . . . . . . . . .   6
    4.  Policy Over a Lineage . . . . . . . . . . . . . . . . . . . .   6
      4.1.  Approval Belongs to the Lineage . . . . . . . . . . . . .   6
-     4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   6
+     4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   7
      4.3.  The Ceiling . . . . . . . . . . . . . . . . . . . . . . .   7
    5.  Attention . . . . . . . . . . . . . . . . . . . . . . . . . .   7
    6.  Revocation  . . . . . . . . . . . . . . . . . . . . . . . . .   7
@@ -94,11 +94,11 @@ Table of Contents
      7.5.  Fan-Out Is a Ceiling, Not a Rule  . . . . . . . . . . . .   9
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
-     9.1.  Media Type Registration . . . . . . . . . . . . . . . . .   9
    10. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
      10.1.  Normative References . . . . . . . . . . . . . . . . . .   9
      10.2.  Informative References . . . . . . . . . . . . . . . . .  10
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  11
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  11
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  11
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  11
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft                Agent Lineage               September 2026
 
@@ -153,8 +153,8 @@ Internet-Draft                Agent Lineage               September 2026
 
 2.  Asserting a Lineage
 
-   A requesting agent asserts that another agent introduced it in
-   exactly one of two ways.
+   A client asserts that another agent introduced it in exactly one of
+   two ways.
 
 2.1.  By Introduction Document
 
@@ -165,7 +165,7 @@ Internet-Draft                Agent Lineage               September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft                Agent Lineage               September 2026
 
@@ -210,21 +210,23 @@ Internet-Draft                Agent Lineage               September 2026
    agent's credential.  No second document is needed; the authorization
    server reads the claim it already verified.
 
-   [I-D.hardt-aauth-protocol] defines this use of act in its agent
-   credential.  Nothing new is defined here; the claim is read.
-
-3.  Admission
-
-
+   [I-D.hardt-aauth-protocol] uses act on its auth token to record a
+   delegation chain, not in its agent credential.  Its agent token
+   permits additional claims, and this document uses the same claim
+   there.  Nothing new is defined here; the claim is read.
 
 
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+3.  Admission
 
 3.1.  What the Document Settles
 
@@ -263,24 +265,26 @@ Internet-Draft                Agent Lineage               September 2026
 
    5.  Under Section 2.1, one operator has published both keys: the
        introduced agent is at accountability level 2 ([U4APolicy]
-       Section 5.1), and the _same_ directory at the _same_ origin also
+       Section 4.2), and the _same_ directory at the _same_ origin also
        holds the introducing key.  Under Section 2.2, the issuer's
        attestation satisfies this check.
 
    6.  The introducing agent has fewer live introduced agents than a
        deployment ceiling.
 
-   Check 5 exists because an agent cannot be allowed to point at a
-   second directory it runs itself.  The directory that attests the
-   child is the one that must also attest the parent.
 
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   Check 5 exists because an agent cannot be allowed to point at a
+   second directory it runs itself.  The directory that attests the
+   child is the one that must also attest the parent.
 
 3.3.  Failure Falls Back
 
@@ -323,21 +327,23 @@ Internet-Draft                Agent Lineage               September 2026
    member earned it.  A worker that was approved to trade means the
    orchestrator that spawned it need not be asked again to trade.
 
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
 4.2.  Three Postures
 
    An owner MUST be able to express each of the following per policy
    unit, using the conditions of [U4APolicy]:
 
    Per agent:  Every agent is asked once at this unit, introduced or
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
-
-Internet-Draft                Agent Lineage               September 2026
-
-
       not.  This is the default and what happens when she writes
       nothing.
 
@@ -379,20 +385,17 @@ Internet-Draft                Agent Lineage               September 2026
    cascade cannot find it active and be admitted behind it, and MUST
    report the number of connections and grants the cascade ended.
 
-   Because depth is one (Section 3.2 check 3), the cascade need not
-   recurse.
 
 
 
 
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   Because depth is one (Section 3.2 check 3), the cascade need not
+   recurse.
 
    Every introduced agent's live grants stop working on its next call,
    through the introspection of [U4ACore] Section 8.2, with no action
@@ -442,10 +445,7 @@ Internet-Draft                Agent Lineage               September 2026
 
 
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft                Agent Lineage               September 2026
 
@@ -467,44 +467,12 @@ Internet-Draft                Agent Lineage               September 2026
 
 9.  IANA Considerations
 
-9.1.  Media Type Registration
-
-   IANA is asked to register the following in the "Media Types"
-   registry.
-
-   Type name:  application
-
-   Subtype name:  u4a-introduction-v1+jws
-
-   Required parameters:  N/A
-
-   Optional parameters:  N/A
-
-   Encoding considerations:  binary; a JWS in compact serialization
-
-   Security considerations:  See Section 7 of this document
-
-   Interoperability considerations:  N/A
-
-   Published specification:  Section 2.1 of this document
-
-   Applications that use this media type:  Applications implementing UMA
-      2.0 with this extension
-
-   Change controller:  IETF
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 10.  References
 
 10.1.  Normative References
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
-
-Internet-Draft                Agent Lineage               September 2026
-
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -526,6 +494,17 @@ Internet-Draft                Agent Lineage               September 2026
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft                Agent Lineage               September 2026
+
 
    [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
@@ -551,17 +530,6 @@ Internet-Draft                Agent Lineage               September 2026
 
 10.2.  Informative References
 
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 10]
-
-Internet-Draft                Agent Lineage               September 2026
-
-
    [I-D.hardt-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
               Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
@@ -584,7 +552,34 @@ Internet-Draft                Agent Lineage               September 2026
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
 
-Appendix A.  Implementation Status
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+        +=========================+=================+============+
+        | Identifier              | Kind            | Defined in |
+        +=========================+=================+============+
+        | application/u4a-        | Media type      | Section    |
+        | introduction-v1+jws     |                 | 2.1        |
+        +-------------------------+-----------------+------------+
+        | introduction            | Agreement claim | Section    |
+        |                         | ([U4ATerms])    | 2.1        |
+        +-------------------------+-----------------+------------+
+
+               Table 1: Identifiers used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
@@ -610,14 +605,6 @@ Authors' Addresses
    Email: nickgamb@gmail.com
 
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 11]
-
-Internet-Draft                Agent Lineage               September 2026
-
-
    Eve Maler
    Venn Factory
 
@@ -626,47 +613,4 @@ Internet-Draft                Agent Lineage               September 2026
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 11]

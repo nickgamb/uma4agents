@@ -2,8 +2,8 @@
 title: "Agent Lineage for User-Managed Access (UMA) 2.0"
 abbrev: "Agent Lineage"
 docname: draft-gamb-uma4agents-lineage-00
-date: 2026-09-12
-category: std
+date: 2026-09-15
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -117,7 +117,7 @@ This document is an OPTIONAL extension of {{U4ACore}} and depends on
 
 # Asserting a Lineage {#asserting}
 
-A requesting agent asserts that another agent introduced it in exactly one of
+A client asserts that another agent introduced it in exactly one of
 two ways.
 
 ## By Introduction Document {#introduction-document}
@@ -173,7 +173,9 @@ lineage instead, by placing the introducing agent's subject identifier in an
 `act` claim {{RFC8693}} of the introduced agent's credential. No second document
 is needed; the authorization server reads the claim it already verified.
 
-{{I-D.hardt-aauth-protocol}} defines this use of `act` in its agent credential.
+{{I-D.hardt-aauth-protocol}} uses `act` on its auth token to record a delegation
+chain, not in its agent credential. Its agent token permits additional claims,
+and this document uses the same claim there.
 Nothing new is defined here; the claim is read.
 
 # Admission {#admission}
@@ -207,7 +209,7 @@ the strongest reason:
    active. A revoked agent goes back through first contact; an introduction
    MUST NOT restore what the owner withdrew.
 5. Under {{introduction-document}}, one operator has published both keys: the
-   introduced agent is at accountability level 2 ({{U4APolicy}} Section 5.1),
+   introduced agent is at accountability level 2 ({{U4APolicy}} Section 4.2),
    and the *same* directory at the *same* origin also holds the introducing
    key. Under {{act-claim}}, the issuer's attestation satisfies this check.
 6. The introducing agent has fewer live introduced agents than a deployment
@@ -359,41 +361,21 @@ depth at which she is asked to trust it.
 
 # IANA Considerations
 
-## Media Type Registration
-
-IANA is asked to register the following in the "Media Types" registry.
-
-Type name:
-: application
-
-Subtype name:
-: u4a-introduction-v1+jws
-
-Required parameters:
-: N/A
-
-Optional parameters:
-: N/A
-
-Encoding considerations:
-: binary; a JWS in compact serialization
-
-Security considerations:
-: See {{security-considerations}} of this document
-
-Interoperability considerations:
-: N/A
-
-Published specification:
-: {{introduction-document}} of this document
-
-Applications that use this media type:
-: Applications implementing UMA 2.0 with this extension
-
-Change controller:
-: IETF
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
 
 --- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `application/u4a-introduction-v1+jws` | Media type | {{introduction-document}} |
+| `introduction` | Agreement claim ({{U4ATerms}}) | {{introduction-document}} |
+{: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}
 

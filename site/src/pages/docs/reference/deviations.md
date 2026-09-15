@@ -19,7 +19,7 @@ explicit extension.
 Everything not listed here is intended to be stock UMA 2.0 or stock AAuth.
 
 Each entry names where the [specification set](/docs/reference/specification/)
-states it normatively. The numbering is the one Core §11 uses; entries 1–22 are that table.
+states it normatively. The numbering is the one Core §12 uses; entries 1–22 are that table.
 
 ## 1. Terms proffered inside `required_claims`
 
@@ -144,7 +144,7 @@ one stack means the claim is measured rather than argued.
 
 ## 10. Consumption ordering made normative
 
-**Baseline.** UMA 2.0 §3.3.1 does not say where in enforcement a single-use
+**Baseline.** UMA 2.0 §5.5 makes permission tickets single-use but does not say where in enforcement a single-use
 token is spent.
 
 **Here.** Introspect (non-consuming) → permissions → proof-of-possession →
@@ -253,7 +253,7 @@ continuity and leaves onboarding undefended. See
 
 ## 16. Owner-side blocking at operator granularity
 
-**Baseline.** UMA 2.0 has no notion of the party operating a requesting agent,
+**Baseline.** UMA 2.0 has no notion of the party operating a client,
 and so nothing to revoke at that level.
 
 **Here.** `POST /owner/operators/block` ends every connection an operator holds
@@ -344,7 +344,7 @@ question about parties, and there is nowhere in UMA 2.0 to put the answer. See
 
 **What is deliberately not extended.** The four beats are untouched. The
 challenge, the ticket, `need_info`, the agreement and the RPT are the same on
-a shared resource as on a personal one — a requesting agent cannot tell the
+a shared resource as on a personal one — a client cannot tell the
 difference, and does not need to.
 
 **Specified in.** [Multi-Party Authorization, Part I](/spec/draft-gamb-uma4agents-multiparty-00.html#organization)
@@ -398,7 +398,7 @@ for the other; no static owner credential exists.
 
 **Why.** The second form is what lets her authority be reached by something
 she runs — a personal agent on her own device — without a browser session and
-without an identity provider in the path. It is the requesting agent's
+without an identity provider in the path. It is the client's
 message-signature profile, pointed the other way.
 
 **Specified in.** [Core §10](/spec/draft-gamb-uma4agents-core-00.html#owner-authentication)

@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
     Model Context Protocol Binding for User-Managed Access (UMA) 2.0
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -253,7 +253,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
          "as_uri": "https://alice-as.example",
          "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
          "resource_metadata":
-           "https://rs.example/.well-known/oauth-protected-resource",
+         "https://rs.example/.well-known/oauth-protected-resource/mcp",
          "scope": "trades:execute",
          "authorization_remediation": {
            "authorization_details": [{
@@ -263,7 +263,8 @@ Internet-Draft             MCP Binding for UMA            September 2026
              "actions": ["execute_trade"],
              "datatypes": ["trades:execute"]
            }],
-           "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwf",
+           "authorization_reference":
+             "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
            "authorization_server": "https://alice-as.example",
            "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
          }
@@ -276,8 +277,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -296,8 +296,8 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
    A client implementing this binding MUST recognise both encodings and
    MUST negotiate identically after either.  The reference
-   implementation's requesting agent does, and the two hosting shapes
-   run against one authorization server.
+   implementation's client does, and the two hosting shapes run against
+   one authorization server.
 
 4.  The Negotiation and the Call
 
@@ -311,6 +311,9 @@ Internet-Draft             MCP Binding for UMA            September 2026
    and signed as [U4ACore] Section 6.  Where the enforcement point is in
    process, the signature components are the HTTP request that carried
    the JSON-RPC message.
+
+   For a single-use grant ([U4ACore] Section 7.2), the operation is the
+   call's params.name and its parameters are params.arguments.
 
 5.  Waiting
 
@@ -330,10 +333,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -364,7 +364,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
    Where an enforcement point is hosted behind a gateway that forwards a
    bounded prefix of the request body, it MUST detect that the body it
    received was truncated and MUST refuse with a reason naming the
-   truncation, as [U4ACore] Section 12.7.  A truncated JSON-RPC body
+   truncation, as [U4ACore] Section 13.7.  A truncated JSON-RPC body
    does not parse, the method disappears, and deny-by-default catches it
    under the wrong name.
 
@@ -389,7 +389,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -420,6 +420,13 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 12.1.  Normative References
 
+   [I-D.ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [JSONRPC]  JSON-RPC Working Group, "JSON-RPC 2.0 Specification", 4
               January 2013, <https://www.jsonrpc.org/specification>.
 
@@ -433,6 +440,16 @@ Internet-Draft             MCP Binding for UMA            September 2026
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
+
    [RFC6454]  Barth, A., "The Web Origin Concept", RFC 6454,
               DOI 10.17487/RFC6454, December 2011,
               <https://www.rfc-editor.org/rfc/rfc6454>.
@@ -440,15 +457,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
 
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
@@ -475,13 +483,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
               <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
               protocol-02>.
 
-   [I-D.ietf-oauth-rar-metadata-remediation]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              rar-metadata-remediation-00>.
-
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
@@ -500,8 +501,7 @@ Appendix A.  Implementation Status
 
 
 
-
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
@@ -509,13 +509,13 @@ Internet-Draft             MCP Binding for UMA            September 2026
    The reference implementation [U4ALAB] runs both hosting shapes of
    Section 3 against one authorization server — an external
    authorization service ahead of an unmodified MCP server, and an MCP
-   server extension applying the profile in process — and one requesting
-   agent negotiates through either.  The routing-header hazard of
-   Section 6 was found by sending the mismatched pair and watching a
-   header-trusting enforcement point wave it through; the reference MCP
-   SDK independently rejects the same pair.  The truncation of Section 8
-   was found by sending a body one byte over a gateway's limit and
-   reading the refusal it produced.
+   server extension applying the profile in process — and one client
+   negotiates through either.  The routing-header hazard of Section 6
+   was found by sending the mismatched pair and watching a header-
+   trusting enforcement point wave it through; the reference MCP SDK
+   independently rejects the same pair.  The truncation of Section 8 was
+   found by sending a body one byte over a gateway's limit and reading
+   the refusal it produced.
 
 Acknowledgments
 
@@ -557,4 +557,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 19 March 2027                [Page 10]

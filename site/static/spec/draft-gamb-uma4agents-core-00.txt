@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
       User-Managed Access (UMA) 2.0 Profile for Autonomous Agents
@@ -15,19 +15,19 @@ Expires: 16 March 2027                                      Venn Factory
 Abstract
 
    This document profiles and extends the User-Managed Access (UMA) 2.0
-   Grant so that an autonomous software agent, operated by a party who
-   is not the resource owner, can negotiate access to that owner's
-   resources while the owner is not present.
+   Grant so that a client, operated by a party other than the resource
+   owner, can obtain access to that owner's resources while the owner is
+   not present.  The case it is written for is a client that is an
+   autonomous software agent.
 
-   It narrows UMA 2.0 in one place and extends it in several.  The
-   requesting side is an agent identified by a key it proves possession
-   of rather than by a client credential; the requesting party token is
-   a proof-of-possession token carrying its permissions as a claim; a
-   grant may be bound to a single operation and spent exactly once; the
-   owner holds a standing, revocable relationship with each agent
-   individually; and the challenge that begins a negotiation is
-   specified as a set of parameters rather than as an HTTP header, so
-   that an enforcement point with no status line can emit it.
+   Under this profile the client authenticates by proving possession of
+   a key and needs no prior registration with the authorization server;
+   the requesting party token is a proof-of-possession token that
+   carries its permissions as a claim; a grant may be bound to a single
+   operation and spent once; the owner holds a standing, revocable
+   relationship with each client; and the challenge that begins a
+   negotiation is specified as a set of parameters rather than as an
+   HTTP header.
 
 Status of This Memo
 
@@ -44,7 +44,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -70,23 +70,23 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
-     1.1.  Design Rule . . . . . . . . . . . . . . . . . . . . . . .   4
+     1.1.  Design Rule . . . . . . . . . . . . . . . . . . . . . . .   3
      1.2.  Relationship to Other Authorization Work  . . . . . . . .   4
      1.3.  Specification Set . . . . . . . . . . . . . . . . . . . .   4
-     1.4.  Roles . . . . . . . . . . . . . . . . . . . . . . . . . .   5
+     1.4.  Roles . . . . . . . . . . . . . . . . . . . . . . . . . .   4
      1.5.  Notational Conventions  . . . . . . . . . . . . . . . . .   5
    2.  Authorization Server Metadata . . . . . . . . . . . . . . . .   6
    3.  The Challenge . . . . . . . . . . . . . . . . . . . . . . . .   6
      3.1.  Parameters, Not a Header  . . . . . . . . . . . . . . . .   6
      3.2.  The HTTP Binding  . . . . . . . . . . . . . . . . . . . .   7
-     3.3.  Structured Remediation  . . . . . . . . . . . . . . . . .   8
-     3.4.  Corroborating the Authorization Server  . . . . . . . . .   9
+     3.3.  Structured Remediation  . . . . . . . . . . . . . . . . .   7
+     3.4.  Corroborating the Authorization Server  . . . . . . . . .   8
    4.  The Negotiation . . . . . . . . . . . . . . . . . . . . . . .   9
      4.1.  Claim Token Formats . . . . . . . . . . . . . . . . . . .   9
      4.2.  Responses . . . . . . . . . . . . . . . . . . . . . . . .  10
      4.3.  Waiting . . . . . . . . . . . . . . . . . . . . . . . . .  10
-   5.  The Requesting Agent  . . . . . . . . . . . . . . . . . . . .  11
-     5.1.  Identity Levels . . . . . . . . . . . . . . . . . . . . .  11
+   5.  The Client  . . . . . . . . . . . . . . . . . . . . . . . . .  10
+     5.1.  Identity Levels . . . . . . . . . . . . . . . . . . . . .  10
      5.2.  Descriptive Metadata  . . . . . . . . . . . . . . . . . .  11
    6.  Proof of Possession . . . . . . . . . . . . . . . . . . . . .  12
      6.1.  The Message Signature Profile . . . . . . . . . . . . . .  12
@@ -102,111 +102,100 @@ Table of Contents
    9.  Standing Connections  . . . . . . . . . . . . . . . . . . . .  17
    10. The Owner's Own Credential  . . . . . . . . . . . . . . . . .  18
    11. Owner-Scoped Artifacts  . . . . . . . . . . . . . . . . . . .  19
-   12. Profiles and Extensions . . . . . . . . . . . . . . . . . . .  19
-   13. Security Considerations . . . . . . . . . . . . . . . . . . .  22
+   12. Profiles and Extensions . . . . . . . . . . . . . . . . . . .  20
+   13. Security Considerations . . . . . . . . . . . . . . . . . . .  23
      13.1.  Authorization Inputs Never Come From the Transport . . .  23
      13.2.  Consumption Is Ordered and Last  . . . . . . . . . . . .  23
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
      13.3.  Single Use Must Survive Replication  . . . . . . . . . .  23
      13.4.  Descriptive Metadata Is Not Authorization  . . . . . . .  23
-     13.5.  Issuers Are Trusted by Dereference . . . . . . . . . . .  23
-     13.6.  Revocation Is Atomic . . . . . . . . . . . . . . . . . .  23
+     13.5.  Issuers Are Trusted by Dereference . . . . . . . . . . .  24
+     13.6.  Revocation Is Atomic . . . . . . . . . . . . . . . . . .  24
      13.7.  A Truncated Request Must Fail Closed . . . . . . . . . .  24
      13.8.  The Resource Server Must Not Read the Owner's Policy . .  24
      13.9.  Not Addressed  . . . . . . . . . . . . . . . . . . . . .  24
    14. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  24
-     14.1.  Public Metadata Is Structural  . . . . . . . . . . . . .  24
-     14.2.  The Record Names a Counterparty  . . . . . . . . . . . .  24
+     14.1.  Public Metadata Is Structural  . . . . . . . . . . . . .  25
+     14.2.  The Record Names a Counterparty  . . . . . . . . . . . .  25
      14.3.  A Stated Purpose Is Not Evaluated  . . . . . . . . . . .  25
    15. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  25
-     15.1.  Profile Identifiers  . . . . . . . . . . . . . . . . . .  25
-     15.2.  JSON Web Token Claims Registration . . . . . . . . . . .  26
-     15.3.  Authorization Details Type Registration  . . . . . . . .  26
-     15.4.  OAuth Authorization Server Metadata Registration . . . .  27
-   16. References  . . . . . . . . . . . . . . . . . . . . . . . . .  27
-     16.1.  Normative References . . . . . . . . . . . . . . . . . .  27
-     16.2.  Informative References . . . . . . . . . . . . . . . . .  29
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  31
-     A.1.  UMA for Agents Reference Implementation . . . . . . . . .  31
+   16. References  . . . . . . . . . . . . . . . . . . . . . . . . .  25
+     16.1.  Normative References . . . . . . . . . . . . . . . . . .  25
+     16.2.  Informative References . . . . . . . . . . . . . . . . .  28
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  29
+     A.1.  Profile Identifiers . . . . . . . . . . . . . . . . . . .  29
+     A.2.  JSON Web Token Claims . . . . . . . . . . . . . . . . . .  30
+     A.3.  Authorization Details Type  . . . . . . . . . . . . . . .  31
+     A.4.  Other Values  . . . . . . . . . . . . . . . . . . . . . .  31
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  31
+     B.1.  UMA for Agents Reference Implementation . . . . . . . . .  32
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  32
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  32
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  33
 
 1.  Introduction
 
-   UMA 2.0 [UMAGrant] describes a topology that almost nothing else has:
-   the party who authorizes access is not the party operating the
-   client, and the authorization server holds the owner's policy rather
-   than the resource server's.  That arrangement was designed for a
-   person sharing a resource with another person.  It turns out to be
-   the arrangement an agent economy needs, because the question an agent
-   economy has to answer is not "is this my agent doing my task" but
-   "may your agent touch my resource".
+   UMA 2.0 [UMAGrant] separates the party who authorizes access, the
+   resource owner, from the party on whose behalf a client requests it,
+   the requesting party, and places the owner's policy at an
+   authorization server of the owner's choosing.  This profile applies
+   that arrangement to clients that are autonomous software agents.
 
-   What UMA 2.0 assumes, and what this profile changes, is everything
-   downstream of that topology.  The requesting side is assumed to be a
-   registered OAuth client operated by a human who can be redirected to
-   a browser.  An agent is neither.  It holds a key rather than a client
-   secret, it may have no prior relationship with the authorization
-   server at all, and the owner it needs an answer from may be asleep.
+   UMA 2.0 leaves client credentials and their assignment open.  This
+   profile addresses clients that have no prior relationship with the
+   authorization server, and owners who are not available when a request
+   arrives.  Nothing in it requires the client to be autonomous: a
+   conventional client application that holds a key can use it.
 
-   This profile is written against a reference implementation [U4ALAB]
-   in which every requirement below is exercised by an automated check.
-   Appendix A says what that implementation covers and where the
-   register of requirement-to-check mappings lives.
+   The requirements in this document are exercised by a reference
+   implementation [U4ALAB]; Appendix B describes its coverage.
 
+1.1.  Design Rule
 
+   This profile uses UMA 2.0's wire surface wherever it fits and makes
+   each departure explicit.  The following are used as [UMAGrant]
+   specifies them:
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-1.1.  Design Rule
+   *  the urn:ietf:params:oauth:grant-type:uma-ticket grant type;
 
-   The rule this profile was written under, and the reason its surface
-   is as small as it is: *stay inside UMA 2.0's wire surface wherever it
-   already fits, and make every departure explicit.* WWW-Authenticate:
-   UMA, the uma-ticket grant type, need_info, request_submitted and the
-   introspection permissions array are all used as specified.
-   Section 12 is the complete list of departures; anything not named
-   there is intended to be stock UMA 2.0.
+   *  the need_info and request_submitted responses;
+
+   *  the permissions array of the introspection response.
+
+   Over HTTP the challenge keeps UMA 2.0's WWW-Authenticate: UMA header
+   (Section 3.2), but the header is no longer its only encoding
+   (Section 3.1).
+
+   Section 12 lists every departure.  Anything not listed there is
+   intended to be UMA 2.0 as specified.
 
 1.2.  Relationship to Other Authorization Work
 
-   This profile is an extension grant on OAuth 2.0 [RFC6749], as UMA 2.0
-   is.
+   GNAP [RFC9635] addresses a comparable topology, including a resource
+   owner who is not the end user and is contacted asynchronously
+   (Section 1.6.4 of [RFC9635]).  It does not define terms that the
+   owner publishes and the client signs, which is the central addition
+   of this set ([U4ATerms]).  A binding of this profile to GNAP is
+   possible.
 
-   GNAP [RFC9635] is the closer comparison, and in several respects the
-   better carrier: its interaction model is more general than OAuth's,
-   key binding is native rather than an extension, and its request
-   format expresses what a client wants far better than a scope string.
-   GNAP also anticipates a resource owner who is not the end user,
-   reached by the authorization server asynchronously while the client
-   waits (Section 1.6.4 of [RFC9635]), and expects the authorization
-   server to follow that owner's decisions, including automated rules.
-   What it leaves to implementations is what those rules may rest on and
-   what is agreed: it defines no terms the owner publishes and the
-   requesting side signs, no record of that agreement held by both
-   parties, and no constraint on which facts may relax a requirement.
-   Those are the substance of this profile.  A GNAP binding of it would
-   be a reasonable document, and probably a cleaner one than the OAuth-
-   shaped binding here; it is not a substitute for it.
-
-   DPoP [RFC9449] solves the same problem as Section 6 for the OAuth
-   installed base.  This profile uses [RFC9421] instead because the
-   signature must cover the request rather than only bind the token, and
-   because the same mechanism authenticates four different parties here,
-   in both directions.  A DPoP binding is a reasonable second binding
-   and would recruit a different set of implementers.
+   DPoP [RFC9449] binds an access token to a key.  This profile uses
+   HTTP Message Signatures [RFC9421] instead, because the signature
+   covers the request as well as binding the token, and because the same
+   mechanism authenticates several parties in this set.
 
 1.3.  Specification Set
 
@@ -214,49 +203,50 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    REQUIRED to implement alongside it; this document together with those
    two constitutes the UMA 2.0 profile for autonomous agents.
 
+   [U4APolicy], [U4ALineage], [U4AMultiParty] and [U4AOwner] are
+   OPTIONAL extensions of this document.  [U4AMCP] binds this profile to
+   a transport and [U4AAAuth] to an agent identity and signature layer;
+   other bindings are possible.
+
+1.4.  Roles
+
+   The roles of [UMAGrant] apply.  This document uses UMA's entity
+   terms: the software making a request is the client, and the party on
+   whose behalf it acts is the requesting party.  Where the client is an
+   autonomous agent, the requesting party is the person or organization
+   accountable for it, and is not necessarily present.
 
 
 
 
 
 
-
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-   [U4APolicy], [U4ALineage], [U4AMultiParty] and [U4AOwner] are
-   OPTIONAL extensions of this document.  [U4AMCP] binds this profile to
-   a transport and [U4AAAuth] to an agent identity and signature layer;
-   other bindings are possible and this document is written so that they
-   are.
+   The UMA Work Group's legal work names the parties responsible for
+   these entities: the party that seeks access through a client is the
+   Requesting Agent, and the party responsible for the client software
+   is the Client Operator.  This document does not use "requesting
+   agent" to mean software.
 
-1.4.  Roles
+   The following roles are added:
 
-   The roles of [UMAGrant] apply, with the following additions and
-   narrowings.
+   Client operator:  The party that runs a client and publishes a
+      directory of the keys its clients hold, corresponding to the
+      Client Operator.  Where this document set says "operator" alone,
+      it means the client operator.  The owner may act against a client
+      operator as a whole (see [U4APolicy]); a client operator is never
+      an authorization input on its own.
 
-   Requesting agent:  The software making the request.  UMA used this
-      term in 2010 [UMAClaims2010] and dropped it; the agent era makes
-      the distinction load-bearing again.  A requesting agent is
-      individuated by a key it proves possession of, and is distinct
-      from the requesting party, who is accountable for it and is not
-      present.  Nothing in this profile lets the requesting agent be the
-      responsible party; it lets the agent be the acting one.
-
-   Operator:  The party that runs a requesting agent and publishes a
-      directory of the keys its agents hold.  The operator is a party
-      the owner may act against as a whole — see [U4APolicy] — and is
-      never an authorization input on its own.
-
-   Enforcement point:  The component that discharges the resource-server
-      obligations of [UMAFedAuthz]: holding the protection API access
+   Enforcement point:  The component that performs the resource server's
+      jobs defined by [UMAFedAuthz]: holding the protection API access
       token, obtaining a permission ticket, introspecting, and refusing.
-      [UMAFedAuthz] Section 1.4 divides responsibility between _parties_
-      and names no component, and this profile keeps it that way.  An
-      enforcement point MAY be a gateway in front of the resource, or
-      the resource itself.  It is a role, not a product.
+      [UMAFedAuthz] Section 1.4 describes these jobs without naming the
+      component that performs them.  An enforcement point MAY be a
+      gateway in front of the resource, or the resource itself.
 
 1.5.  Notational Conventions
 
@@ -271,22 +261,26 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    The notation s256(x) denotes the string "s256:" followed by the
    base64url encoding, without padding, of the SHA-256 digest of the
-   octets x.
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
+   octets x.  Where x is a JSON value, the octets are its serialization
+   under the JSON Canonicalization Scheme [RFC8785], so that independent
+   implementations compute the same digest.
 
    The notation jkt(k) denotes the string "jkt:" followed by the JWK
    Thumbprint [RFC7638] of the JSON Web Key k.  The value after the
    prefix is the same thumbprint DPoP [RFC9449] carries in its jkt
    confirmation method; the prefix marks it as a handle rather than a
    confirmation.
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
 2.  Authorization Server Metadata
 
@@ -297,23 +291,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    The authorization server MUST include in its metadata the value
    https://u4a.ai/spec/core/1.0 in the uma_profiles_supported array, and
    MUST include the identifying URI of each extension in this set that
-   it implements.  [UMAGrant] Section 4 asks a profile to be given a
-   uniquely identifying URI and asks a server supporting one to
-   advertise it; this profile's URIs are listed in Section 15.
-
-   The following metadata member is added:
-
-   terms_endpoint:  OPTIONAL.  The URL of the owner's terms roster, as
-      defined in [U4ATerms].  An authorization server implementing
-      [U4ATerms] MUST include it.
+   it implements.  This profile's identifying URIs are listed in
+   Appendix A.
 
    An authorization server MUST NOT advertise a grant type or claim
    token format it will not accept, and MUST advertise every grant type
-   and claim token format it will.  This is not pedantry about
-   completeness: a requesting agent that has never met this
-   authorization server decides from this document alone what to
-   attempt, and an unadvertised-but-accepted format is indistinguishable
-   to it from an unsupported one.
+   and claim token format it will.  This requirement establishes an
+   accurate source of truth for an agent making first contact with the
+   authorization server, and enables clean interoperability failures in
+   the absence of human intervention.
 
 3.  The Challenge
 
@@ -330,14 +316,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    error:  REQUIRED.  The value insufficient_authorization.
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    as_uri:  REQUIRED.  The issuer identifier of the authorization server
       that decides access to this resource for this owner.
 
@@ -351,6 +329,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       another identifier the same resource is reachable by; a client
       following the pointer is required by [RFC9728] Section 3.3 to
       reject any other.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    scope:  OPTIONAL.  A space-delimited list of the scopes that would
       satisfy the attempted access, as [RFC6750] Section 3.
@@ -367,8 +353,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    point running in-process inside the resource returns a domain result,
    not a status line; a JSON-RPC method handler has nowhere to put a
    WWW-Authenticate.  Both encodings run in the reference implementation
-   against one authorization server, and one requesting agent reads
-   both.
+   against one authorization server, and one client reads both.
 
 3.2.  The HTTP Binding
 
@@ -386,14 +371,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
      scope="trades:execute",
      authorization_remediation="eyJhdXRob3JpemF0aW9uX2RldGFpbHMi..."
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
     Figure 1: A challenge over HTTP.  Line breaks are for display only.
 
 3.3.  Structured Remediation
@@ -406,9 +383,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    authorization_details:  REQUIRED.  An array of authorization detail
       objects [RFC9396] describing what was attempted.
 
-   authorization_reference:  REQUIRED. s256 over the canonical JSON
-      serialization of authorization_details, with object keys sorted
-      and no insignificant whitespace.
+   authorization_reference:  REQUIRED. s256 over authorization_details,
+      serialized as [RFC8785].
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    authorization_server:  REQUIRED by this profile.  The issuer
       identifier of the authorization server that decides.  Same value
@@ -425,7 +409,8 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
        "actions": ["execute_trade"],
        "datatypes": ["trades:execute"]
      }],
-     "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwfXJ8m",
+     "authorization_reference":
+       "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
      "authorization_server": "https://alice-as.example",
      "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
    }
@@ -441,15 +426,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    template, is the whole of the difference: the client authors nothing
    and cannot widen what it was given.
 
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    Emitting the [RFC9396] vocabulary costs an enforcement point nothing,
    since it already knows the resource identifier and the scopes, and
    buys three things.  A client that implements
@@ -461,11 +437,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 3.4.  Corroborating the Authorization Server
 
-   A requesting agent MUST fetch the document named by
-   resource_metadata, MUST verify that its resource member identifies
-   the resource being accessed as required by [RFC9728] Section 3.3, and
-   MUST refuse a challenge whose as_uri does not appear in that
-   document's authorization_servers array.
+   A client MUST fetch the document named by resource_metadata, MUST
+   verify that its resource member identifies the resource being
+   accessed as required by [RFC9728] Section 3.3, and MUST refuse a
+   challenge whose as_uri does not appear in that document's
+   authorization_servers array.
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    Without this, the only statement of which authorization server
    decides is an unauthenticated header on a refused request.  With it,
@@ -475,12 +458,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 4.  The Negotiation
 
-   The requesting agent presents the ticket at the authorization
-   server's token endpoint using the urn:ietf:params:oauth:grant-
-   type:uma-ticket grant type, as [UMAGrant] Section 3.3.1.  This
-   profile does not change the grant type, the ticket's single-use
-   rotation, or the meaning of need_info, request_submitted,
-   request_denied or invalid_grant.
+   The client presents the ticket at the authorization server's token
+   endpoint using the urn:ietf:params:oauth:grant-type:uma-ticket grant
+   type, as [UMAGrant] Section 3.3.1.  This profile does not change the
+   grant type, the ticket's single-use rotation, or the meaning of
+   need_info, request_submitted, request_denied or invalid_grant.
 
 4.1.  Claim Token Formats
 
@@ -498,22 +480,13 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    authorization server MUST treat it as a claim about identity and
    reach, and MUST NOT treat it as conferring access.
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
-   A requesting agent MUST send the credentials it exchanges for such an
-   assertion only to the identity provider they belong to, as configured
-   at the agent, and MUST NOT send them to a provider or token endpoint
-   that only the authorization server's request names.  The
-   authorization server says which provider it will believe.  If it
-   could also say where the agent's credentials go, any resource an
-   agent visited could collect an employee's token and the application's
-   secret.
+   A client MUST send the credentials it exchanges for such an assertion
+   only to the identity provider they belong to, as configured at the
+   agent, and MUST NOT send them to a provider or token endpoint that
+   only the authorization server's request names.  The authorization
+   server says which provider it will believe.  If it could also say
+   where the agent's credentials go, any resource an agent visited could
+   collect an employee's token and the application's secret.
 
    Presenting the same assertion as a jwt-bearer grant would have the
    identity provider's assertion produce the access token directly,
@@ -523,76 +496,89 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    for.  Where both are demanded, identity is demanded first, because
    which terms apply follows from which party the agent acts for.
 
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 4.2.  Responses
 
-   The authorization server's responses are those of [UMAGrant]
-   Section 3.3.1.  Two are constrained by this profile.
+   The authorization server's responses are those of [UMAGrant] Sections
+   3.3.5 and 3.3.6.  Two are constrained by this profile.
 
    A request_submitted response indicates that the owner has been asked
    and has not yet answered.  The authorization server MUST distinguish
    two kinds of pending request, and MUST make the kind available to the
    owner's decision surface:
 
-   connection:  The requesting agent has no standing relationship with
-      this owner.  The question put to the owner is whether to have one.
-      See Section 9.
+   connection:  The client has no standing relationship with this owner.
+      The question put to the owner is whether to have one.  See
+      Section 9.
 
-   operation:  The requesting agent has a standing relationship, and the
-      owner's policy requires her to answer for this particular access.
+   operation:  The client has a standing relationship, and the owner's
+      policy requires her to answer for this particular access.
 
    A request_denied response MAY carry an error_description.  Where the
    refusal was reached without evaluating the owner's policy — because a
    quota was exhausted or the operator was blocked — the authorization
-   server SHOULD say so, so that a well-behaved requesting agent can
-   distinguish a refusal it might overcome from one it cannot.
+   server SHOULD say so, so that a well-behaved client can distinguish a
+   refusal it might overcome from one it cannot.
 
 4.3.  Waiting
 
    request_submitted is a state to render, not a call to hold open.  A
-   requesting agent that can express waiting to its own user SHOULD hand
-   the wait up rather than block, and a binding SHOULD define how.  The
-   decision belongs to the owner either way; what changes is whether the
+   client that can express waiting to its own user SHOULD hand the wait
+   up rather than block, and a binding SHOULD define how.  The decision
+   belongs to the owner either way; what changes is whether the
    requesting party's client hangs on it.
 
+   A binding that surfaces the wait MUST be able to say that the party
+   being waited on is not the requesting party's own user, and that the
+   client MUST NOT attempt to satisfy the wait from that user.  A wait
+   that cannot name its subject will be answered by the wrong person.
+
+5.  The Client
+
+5.1.  Identity Levels
+
+   A client presents itself at exactly one of two levels.  The level
+   determines the shape of the standing connection handle and nothing
+   else.
+
+   Pseudonymous:  The client presents a bare public JWK [RFC7517].  The
+      key is the identity.  The connection handle is jkt(k).
+
+   Identified:  The client presents a credential from an issuer
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-   A binding that surfaces the wait MUST be able to say that the party
-   being waited on is not the requesting party's own user, and that the
-   requesting agent's client MUST NOT attempt to satisfy the wait from
-   that user.  A wait that cannot name its subject will be answered by
-   the wrong person.
-
-5.  The Requesting Agent
-
-5.1.  Identity Levels
-
-   A requesting agent presents itself at exactly one of two levels.  The
-   level determines the shape of the standing connection handle and
-   nothing else.
-
-   Pseudonymous:  The agent presents a bare public JWK [RFC7517].  The
-      key is the identity.  The connection handle is jkt(k).
-
-   Identified:  The agent presents a credential from an issuer asserting
-      its identity and binding it to a key — for example an aa-agent+jwt
-      as defined by [I-D.hardt-aauth-protocol], whose cnf.jwk is the
-      signing key.  The authorization server MUST verify that credential
-      against keys published by its issuer, MUST require that the issuer
-      identifier use the https scheme, and MUST derive the connection
-      handle from the issuer and subject rather than from the key.  The
-      issuer MUST qualify the handle whole, including any path.
+      asserting its identity and binding it to a key — for example an
+      aa-agent+jwt as defined by [I-D.hardt-aauth-protocol], whose
+      cnf.jwk is the signing key.  The authorization server MUST verify
+      that credential against keys published by its issuer, MUST require
+      that the issuer identifier use the https scheme, and MUST derive
+      the connection handle from the issuer and subject rather than from
+      the key.  The issuer MUST qualify the handle whole, including any
+      path.  The handle MUST be the subject, followed by @ and the
+      issuer identifier with its scheme and any trailing / removed,
+      unless the subject already ends with that suffix, in which case
+      the handle is the subject.
 
    The handle for an identified agent MUST NOT be derived from its key.
    Issuers that attest agents commonly bind a fresh key per session; a
    thumbprint-keyed relationship forgets such an agent on every run,
    which presents to the owner as an agent she has approved asking to be
-   approved again.  This was found by running it.
+   approved again.
 
    Qualifying by the issuer's host alone is the natural shortcut and it
    merges strangers.  A multi-tenant identity provider commonly serves
@@ -606,17 +592,8 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 5.2.  Descriptive Metadata
 
-   A requesting agent MAY additionally present descriptive metadata, so
-   that an owner who has never met it can be told something true about
-   it:
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 11]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
+   A client MAY additionally present descriptive metadata, so that an
+   owner who has never met it can be told something true about it:
 
    *  a client identifier that is an https URL resolving to a client ID
       metadata document [I-D.ietf-oauth-client-id-metadata-document],
@@ -627,25 +604,39 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       directory of keys the operator publishes, which MUST be covered by
       the request signature where it is present.
 
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    Neither is an authorization input.  The key that verifies a request
    is always the one confirmed by the grant, the connection handle is
    unchanged by the presence or absence of either, and an authorization
    server MUST NOT admit a request it would otherwise refuse on the
    strength of descriptive metadata alone.  Failure to resolve
    descriptive metadata MUST leave the request where it was rather than
-   refusing it; an operator's outage is not evidence about an agent.
+   refusing it; an operator's outage is not evidence about a client.
 
    A metadata document proves only that it claims its own URL.  Anyone
    can publish one, so resolving it establishes a name to display and
    nothing more.  What raises the metadata above a name is the operator
-   directory, which the agent does not control — see [U4APolicy].
+   directory, which the client does not control — see [U4APolicy].
 
 6.  Proof of Possession
 
    The requesting party token issued under this profile is a proof-of-
-   possession token.  A requesting agent MUST prove possession of the
-   confirmed key on every request to the protected resource, and an
-   enforcement point MUST verify it.
+   possession token.  A client MUST prove possession of the confirmed
+   key on every request to the protected resource, and an enforcement
+   point MUST verify it.
 
 6.1.  The Message Signature Profile
 
@@ -655,6 +646,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    "@authority", "@path" and "authorization".  A signer MAY cover more,
    and a verifier MUST accept a superset rather than requiring an exact
    set.
+
+   On a request that carries no Authorization header, such as a resource
+   server introducing itself or an owner's own signed request, the
+   "authorization" component is covered with the empty string as its
+   value, so the covered set is the same on every request.  [RFC9421]
+   Section 2.5 would otherwise treat covering an absent field as an
+   error; this is a departure from it, and the signer and the verifier
+   apply it identically.
 
    Requiring an exact list is the intuitive implementation and it is
    wrong.  It makes this profile and
@@ -666,15 +665,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    A verifier MUST reconstruct the signature base using the @authority
    value it is configured with, and MUST NOT take it from the Host
    header or from any forwarded header.  An authority read from the
+   request is an authority the caller chose.  This is a security rule
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-   request is an authority the caller chose.  This is a security rule
    and a portability rule with one cause: an enforcement point that
    recovers its authority from the routing layer breaks silently when
    the routing layer changes, with signatures failing to verify for a
@@ -690,6 +689,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    a Content-Digest [RFC9530] header, and the verifier MUST recompute
    the digest from the received body as well as verifying the signature
    over it.
+
+   A request carries meaning in its body whenever it has one.  That
+   includes every tool call, whose operation and arguments are in the
+   body, and every request to the owner or protection API that sends a
+   body.
 
    The four required components say who is asking and what they are
    asking of.  They say nothing about the bytes.  That is adequate for a
@@ -721,11 +725,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 13]
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -736,13 +736,19 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
      "expires_in": 3600
    }
 
+   A client presents the token in the Authorization header as PoP
+   followed by a space and the token, on a request signed as Section 6.1
+   specifies.  The PoP scheme is this profile's; it is not registered in
+   the HTTP Authentication Scheme Registry, and a binding that carries
+   the token elsewhere says where.
+
    The requesting party token MUST be a JWT [RFC7519] signed by the
    authorization server, and MUST carry:
 
    cnf:  REQUIRED.  A confirmation claim whose jwk member is the public
-      key the requesting agent must prove possession of.  This is the
-      key that signed the claim token, and the key the enforcement point
-      verifies requests against.
+      key the client must prove possession of.  This is the key that
+      signed the claim token, and the key the enforcement point verifies
+      requests against.
 
    permissions:  REQUIRED.  The array defined by [UMAFedAuthz]
       Section 5.1.1 — each element carrying resource_id, resource_scopes
@@ -751,6 +757,10 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    owner:  REQUIRED.  The resource owner on whose behalf this token was
       issued.  See Section 11.
+
+   contract:  REQUIRED where the grant was issued on an agreement under
+      [U4ATerms]. s256 over the agreement's JWS compact serialization,
+      the same value the receipt of [U4ATerms] carries as agreement.
 
    A bearer requesting party token is a credential that works for
    whoever picks it up, which is an unreasonable thing to hand software
@@ -768,29 +778,24 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    single_use:  REQUIRED.  Boolean true.
 
-   operation:  REQUIRED.  An object with a tool member naming the
-      operation and a params_s256 member carrying s256 over the
-      canonical JSON serialization of the exact parameters approved,
-      with object keys sorted.
 
 
 
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 14]
+Gamb & Maler              Expires 19 March 2027                [Page 14]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   operation:  REQUIRED.  An object with a tool member naming the
+      operation and a params_s256 member carrying s256 over the
+      parameters approved, serialized as [RFC8785]: the params member of
+      the agreement's operation [U4ATerms].
 
    {
      "single_use": true,
      "operation": {
        "tool": "execute_trade",
-       "params_s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+       "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
      }
    }
 
@@ -828,19 +833,19 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
        establish that it is active and that the relationship behind it
        still stands.
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 15]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    2.  Establish that the resource being accessed appears in permissions
        with a scope that covers the attempted access, and that the
        permission's own exp and nbf, where present, admit the present
        time.
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 15]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    3.  Verify proof of possession against the key named by cnf in the
        introspection response.
@@ -884,6 +889,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    whether that caller was the one that consumed it.  A caller told that
    it was not MUST refuse the request.
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 16]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    A read followed by a write is correct in one process and wrong the
    moment there are two.  Two callers read consumed = false, both are
    told yes, and one owner-approved action is performed twice.  The
@@ -891,14 +905,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    be tested for in a single-process deployment — which is where the
    specification has to carry it, because the implementation will not.
 
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 16]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
-   [UMAGrant] Section 3.3.1 says a permission ticket is single-use and
+   [UMAGrant] Section 5.5 says a permission ticket is single-use and
    does not say where in enforcement it is spent, nor what "single-use"
    means when the authorization server has more than one replica.  Both
    are stated here.
@@ -912,9 +919,9 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    An enforcement point receiving a reason of the first kind MUST refuse
    without issuing a fresh challenge.  A bare {"active": false} sends a
-   requesting agent around a negotiation whose outcome the owner has
-   already settled, which wastes the agent's time and puts a request in
-   front of the owner that she has already answered.
+   client around a negotiation whose outcome the owner has already
+   settled, which wastes the agent's time and puts a request in front of
+   the owner that she has already answered.
 
    An authorization server MUST NOT describe a token as active to a
    resource server whose protection API access token was issued for a
@@ -926,17 +933,26 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 9.  Standing Connections
 
    A connection is the standing relationship an owner has with one
-   requesting agent, keyed by the handle of Section 5.1.
+   client, keyed by the handle of Section 5.1.
 
    An authorization server implementing this profile MUST:
 
    *  refuse to grant, and instead put the request to the owner as a
       connection pending request, where no active connection exists for
-      the requesting agent's handle, whatever the owner's policy would
-      otherwise decide;
+      the client's handle, whatever the owner's policy would otherwise
+      decide;
 
    *  record the connection when the owner approves, retaining at least
       the handle, the identity level, and the time of first contact;
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    *  offer the owner an operation that ends a connection, and on that
       operation invalidate every live requesting party token issued
@@ -944,15 +960,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    *  retain the fact that a connection was previously ended, across any
       later re-establishment of a connection with the same handle;
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 17]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    *  keep inactive every token invalidated by ending a connection,
       across any later re-establishment of a connection with the same
@@ -994,21 +1001,22 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    authorization server MUST NOT hold a static owner credential of its
    own.
 
-   The second form is what lets the owner's authority be reached by
-   something she runs — a personal agent on her own device — without a
-   browser session and without an identity provider in the path.  It is
-   the same message-signature profile the requesting agent uses, pointed
-   the other way.  Every handler MUST act on the owner the credential
-   proved rather than on one the request named.  What that software can
-   ask her authority to do is specified in [U4AOwner].
 
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 18]
+Gamb & Maler              Expires 19 March 2027                [Page 18]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   The second form is what lets the owner's authority be reached by
+   something she runs — a personal agent on her own device — without a
+   browser session and without an identity provider in the path.  It is
+   the same message-signature profile the client uses, pointed the other
+   way.  Every handler MUST act on the owner the credential proved
+   rather than on one the request named.  What that software can ask her
+   authority to do is specified in [U4AOwner].
 
 11.  Owner-Scoped Artifacts
 
@@ -1048,173 +1056,189 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    alias hands every client at that alias a document it is required to
    reject.  Aliases are resources too.
 
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 19]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 12.  Profiles and Extensions
 
-   This document is both a profile and an extension of [UMAGrant] in the
-   sense of its Section 4: it restricts UMA's available options in two
-   places and defines new use of its extensibility points in several.
+   Each departure below is labelled, in the sense of [UMAGrant]
+   Section 4, as a profile (it restricts an option UMA 2.0 leaves open),
+   an extension (it uses one of UMA 2.0's extensibility points), or a
+   divergence (it replaces something UMA 2.0 specifies).
 
    The complete list of departures from [UMAGrant] and [UMAFedAuthz]
    follows.  Anything not named here, in this document or in another
    document of this set, is intended to be stock UMA 2.0.
 
+   +==+====================+==========+================+===============+
+   |# |Departure           |Kind      |Baseline        |Where specified|
+   +==+====================+==========+================+===============+
+   |1 |The authorization   |extension |The server names|[U4ATerms]     |
+   |  |server proffers     |          |acceptable claim|               |
+   |  |claim _content_,    |          |formats         |               |
+   |  |dereferenceable and |          |                |               |
+   |  |counter-signed      |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |2 |Proof-of-possession |profile,  |Bearer token;   |Section 7.1    |
+   |  |requesting party    |extension |permissions     |               |
+   |  |token carrying      |          |visible only    |               |
+   |  |permissions as a    |          |through         |               |
+   |  |claim               |          |introspection   |               |
+   +--+--------------------+----------+----------------+---------------+
+   |3 |operation and       |extension |Per-permission  |Section 7.2    |
+   |  |single_use claims   |          |scopes and      |               |
+   |  |                    |          |expiry only     |               |
+   +--+--------------------+----------+----------------+---------------+
+   |4 |Owner intervention  |extension |Resource-owner  |Section 9      |
+   |  |as two kinds of     |          |intervention out|               |
+   |  |pending request     |          |of scope        |               |
+   +--+--------------------+----------+----------------+---------------+
+   |5 |A standing          |extension |Nothing         |Section 9      |
+   |  |connection keyed by |          |directly; the   |               |
+   |  |an identity handle, |          |persisted claims|               |
+   |  |owner-visible and   |          |token is the    |               |
+   |  |owner-revocable     |          |ancestor        |               |
+   +--+--------------------+----------+----------------+---------------+
+   |6 |Discovery in more   |extension |Metadata        |Section 3.4,   |
+   |  |than one binding    |          |documents       |[U4AFedAuthz]  |
+   |  |encoding from one   |          |predate this;   |               |
+   |  |registry, and       |          |the challenge   |               |
+   |  |challenge           |          |carries as_uri  |               |
+   |  |corroboration       |          |on faith        |               |
+   +--+--------------------+----------+----------------+---------------+
+   |7 |Public metadata     |extension |The resource    |[U4AFedAuthz]  |
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 19]
+Gamb & Maler              Expires 19 March 2027                [Page 20]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-    +====+=======================+==================+=================+
-    | #  | Departure             | Baseline         | Where specified |
-    +====+=======================+==================+=================+
-    | 1  | The authorization     | The server names | [U4ATerms]      |
-    |    | server proffers claim | acceptable claim |                 |
-    |    | _content_,            | formats          |                 |
-    |    | dereferenceable and   |                  |                 |
-    |    | counter-signed        |                  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 2  | Proof-of-possession   | Bearer token;    | Section 7.1     |
-    |    | requesting party      | permissions      |                 |
-    |    | token carrying        | visible only     |                 |
-    |    | permissions as a      | through          |                 |
-    |    | claim                 | introspection    |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 3  | operation and         | Per-permission   | Section 7.2     |
-    |    | single_use claims     | scopes and       |                 |
-    |    |                       | expiry only      |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 4  | Owner intervention as | Resource-owner   | Section 9       |
-    |    | two kinds of pending  | intervention out |                 |
-    |    | request               | of scope         |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 5  | A standing connection | Nothing          | Section 9       |
-    |    | keyed by an identity  | directly; the    |                 |
-    |    | handle, owner-visible | persisted claims |                 |
-    |    | and owner-revocable   | token is the     |                 |
-    |    |                       | ancestor         |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 6  | Discovery in more     | Metadata         | Section 3.4,    |
-    |    | than one binding      | documents        | [U4AFedAuthz]   |
-    |    | encoding from one     | predate this;    |                 |
-    |    | registry, and         | the challenge    |                 |
-    |    | challenge             | carries as_uri   |                 |
-    |    | corroboration         | on faith         |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 7  | Public metadata stays | The resource     | [U4AFedAuthz]   |
-    |    | structural; owner-    | server pushes    |                 |
-    |    | bound instances       | owner-bound      |                 |
-    |    | served only to the    | registrations    |                 |
-    |    | owner's authority     | under the        |                 |
-    |    |                       | protection token |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 8  | The challenge is a    | WWW-Authenticate | Section 3.1     |
-    |    | set of parameters;    | is mandated      |                 |
-    |    | each binding says how |                  |                 |
-    |    | they travel           |                  |                 |
-    +----+-----------------------+------------------+-----------------+
+   |  |stays structural;   |          |server pushes   |               |
+   |  |owner-bound         |          |owner-bound     |               |
+   |  |instances served    |          |registrations   |               |
+   |  |only to the owner's |          |under the       |               |
+   |  |authority           |          |protection token|               |
+   +--+--------------------+----------+----------------+---------------+
+   |8 |The challenge is a  |divergence|WWW-Authenticate|Section 3.1    |
+   |  |set of parameters;  |          |is mandated     |               |
+   |  |each binding says   |          |                |               |
+   |  |how they travel     |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |9 |Enforcement         |profile   |Obligations     |Section 8.1    |
+   |  |obligations stated  |          |named, host     |               |
+   |  |as a conformance    |          |unnamed         |               |
+   |  |profile, not a      |          |                |               |
+   |  |component           |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |10|Consumption         |profile,  |Unspecified     |Section 8.2,   |
+   |  |ordering normative; |extension |where a single- |Section 8.4    |
+   |  |introspection       |          |use token is    |               |
+   |  |carries a reason    |          |spent           |               |
+   +--+--------------------+----------+----------------+---------------+
+   |11|Descriptive agent   |extension |The agent is its|Section 5.2    |
+   |  |metadata, display   |          |key, or its     |               |
+   |  |only                |          |issuer's token  |               |
+   +--+--------------------+----------+----------------+---------------+
+   |12|Structured          |extension |The challenge   |Section 3.3    |
+   |  |remediation in the  |          |carries as_uri  |               |
+   |  |challenge, plus the |          |and ticket      |               |
+   |  |two members that    |          |                |               |
+   |  |let a third party   |          |                |               |
+   |  |decide              |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |13|A resource server   |extension |How a resource  |[U4AFedAuthz]  |
+   |  |introduces itself   |          |server comes to |               |
+   |  |to an owner's       |          |hold a          |               |
+   |  |authority by        |          |protection token|               |
+   |  |signing as its own  |          |is unspecified  |               |
+   |  |origin              |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |14|Every owner-scoped  |profile   |One             |Section 11     |
+   |  |artifact carries    |          |authorization   |               |
+   |  |its owner; the      |          |server per      |               |
+   |  |authority is the    |          |protected       |               |
+   |  |owner's choice      |          |resource, owner |               |
+   |  |                    |          |implicit in the |               |
+   |  |                    |          |deployment      |               |
+   +--+--------------------+----------+----------------+---------------+
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 20]
+Gamb & Maler              Expires 19 March 2027                [Page 21]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-    | 9  | Enforcement           | Obligations      | Section 8.1     |
-    |    | obligations stated as | named, host      |                 |
-    |    | a conformance         | unnamed          |                 |
-    |    | profile, not a        |                  |                 |
-    |    | component             |                  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 10 | Consumption ordering  | Unspecified      | Section 8.2,    |
-    |    | normative;            | where a single-  | Section 8.4     |
-    |    | introspection carries | use token is     |                 |
-    |    | a reason              | spent            |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 11 | Descriptive agent     | The agent is its | Section 5.2     |
-    |    | metadata, display     | key, or its      |                 |
-    |    | only                  | issuer's token   |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 12 | Structured            | The challenge    | Section 3.3     |
-    |    | remediation in the    | carries as_uri   |                 |
-    |    | challenge, plus the   | and ticket       |                 |
-    |    | two members that let  |                  |                 |
-    |    | a third party decide  |                  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 13 | A resource server     | How a resource   | [U4AFedAuthz]   |
-    |    | introduces itself to  | server comes to  |                 |
-    |    | an owner's authority  | hold a           |                 |
-    |    | by signing as its own | protection token |                 |
-    |    | origin                | is unspecified   |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 14 | Every owner-scoped    | One              | Section 11      |
-    |    | artifact carries its  | authorization    |                 |
-    |    | owner; the authority  | server per       |                 |
-    |    | is the owner's choice | protected        |                 |
-    |    |                       | resource, owner  |                 |
-    |    |                       | implicit in the  |                 |
-    |    |                       | deployment       |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 15 | A depth limit on the  | No opinion on    | [U4APolicy]     |
-    |    | owner's pending       | how many pending |                 |
-    |    | queue, in two lanes   | requests an      |                 |
-    |    |                       | owner may be     |                 |
-    |    |                       | made to hold     |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 16 | Owner-side refusal at | No notion of the | [U4APolicy]     |
-    |    | operator granularity  | party operating  |                 |
-    |    |                       | a requesting     |                 |
-    |    |                       | agent            |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 17 | Assurance may only    | No vocabulary    | [U4APolicy]     |
-    |    | tighten; only the     | for either       |                 |
+   |15|A depth limit on    |extension |No opinion on   |[U4APolicy]    |
+   |  |the owner's pending |          |how many pending|               |
+   |  |queue, in two lanes |          |requests an     |               |
+   |  |                    |          |owner may be    |               |
+   |  |                    |          |made to hold    |               |
+   +--+--------------------+----------+----------------+---------------+
+   |16|Owner-side refusal  |extension |No notion of the|[U4APolicy]    |
+   |  |at operator         |          |party operating |               |
+   |  |granularity         |          |a client        |               |
+   +--+--------------------+----------+----------------+---------------+
+   |17|Assurance may only  |extension |No vocabulary   |[U4APolicy]    |
+   |  |tighten; only the   |          |for either      |               |
+   |  |owner's own         |          |                |               |
+   |  |decisions may relax |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |18|An agent holding a  |extension |No object       |[U4ALineage]   |
+   |  |connection may      |          |between "a      |               |
+   |  |introduce a         |          |stranger" and   |               |
+   |  |sibling, which then |          |"the same       |               |
+   |  |negotiates its own  |          |client"         |               |
+   |  |grant               |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |19|A layer above the   |extension |The resource    |[U4AMultiParty]|
+   |  |resource owner that |          |rights          |               |
+   |  |may only narrow     |          |administrator is|               |
+   |  |                    |          |named and given |               |
+   |  |                    |          |no wire surface |               |
+   +--+--------------------+----------+----------------+---------------+
+   |20|Several owners of   |extension |Exactly one     |[U4AMultiParty]|
+   |  |equal standing,     |          |authorization   |               |
+   |  |with signed         |          |server per      |               |
+   |  |verdicts carried in |          |protected       |               |
+   |  |the grant           |          |resource        |               |
+   +--+--------------------+----------+----------------+---------------+
+   |21|The owner's own     |extension |Silent on how   |Section 10     |
+   |  |credential to her   |          |the owner       |               |
+   |  |authorization       |          |authenticates   |               |
+   |  |server: a           |          |                |               |
+   |  |designated identity |          |                |               |
+   |  |provider, an        |          |                |               |
+   |  |enrolled key, or    |          |                |               |
+   |  |both, each          |          |                |               |
+   |  |independently       |          |                |               |
+   |  |sufficient          |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
+   |22|The owner's API:    |extension |Left to the     |[U4AOwner]     |
+   |  |the surface through |          |deployment      |               |
+   |  |which her portal,   |          |                |               |
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 21]
+Gamb & Maler              Expires 19 March 2027                [Page 22]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-    |    | owner's own decisions |                  |                 |
-    |    | may relax             |                  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 18 | An agent holding a    | No object        | [U4ALineage]    |
-    |    | connection may        | between "a       |                 |
-    |    | introduce a sibling,  | stranger" and    |                 |
-    |    | which then negotiates | "the same        |                 |
-    |    | its own grant         | client"          |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 19 | A layer above the     | The resource     | [U4AMultiParty] |
-    |    | resource owner that   | rights           |                 |
-    |    | may only narrow       | administrator is |                 |
-    |    |                       | named and given  |                 |
-    |    |                       | no wire surface  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 20 | Several owners of     | Exactly one      | [U4AMultiParty] |
-    |    | equal standing, with  | authorization    |                 |
-    |    | signed verdicts       | server per       |                 |
-    |    | carried in the grant  | protected        |                 |
-    |    |                       | resource         |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 21 | The owner's own       | Silent on how    | Section 10      |
-    |    | credential to her     | the owner        |                 |
-    |    | authorization server: | authenticates    |                 |
-    |    | a designated identity |                  |                 |
-    |    | provider, an enrolled |                  |                 |
-    |    | key, or both, each    |                  |                 |
-    |    | independently         |                  |                 |
-    |    | sufficient            |                  |                 |
-    +----+-----------------------+------------------+-----------------+
-    | 22 | The owner's API: the  | Left to the      | [U4AOwner]      |
-    |    | surface through which | deployment       |                 |
-    |    | her portal, her tools |                  |                 |
-    |    | or her own agent      |                  |                 |
-    |    | operate her           |                  |                 |
-    |    | authorization server  |                  |                 |
-    +----+-----------------------+------------------+-----------------+
+   |  |her tools or her    |          |                |               |
+   |  |own agent operate   |          |                |               |
+   |  |her authorization   |          |                |               |
+   |  |server              |          |                |               |
+   +--+--------------------+----------+----------------+---------------+
 
                      Table 1: Departures from UMA 2.0.
 
@@ -1222,17 +1246,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    The considerations of [UMAGrant] Section 5 and [UMAFedAuthz]
    Section 7 apply.  The following are specific to this profile.
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 22]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
 13.1.  Authorization Inputs Never Come From the Transport
 
@@ -1264,6 +1277,19 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    implementer reaches for when writing policy, and must refuse it
    there.
 
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 23]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 13.5.  Issuers Are Trusted by Dereference
 
    An authorization server that verifies an identified agent's
@@ -1278,17 +1304,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    See Section 9.  Ending a relationship and invalidating the grants
    under it are the same decision and MUST be the same operation.
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 23]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
 13.7.  A Truncated Request Must Fail Closed
 
@@ -1323,6 +1338,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    The considerations of [UMAGrant] Section 6 apply.  The following are
    specific to this profile.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 24]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 14.1.  Public Metadata Is Structural
 
    Which resources a named person owns MUST NOT be published at an
@@ -1334,162 +1357,77 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    An authorization server implementing this profile keeps a record of
    what was promised, decided and done, and that record names the
-   requesting agent.  It is the owner's record of her own decisions and
-   it is also a per-agent history, which is a more sensitive object than
-   either half.  Retention is deployment policy; this profile requires
-   only that a decision the owner did not personally take MUST NOT be
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 24]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
+   client.  It is the owner's record of her own decisions and it is also
+   a per-agent history, which is a more sensitive object than either
+   half.  Retention is deployment policy; this profile requires only
+   that a decision the owner did not personally take MUST NOT be
    recorded as one she did.
 
 14.3.  A Stated Purpose Is Not Evaluated
 
-   Where a requesting agent states why it wants access, the
-   authorization server records it and shows it to the owner.  It MUST
-   NOT parse it, compare it to the purpose in the owner's terms, or let
-   it affect the decision other than by its absence.  An authority that
-   reads a stated purpose and rules on whether it is plausible has put a
-   judgement about natural language inside an authorization decision,
-   which makes the same request answerable two ways.  See [U4ATerms] and
-   [U4APolicy].
+   Where a client states why it wants access, the authorization server
+   records it and shows it to the owner.  It MUST NOT parse it, compare
+   it to the purpose in the owner's terms, or let it affect the decision
+   other than by its absence.  An authority that reads a stated purpose
+   and rules on whether it is plausible has put a judgement about
+   natural language inside an authorization decision, which makes the
+   same request answerable two ways.  See [U4ATerms] and [U4APolicy].
 
 15.  IANA Considerations
 
-15.1.  Profile Identifiers
-
-   [UMAGrant] Section 4 asks that a profile or extension be given a
-   uniquely identifying URI and that an authorization server supporting
-   one advertise it in uma_profiles_supported.  There is no IANA
-   registry for these; they are recorded here.
-
-         +=================+====================================+
-         | Document        | Identifying URI                    |
-         +=================+====================================+
-         | This document   | https://u4a.ai/spec/core/1.0       |
-         +-----------------+------------------------------------+
-         | [U4ATerms]      | https://u4a.ai/spec/terms/1.0      |
-         +-----------------+------------------------------------+
-         | [U4AFedAuthz]   | https://u4a.ai/spec/fedauthz/1.0   |
-         +-----------------+------------------------------------+
-         | [U4APolicy]     | https://u4a.ai/spec/policy/1.0     |
-         +-----------------+------------------------------------+
-         | [U4ALineage]    | https://u4a.ai/spec/lineage/1.0    |
-         +-----------------+------------------------------------+
-         | [U4AMultiParty] | https://u4a.ai/spec/multiparty/1.0 |
-         +-----------------+------------------------------------+
-         | [U4AOwner]      | https://u4a.ai/spec/owner/1.0      |
-         +-----------------+------------------------------------+
-         | [U4AMCP]        | https://u4a.ai/spec/mcp/1.0        |
-         +-----------------+------------------------------------+
-         | [U4AAAuth]      | https://u4a.ai/spec/aauth/1.0      |
-         +-----------------+------------------------------------+
-
-                    Table 2: Profile identifying URIs.
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 25]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
-15.2.  JSON Web Token Claims Registration
-
-   IANA is asked to register the following in the "JSON Web Token
-   Claims" registry established by [RFC7519].
-
-   Claim Name:  permissions
-
-   Claim Description:  Permissions granted to the requesting party, as
-      defined by [UMAFedAuthz] Section 5.1.1
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 7.1 of this document
-
-   Claim Name:  owner
-
-   Claim Description:  The resource owner on whose behalf a token was
-      issued
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 11 of this document
-
-   Claim Name:  single_use
-
-   Claim Description:  Whether the token may be spent exactly once
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 7.2 of this document
-
-   Claim Name:  operation
-
-   Claim Description:  The single operation and parameter digest a token
-      is bound to
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 7.2 of this document
-
-15.3.  Authorization Details Type Registration
-
-   IANA is asked to register the following in the "OAuth Authorization
-   Server Metadata" sub-registry for authorization details types
-   established by [RFC9396].
-
-   Type Name:  urn:uma4agents:authorization-details:tool-call
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 26]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
-   Type Description:  An attempted invocation of one named operation on
-      a protected resource
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 3.3 of this document
-
-15.4.  OAuth Authorization Server Metadata Registration
-
-   IANA is asked to register the following in the "OAuth Authorization
-   Server Metadata" registry established by [RFC8414].
-
-   Metadata Name:  terms_endpoint
-
-   Metadata Description:  URL of the resource owner's terms roster
-
-   Change Controller:  IETF
-
-   Specification Document(s):  [U4ATerms]
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 16.  References
 
 16.1.  Normative References
 
+   [I-D.ietf-oauth-client-id-metadata-document]
+              Parecki, A. and E. Smith, "OAuth Client ID Metadata
+              Document", Work in Progress, Internet-Draft, draft-ietf-
+              oauth-client-id-metadata-document-02, 6 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              client-id-metadata-document-02>.
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 25]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
+   [I-D.ietf-oauth-identity-assertion-authz-grant]
+              Parecki, A., McGuinness, K., and B. Campbell, "Identity
+              Assertion JWT Authorization Grant", Work in Progress,
+              Internet-Draft, draft-ietf-oauth-identity-assertion-authz-
+              grant-04, 21 May 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              identity-assertion-authz-grant-04>.
+
+   [I-D.ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
+   [I-D.meunier-webbotauth-registry]
+              Guerreiro, M., Kirazci, U., and T. Meunier, "Registry and
+              Signature Agent card for Web bot auth", Work in Progress,
+              Internet-Draft, draft-meunier-webbotauth-registry-03, 26
+              June 2026, <https://datatracker.ietf.org/doc/html/draft-
+              meunier-webbotauth-registry-03>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
-
-   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
-              RFC 6749, DOI 10.17487/RFC6749, October 2012,
-              <https://www.rfc-editor.org/rfc/rfc6749>.
 
    [RFC6750]  Jones, M. and D. Hardt, "The OAuth 2.0 Authorization
               Framework: Bearer Token Usage", RFC 6750,
@@ -1504,16 +1442,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               DOI 10.17487/RFC7517, May 2015,
               <https://www.rfc-editor.org/rfc/rfc7517>.
 
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 27]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
               (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
               <https://www.rfc-editor.org/rfc/rfc7519>.
@@ -1521,6 +1449,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
               2015, <https://www.rfc-editor.org/rfc/rfc7638>.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 26]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
               RFC 7662, DOI 10.17487/RFC7662, October 2015,
@@ -1534,6 +1470,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Authorization Server Metadata", RFC 8414,
               DOI 10.17487/RFC8414, June 2018,
               <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
 
    [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
               Rich Authorization Requests", RFC 9396,
@@ -1560,20 +1501,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
               00.html>.
 
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 28]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 27]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    [UMAFedAuthz]
               Maler, E., Machulak, M., and J. Richer, "Federated
@@ -1596,49 +1535,12 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
               protocol-02>.
 
-   [I-D.ietf-oauth-client-id-metadata-document]
-              Parecki, A. and E. Smith, "OAuth Client ID Metadata
-              Document", Work in Progress, Internet-Draft, draft-ietf-
-              oauth-client-id-metadata-document-02, 6 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              client-id-metadata-document-02>.
-
-   [I-D.ietf-oauth-identity-assertion-authz-grant]
-              Parecki, A., McGuinness, K., and B. Campbell, "Identity
-              Assertion JWT Authorization Grant", Work in Progress,
-              Internet-Draft, draft-ietf-oauth-identity-assertion-authz-
-              grant-04, 21 May 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              identity-assertion-authz-grant-04>.
-
-   [I-D.ietf-oauth-rar-metadata-remediation]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              rar-metadata-remediation-00>.
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 29]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    [I-D.meunier-webbotauth-httpsig-protocol]
               Meunier, T. and S. Major, "HTTP Message Signatures for
               automated traffic", Work in Progress, Internet-Draft,
               draft-meunier-webbotauth-httpsig-protocol-02, 18 August
               2026, <https://datatracker.ietf.org/doc/html/draft-
               meunier-webbotauth-httpsig-protocol-02>.
-
-   [I-D.meunier-webbotauth-registry]
-              Guerreiro, M., Kirazci, U., and T. Meunier, "Registry and
-              Signature Agent card for Web bot auth", Work in Progress,
-              Internet-Draft, draft-meunier-webbotauth-registry-03, 26
-              June 2026, <https://datatracker.ietf.org/doc/html/draft-
-              meunier-webbotauth-registry-03>.
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
@@ -1660,6 +1562,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Internet-Draft, draft-gamb-uma4agents-aauth-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html>.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 28]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
@@ -1670,17 +1580,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               draft-gamb-uma4agents-lineage-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-lineage-
               00.html>.
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 30]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    [U4AMCP]   Gamb, N. and E. Maler, "Model Context Protocol Binding for
               User-Managed Access (UMA) 2.0", Work in Progress,
@@ -1710,33 +1609,149 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Maler, E. and P. Bryan, "Simple Access Authorization
               Claims", April 2010.
 
-Appendix A.  Implementation Status
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+A.1.  Profile Identifiers
+
+   [UMAGrant] Section 4 asks that a profile or extension be given a
+   uniquely identifying URI.  The identifying URIs of this set are:
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 29]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
+         +=================+====================================+
+         | Document        | Identifying URI                    |
+         +=================+====================================+
+         | This document   | https://u4a.ai/spec/core/1.0       |
+         +-----------------+------------------------------------+
+         | [U4ATerms]      | https://u4a.ai/spec/terms/1.0      |
+         +-----------------+------------------------------------+
+         | [U4AFedAuthz]   | https://u4a.ai/spec/fedauthz/1.0   |
+         +-----------------+------------------------------------+
+         | [U4APolicy]     | https://u4a.ai/spec/policy/1.0     |
+         +-----------------+------------------------------------+
+         | [U4ALineage]    | https://u4a.ai/spec/lineage/1.0    |
+         +-----------------+------------------------------------+
+         | [U4AMultiParty] | https://u4a.ai/spec/multiparty/1.0 |
+         +-----------------+------------------------------------+
+         | [U4AOwner]      | https://u4a.ai/spec/owner/1.0      |
+         +-----------------+------------------------------------+
+         | [U4AMCP]        | https://u4a.ai/spec/mcp/1.0        |
+         +-----------------+------------------------------------+
+         | [U4AAAuth]      | https://u4a.ai/spec/aauth/1.0      |
+         +-----------------+------------------------------------+
+
+                    Table 2: Profile identifying URIs.
+
+A.2.  JSON Web Token Claims
+
+   +=============+========================================+============+
+   | Claim       | Meaning                                | Defined    |
+   |             |                                        | in         |
+   +=============+========================================+============+
+   | permissions | Permissions granted, as [UMAFedAuthz]  | Section    |
+   |             | Section 5.1.1                          | 7.1        |
+   +-------------+----------------------------------------+------------+
+   | owner       | The resource owner on whose behalf a   | Section    |
+   |             | token was issued                       | 7.1        |
+   +-------------+----------------------------------------+------------+
+   | contract    | Digest of the agreement a grant was    | Section    |
+   |             | issued on                              | 7.1        |
+   +-------------+----------------------------------------+------------+
+   | single_use  | Whether a token may be spent once      | Section    |
+   |             |                                        | 7.2        |
+   +-------------+----------------------------------------+------------+
+   | operation   | The single operation, and the digest   | Section    |
+   |             | of its parameters, a token is bound to | 7.2        |
+   +-------------+----------------------------------------+------------+
+
+                 Table 3: JWT claims used by this document.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 30]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
+A.3.  Authorization Details Type
+
+   +==============================================+============+=======+
+   |Type                                          | Meaning    |Defined|
+   |                                              |            |in     |
+   +==============================================+============+=======+
+   |urn:uma4agents:authorization-details:tool-call| An         |Section|
+   |                                              | attempted  |3.3    |
+   |                                              | invocation |       |
+   |                                              | of one     |       |
+   |                                              | named      |       |
+   |                                              | operation  |       |
+   |                                              | on a       |       |
+   |                                              | protected  |       |
+   |                                              | resource   |       |
+   +----------------------------------------------+------------+-------+
+
+         Table 4: Authorization details type used by this document.
+
+A.4.  Other Values
+
+   +============================+===========================+=========+
+   | Identifier                 | Kind                      | Defined |
+   |                            |                           | in      |
+   +============================+===========================+=========+
+   | insufficient_authorization | Error value of the        | Section |
+   |                            | challenge                 | 3.1     |
+   +----------------------------+---------------------------+---------+
+   | PoP                        | Token type                | Section |
+   |                            |                           | 7.1     |
+   +----------------------------+---------------------------+---------+
+   | authorization_server       | Member of                 | Section |
+   |                            | authorization_remediation | 3.3     |
+   +----------------------------+---------------------------+---------+
+   | ticket                     | Member of                 | Section |
+   |                            | authorization_remediation | 3.3     |
+   +----------------------------+---------------------------+---------+
+
+               Table 5: Other values used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
 
-A.1.  UMA for Agents Reference Implementation
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 31]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
+B.1.  UMA for Agents Reference Implementation
 
    Organization:  Independent
 
    Description:  A running deployment of this profile and the rest of
       its set: an authorization server, an enforcement point in two
       hosting shapes, a protected resource, an operator key directory,
-      and requesting agents at both identity levels.  It runs under
-      container orchestration and on a single host, against both an in-
-      memory and a replicated store.  It carries two requesting-agent
-      implementations that share no code — one in Python, one in
-      TypeScript — which meet on the wire and nowhere else; the second
-      was written from these documents rather than from the first, and
-      found one defect in the enforcement point on its first run.
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 31]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
+      and clients at both identity levels.  It runs under container
+      orchestration and on a single host, against both an in-memory and
+      a replicated store.  It carries two client implementations that
+      share no code — one in Python, one in TypeScript — which meet on
+      the wire and nowhere else; the second was written from these
+      documents rather than from the first, and found one defect in the
+      enforcement point on its first run.
 
    Level of maturity:  Research.  The implementation exists to establish
       that the requirements in this document can be met and to find the
@@ -1771,6 +1786,14 @@ Acknowledgments
    binding mechanics this profile composes with, and the observation
    that its resource token and UMA's permission ticket are the same
    object minted on opposite sides.  [I-D.meunier-webbotauth-registry]
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 32]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    supplied the operator key directory.
    [I-D.ietf-oauth-rar-metadata-remediation] supplied the remediation
    payload that Section 3.3 extends by two members.
@@ -1789,4 +1812,37 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 32]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 33]

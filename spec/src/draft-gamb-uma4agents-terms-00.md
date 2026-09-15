@@ -2,8 +2,8 @@
 title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
 abbrev: "Owner-Proffered Terms"
 docname: draft-gamb-uma4agents-terms-00
-date: 2026-09-12
-category: std
+date: 2026-09-15
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -47,13 +47,13 @@ normative:
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
+informative:
   IEEE7012:
     title: "IEEE Standard for Machine Readable Personal Privacy Terms"
     date: 2025
     seriesinfo:
       IEEE: Std 7012-2025
     target: https://standards.ieee.org/ieee/7012/7192/
-informative:
   ODRL:
     title: "ODRL Information Model 2.2"
     author:
@@ -122,7 +122,7 @@ that both parties hold identical records of what was agreed.
 
 # Introduction
 
-{{UMAGrant}} Section 3.3.4 lets an authorization server tell a client what claims
+{{UMAGrant}} Section 3.3.6 lets an authorization server tell a client what claims
 it needs by naming claim types and acceptable formats. The client then gathers
 those claims from wherever it can and presents them. The authorization server
 asks *what can you tell me about yourself*.
@@ -272,12 +272,22 @@ no counter-offer and no negotiation beyond the single choice of agreeing or not,
 per {{IEEE7012}} Section 5.2.2. A protocol that let the requesting side propose
 amendments would make the owner a party to a conversation she is not present for.
 
+## Authorization Server Metadata {#terms-metadata}
+
+This document adds the following member to the authorization server metadata of
+{{U4ACore}} Section 2:
+
+terms_endpoint:
+: The URL of the owner's terms roster. An authorization server implementing this
+  document MUST include it.
+
 # The Agreement {#agreement}
 
 The requesting side agrees by presenting a claim token whose
 `claim_token_format` is `urn:uma4agents:format:myterms-agreement-v1+jws` and
 whose value is the base64url encoding of a JWS {{RFC7515}} in compact
-serialization with a `typ` of `myterms-agreement-v1+jws`.
+serialization with a `typ` of `myterms-agreement-v1+jws`. The compact
+serialization is encoded as a whole, so decoding the claim token yields the JWS.
 
 ## The Signing Key {#signing-key}
 
@@ -287,7 +297,7 @@ jwk:
 : A public JWK {{RFC7517}}, where the requesting side is pseudonymous.
 
 agent_token:
-: A credential from an issuer that asserts the requesting agent's identity and
+: A credential from an issuer that asserts the client's identity and
   names the signing key, where the requesting side is identified.
 
 The authorization server MUST verify the JWS against the key so named, and MUST
@@ -306,8 +316,8 @@ array that is a subset of the template's, and a `prohibited` array that is a
 superset of the template's.
 
 Where the template's `per_operation` is `true`, the agreement MUST carry an
-`operation` member naming the operation proposed and the parameters proposed for
-it.
+`operation` member: an object whose `tool` member names the operation proposed
+and whose `params` member is a JSON object holding the parameters proposed for it.
 
 ~~~ json
 {
@@ -326,7 +336,7 @@ it.
   "reason": "Suitability review before Thursday's client meeting.",
   "mission": {
     "approver": "https://ps.example",
-    "s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "s256": "s256:zrAKkVJdpk-xcbEDrjDvO4F_o7x47N6ZuITu2-kTEAM"
   }
 }
 ~~~
@@ -391,7 +401,8 @@ template_id:
 : REQUIRED. The version that was agreed to.
 
 agreement:
-: REQUIRED. `s256` over the octets of the agreement as transmitted.
+: REQUIRED. `s256` over the octets of the agreement as transmitted: the JWS
+  compact serialization obtained by decoding the claim token.
 
 agreement_jws:
 : REQUIRED. The complete agreement JWS, as received.
@@ -402,12 +413,12 @@ family:
 ~~~ json
 {
   "iss": "https://alice-as.example",
-  "sub": "jkt:RnJ0c2FmZS1hZ2VudC1rZXktdGh1bWI",
+  "sub": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "iat": 1789430010,
   "family": "fam_8f3aQ2Xc",
   "terms_uri": "https://alice-as.example/terms/alice/advisor/v2",
   "template_id": "alice/advisor/v2",
-  "agreement": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "agreement": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "agreement_jws": "eyJ0eXAiOiJteXRlcm1zLWFncmVlbWVudC12MStqd3Mi..."
 }
 ~~~
@@ -497,56 +508,26 @@ not hers alone" is information it can act on.
 
 # IANA Considerations
 
-## Media Type Registration
-
-IANA is asked to register the following in the "Media Types" registry.
-
-Type name:
-: application
-
-Subtype name:
-: myterms-agreement-v1+jws
-
-Required parameters:
-: N/A
-
-Optional parameters:
-: N/A
-
-Encoding considerations:
-: binary; a JWS in compact serialization
-
-Security considerations:
-: See {{security-considerations}} of this document
-
-Interoperability considerations:
-: N/A
-
-Published specification:
-: {{agreement}} of this document
-
-Applications that use this media type:
-: Applications implementing UMA 2.0 with this extension
-
-Change controller:
-: IETF
-
-IANA is asked to register `application/myterms-receipt+jws` in the same registry,
-with the same considerations and with {{receipt}} of this document as its
-published specification.
-
-## URN Sub-namespace Registration
-
-IANA is asked to record the following identifiers, which are defined by this
-document within the `urn:uma4agents:` namespace:
-
-| Identifier | Defined in |
-|---|---|
-| `urn:uma4agents:claim:myterms-agreement` | {{proffering}} |
-| `urn:uma4agents:format:myterms-agreement-v1+jws` | {{agreement}} |
-{: title="Identifiers defined by this document."}
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
 
 --- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `terms_endpoint` | Authorization server metadata | {{terms-metadata}} |
+| `decline` | Token endpoint request parameter | {{declining}} |
+| `receipt` | Token endpoint response member | {{receipt}} |
+| `application/myterms-agreement-v1+jws` | Media type | {{agreement}} |
+| `application/myterms-receipt+jws` | Media type | {{receipt}} |
+| `urn:uma4agents:claim:myterms-agreement` | URN | {{proffering}} |
+| `urn:uma4agents:format:myterms-agreement-v1+jws` | URN | {{agreement}} |
+{: title="Identifiers used by this document."}
 
 # Implementation Status {#implementation-status}
 

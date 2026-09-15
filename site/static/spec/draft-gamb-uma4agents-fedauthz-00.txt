@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
              Federated Authorization for Autonomous Agents
@@ -43,7 +43,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -93,15 +93,13 @@ Table of Contents
      7.3.  Revocation Reads the Store  . . . . . . . . . . . . . . .  10
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  10
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  10
-     9.1.  OAuth Protected Resource Metadata Registration  . . . . .  10
-     9.2.  OAuth Authorization Server Metadata Registration  . . . .  11
-     9.3.  OAuth Token Introspection Response Registration . . . . .  11
-   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
-     10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
-     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  13
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  10
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .  10
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  11
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 
 
@@ -109,7 +107,9 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -179,7 +179,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
    owner_resources_endpoint:  REQUIRED.  The URL of the protected
       listing of Section 2.2.
 
-   The document MUST carry signed_metadata as [RFC9728] Section 2.1,
+   The document MUST carry signed_metadata as [RFC9728] Section 2.2,
    signed by a key published at the resource's own jwks_uri, so that a
    relayed copy stays attributable to the resource.
 
@@ -221,7 +221,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -305,7 +305,8 @@ Internet-Draft             FedAuthz for Agents            September 2026
    POST /rs/register HTTP/1.1
    Host: alice-as.example
    Content-Type: application/json
-   Content-Digest: sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDU=:
+   Content-Digest: sha-256=
+     :Tmn1PBTGYjBHkU9XV2NHLt2YstMuZTPQqpEBaE28JJM=:
    Signature-Input: sig1=("@method" "@authority" "@path"
      "authorization" "content-digest");created=1789430000;
      keyid="rs-1";alg="ed25519"
@@ -332,8 +333,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -389,7 +389,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -445,7 +445,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -473,10 +473,10 @@ Internet-Draft             FedAuthz for Agents            September 2026
    alongside what was promised.
 
    An enforcement point MUST NOT be told, and MUST NOT report, the
-   identity handle of the requesting agent.  The authorization server
-   resolves it from the negotiation.  The enforcement point is the
-   resource server's component, and the owner's record of which agent
-   did what is not the resource server's to hold.
+   identity handle of the client.  The authorization server resolves it
+   from the negotiation.  The enforcement point is the resource server's
+   component, and the owner's record of which agent did what is not the
+   resource server's to hold.
 
 7.  Security Considerations
 
@@ -501,7 +501,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -535,64 +535,8 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 9.  IANA Considerations
 
-9.1.  OAuth Protected Resource Metadata Registration
-
-   IANA is asked to register the following in the "OAuth Protected
-   Resource Metadata" registry established by [RFC9728].
-
-   Metadata Name:  tool_surfaces
-
-   Metadata Description:  Operations the resource offers, each with the
-      scopes it requires
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 2.1 of this document
-
-   Metadata Name:  owner_resources_endpoint
-
-   Metadata Description:  URL of the protected listing of owner-bound
-      resource instances
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 10]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 2.2 of this document
-
-9.2.  OAuth Authorization Server Metadata Registration
-
-   IANA is asked to register the following in the "OAuth Authorization
-   Server Metadata" registry established by [RFC8414].
-
-   Metadata Name:  consume_endpoint
-
-   Metadata Description:  URL of the operation that spends a single-use
-      requesting party token
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 5.1 of this document
-
-9.3.  OAuth Token Introspection Response Registration
-
-   IANA is asked to register the following in the "OAuth Token
-   Introspection Response" registry established by [RFC7662].
-
-   Name:  error
-
-   Description:  Why an inactive token is inactive; see Section 5 of
-      this document
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 5 of this document
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 10.  References
 
@@ -613,7 +557,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 11]
+Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -669,7 +613,7 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -685,7 +629,87 @@ Internet-Draft             FedAuthz for Agents            September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
 
-Appendix A.  Implementation Status
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
+
+   +==========================+===============+==============+=========+
+   | Name                     | Kind          | Meaning      | Defined |
+   |                          |               |              | in      |
+   +==========================+===============+==============+=========+
+   | tool_surfaces            | Protected     | Operations   | Section |
+   |                          | resource      | the          | 2.1     |
+   |                          | metadata      | resource     |         |
+   |                          | [RFC9728]     | offers,      |         |
+   |                          |               | each with    |         |
+   |                          |               | the scopes   |         |
+   |                          |               | it requires  |         |
+   +--------------------------+---------------+--------------+---------+
+   | owner_resources_endpoint | Protected     | URL of the   | Section |
+   |                          | resource      | protected    | 2.2     |
+   |                          | metadata      | listing of   |         |
+   |                          | [RFC9728]     | owner-bound  |         |
+   |                          |               | resource     |         |
+   |                          |               | instances    |         |
+   +--------------------------+---------------+--------------+---------+
+   | consume_endpoint         | Authorization | URL of the   | Section |
+   |                          | server        | operation    | 5.1     |
+   |                          | metadata      | that spends  |         |
+   |                          | [RFC8414]     | a single-    |         |
+   |                          |               | use          |         |
+   |                          |               | requesting   |         |
+   |                          |               | party token  |         |
+   +--------------------------+---------------+--------------+---------+
+   | error                    | Token         | Why an       | Section |
+   |                          | introspection | inactive     | 5       |
+   |                          | response      | token is     |         |
+   |                          | [RFC7662]     | inactive     |         |
+   +--------------------------+---------------+--------------+---------+
+
+                Table 1: Identifiers used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
@@ -696,6 +720,15 @@ Appendix A.  Implementation Status
    identical stack and measured before push was retired to a preserved
    branch.  The deadlock of Section 3.2 and the fail-open reading that
    Section 4.1 warns against were both found by running it.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 13]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
 Acknowledgments
 
@@ -725,4 +758,27 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 13]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]

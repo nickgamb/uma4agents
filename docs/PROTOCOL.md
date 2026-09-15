@@ -18,7 +18,7 @@ an explicit extension. The deviations are the findings.
 
 | Party | Host | Role |
 |---|---|---|
-| Requesting agent + agent-shim | (host machine) | Holds an Ed25519 signing key; optionally a PS-issued `aa-agent+jwt`. Default is pseudonymous (bare public key in the contract header) |
+| Client (agent) + agent-shim | (host machine) | Holds an Ed25519 signing key; optionally a PS-issued `aa-agent+jwt`. Default is pseudonymous (bare public key in the contract header) |
 | agentgateway + uma-pep | `gateway.uma.lab` | RS-side PEP in the default deployment; holds the PAT; carries the FedAuthz obligations |
 | alice-vault-mcp | (internal) | The resource. Holds no auth code under `ENFORCEMENT_MODE=gateway`; under `embedded` it runs the same enforcement core in-process and there is no gateway in the authorization path |
 | agent-operator | `agent.uma.lab` | The requesting firm's public presence: its CIMD document and Web Bot Auth key directory |
@@ -628,7 +628,7 @@ reference](https://u4a.ai/docs/reference/events/#the-row-and-every-kind-of-entry
 The normative statement of each departure is in the [specification
 set](../spec/README.md); this table is the implementation's index into it,
 numbered as [draft-gamb-uma4agents-core-00](../site/static/spec/draft-gamb-uma4agents-core-00.txt)
-section 11 numbers them. The site's
+section 12 numbers them. The site's
 [deviations page](https://u4a.ai/docs/reference/deviations/) carries the same
 list with the baseline and the reasoning for each.
 
@@ -649,7 +649,7 @@ list with the baseline and the reasoning for each.
 | 13 | `POST /rs/register`: a resource server introduces itself by an RFC 9421 signature from a key published at the origin of the resource it claims, verified through that resource's own RFC 9728 document; success is 202 `pending`; `/token` then accepts the same signature in place of a secret | FedAuthz §1.4: the PAT is issued with the owner's authorization, and nothing says how the RS comes to hold one | FedAuthz §4 |
 | 14 | Every owner-scoped artifact carries its owner — ticket, RPT `owner` claim, resource-id namespace, `template_id`, the per-owner RFC 9728 document — and the authority named in the challenge is the owner's choice | One AS per protected resource, owner implicit in the deployment | Core §11 |
 | 15 | A depth limit on the owner's pending queue, in two lanes split on operator attestation; past it, `429 request_denied` | No opinion on how many pends an owner may be made to hold | Policy §6 |
-| 16 | Owner-side refusal at operator granularity: `POST /owner/operators/block` ends every connection an operator holds in one step | No notion of the party operating a requesting agent | Policy §7 |
+| 16 | Owner-side refusal at operator granularity: `POST /owner/operators/block` ends every connection an operator holds in one step | No notion of the party operating a client | Policy §7 |
 | 17 | Assurance may only tighten; only the owner's own decisions may relax — enforced where policy is stored | No vocabulary for either | Policy §3–5 |
 | 18 | An agent holding a connection may introduce a sibling (`u4a-introduction-v1+jws`, or RFC 8693 `act`), which skips first contact and then negotiates its own grant under its own key; revocation cascades | No object between "a stranger" and "the same client" | Lineage |
 | 19 | A layer above the owner: charter, envelope clamped on write, `delegation` per role, one resource administered by several members each under her own authority, break-glass signed by the organization | The *resource rights administrator* is named and given no wire surface | MultiParty Part I |

@@ -12,7 +12,7 @@
 ]>
 
 
-<rfc ipr="trust200902" docName="draft-gamb-uma4agents-mcp-00" category="std" consensus="true" submissionType="IETF" tocInclude="true" sortRefs="true" symRefs="true">
+<rfc ipr="trust200902" docName="draft-gamb-uma4agents-mcp-00" category="info" submissionType="IETF" tocInclude="true" sortRefs="true" symRefs="true">
   <front>
     <title abbrev="MCP Binding for UMA">Model Context Protocol Binding for User-Managed Access (UMA) 2.0</title>
 
@@ -28,7 +28,7 @@
       </address>
     </author>
 
-    <date year="2026" month="September" day="12"/>
+    <date year="2026" month="September" day="15"/>
 
     <area>Security</area>
     
@@ -194,7 +194,7 @@ for want of authorization with a JSON-RPC error <xref target="JSONRPC"/> whose <
       "as_uri": "https://alice-as.example",
       "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
       "resource_metadata":
-        "https://rs.example/.well-known/oauth-protected-resource",
+      "https://rs.example/.well-known/oauth-protected-resource/mcp",
       "scope": "trades:execute",
       "authorization_remediation": {
         "authorization_details": [{
@@ -204,7 +204,8 @@ for want of authorization with a JSON-RPC error <xref target="JSONRPC"/> whose <
           "actions": ["execute_trade"],
           "datatypes": ["trades:execute"]
         }],
-        "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwf",
+        "authorization_reference":
+          "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
         "authorization_server": "https://alice-as.example",
         "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
       }
@@ -227,8 +228,7 @@ is binding-specific.</t>
 <section anchor="client"><name>A Client Reads Both</name>
 
 <t>A client implementing this binding <bcp14>MUST</bcp14> recognise both encodings and <bcp14>MUST</bcp14>
-negotiate identically after either. The reference implementation's requesting
-agent does, and the two hosting shapes run against one authorization server.</t>
+negotiate identically after either. The reference implementation's client does, and the two hosting shapes run against one authorization server.</t>
 
 </section>
 </section>
@@ -242,6 +242,9 @@ challenge and the eventual call, and nothing about the grant depends on it.</t>
 party token in an <spanx style="verb">Authorization</spanx> header with the <spanx style="verb">PoP</spanx> scheme and signed as
 <xref target="U4ACore"/> Section 6. Where the enforcement point is in process, the signature
 components are the HTTP request that carried the JSON-RPC message.</t>
+
+<t>For a single-use grant (<xref target="U4ACore"/> Section 7.2), the operation is the call's
+<spanx style="verb">params.name</spanx> and its parameters are <spanx style="verb">params.arguments</spanx>.</t>
 
 </section>
 <section anchor="waiting"><name>Waiting</name>
@@ -286,7 +289,7 @@ refuse a request from an origin it does not serve.</t>
 <t>Where an enforcement point is hosted behind a gateway that forwards a bounded
 prefix of the request body, it <bcp14>MUST</bcp14> detect that the body it received was
 truncated and <bcp14>MUST</bcp14> refuse with a reason naming the truncation, as <xref target="U4ACore"/>
-Section 12.7. A truncated JSON-RPC body does not parse, the method disappears,
+Section 13.7. A truncated JSON-RPC body does not parse, the method disappears,
 and deny-by-default catches it under the wrong name.</t>
 
 </section>
@@ -347,6 +350,35 @@ follows <xref target="MCP"/>'s convention for vendor-prefixed extension identifi
 
 
 
+
+<reference anchor="I-D.ietf-oauth-rar-metadata-remediation">
+   <front>
+      <title>OAuth 2.0 RAR Metadata and Error Remediation</title>
+      <author fullname="Yaron Zehavi" initials="Y." surname="Zehavi">
+         <organization>Raiffeisen Bank International</organization>
+      </author>
+      <date day="23" month="August" year="2026"/>
+      <abstract>
+	 <t>   OAuth 2.0 Rich Authorization Requests (RAR) [RFC9396] standardizes
+   the exchange and processing of authorization details but does not
+   define metadata for describing authorization details types.
+
+   In addition, no interoperable guidance is offered to clients, to
+   remediate failures by resource servers due to insufficient
+   authorization details.
+
+   This document addresses this interoperability challenge, allowing
+   clients to dynamically discover metadata instead of relying on out-
+   of-band agreements, as well as standardizes failure signaling
+   including interoperable remediation when insufficient authorization
+   details are the cause of failure.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-rar-metadata-remediation-00"/>
+   
+</reference>
 <reference anchor="RFC6454">
   <front>
     <title>The Web Origin Concept</title>
@@ -480,35 +512,6 @@ follows <xref target="MCP"/>'s convention for vendor-prefixed extension identifi
    
 </reference>
 
-<reference anchor="I-D.ietf-oauth-rar-metadata-remediation">
-   <front>
-      <title>OAuth 2.0 RAR Metadata and Error Remediation</title>
-      <author fullname="Yaron Zehavi" initials="Y." surname="Zehavi">
-         <organization>Raiffeisen Bank International</organization>
-      </author>
-      <date day="23" month="August" year="2026"/>
-      <abstract>
-	 <t>   OAuth 2.0 Rich Authorization Requests (RAR) [RFC9396] standardizes
-   the exchange and processing of authorization details but does not
-   define metadata for describing authorization details types.
-
-   In addition, no interoperable guidance is offered to clients, to
-   remediate failures by resource servers due to insufficient
-   authorization details.
-
-   This document addresses this interoperability challenge, allowing
-   clients to dynamically discover metadata instead of relying on out-
-   of-band agreements, as well as standardizes failure signaling
-   including interoperable remediation when insufficient authorization
-   details are the cause of failure.
-
-	 </t>
-      </abstract>
-   </front>
-   <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-rar-metadata-remediation-00"/>
-   
-</reference>
-
 <reference anchor="U4ALAB" target="https://github.com/nickgamb/uma4agents">
   <front>
     <title>UMA for Agents: a reference implementation</title>
@@ -546,7 +549,7 @@ follows <xref target="MCP"/>'s convention for vendor-prefixed extension identifi
 </references>
 
 
-<?line 348?>
+<?line 351?>
 
 <section anchor="implementation-status"><name>Implementation Status</name>
 
@@ -556,7 +559,7 @@ follows <xref target="MCP"/>'s convention for vendor-prefixed extension identifi
 <t>The reference implementation <xref target="U4ALAB"/> runs both hosting shapes of
 <xref target="challenge"/> against one authorization server — an external authorization
 service ahead of an unmodified MCP server, and an MCP server extension
-applying the profile in process — and one requesting agent negotiates through
+applying the profile in process — and one client negotiates through
 either. The routing-header hazard of <xref target="routing-headers"/> was found by sending
 the mismatched pair and watching a header-trusting enforcement point wave it
 through; the reference MCP SDK independently rejects the same pair. The
@@ -578,131 +581,133 @@ shapes are forced.</t>
   </back>
 
 <!-- ##markdown-source:
-H4sIAAAAAAAAA91b63Ibx3L+P08xgX4ocWHBi2nZgs45DkXJthLxEl2iclwu
-YbA7AMZc7OLsLAjBLLryEHmAPEseJU+Sr7tn9kICspNU5UdO1bHJ5e5MT1++
-/rp7nCSJql2d27EenJeZzfVZWdT2U62vqrIu0zLXz12RuWKuZ2Wl33tbJeem
-MHOb6dM0td7rv31/fvp3+nh0OFBmOq3sDS11dtX/7vx0oLIyLcwSO2WVmdXJ
-3CynyXppTrBYUftkma6Sw0OVmRqvHB8eP0kOnyZHxyrFg3lZbcfa15ny6+nS
-ee8g5XaFF1+9fPedcqtqrOtq7evjw8Onh8fKVNaM9VubritXb9W13W7KKhvr
-nyDIUJt1vSgr96upscxQQ1j8Y+fh8S4LN9RTOc3PytemyD6avCyw+9Z6tXJY
-F28PtS+rurIzvO23S/rhZyVbjZXWCf6vtSv8WF+M9Pc4PD8QjVy49Lp9VlZz
-UwTxxvocO39vqswW+vXrM37BLo3Lx7rAV6TFv5/T76O0XPb3eTnS5ya3VWej
-lze286y/0T/botDfmbSGslVRVks8v7Ek+5vvzp6cfHUSfnz69fE39CP0NuZl
-fseB3q5s6mYuDeqGhziyX7Dx18nxNwNeptUV/S8h6cZ77KJXVfmLTWt+t+sx
-tJrIZKq5rcd6UdcrPz44WNI6qSyzCquMXHngu8Id9Bb5h7eXF2+uzvpnpIcJ
-npLD90/2mUM0H30oq2uKie+rcr3qCX/0ZXJ4lBye7BR+s9mMfvFlUa3SERbs
-C40v3p+cnpWV7Uv62VglTc5cbjk6T9d1WZTLcu31Kbv77qM88N19/tu83HPA
-fU7Ymo9/hdTOelfMyrjzKxitKmydvCDc2AcfKRRA+LFLf+sTMzKO1Xbw2a9H
-i3qZi0K/sxn0svi1r1Q8tRUEzkhpLYj8/1HjzGYk8K//c1V2VhB1khAdMHmV
-vBgtgGd1Yui9JEZj/Juz9Swp+U+VqZKlrQ3OZpLKLm3mBKvERK9Pn99z+fNT
-sQRLMtYGYDOzlS1Sq91ylWOFov5MsP7fmOa+SueuXqynBN8HEdEPWn0qlSSJ
-NlNfV4Bmpd4tnNdIpWs6C6clr+uFpRTLgb3qBLZpPVIW03XJLzOqqvuoOtKv
-ah2wxXq9KDesQV+uKyiwnEGVBF6U3OuyzD3ykKt5d9VLqTpdmDy3xdwOoSXe
-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
-2puPpVo6JWfpsMbdx4j1Ed9epWasFE0qpN/HPlSqdLLOTdmmR+roQjFd3Jac
-pU9T8vrcZvMl/xcJt2OkjimVa38ezFDU2UFbcD72/ZIzDP7lUkw2DFQZ+Ddj
-fdAV/0oCbkhj73Cxmg0RHLl3i4vvV4+lKDTwjuBgyZJITCbtlZbQCtArmy6I
-ThIqSNcnkArazxrET6iy+1d6jMsBz8Gb6To11YOKyRKKkBEzOqEfXjJ8VKNc
-mRPhrZsvar0ltorsZioUBKgs4dRSb8b/JKLizjnr+78A1BCAxJI5AAA=
+H4sIAAAAAAAAA91b25IbR3J9r68ogw/cVaAxF41ECdqLh0NS4i5nhubFtFah
+IArdBaDERje2qzEgNDEKf4Q/wN/iT/GX+GRmVV8wACXbEX6wI6yd6emuysrL
+yZOZxSRJVO3q3I714LLMbK4vyqK2H2v9sirrMi1z/dgVmSvmelZW+q23VXJp
+CjO3mT5PU+u9/t3by/Pf69PR8UCZ6bSyN7TUxcv+d5fnA5WVaWGW2CmrzKxO
+5mY5TdZLc4bFitony3SVHB+rzNR45fT49Mvk+Ovk5AuV4sG8rLZj7YpZqfx6
+unTeO4i5XeHN50/fPFNuVY11Xa19fXp8/PXxqTKVNWP92qbrytVb9cFuN2WV
+jfUPkGSozbpelJX72dRYZqghLf6z9/R4l6Ub6qkc50fla1Nk701eFth9a71a
+OayLt4fal1Vd2Rne9tsl/fCjkq3GSusE/69xBj/WVyP9LU7PD0QlVy790D4r
+q7kpgnhjfYmdvzVVZgv94sUFv2CXxuVjXeArUuM/zun3UVou+/s8HelLk9uq
+s9HTG9t51t/on21R6GcmraFtVZTVEs9vLMn+PHkycraeJSWdJ6lMlSxtbWAr
+k1R2aTMnS+DVV88uvjz74iz8+PWj06/oR6h4zDv+irO9XtnUzVwaLANvcmTq
+4A+PktOvBrxMq1b6v4QOMj5gQr2qyp9sWvO7Xe+i1UQmU81tPdaLul758dHR
+ktZJZZlVWGXkyiPfFe6ot8hfXl9fvXp50T8jPUzwlIKjf7JPHKL56F1ZfaD4
++bYq16ue8CefJ8cnyfHZXuE3m83oJ18W1SodYcG+0Pji7dn5RVnZvqSfjGvS
+5MzlliP5fF2XRbks116fc2TsP8o9Nz/k6s3LPV895K+t+fhXSO2sJ1iIOz+H
+0arC1skTwphDUJNCAYQ1+/S3PjMj41htR5/8erSol7ko9JnNoJfFz32l4qmt
+IHBGSmvx5v+PGmc2I4F//p+rsrOCqJOE2MGdBaCvTgwDT4zGsej9xfnjHT++
+PBf18vJjbYAgM1vZIrXaLVc5oKqoPxGB/zf63tXT3NWL9ZTg+ygi+lGrJKWS
+JNFm6usK0KzUm4XzGrl0TWfhtOR1vbCUYzlaV51oNa2byWK6Lvllhkq1C5Uj
+/bzWATCs14tywxr05bqCAssZVEmIRNm9LsvcIw+5mndXvZSq04XJc1vM7RBa
+4g3rTan9wqywrCm0JTOnbA29Kh3+uzRb6OWD/UZ2VWnu6I+Z82l5Yyuvpxaf
+wIrYb+YqX+sUW2BpU+OZXiL16wI8oUYmspB6Xhl8jkytNws4wDdKfjT1/u15
+HQBtDfkgP0740OPkf19brLuwJiMReJMMCiyVuSldBplIHb622AG/bemkyxGZ
+yDbCkDogtM1nGnYrypoWH2l6pdESy0lasjcQaW1yOVzlMqvw9jf8NzkR1iin
+tXEFNiTF6O/evHmpZ1W55JfKTWEriN43BwIcryr7EQ6Ub7Xx0SoEZdFhhlCP
+Sxe0A+spt2Ja7eHRYXdeSJd4WqlAiLxeFzgITpGNxFWXLstyq9QDgpGqzNYp
+px51e4uz3N3RBrRsjOU9TiqmZQ+jMw5ZP2T5Ts5tqAFZyVXkV7wkMj1UQy4q
+pyaPX62nufOLzt8bp440BtIFugIJ2Rxlxz4bRCgEILMZtsGyhCuUM9HU7W1I
+qvi0sDbziu1hwEhN4VcghSP9jl4kqbLSihssDFTpSGxvQTYySOeK1K1MTri1
+MlW9xfIlXlH0OpuLgwLmhZn12pNmgk+tcCD8aRg8vvTQb5m7dKszRHNm/SgA
+R7CaNlnGXy7oF5yVnZKi32wl8NlEpoLta/J9nLVzTAVmzZ71+eiETnkD3sXe
+6GqOeGvgSPgkRv4qN+knIl95V0cjM4BSEFpo6GdgP60X4hHxSeLGeKwlnLf3
+F4V3GD4mBaTELVwUXgk1PHigX9mcA8Mv3Coi4mt7D1udiBFV1lfBSF9TGOBQ
+FEIlKpJpDvQyzetAiboX5CK2LHMosbXhUU5vHIWEOAdrR3UdLVrgZHQaVAZ/
+W7gqIzMiwFEu1G62JUnevnpOXjTZl5dRdR2djI4nopirUrKjYRpNYERaEkBD
+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
 
 -->
 

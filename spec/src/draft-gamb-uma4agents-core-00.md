@@ -2,8 +2,8 @@
 title: "User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"
 abbrev: "UMA 2.0 for Agents"
 docname: draft-gamb-uma4agents-core-00
-date: 2026-09-12
-category: std
+date: 2026-09-15
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -21,7 +21,11 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
-  RFC6749:
+  RFC8785:
+  I-D.ietf-oauth-client-id-metadata-document:
+  I-D.meunier-webbotauth-registry:
+  I-D.ietf-oauth-identity-assertion-authz-grant:
+  I-D.ietf-oauth-rar-metadata-remediation:
   RFC6750:
   RFC7515:
   RFC7517:
@@ -84,11 +88,7 @@ normative:
 informative:
   RFC9635:
   RFC9449:
-  I-D.ietf-oauth-rar-metadata-remediation:
-  I-D.ietf-oauth-identity-assertion-authz-grant:
   I-D.meunier-webbotauth-httpsig-protocol:
-  I-D.meunier-webbotauth-registry:
-  I-D.ietf-oauth-client-id-metadata-document:
   I-D.hardt-aauth-protocol:
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
@@ -177,76 +177,64 @@ informative:
 --- abstract
 
 This document profiles and extends the User-Managed Access (UMA) 2.0 Grant so
-that an autonomous software agent, operated by a party who is not the resource
-owner, can negotiate access to that owner's resources while the owner is not
-present.
+that a client, operated by a party other than the resource owner, can obtain
+access to that owner's resources while the owner is not present. The case it is
+written for is a client that is an autonomous software agent.
 
-It narrows UMA 2.0 in one place and extends it in several. The requesting side
-is an agent identified by a key it proves possession of rather than by a client
-credential; the requesting party token is a proof-of-possession token carrying
-its permissions as a claim; a grant may be bound to a single operation and spent
-exactly once; the owner holds a standing, revocable relationship with each agent
-individually; and the challenge that begins a negotiation is specified as a set
-of parameters rather than as an HTTP header, so that an enforcement point with no
-status line can emit it.
+Under this profile the client authenticates by proving possession of a key and
+needs no prior registration with the authorization server; the requesting party
+token is a proof-of-possession token that carries its permissions as a claim; a
+grant may be bound to a single operation and spent once; the owner holds a
+standing, revocable relationship with each client; and the challenge that begins
+a negotiation is specified as a set of parameters rather than as an HTTP header.
 
 --- middle
 
 # Introduction
 
-UMA 2.0 {{UMAGrant}} describes a topology that almost nothing else has: the
-party who authorizes access is not the party operating the client, and the
-authorization server holds the owner's policy rather than the resource server's.
-That arrangement was designed for a person sharing a resource with another
-person. It turns out to be the arrangement an agent economy needs, because the
-question an agent economy has to answer is not "is this my agent doing my task"
-but "may your agent touch my resource".
+UMA 2.0 {{UMAGrant}} separates the party who authorizes access, the resource
+owner, from the party on whose behalf a client requests it, the requesting party,
+and places the owner's policy at an authorization server of the owner's choosing.
+This profile applies that arrangement to clients that are autonomous software
+agents.
 
-What UMA 2.0 assumes, and what this profile changes, is everything downstream of
-that topology. The requesting side is assumed to be a registered OAuth client
-operated by a human who can be redirected to a browser. An agent is neither. It
-holds a key rather than a client secret, it may have no prior relationship with
-the authorization server at all, and the owner it needs an answer from may be
-asleep.
+UMA 2.0 leaves client credentials and their assignment open. This profile
+addresses clients that have no prior relationship with the authorization server,
+and owners who are not available when a request arrives. Nothing in it requires
+the client to be autonomous: a conventional client application that holds a key
+can use it.
 
-This profile is written against a reference implementation {{U4ALAB}} in which
-every requirement below is exercised by an automated check.
-{{implementation-status}} says what that implementation covers and where the
-register of requirement-to-check mappings lives.
+The requirements in this document are exercised by a reference implementation
+{{U4ALAB}}; {{implementation-status}} describes its coverage.
 
 ## Design Rule
 
-The rule this profile was written under, and the reason its surface is as small
-as it is: **stay inside UMA 2.0's wire surface wherever it already fits, and
-make every departure explicit.** `WWW-Authenticate: UMA`, the `uma-ticket` grant
-type, `need_info`, `request_submitted` and the introspection `permissions` array
-are all used as specified. {{profiles-and-extensions}} is the complete list of
-departures; anything not named there is intended to be stock UMA 2.0.
+This profile uses UMA 2.0's wire surface wherever it fits and makes each
+departure explicit. The following are used as {{UMAGrant}} specifies them:
+
+- the `urn:ietf:params:oauth:grant-type:uma-ticket` grant type;
+- the `need_info` and `request_submitted` responses;
+- the `permissions` array of the introspection response.
+
+Over HTTP the challenge keeps UMA 2.0's `WWW-Authenticate: UMA` header
+({{challenge-http}}), but the header is no longer its only encoding
+({{challenge-parameters}}).
+
+{{profiles-and-extensions}} lists every departure. Anything not listed there is
+intended to be UMA 2.0 as specified.
 
 ## Relationship to Other Authorization Work
 
-This profile is an extension grant on OAuth 2.0 {{RFC6749}}, as UMA 2.0 is.
+GNAP {{RFC9635}} addresses a comparable topology, including a resource owner who
+is not the end user and is contacted asynchronously (Section 1.6.4 of
+{{RFC9635}}). It does not define terms that the owner publishes and the client
+signs, which is the central addition of this set ({{U4ATerms}}). A binding of
+this profile to GNAP is possible.
 
-GNAP {{RFC9635}} is the closer comparison, and in several respects the better
-carrier: its interaction model is more general than OAuth's, key binding is
-native rather than an extension, and its request format expresses what a client
-wants far better than a scope string. GNAP also anticipates a resource owner who
-is not the end user, reached by the authorization server asynchronously while
-the client waits (Section 1.6.4 of {{RFC9635}}), and expects the authorization
-server to follow that owner's decisions, including automated rules. What it
-leaves to implementations is what those rules may rest on and what is agreed:
-it defines no terms the owner publishes and the requesting side signs, no record
-of that agreement held by both parties, and no constraint on which facts may
-relax a requirement. Those are the substance of this profile. A GNAP binding of
-it would be a reasonable document, and probably a cleaner one than the
-OAuth-shaped binding here; it is not a substitute for it.
-
-DPoP {{RFC9449}} solves the same problem as {{proof-of-possession}} for the
-OAuth installed base. This profile uses {{RFC9421}} instead because the signature
-must cover the request rather than only bind the token, and because the same
-mechanism authenticates four different parties here, in both directions. A DPoP
-binding is a reasonable second binding and would recruit a different set of
-implementers.
+DPoP {{RFC9449}} binds an access token to a key. This profile uses HTTP Message
+Signatures {{RFC9421}} instead, because the signature covers the request as well
+as binding the token, and because the same mechanism authenticates several
+parties in this set.
 
 ## Specification Set
 
@@ -257,32 +245,36 @@ UMA 2.0 profile for autonomous agents.
 {{U4APolicy}}, {{U4ALineage}}, {{U4AMultiParty}} and {{U4AOwner}} are OPTIONAL
 extensions of this document. {{U4AMCP}} binds this profile to a transport and
 {{U4AAAuth}} to an agent identity and signature layer; other bindings are
-possible and this document is written so that they are.
+possible.
 
 ## Roles
 
-The roles of {{UMAGrant}} apply, with the following additions and narrowings.
+The roles of {{UMAGrant}} apply. This document uses UMA's entity terms: the
+software making a request is the client, and the party on whose behalf it acts is
+the requesting party. Where the client is an autonomous agent, the requesting
+party is the person or organization accountable for it, and is not necessarily
+present.
 
-Requesting agent:
-: The software making the request. UMA used this term in 2010 {{UMAClaims2010}}
-  and dropped it; the agent era makes the distinction load-bearing again. A
-  requesting agent is individuated by a key it proves possession of, and is
-  distinct from the requesting party, who is accountable for it and is not
-  present. Nothing in this profile lets the requesting agent be the responsible
-  party; it lets the agent be the acting one.
+The UMA Work Group's legal work names the parties responsible for these entities:
+the party that seeks access through a client is the Requesting Agent, and the
+party responsible for the client software is the Client Operator. This document
+does not use "requesting agent" to mean software.
 
-Operator:
-: The party that runs a requesting agent and publishes a directory of the keys
-  its agents hold. The operator is a party the owner may act against as a whole
-  — see {{U4APolicy}} — and is never an authorization input on its own.
+The following roles are added:
+
+Client operator:
+: The party that runs a client and publishes a directory of the keys its clients
+  hold, corresponding to the Client Operator. Where this document set says
+  "operator" alone, it means the client operator. The owner may act against a
+  client operator as a whole (see {{U4APolicy}}); a client operator is never an
+  authorization input on its own.
 
 Enforcement point:
-: The component that discharges the resource-server obligations of
-  {{UMAFedAuthz}}: holding the protection API access token, obtaining a
-  permission ticket, introspecting, and refusing. {{UMAFedAuthz}} Section 1.4
-  divides responsibility between *parties* and names no component, and this
-  profile keeps it that way. An enforcement point MAY be a gateway in front of
-  the resource, or the resource itself. It is a role, not a product.
+: The component that performs the resource server's jobs defined by
+  {{UMAFedAuthz}}: holding the protection API access token, obtaining a permission
+  ticket, introspecting, and refusing. {{UMAFedAuthz}} Section 1.4 describes these
+  jobs without naming the component that performs them. An enforcement point MAY
+  be a gateway in front of the resource, or the resource itself.
 
 ## Notational Conventions
 
@@ -291,7 +283,9 @@ Enforcement point:
 Base64url encoding is as defined in {{RFC7515}} Section 2, without padding.
 
 The notation `s256(x)` denotes the string `"s256:"` followed by the base64url
-encoding, without padding, of the SHA-256 digest of the octets `x`.
+encoding, without padding, of the SHA-256 digest of the octets `x`. Where `x` is
+a JSON value, the octets are its serialization under the JSON Canonicalization
+Scheme {{RFC8785}}, so that independent implementations compute the same digest.
 
 The notation `jkt(k)` denotes the string `"jkt:"` followed by the JWK Thumbprint
 {{RFC7638}} of the JSON Web Key `k`. The value after the prefix is the same
@@ -307,22 +301,13 @@ by this document.
 The authorization server MUST include in its metadata the value
 `https://u4a.ai/spec/core/1.0` in the `uma_profiles_supported` array, and MUST
 include the identifying URI of each extension in this set that it implements.
-{{UMAGrant}} Section 4 asks a profile to be given a uniquely identifying URI and
-asks a server supporting one to advertise it; this profile's URIs are listed in
-{{iana-considerations}}.
-
-The following metadata member is added:
-
-terms_endpoint:
-: OPTIONAL. The URL of the owner's terms roster, as defined in {{U4ATerms}}. An
-  authorization server implementing {{U4ATerms}} MUST include it.
+This profile's identifying URIs are listed in {{used-identifiers}}.
 
 An authorization server MUST NOT advertise a grant type or claim token format it
 will not accept, and MUST advertise every grant type and claim token format it
-will. This is not pedantry about completeness: a requesting agent that has never
-met this authorization server decides from this document alone what to attempt,
-and an unadvertised-but-accepted format is indistinguishable to it from an
-unsupported one.
+will. This requirement establishes an accurate source of truth for an agent
+making first contact with the authorization server, and enables clean
+interoperability failures in the absence of human intervention.
 
 # The Challenge {#the-challenge}
 
@@ -373,7 +358,7 @@ deployments most likely to adopt this profile. An enforcement point running
 in-process inside the resource returns a domain result, not a status line; a
 JSON-RPC method handler has nowhere to put a `WWW-Authenticate`. Both encodings
 run in the reference implementation against one authorization server, and one
-requesting agent reads both.
+client reads both.
 
 ## The HTTP Binding {#challenge-http}
 
@@ -405,9 +390,8 @@ authorization_details:
   was attempted.
 
 authorization_reference:
-: REQUIRED. `s256` over the canonical JSON serialization of
-  `authorization_details`, with object keys sorted and no insignificant
-  whitespace.
+: REQUIRED. `s256` over `authorization_details`, serialized as
+  {{RFC8785}}.
 
 authorization_server:
 : REQUIRED by this profile. The issuer identifier of the authorization server
@@ -425,7 +409,8 @@ ticket:
     "actions": ["execute_trade"],
     "datatypes": ["trades:execute"]
   }],
-  "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwfXJ8m",
+  "authorization_reference":
+    "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
   "authorization_server": "https://alice-as.example",
   "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
 }
@@ -450,7 +435,7 @@ parsing the details.
 
 ## Corroborating the Authorization Server {#corroboration}
 
-A requesting agent MUST fetch the document named by `resource_metadata`, MUST
+A client MUST fetch the document named by `resource_metadata`, MUST
 verify that its `resource` member identifies the resource being accessed as
 required by {{RFC9728}} Section 3.3, and MUST refuse a challenge whose `as_uri`
 does not appear in that document's `authorization_servers` array.
@@ -463,7 +448,7 @@ document cannot carry.
 
 # The Negotiation
 
-The requesting agent presents the ticket at the authorization server's token
+The client presents the ticket at the authorization server's token
 endpoint using the `urn:ietf:params:oauth:grant-type:uma-ticket` grant type, as
 {{UMAGrant}} Section 3.3.1. This profile does not change the grant type, the
 ticket's single-use rotation, or the meaning of `need_info`,
@@ -484,7 +469,7 @@ an identity assertion authorization grant
 MUST treat it as a claim about identity and reach, and MUST NOT treat it as
 conferring access.
 
-A requesting agent MUST send the credentials it exchanges for such an assertion
+A client MUST send the credentials it exchanges for such an assertion
 only to the identity provider they belong to, as configured at the agent, and
 MUST NOT send them to a provider or token endpoint that only the authorization
 server's request names. The authorization server says which provider it will
@@ -500,7 +485,8 @@ first, because which terms apply follows from which party the agent acts for.
 
 ## Responses
 
-The authorization server's responses are those of {{UMAGrant}} Section 3.3.1.
+The authorization server's responses are those of {{UMAGrant}} Sections 3.3.5
+and 3.3.6.
 Two are constrained by this profile.
 
 A `request_submitted` response indicates that the owner has been asked and has
@@ -508,56 +494,57 @@ not yet answered. The authorization server MUST distinguish two kinds of pending
 request, and MUST make the kind available to the owner's decision surface:
 
 connection:
-: The requesting agent has no standing relationship with this owner. The question
+: The client has no standing relationship with this owner. The question
   put to the owner is whether to have one. See {{connections}}.
 
 operation:
-: The requesting agent has a standing relationship, and the owner's policy
+: The client has a standing relationship, and the owner's policy
   requires her to answer for this particular access.
 
 A `request_denied` response MAY carry an `error_description`. Where the refusal
 was reached without evaluating the owner's policy — because a quota was exhausted
 or the operator was blocked — the authorization server SHOULD say so, so that a
-well-behaved requesting agent can distinguish a refusal it might overcome from
+well-behaved client can distinguish a refusal it might overcome from
 one it cannot.
 
 ## Waiting
 
-`request_submitted` is a state to render, not a call to hold open. A requesting
-agent that can express waiting to its own user SHOULD hand the wait up rather
+`request_submitted` is a state to render, not a call to hold open. A client that can express waiting to its own user SHOULD hand the wait up rather
 than block, and a binding SHOULD define how. The decision belongs to the owner
 either way; what changes is whether the requesting party's client hangs on it.
 
 A binding that surfaces the wait MUST be able to say that the party being waited
-on is not the requesting party's own user, and that the requesting agent's client
+on is not the requesting party's own user, and that the client
 MUST NOT attempt to satisfy the wait from that user. A wait that cannot name its
 subject will be answered by the wrong person.
 
-# The Requesting Agent {#requesting-agent}
+# The Client {#requesting-agent}
 
 ## Identity Levels {#identity-levels}
 
-A requesting agent presents itself at exactly one of two levels. The level
+A client presents itself at exactly one of two levels. The level
 determines the shape of the standing connection handle and nothing else.
 
 Pseudonymous:
-: The agent presents a bare public JWK {{RFC7517}}. The key is the identity. The
+: The client presents a bare public JWK {{RFC7517}}. The key is the identity. The
   connection handle is `jkt(k)`.
 
 Identified:
-: The agent presents a credential from an issuer asserting its identity and
+: The client presents a credential from an issuer asserting its identity and
   binding it to a key — for example an `aa-agent+jwt` as defined by
   {{I-D.hardt-aauth-protocol}}, whose `cnf.jwk` is the signing key. The
   authorization server MUST verify that credential against keys published by its
   issuer, MUST require that the issuer identifier use the `https` scheme, and
   MUST derive the connection handle from the issuer and subject rather than from
-  the key. The issuer MUST qualify the handle whole, including any path.
+  the key. The issuer MUST qualify the handle whole, including any path. The
+  handle MUST be the subject, followed by `@` and the issuer identifier with its
+  scheme and any trailing `/` removed, unless the subject already ends with that
+  suffix, in which case the handle is the subject.
 
 The handle for an identified agent MUST NOT be derived from its key. Issuers that
 attest agents commonly bind a fresh key per session; a thumbprint-keyed
 relationship forgets such an agent on every run, which presents to the owner as
-an agent she has approved asking to be approved again. This was found by running
-it.
+an agent she has approved asking to be approved again.
 
 Qualifying by the issuer's host alone is the natural shortcut and it merges
 strangers. A multi-tenant identity provider commonly serves every tenant from one
@@ -570,7 +557,7 @@ a deployment MUST supply one.
 
 ## Descriptive Metadata {#descriptive-metadata}
 
-A requesting agent MAY additionally present descriptive metadata, so that an
+A client MAY additionally present descriptive metadata, so that an
 owner who has never met it can be told something true about it:
 
 - a client identifier that is an `https` URL resolving to a client ID metadata
@@ -586,17 +573,17 @@ one confirmed by the grant, the connection handle is unchanged by the presence o
 absence of either, and an authorization server MUST NOT admit a request it would
 otherwise refuse on the strength of descriptive metadata alone. Failure to
 resolve descriptive metadata MUST leave the request where it was rather than
-refusing it; an operator's outage is not evidence about an agent.
+refusing it; an operator's outage is not evidence about a client.
 
 A metadata document proves only that it claims its own URL. Anyone can publish
 one, so resolving it establishes a name to display and nothing more. What raises
-the metadata above a name is the operator directory, which the agent does not
+the metadata above a name is the operator directory, which the client does not
 control — see {{U4APolicy}}.
 
 # Proof of Possession {#proof-of-possession}
 
 The requesting party token issued under this profile is a proof-of-possession
-token. A requesting agent MUST prove possession of the confirmed key on every
+token. A client MUST prove possession of the confirmed key on every
 request to the protected resource, and an enforcement point MUST verify it.
 
 ## The Message Signature Profile {#signature-profile}
@@ -606,6 +593,13 @@ Proof of possession uses HTTP Message Signatures {{RFC9421}}.
 A signature MUST cover at least the components `"@method"`, `"@authority"`,
 `"@path"` and `"authorization"`. A signer MAY cover more, and a verifier MUST
 accept a superset rather than requiring an exact set.
+
+On a request that carries no `Authorization` header, such as a resource server
+introducing itself or an owner's own signed request, the `"authorization"`
+component is covered with the empty string as its value, so the covered set is
+the same on every request. {{RFC9421}} Section 2.5 would otherwise treat covering
+an absent field as an error; this is a departure from it, and the signer and the
+verifier apply it identically.
 
 Requiring an exact list is the intuitive implementation and it is wrong. It makes
 this profile and {{I-D.meunier-webbotauth-httpsig-protocol}} unable to coexist on
@@ -628,6 +622,10 @@ reconstructing the base, rather than re-serializing it from parsed components.
 Where a request carries meaning in its body, the signature MUST cover a
 `Content-Digest` {{RFC9530}} header, and the verifier MUST recompute the digest
 from the received body as well as verifying the signature over it.
+
+A request carries meaning in its body whenever it has one. That includes every
+tool call, whose operation and arguments are in the body, and every request to
+the owner or protection API that sends a body.
 
 The four required components say who is asking and what they are asking of. They
 say nothing about the bytes. That is adequate for a request whose meaning is in
@@ -662,12 +660,18 @@ On success the authorization server responds as {{UMAGrant}} Section 3.3.5, with
 }
 ~~~
 
+A client presents the token in the `Authorization` header as `PoP` followed by
+a space and the token, on a request signed as {{signature-profile}} specifies.
+The `PoP` scheme is this profile's; it is not registered in the HTTP
+Authentication Scheme Registry, and a binding that carries the token elsewhere
+says where.
+
 The requesting party token MUST be a JWT {{RFC7519}} signed by the authorization
 server, and MUST carry:
 
 cnf:
 : REQUIRED. A confirmation claim whose `jwk` member is the public key the
-  requesting agent must prove possession of. This is the key that signed the
+  client must prove possession of. This is the key that signed the
   claim token, and the key the enforcement point verifies requests against.
 
 permissions:
@@ -678,6 +682,11 @@ permissions:
 owner:
 : REQUIRED. The resource owner on whose behalf this token was issued. See
   {{owner-scoped}}.
+
+contract:
+: REQUIRED where the grant was issued on an agreement under {{U4ATerms}}.
+  `s256` over the agreement's JWS compact serialization, the same value the
+  receipt of {{U4ATerms}} carries as `agreement`.
 
 A bearer requesting party token is a credential that works for whoever picks it
 up, which is an unreasonable thing to hand software that makes thousands of calls
@@ -697,15 +706,16 @@ single_use:
 
 operation:
 : REQUIRED. An object with a `tool` member naming the operation and a
-  `params_s256` member carrying `s256` over the canonical JSON serialization of
-  the exact parameters approved, with object keys sorted.
+  `params_s256` member carrying `s256` over the parameters approved, serialized
+  as {{RFC8785}}: the `params` member of the agreement's `operation`
+  {{U4ATerms}}.
 
 ~~~ json
 {
   "single_use": true,
   "operation": {
     "tool": "execute_trade",
-    "params_s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
   }
 }
 ~~~
@@ -783,7 +793,7 @@ under replication, and it cannot be tested for in a single-process deployment �
 which is where the specification has to carry it, because the implementation will
 not.
 
-{{UMAGrant}} Section 3.3.1 says a permission ticket is single-use and does not say
+{{UMAGrant}} Section 5.5 says a permission ticket is single-use and does not say
 where in enforcement it is spent, nor what "single-use" means when the
 authorization server has more than one replica. Both are stated here.
 
@@ -795,7 +805,7 @@ it MUST distinguish a reason that further negotiation cannot change from one tha
 it can.
 
 An enforcement point receiving a reason of the first kind MUST refuse without
-issuing a fresh challenge. A bare `{"active": false}` sends a requesting agent
+issuing a fresh challenge. A bare `{"active": false}` sends a client
 around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.
@@ -809,13 +819,13 @@ business.
 
 # Standing Connections {#connections}
 
-A connection is the standing relationship an owner has with one requesting agent,
+A connection is the standing relationship an owner has with one client,
 keyed by the handle of {{identity-levels}}.
 
 An authorization server implementing this profile MUST:
 
 - refuse to grant, and instead put the request to the owner as a `connection`
-  pending request, where no active connection exists for the requesting agent's
+  pending request, where no active connection exists for the client's
   handle, whatever the owner's policy would otherwise decide;
 - record the connection when the owner approves, retaining at least the handle,
   the identity level, and the time of first contact;
@@ -863,7 +873,7 @@ NOT hold a static owner credential of its own.
 The second form is what lets the owner's authority be reached by something she
 runs — a personal agent on her own device — without a browser session and
 without an identity provider in the path. It is the same message-signature
-profile the requesting agent uses, pointed the other way. Every handler MUST act
+profile the client uses, pointed the other way. Every handler MUST act
 on the owner the credential proved rather than on one the request named. What
 that software can ask her authority to do is specified in {{U4AOwner}}.
 
@@ -901,38 +911,39 @@ required to reject. Aliases are resources too.
 
 # Profiles and Extensions {#profiles-and-extensions}
 
-This document is both a profile and an extension of {{UMAGrant}} in the sense of
-its Section 4: it restricts UMA's available options in two places and defines new
-use of its extensibility points in several.
+Each departure below is labelled, in the sense of {{UMAGrant}} Section 4, as a
+profile (it restricts an option UMA 2.0 leaves open), an extension (it uses one
+of UMA 2.0's extensibility points), or a divergence (it replaces something UMA 2.0
+specifies).
 
 The complete list of departures from {{UMAGrant}} and {{UMAFedAuthz}} follows.
 Anything not named here, in this document or in another document of this set, is
 intended to be stock UMA 2.0.
 
-| # | Departure | Baseline | Where specified |
-|---|---|---|---|
-| 1 | The authorization server proffers claim *content*, dereferenceable and counter-signed | The server names acceptable claim formats | {{U4ATerms}} |
-| 2 | Proof-of-possession requesting party token carrying `permissions` as a claim | Bearer token; permissions visible only through introspection | {{rpt}} |
-| 3 | `operation` and `single_use` claims | Per-permission scopes and expiry only | {{operation-binding}} |
-| 4 | Owner intervention as two kinds of pending request | Resource-owner intervention out of scope | {{connections}} |
-| 5 | A standing connection keyed by an identity handle, owner-visible and owner-revocable | Nothing directly; the persisted claims token is the ancestor | {{connections}} |
-| 6 | Discovery in more than one binding encoding from one registry, and challenge corroboration | Metadata documents predate this; the challenge carries `as_uri` on faith | {{corroboration}}, {{U4AFedAuthz}} |
-| 7 | Public metadata stays structural; owner-bound instances served only to the owner's authority | The resource server pushes owner-bound registrations under the protection token | {{U4AFedAuthz}} |
-| 8 | The challenge is a set of parameters; each binding says how they travel | `WWW-Authenticate` is mandated | {{challenge-parameters}} |
-| 9 | Enforcement obligations stated as a conformance profile, not a component | Obligations named, host unnamed | {{obligations}} |
-| 10 | Consumption ordering normative; introspection carries a reason | Unspecified where a single-use token is spent | {{ordering}}, {{introspection}} |
-| 11 | Descriptive agent metadata, display only | The agent is its key, or its issuer's token | {{descriptive-metadata}} |
-| 12 | Structured remediation in the challenge, plus the two members that let a third party decide | The challenge carries `as_uri` and `ticket` | {{remediation}} |
-| 13 | A resource server introduces itself to an owner's authority by signing as its own origin | How a resource server comes to hold a protection token is unspecified | {{U4AFedAuthz}} |
-| 14 | Every owner-scoped artifact carries its owner; the authority is the owner's choice | One authorization server per protected resource, owner implicit in the deployment | {{owner-scoped}} |
-| 15 | A depth limit on the owner's pending queue, in two lanes | No opinion on how many pending requests an owner may be made to hold | {{U4APolicy}} |
-| 16 | Owner-side refusal at operator granularity | No notion of the party operating a requesting agent | {{U4APolicy}} |
-| 17 | Assurance may only tighten; only the owner's own decisions may relax | No vocabulary for either | {{U4APolicy}} |
-| 18 | An agent holding a connection may introduce a sibling, which then negotiates its own grant | No object between "a stranger" and "the same client" | {{U4ALineage}} |
-| 19 | A layer above the resource owner that may only narrow | The resource rights administrator is named and given no wire surface | {{U4AMultiParty}} |
-| 20 | Several owners of equal standing, with signed verdicts carried in the grant | Exactly one authorization server per protected resource | {{U4AMultiParty}} |
-| 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient | Silent on how the owner authenticates | {{owner-authentication}} |
-| 22 | The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server | Left to the deployment | {{U4AOwner}} |
+| # | Departure | Kind | Baseline | Where specified |
+|---|---|---|---|---|
+| 1 | The authorization server proffers claim *content*, dereferenceable and counter-signed | extension | The server names acceptable claim formats | {{U4ATerms}} |
+| 2 | Proof-of-possession requesting party token carrying `permissions` as a claim | profile, extension | Bearer token; permissions visible only through introspection | {{rpt}} |
+| 3 | `operation` and `single_use` claims | extension | Per-permission scopes and expiry only | {{operation-binding}} |
+| 4 | Owner intervention as two kinds of pending request | extension | Resource-owner intervention out of scope | {{connections}} |
+| 5 | A standing connection keyed by an identity handle, owner-visible and owner-revocable | extension | Nothing directly; the persisted claims token is the ancestor | {{connections}} |
+| 6 | Discovery in more than one binding encoding from one registry, and challenge corroboration | extension | Metadata documents predate this; the challenge carries `as_uri` on faith | {{corroboration}}, {{U4AFedAuthz}} |
+| 7 | Public metadata stays structural; owner-bound instances served only to the owner's authority | extension | The resource server pushes owner-bound registrations under the protection token | {{U4AFedAuthz}} |
+| 8 | The challenge is a set of parameters; each binding says how they travel | divergence | `WWW-Authenticate` is mandated | {{challenge-parameters}} |
+| 9 | Enforcement obligations stated as a conformance profile, not a component | profile | Obligations named, host unnamed | {{obligations}} |
+| 10 | Consumption ordering normative; introspection carries a reason | profile, extension | Unspecified where a single-use token is spent | {{ordering}}, {{introspection}} |
+| 11 | Descriptive agent metadata, display only | extension | The agent is its key, or its issuer's token | {{descriptive-metadata}} |
+| 12 | Structured remediation in the challenge, plus the two members that let a third party decide | extension | The challenge carries `as_uri` and `ticket` | {{remediation}} |
+| 13 | A resource server introduces itself to an owner's authority by signing as its own origin | extension | How a resource server comes to hold a protection token is unspecified | {{U4AFedAuthz}} |
+| 14 | Every owner-scoped artifact carries its owner; the authority is the owner's choice | profile | One authorization server per protected resource, owner implicit in the deployment | {{owner-scoped}} |
+| 15 | A depth limit on the owner's pending queue, in two lanes | extension | No opinion on how many pending requests an owner may be made to hold | {{U4APolicy}} |
+| 16 | Owner-side refusal at operator granularity | extension | No notion of the party operating a client | {{U4APolicy}} |
+| 17 | Assurance may only tighten; only the owner's own decisions may relax | extension | No vocabulary for either | {{U4APolicy}} |
+| 18 | An agent holding a connection may introduce a sibling, which then negotiates its own grant | extension | No object between "a stranger" and "the same client" | {{U4ALineage}} |
+| 19 | A layer above the resource owner that may only narrow | extension | The resource rights administrator is named and given no wire surface | {{U4AMultiParty}} |
+| 20 | Several owners of equal standing, with signed verdicts carried in the grant | extension | Exactly one authorization server per protected resource | {{U4AMultiParty}} |
+| 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient | extension | Silent on how the owner authenticates | {{owner-authentication}} |
+| 22 | The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server | extension | Left to the deployment | {{U4AOwner}} |
 {: title="Departures from UMA 2.0."}
 
 # Security Considerations
@@ -1022,7 +1033,7 @@ authority that owner named.
 ## The Record Names a Counterparty
 
 An authorization server implementing this profile keeps a record of what was
-promised, decided and done, and that record names the requesting agent. It is
+promised, decided and done, and that record names the client. It is
 the owner's record of her own decisions and it is also a per-agent history, which
 is a more sensitive object than either half. Retention is deployment policy; this
 profile requires only that a decision the owner did not personally take MUST NOT
@@ -1030,7 +1041,7 @@ be recorded as one she did.
 
 ## A Stated Purpose Is Not Evaluated
 
-Where a requesting agent states why it wants access, the authorization server
+Where a client states why it wants access, the authorization server
 records it and shows it to the owner. It MUST NOT parse it, compare it to the
 purpose in the owner's terms, or let it affect the decision other than by its
 absence. An authority that reads a stated purpose and rules on whether it is
@@ -1040,12 +1051,20 @@ decision, which makes the same request answerable two ways. See {{U4ATerms}} and
 
 # IANA Considerations {#iana-considerations}
 
+This document has no IANA actions. The identifiers it uses are listed in
+{{used-identifiers}}.
+
+--- back
+
+# Identifiers Used by This Document {#used-identifiers}
+
+This appendix lists the identifiers this document defines. It is informative and
+requests no registration.
+
 ## Profile Identifiers
 
 {{UMAGrant}} Section 4 asks that a profile or extension be given a uniquely
-identifying URI and that an authorization server supporting one advertise it in
-`uma_profiles_supported`. There is no IANA registry for these; they are recorded
-here.
+identifying URI. The identifying URIs of this set are:
 
 | Document | Identifying URI |
 |---|---|
@@ -1060,96 +1079,33 @@ here.
 | {{U4AAAuth}} | `https://u4a.ai/spec/aauth/1.0` |
 {: title="Profile identifying URIs."}
 
-## JSON Web Token Claims Registration
+## JSON Web Token Claims
 
-IANA is asked to register the following in the "JSON Web Token Claims" registry
-established by {{RFC7519}}.
+| Claim | Meaning | Defined in |
+|---|---|---|
+| `permissions` | Permissions granted, as {{UMAFedAuthz}} Section 5.1.1 | {{rpt}} |
+| `owner` | The resource owner on whose behalf a token was issued | {{rpt}} |
+| `contract` | Digest of the agreement a grant was issued on | {{rpt}} |
+| `single_use` | Whether a token may be spent once | {{operation-binding}} |
+| `operation` | The single operation, and the digest of its parameters, a token is bound to | {{operation-binding}} |
+{: title="JWT claims used by this document."}
 
-Claim Name:
-: `permissions`
+## Authorization Details Type
 
-Claim Description:
-: Permissions granted to the requesting party, as defined by {{UMAFedAuthz}}
-  Section 5.1.1
+| Type | Meaning | Defined in |
+|---|---|---|
+| `urn:uma4agents:authorization-details:tool-call` | An attempted invocation of one named operation on a protected resource | {{remediation}} |
+{: title="Authorization details type used by this document."}
 
-Change Controller:
-: IETF
+## Other Values
 
-Specification Document(s):
-: {{rpt}} of this document
-
-Claim Name:
-: `owner`
-
-Claim Description:
-: The resource owner on whose behalf a token was issued
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{owner-scoped}} of this document
-
-Claim Name:
-: `single_use`
-
-Claim Description:
-: Whether the token may be spent exactly once
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{operation-binding}} of this document
-
-Claim Name:
-: `operation`
-
-Claim Description:
-: The single operation and parameter digest a token is bound to
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{operation-binding}} of this document
-
-## Authorization Details Type Registration
-
-IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" sub-registry for authorization details types established by
-{{RFC9396}}.
-
-Type Name:
-: `urn:uma4agents:authorization-details:tool-call`
-
-Type Description:
-: An attempted invocation of one named operation on a protected resource
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{remediation}} of this document
-
-## OAuth Authorization Server Metadata Registration
-
-IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" registry established by {{RFC8414}}.
-
-Metadata Name:
-: `terms_endpoint`
-
-Metadata Description:
-: URL of the resource owner's terms roster
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: {{U4ATerms}}
-
---- back
+| Identifier | Kind | Defined in |
+|---|---|---|
+| `insufficient_authorization` | Error value of the challenge | {{challenge-parameters}} |
+| `PoP` | Token type | {{rpt}} |
+| `authorization_server` | Member of `authorization_remediation` | {{remediation}} |
+| `ticket` | Member of `authorization_remediation` | {{remediation}} |
+{: title="Other values used by this document."}
 
 # Implementation Status {#implementation-status}
 
@@ -1164,9 +1120,9 @@ Organization:
 Description:
 : A running deployment of this profile and the rest of its set: an authorization
   server, an enforcement point in two hosting shapes, a protected resource, an
-  operator key directory, and requesting agents at both identity levels. It runs
+  operator key directory, and clients at both identity levels. It runs
   under container orchestration and on a single host, against both an in-memory
-  and a replicated store. It carries two requesting-agent implementations that
+  and a replicated store. It carries two client implementations that
   share no code — one in Python, one in TypeScript — which meet on the wire and
   nowhere else; the second was written from these documents rather than from
   the first, and found one defect in the enforcement point on its first run.

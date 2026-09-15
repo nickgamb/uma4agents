@@ -1,8 +1,8 @@
 ---
 templateKey: doc
-seoTitle: "Resource owner, requesting party, requesting agent: who decides"
+seoTitle: "Resource owner, requesting party, client: who decides"
 title: The three parties
-description: Owner, requesting party, requesting agent — and what it costs to treat the last two as one.
+description: Owner, requesting party, client — and what it costs to treat an agent and the party behind it as one.
 diagram: who-answers
 diagramCaption: Three parties, one question. Only one of them has standing to answer it.
 next:
@@ -14,9 +14,10 @@ next:
     blurb: Which of the three the identity layer describes.
 ---
 
-OAuth has two parties on the requesting side: a resource owner and a client. UMA
-2.0 added a third, the requesting party, because the person asking might not be
-the person who owns the resource. Agents make a fourth distinction do real work.
+UMA 2.0 has three entities in a sharing arrangement: the resource owner, the
+requesting party on whose behalf access is sought, and the client — the software
+that makes the request. When the client is an autonomous agent, the difference
+between the requesting party and the client does real work.
 
 ## Who is who
 
@@ -27,17 +28,22 @@ The **requesting party** is the human or organisation on whose behalf the
 request is made. Bob, the advisor. He is accountable for what his agent agrees
 to, and he is also not present at the moment the request happens.
 
-The **requesting agent** is the software making the call. It holds a key, signs
-requests, accepts terms, and acts continuously without anyone watching.
+The **client** is the software making the call. In this profile it is usually an
+autonomous agent: it holds a key, signs requests, accepts terms, and acts
+continuously without anyone watching.
 
-## Why the last two came apart
+UMA's legal work names the parties responsible for these entities. The
+**Requesting Agent** is the party that seeks access through a client, and the
+**Client Operator** is the party responsible for the client software. The
+profile uses those names for parties, never for software.
 
-UMA's 2010 drafts had both terms. UMA 2.0 collapsed them into "requesting
-party", which was reasonable at the time: the client was a web app that Bob was
-sitting in front of, so the party and the software were in the same room and the
-same session.
+## Why the requesting party and the client come apart
 
-That is no longer true, and three things now attach to the agent rather than to
+In most UMA 2.0 deployments the client was a web app that Bob was sitting in
+front of, so the party and the software shared a session, and treating them as
+one rarely mattered.
+
+An agent changes that, and three things now attach to the client rather than to
 Bob:
 
 - **The signature.** Terms are signed by the agent's key, not by Bob.

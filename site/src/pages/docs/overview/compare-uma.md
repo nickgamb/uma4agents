@@ -49,9 +49,10 @@ to the authorization server. The profile has the resource server publish
 authorization server read it. Push still works; the point is that the
 specification should not require it.
 
-**The requesting agent came back.** UMA's 2010 drafts distinguished the
-requesting party from the requesting agent. 2.0 collapsed them, reasonably at the
-time. Agents make the distinction matter again — see
+**The client is an agent.** UMA 2.0's entities carry over unchanged: the client
+makes the request on behalf of the requesting party. When the client is an
+autonomous agent the two no longer share a session, and the profile attaches the
+signature, the attested identity and the revocation to the client — see
 [the three parties](/docs/overview/parties/).
 
 **The challenge became parameters.** UMA carries the challenge in

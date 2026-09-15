@@ -95,6 +95,33 @@ release within that month. One entry per release.
 - **Docs:** run-the-lab and KUBERNETES quoted a policy-test pair no check prints and an out-of-date count. Both give the count the suite has and say what a refusal means.
 - **Docs:** START-HERE said `make kagent` brings its own model; it uses Anthropic by default, and `MODEL=ollama` runs one in the cluster.
 
+## September 13 2026
+
+### v2026.09.9
+
+#### Enhancements
+
+- **Specification:** all nine drafts are declared informational individual submissions (`category: info`) rather than standards-track.
+- **Specification:** IANA Considerations request no actions. Each draft lists the identifiers it defines in an informative appendix instead of registration templates.
+- **Specification:** the core draft's abstract, introduction and roles are rewritten. The software making a request is UMA's client; "Requesting Agent" is left to UMA's legal work, where it names a party; the client operator is defined; and the list of departures says whether each one profiles, extends or diverges from UMA 2.0.
+- **Specification:** `terms_endpoint` is defined by the terms draft rather than the core draft.
+- **Specification:** the exact form of an identified connection handle, the `contract` claim, the parameters an operation binding covers, and the octets an agreement digest is computed over are specified.
+- **Docs:** the parties, concepts, glossary, architecture and comparison pages use client for the software making a request, and no longer say UMA 2.0 merged the requesting party with it.
+
+#### Bug fixes
+
+- **Specification:** the AAuth binding qualified identified connection handles by issuer host alone, contradicting the core draft.
+- **Specification:** the multiparty verdict's `cnf_jkt` was defined as a bare thumbprint while its example carried the `jkt:` prefix; it is now `jkt(k)`.
+- **Specification:** four cross-document section references pointed at the wrong sections.
+- **Docs:** the specification page, the deviations page and `docs/PROTOCOL.md` cited §11 for the core draft's register of departures, which is §12.
+- **Specification:** the core draft's design rule listed the `WWW-Authenticate: UMA` header as reused unchanged, contradicting its own departure 8; it now says the header is kept over HTTP but is no longer the only encoding.
+- **Specification:** the federated authorization draft cited RFC 9728 §2.1 for `signed_metadata` (it is §2.2), and the terms draft cited UMA Grant §3.3.4 for `need_info` (it is §3.3.6). The core draft and the deviations page cited UMA Grant §3.3.1 for single-use permission tickets (§5.5) and for the authorization server's responses (§3.3.5 and §3.3.6).
+- **Specification:** the policy draft now states that its `429` refusal at the pending-queue bound departs from UMA Grant's `403` for `request_denied`, and why.
+- **Specification:** the identifier appendices were incomplete. Added: core's `insufficient_authorization`, `PoP` and the remediation members; terms' `decline` and `receipt`; lineage's `introduction` claim; multiparty's `org`, `kind` and `admin` claims. The multiparty draft now defines the `u4a-org-admin+jwt` credential it listed.
+- **Specification:** the core draft said digests are taken over "canonical JSON" without defining it, and `params_s256` did not rule out whitespace. Digests over JSON values are now over the RFC 8785 serialization. Core §6.1 also states that a request with no `Authorization` header covers the `authorization` component with the empty string, and that this departs from RFC 9421 §2.5.
+- **Specification:** core did not say which requests "carry meaning in the body" and must cover `Content-Digest`, or how a client presents the token; it now says any request with a body, and `Authorization: PoP <token>`, noting the scheme is unregistered. The lineage draft and the sub-agent page credited AAuth's agent credential with `act`, which AAuth carries on its auth token. The AAuth binding attributed its resource-metadata type correctly.
+- **Specification:** example digests and thumbprints are full length, the MCP binding's remediation example matches the core draft's, and references a conforming implementation needs are normative.
+
 ## September 12 2026
 
 ### v2026.09.8

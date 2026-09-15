@@ -4,9 +4,9 @@
 
 Network Working Group                                            N. Gamb
 Internet-Draft                                            MindGarden LLC
-Intended status: Standards Track                                E. Maler
-Expires: 16 March 2027                                      Venn Factory
-                                                       12 September 2026
+Intended status: Informational                                  E. Maler
+Expires: 19 March 2027                                      Venn Factory
+                                                       15 September 2026
 
 
       Multi-Party Authorization for User-Managed Access (UMA) 2.0
@@ -49,11 +49,11 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2027.
+   This Internet-Draft will expire on 19 March 2027.
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 1]
+Gamb & Maler              Expires 19 March 2027                 [Page 1]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -80,11 +80,11 @@ Table of Contents
    2.  Part I: A Layer Above the Owner . . . . . . . . . . . . . . .   4
      2.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .   4
      2.2.  The Charter . . . . . . . . . . . . . . . . . . . . . . .   4
-     2.3.  Delegation  . . . . . . . . . . . . . . . . . . . . . . .   5
+     2.3.  Delegation  . . . . . . . . . . . . . . . . . . . . . . .   4
      2.4.  The Envelope, Clamped on Write  . . . . . . . . . . . . .   5
      2.5.  The Decision  . . . . . . . . . . . . . . . . . . . . . .   6
      2.6.  What the Organization May See . . . . . . . . . . . . . .   6
-     2.7.  Acting for a Member . . . . . . . . . . . . . . . . . . .   7
+     2.7.  Acting for a Member . . . . . . . . . . . . . . . . . . .   6
      2.8.  Enrolment and Leaving . . . . . . . . . . . . . . . . . .   7
      2.9.  Break-Glass . . . . . . . . . . . . . . . . . . . . . . .   8
    3.  Part II: Owners of Equal Standing . . . . . . . . . . . . . .   8
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 2]
+Gamb & Maler              Expires 19 March 2027                 [Page 2]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -117,12 +117,11 @@ Internet-Draft          Multi-Party Authorization         September 2026
      5.1.  Members Are Not Visible to Each Other . . . . . . . . . .  15
      5.2.  The Ceiling Is Disclosed to the Agent . . . . . . . . . .  15
    6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
-     6.1.  Media Type Registration . . . . . . . . . . . . . . . . .  15
-     6.2.  JSON Web Token Claims Registration  . . . . . . . . . . .  16
-   7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  16
-     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  16
-     7.2.  Informative References  . . . . . . . . . . . . . . . . .  18
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  18
+   7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  15
+     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  15
+     7.2.  Informative References  . . . . . . . . . . . . . . . . .  16
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  17
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  18
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  19
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  19
 
@@ -143,9 +142,9 @@ Internet-Draft          Multi-Party Authorization         September 2026
    This document adds two arrangements.  In both, the four beats of
    [U4ACore] are untouched: the challenge, the ticket, the proffered
    terms, the agreement and the grant are the same on a shared resource
-   as on a personal one.  A requesting agent cannot tell the difference
-   and does not need to.  Everything added is either a document one
-   party publishes or a question asked of a party that already existed.
+   as on a personal one.  A client cannot tell the difference and does
+   not need to.  Everything added is either a document one party
+   publishes or a question asked of a party that already existed.
 
 1.1.  Relationship to the Set
 
@@ -162,15 +161,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
+   Throughout, a _policy unit_ is as defined in [U4APolicy] Section 2.
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 3]
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
-
-   Throughout, a _policy unit_ is as defined in [U4APolicy] Section 2.
 
 2.  Part I: A Layer Above the Owner
 
@@ -216,19 +214,17 @@ Internet-Draft          Multi-Party Authorization         September 2026
    the organization runs — and a language small enough to be checked by
    reading is the only kind that can be.
 
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 4]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
 2.3.  Delegation
 
    Each role MUST carry a delegation value, one of:
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
    none:  The member may reach the resource herself.  No agent acting
       for her may.
@@ -269,19 +265,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    document through the same path as one of her own edits.  It MUST NOT
    apply the envelope only at grant time.
 
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 5]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    The clamp is applied on write so that the ceiling appears in the
    terms document the requesting side dereferences and signs, rather
    than being applied invisibly at the door.  A terms document MUST
@@ -289,6 +272,15 @@ Internet-Draft          Multi-Party Authorization         September 2026
    agent reads the document before it signs anything, and that is the
    only moment at which "these terms are not hers alone" is information
    it can act on.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
 2.5.  The Decision
 
@@ -328,16 +320,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    The filtering is the member's authorization server's, applied before
    it answers, and is not the organization's to respect.
 
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                 [Page 6]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
 2.7.  Acting for a Member
 
    An organization MAY answer a pending request on a member's behalf,
@@ -346,13 +328,31 @@ Internet-Draft          Multi-Party Authorization         September 2026
    *  the record MUST name the organization's administrator, and MUST
       NOT record the decision as the member's ([U4APolicy] Section 8.4);
 
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    *  an agent shut out by the organization loses its reach to claimed
       resources only, held in the membership record so that it ends when
       the membership does, and its standing with the member over her own
       resources is untouched;
 
    *  an introspection response for a grant so affected carries error of
-      organization_revoked ([U4AFedAuthz] Section 6).
+      organization_revoked ([U4AFedAuthz] Section 5).
+
+   The organization conveys each such action to the member's
+   authorization server as a short-lived JWT with typ of u4a-org-
+   admin+jwt, signed by the organization, naming the member as sub, the
+   organization as org and the acting administrator as admin.  The
+   member's authorization server verifies it against the keys of the
+   organization she enrolled with, and refuses one that does not name
+   her.
 
 2.8.  Enrolment and Leaving
 
@@ -389,7 +389,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 7]
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -421,8 +421,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
    Tally:  A party that publishes the mandate, folds the holders' terms
       into one document, collects verdicts, and issues a grant carrying
       them.  It speaks the authorization-server surface of [U4ACore] to
-      the requesting agent, which cannot tell it from an authorization
-      server and does not need to.
+      the client, which cannot tell it from an authorization server and
+      does not need to.
 
    With no party above the holders, the decision cannot be put anywhere
    without privileging the place it is put.  The tally is that place,
@@ -445,7 +445,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 8]
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -470,12 +470,12 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 3.3.  The Fold
 
-   When a requesting agent presents a ticket for a jointly held
-   resource, the tally MUST obtain each holder's terms over it from her
-   authorization server and MUST fold them into one terms document: the
-   shortest expiry, the intersection of scopes, the union of
-   prohibitions, and ask-me if any holder asks.  It proffers that
-   document under [U4ATerms], and the agent signs it once.
+   When a client presents a ticket for a jointly held resource, the
+   tally MUST obtain each holder's terms over it from her authorization
+   server and MUST fold them into one terms document: the shortest
+   expiry, the intersection of scopes, the union of prohibitions, and
+   ask-me if any holder asks.  It proffers that document under
+   [U4ATerms], and the agent signs it once.
 
    The fold is the clamp of Section 2.4 applied sideways: each holder's
    terms are a ceiling on the running document.  An implementation
@@ -501,7 +501,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                 [Page 9]
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -512,8 +512,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
    exp:  REQUIRED.  Short.
 
-   cnf_jkt:  REQUIRED in an allow.  The JWK thumbprint (RFC 7638) of the
-      key that signed the agreement.
+   cnf_jkt:  REQUIRED in an allow. jkt(k), as [U4ACore] defines it, of
+      the key k that signed the agreement.
 
    scope:  REQUIRED in an allow.  The scopes the agreement carries.
 
@@ -557,7 +557,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 10]
+Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -568,12 +568,12 @@ Internet-Draft          Multi-Party Authorization         September 2026
      "account": "joint-brokerage-1",
      "negotiation": "fam_8f3aQ2Xc",
      "resource_id": "joint-brokerage-1/get_positions",
-     "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+     "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
      "effect": "allow",
-     "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+     "cnf_jkt": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
      "scope": ["positions:read"],
      "expires_in": 3600,
-     "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
+     "mandate_s256": "s256:2Vm2OGY_mn3mY6G-N-Obxdgg49uzoxsK8brUPgw5_Gk",
      "iat": 1789430000,
      "exp": 1789430300
    }
@@ -607,13 +607,13 @@ Internet-Draft          Multi-Party Authorization         September 2026
 3.6.  Verdicts Are Not Claims
 
    A verdict MUST travel from the holder's authorization server to the
-   tally.  It MUST NOT be gathered by the requesting agent and presented
-   as a claim.
+   tally.  It MUST NOT be gathered by the client and presented as a
+   claim.
 
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 11]
+Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -725,7 +725,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 13]
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -781,7 +781,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 16 March 2027                [Page 14]
+Gamb & Maler              Expires 19 March 2027                [Page 14]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -828,61 +828,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 6.  IANA Considerations
 
-6.1.  Media Type Registration
-
-   IANA is asked to register application/u4a-verdict+jwt, application/
-   u4a-membership+jwt, application/u4a-org-notice+jwt and application/
-   u4a-org-admin+jwt in the "Media Types" registry, each with:
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 15]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
-   Required parameters:  N/A
-
-   Optional parameters:  N/A
-
-   Encoding considerations:  binary; a JWT in compact serialization
-
-   Security considerations:  See Section 4 of this document
-
-   Interoperability considerations:  N/A
-
-   Applications that use this media type:  Applications implementing UMA
-      2.0 with this extension
-
-   Change controller:  IETF
-
-   and with the following published specifications: Section 3.4 for u4a-
-   verdict+jwt; Section 2.8 for u4a-membership+jwt and u4a-org-
-   notice+jwt; Section 2.7 for u4a-org-admin+jwt.
-
-6.2.  JSON Web Token Claims Registration
-
-   IANA is asked to register the following in the "JSON Web Token
-   Claims" registry established by [RFC7519].
-
-   Claim Name:  joint
-
-   Claim Description:  The mandate and verdicts under which a jointly
-      held resource was released
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 3.8 of this document
-
-   Claim Name:  break_glass
-
-   Claim Description:  That a grant was issued by an organization under
-      its emergency clause, and the justification
-
-   Change Controller:  IETF
-
-   Specification Document(s):  Section 2.9 of this document
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
 
 7.  References
 
@@ -890,10 +837,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 16]
+Gamb & Maler              Expires 19 March 2027                [Page 15]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -914,11 +858,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
-   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
-              Protected Resource Metadata", RFC 9728,
-              DOI 10.17487/RFC9728, April 2025,
-              <https://www.rfc-editor.org/rfc/rfc9728>.
 
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
@@ -944,16 +883,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
               Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 17]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
               Kantara Recommendation, 7 January 2018,
@@ -961,6 +890,13 @@ Internet-Draft          Multi-Party Authorization         September 2026
               grant-2.0.html>.
 
 7.2.  Informative References
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 16]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
    [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
               Work Group, "Solving Data Sharing Challenges with UMA: The
@@ -974,14 +910,105 @@ Internet-Draft          Multi-Party Authorization         September 2026
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
 
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
+
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
 
-Appendix A.  Implementation Status
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+      +================================+============+==============+
+      | Identifier                     | Kind       | Defined in   |
+      +================================+============+==============+
+      | application/u4a-verdict+jwt    | Media type | Section 3.4  |
+      +--------------------------------+------------+--------------+
+      | application/u4a-membership+jwt | Media type | Section 2.8  |
+      +--------------------------------+------------+--------------+
+      | application/u4a-org-notice+jwt | Media type | Section 2.8  |
+      +--------------------------------+------------+--------------+
+      | application/u4a-org-admin+jwt  | Media type | Section 2.7  |
+      +--------------------------------+------------+--------------+
+      | joint                          | JWT claim  | Section 3.8  |
+      |                                | [RFC7519]  |              |
+      +--------------------------------+------------+--------------+
+      | family                         | JWT claim  | Section 3.8  |
+      |                                | [RFC7519]  |              |
+      +--------------------------------+------------+--------------+
+      | break_glass                    | JWT claim  | Section 2.9  |
+      |                                | [RFC7519]  |              |
+      +--------------------------------+------------+--------------+
+      | org                            | JWT claim  | Section 2.8, |
+      |                                | [RFC7519]  | Section 2.7  |
+      +--------------------------------+------------+--------------+
+      | kind                           | JWT claim  | Section 2.8  |
+      |                                | [RFC7519]  |              |
+      +--------------------------------+------------+--------------+
+      | admin                          | JWT claim  | Section 2.7  |
+      |                                | [RFC7519]  |              |
+      +--------------------------------+------------+--------------+
+
+               Table 1: Identifiers used by this document.
+
+Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 18]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
    The reference implementation [U4ALAB] implements both parts.  The
    clamp of Section 2.4 is tested exhaustively for one-directionality
@@ -995,20 +1022,6 @@ Appendix A.  Implementation Status
    terms, first-party-only refusing a third party's agent, the
    organization's scoped view, administrator decisions not counting as
    the member's, break-glass, and leaving.
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 18]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
 Acknowledgments
 
@@ -1048,17 +1061,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 16 March 2027                [Page 19]
+Gamb & Maler              Expires 19 March 2027                [Page 19]

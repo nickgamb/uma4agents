@@ -9,17 +9,15 @@
 <meta content="Eve Maler" name="author">
 <meta content="
        This document profiles and extends the User-Managed Access (UMA) 2.0 Grant so
-that an autonomous software agent, operated by a party who is not the resource
-owner, can negotiate access to that owner's resources while the owner is not
-present. 
-       It narrows UMA 2.0 in one place and extends it in several. The requesting side
-is an agent identified by a key it proves possession of rather than by a client
-credential; the requesting party token is a proof-of-possession token carrying
-its permissions as a claim; a grant may be bound to a single operation and spent
-exactly once; the owner holds a standing, revocable relationship with each agent
-individually; and the challenge that begins a negotiation is specified as a set
-of parameters rather than as an HTTP header, so that an enforcement point with no
-status line can emit it. 
+that a client, operated by a party other than the resource owner, can obtain
+access to that owner's resources while the owner is not present. The case it is
+written for is a client that is an autonomous software agent. 
+       Under this profile the client authenticates by proving possession of a key and
+needs no prior registration with the authorization server; the requesting party
+token is a proof-of-possession token that carries its permissions as a claim; a
+grant may be bound to a single operation and spent once; the owner holds a
+standing, revocable relationship with each client; and the challenge that begins
+a negotiation is specified as a set of parameters rather than as an HTTP header. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
 <meta content="UMA" name="keyword">
@@ -1243,7 +1241,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 16 March 2027</td>
+<td class="center">Expires 19 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1256,12 +1254,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-core-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-12" class="published">12 September 2026</time>
+<time datetime="2026-09-15" class="published">15 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-19">19 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1279,17 +1277,15 @@ li > p:last-of-type:only-child {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">This document profiles and extends the User-Managed Access (UMA) 2.0 Grant so
-that an autonomous software agent, operated by a party who is not the resource
-owner, can negotiate access to that owner's resources while the owner is not
-present.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">It narrows UMA 2.0 in one place and extends it in several. The requesting side
-is an agent identified by a key it proves possession of rather than by a client
-credential; the requesting party token is a proof-of-possession token carrying
-its permissions as a claim; a grant may be bound to a single operation and spent
-exactly once; the owner holds a standing, revocable relationship with each agent
-individually; and the challenge that begins a negotiation is specified as a set
-of parameters rather than as an HTTP header, so that an enforcement point with no
-status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+that a client, operated by a party other than the resource owner, can obtain
+access to that owner's resources while the owner is not present. The case it is
+written for is a client that is an autonomous software agent.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">Under this profile the client authenticates by proving possession of a key and
+needs no prior registration with the authorization server; the requesting party
+token is a proof-of-possession token that carries its permissions as a claim; a
+grant may be bound to a single operation and spent once; the owner holds a
+standing, revocable relationship with each client; and the challenge that begins
+a negotiation is specified as a set of parameters rather than as an HTTP header.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1310,7 +1306,7 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1394,7 +1390,7 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-requesting-agent" class="internal xref">The Requesting Agent</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-client" class="internal xref">The Client</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-identity-levels" class="internal xref">Identity Levels</a></p>
@@ -1503,20 +1499,6 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
             <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
-                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-profile-identifiers" class="internal xref">Profile Identifiers</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
-                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-json-web-token-claims-regis" class="internal xref">JSON Web Token Claims Registration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
-                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-authorization-details-type-" class="internal xref">Authorization Details Type Registration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4">
-                <p id="section-toc.1-1.15.2.4.1"><a href="#section-15.4" class="auto internal xref">15.4</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata Registration</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
             <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
@@ -1530,18 +1512,35 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-identifiers-used-by-this-do" class="internal xref">Identifiers Used by This Document</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
-                <p id="section-toc.1-1.17.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-uma-for-agents-reference-im" class="internal xref">UMA for Agents Reference Implementation</a></p>
+                <p id="section-toc.1-1.17.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-profile-identifiers" class="internal xref">Profile Identifiers</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-json-web-token-claims" class="internal xref">JSON Web Token Claims</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3">
+                <p id="section-toc.1-1.17.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-authorization-details-type" class="internal xref">Authorization Details Type</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.4">
+                <p id="section-toc.1-1.17.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-other-values" class="internal xref">Other Values</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.1">
+                <p id="section-toc.1-1.18.2.1.1"><a href="#appendix-B.1" class="auto internal xref">B.1</a>.  <a href="#name-uma-for-agents-reference-im" class="internal xref">UMA for Agents Reference Implementation</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
-            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1552,34 +1551,41 @@ status line can emit it.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">UMA 2.0 <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> describes a topology that almost nothing else has: the
-party who authorizes access is not the party operating the client, and the
-authorization server holds the owner's policy rather than the resource server's.
-That arrangement was designed for a person sharing a resource with another
-person. It turns out to be the arrangement an agent economy needs, because the
-question an agent economy has to answer is not "is this my agent doing my task"
-but "may your agent touch my resource".<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">What UMA 2.0 assumes, and what this profile changes, is everything downstream of
-that topology. The requesting side is assumed to be a registered OAuth client
-operated by a human who can be redirected to a browser. An agent is neither. It
-holds a key rather than a client secret, it may have no prior relationship with
-the authorization server at all, and the owner it needs an answer from may be
-asleep.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This profile is written against a reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> in which
-every requirement below is exercised by an automated check.
-<a href="#implementation-status" class="auto internal xref">Appendix A</a> says what that implementation covers and where the
-register of requirement-to-check mappings lives.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-1">UMA 2.0 <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> separates the party who authorizes access, the resource
+owner, from the party on whose behalf a client requests it, the requesting party,
+and places the owner's policy at an authorization server of the owner's choosing.
+This profile applies that arrangement to clients that are autonomous software
+agents.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">UMA 2.0 leaves client credentials and their assignment open. This profile
+addresses clients that have no prior relationship with the authorization server,
+and owners who are not available when a request arrives. Nothing in it requires
+the client to be autonomous: a conventional client application that holds a key
+can use it.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The requirements in this document are exercised by a reference implementation
+<span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span>; <a href="#implementation-status" class="auto internal xref">Appendix B</a> describes its coverage.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <div id="design-rule">
 <section id="section-1.1">
         <h3 id="name-design-rule">
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-design-rule" class="section-name selfRef">Design Rule</a>
         </h3>
-<p id="section-1.1-1">The rule this profile was written under, and the reason its surface is as small
-as it is: <strong>stay inside UMA 2.0's wire surface wherever it already fits, and
-make every departure explicit.</strong> <code>WWW-Authenticate: UMA</code>, the <code>uma-ticket</code> grant
-type, <code>need_info</code>, <code>request_submitted</code> and the introspection <code>permissions</code> array
-are all used as specified. <a href="#profiles-and-extensions" class="auto internal xref">Section 12</a> is the complete list of
-departures; anything not named there is intended to be stock UMA 2.0.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-1">This profile uses UMA 2.0's wire surface wherever it fits and makes each
+departure explicit. The following are used as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> specifies them:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.1-2.1">
+            <p id="section-1.1-2.1.1">the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> grant type;<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.2">
+            <p id="section-1.1-2.2.1">the <code>need_info</code> and <code>request_submitted</code> responses;<a href="#section-1.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.3">
+            <p id="section-1.1-2.3.1">the <code>permissions</code> array of the introspection response.<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-1.1-3">Over HTTP the challenge keeps UMA 2.0's <code>WWW-Authenticate: UMA</code> header
+(<a href="#challenge-http" class="auto internal xref">Section 3.2</a>), but the header is no longer its only encoding
+(<a href="#challenge-parameters" class="auto internal xref">Section 3.1</a>).<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+<p id="section-1.1-4"><a href="#profiles-and-extensions" class="auto internal xref">Section 12</a> lists every departure. Anything not listed there is
+intended to be UMA 2.0 as specified.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-other-authorization-work">
@@ -1587,26 +1593,15 @@ departures; anything not named there is intended to be stock UMA 2.0.<a href="#s
         <h3 id="name-relationship-to-other-autho">
 <a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-other-autho" class="section-name selfRef">Relationship to Other Authorization Work</a>
         </h3>
-<p id="section-1.2-1">This profile is an extension grant on OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, as UMA 2.0 is.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
-<p id="section-1.2-2">GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> is the closer comparison, and in several respects the better
-carrier: its interaction model is more general than OAuth's, key binding is
-native rather than an extension, and its request format expresses what a client
-wants far better than a scope string. GNAP also anticipates a resource owner who
-is not the end user, reached by the authorization server asynchronously while
-the client waits (Section 1.6.4 of <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>), and expects the authorization
-server to follow that owner's decisions, including automated rules. What it
-leaves to implementations is what those rules may rest on and what is agreed:
-it defines no terms the owner publishes and the requesting side signs, no record
-of that agreement held by both parties, and no constraint on which facts may
-relax a requirement. Those are the substance of this profile. A GNAP binding of
-it would be a reasonable document, and probably a cleaner one than the
-OAuth-shaped binding here; it is not a substitute for it.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
-<p id="section-1.2-3">DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> solves the same problem as <a href="#proof-of-possession" class="auto internal xref">Section 6</a> for the
-OAuth installed base. This profile uses <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> instead because the signature
-must cover the request rather than only bind the token, and because the same
-mechanism authenticates four different parties here, in both directions. A DPoP
-binding is a reasonable second binding and would recruit a different set of
-implementers.<a href="#section-1.2-3" class="pilcrow">¶</a></p>
+<p id="section-1.2-1">GNAP <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> addresses a comparable topology, including a resource owner who
+is not the end user and is contacted asynchronously (Section 1.6.4 of
+<span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>). It does not define terms that the owner publishes and the client
+signs, which is the central addition of this set (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>). A binding of
+this profile to GNAP is possible.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> binds an access token to a key. This profile uses HTTP Message
+Signatures <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> instead, because the signature covers the request as well
+as binding the token, and because the same mechanism authenticates several
+parties in this set.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="specification-set">
@@ -1620,7 +1615,7 @@ UMA 2.0 profile for autonomous agents.<a href="#section-1.3-1" class="pilcrow">�
 <p id="section-1.3-2"><span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>, <span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>, <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> and <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span> are <span class="bcp14">OPTIONAL</span>
 extensions of this document. <span>[<a href="#U4AMCP" class="cite xref">U4AMCP</a>]</span> binds this profile to a transport and
 <span>[<a href="#U4AAAuth" class="cite xref">U4AAAuth</a>]</span> to an agent identity and signature layer; other bindings are
-possible and this document is written so that they are.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+possible.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="roles">
@@ -1628,33 +1623,33 @@ possible and this document is written so that they are.<a href="#section-1.3-2" 
         <h3 id="name-roles">
 <a href="#section-1.4" class="section-number selfRef">1.4. </a><a href="#name-roles" class="section-name selfRef">Roles</a>
         </h3>
-<p id="section-1.4-1">The roles of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> apply, with the following additions and narrowings.<a href="#section-1.4-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-1.4-2">
-          <dt id="section-1.4-2.1">Requesting agent:</dt>
-          <dd style="margin-left: 1.5em" id="section-1.4-2.2">
-            <p id="section-1.4-2.2.1">The software making the request. UMA used this term in 2010 <span>[<a href="#UMAClaims2010" class="cite xref">UMAClaims2010</a>]</span>
-and dropped it; the agent era makes the distinction load-bearing again. A
-requesting agent is individuated by a key it proves possession of, and is
-distinct from the requesting party, who is accountable for it and is not
-present. Nothing in this profile lets the requesting agent be the responsible
-party; it lets the agent be the acting one.<a href="#section-1.4-2.2.1" class="pilcrow">¶</a></p>
+<p id="section-1.4-1">The roles of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> apply. This document uses UMA's entity terms: the
+software making a request is the client, and the party on whose behalf it acts is
+the requesting party. Where the client is an autonomous agent, the requesting
+party is the person or organization accountable for it, and is not necessarily
+present.<a href="#section-1.4-1" class="pilcrow">¶</a></p>
+<p id="section-1.4-2">The UMA Work Group's legal work names the parties responsible for these entities:
+the party that seeks access through a client is the Requesting Agent, and the
+party responsible for the client software is the Client Operator. This document
+does not use "requesting agent" to mean software.<a href="#section-1.4-2" class="pilcrow">¶</a></p>
+<p id="section-1.4-3">The following roles are added:<a href="#section-1.4-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.4-4">
+          <dt id="section-1.4-4.1">Client operator:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.4-4.2">
+            <p id="section-1.4-4.2.1">The party that runs a client and publishes a directory of the keys its clients
+hold, corresponding to the Client Operator. Where this document set says
+"operator" alone, it means the client operator. The owner may act against a
+client operator as a whole (see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>); a client operator is never an
+authorization input on its own.<a href="#section-1.4-4.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-1.4-2.3">Operator:</dt>
-          <dd style="margin-left: 1.5em" id="section-1.4-2.4">
-            <p id="section-1.4-2.4.1">The party that runs a requesting agent and publishes a directory of the keys
-its agents hold. The operator is a party the owner may act against as a whole
-— see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> — and is never an authorization input on its own.<a href="#section-1.4-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-1.4-2.5">Enforcement point:</dt>
-          <dd style="margin-left: 1.5em" id="section-1.4-2.6">
-            <p id="section-1.4-2.6.1">The component that discharges the resource-server obligations of
-<span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>: holding the protection API access token, obtaining a
-permission ticket, introspecting, and refusing. <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 1.4
-divides responsibility between <em>parties</em> and names no component, and this
-profile keeps it that way. An enforcement point <span class="bcp14">MAY</span> be a gateway in front of
-the resource, or the resource itself. It is a role, not a product.<a href="#section-1.4-2.6.1" class="pilcrow">¶</a></p>
+<dt id="section-1.4-4.3">Enforcement point:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.4-4.4">
+            <p id="section-1.4-4.4.1">The component that performs the resource server's jobs defined by
+<span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>: holding the protection API access token, obtaining a permission
+ticket, introspecting, and refusing. <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 1.4 describes these
+jobs without naming the component that performs them. An enforcement point <span class="bcp14">MAY</span>
+be a gateway in front of the resource, or the resource itself.<a href="#section-1.4-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1671,7 +1666,9 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-1.5-1" class="pilcrow">¶</a></p>
 <p id="section-1.5-2">Base64url encoding is as defined in <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 2, without padding.<a href="#section-1.5-2" class="pilcrow">¶</a></p>
 <p id="section-1.5-3">The notation <code>s256(x)</code> denotes the string <code>"s256:"</code> followed by the base64url
-encoding, without padding, of the SHA-256 digest of the octets <code>x</code>.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
+encoding, without padding, of the SHA-256 digest of the octets <code>x</code>. Where <code>x</code> is
+a JSON value, the octets are its serialization under the JSON Canonicalization
+Scheme <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, so that independent implementations compute the same digest.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 <p id="section-1.5-4">The notation <code>jkt(k)</code> denotes the string <code>"jkt:"</code> followed by the JWK Thumbprint
 <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the JSON Web Key <code>k</code>. The value after the prefix is the same
 thumbprint DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> carries in its <code>jkt</code> confirmation method; the prefix
@@ -1691,24 +1688,12 @@ by this document.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">The authorization server <span class="bcp14">MUST</span> include in its metadata the value
 <code>https://u4a.ai/spec/core/1.0</code> in the <code>uma_profiles_supported</code> array, and <span class="bcp14">MUST</span>
 include the identifying URI of each extension in this set that it implements.
-<span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 4 asks a profile to be given a uniquely identifying URI and
-asks a server supporting one to advertise it; this profile's URIs are listed in
-<a href="#iana-considerations" class="auto internal xref">Section 15</a>.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">The following metadata member is added:<a href="#section-2-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-2-4">
-        <dt id="section-2-4.1">terms_endpoint:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1"><span class="bcp14">OPTIONAL</span>. The URL of the owner's terms roster, as defined in <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>. An
-authorization server implementing <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> <span class="bcp14">MUST</span> include it.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
-</dd>
-      <dd class="break"></dd>
-</dl>
-<p id="section-2-5">An authorization server <span class="bcp14">MUST NOT</span> advertise a grant type or claim token format it
+This profile's identifying URIs are listed in <a href="#used-identifiers" class="auto internal xref">Appendix A</a>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">An authorization server <span class="bcp14">MUST NOT</span> advertise a grant type or claim token format it
 will not accept, and <span class="bcp14">MUST</span> advertise every grant type and claim token format it
-will. This is not pedantry about completeness: a requesting agent that has never
-met this authorization server decides from this document alone what to attempt,
-and an unadvertised-but-accepted format is indistinguishable to it from an
-unsupported one.<a href="#section-2-5" class="pilcrow">¶</a></p>
+will. This requirement establishes an accurate source of truth for an agent
+making first contact with the authorization server, and enables clean
+interoperability failures in the absence of human intervention.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-challenge">
@@ -1779,7 +1764,7 @@ deployments most likely to adopt this profile. An enforcement point running
 in-process inside the resource returns a domain result, not a status line; a
 JSON-RPC method handler has nowhere to put a <code>WWW-Authenticate</code>. Both encodings
 run in the reference implementation against one authorization server, and one
-requesting agent reads both.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+client reads both.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="challenge-http">
@@ -1826,9 +1811,8 @@ was attempted.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
           <dd class="break"></dd>
 <dt id="section-3.3-2.3">authorization_reference:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.4">
-            <p id="section-3.3-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over the canonical JSON serialization of
-<code>authorization_details</code>, with object keys sorted and no insignificant
-whitespace.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.3-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over <code>authorization_details</code>, serialized as
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.3-2.5">authorization_server:</dt>
@@ -1854,7 +1838,8 @@ that decides. Same value as the <code>as_uri</code> parameter.<a href="#section-
     "actions": ["execute_trade"],
     "datatypes": ["trades:execute"]
   }],
-  "authorization_reference": "s256:6cR6qTmCj6s0S95MxCfdfwfXJ8m",
+  "authorization_reference":
+    "s256:ij_r5Jn2rOT7fL8gSvNaOY1XBnRZnWOwasceTRKB42E",
   "authorization_server": "https://alice-as.example",
   "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2"
 }
@@ -1884,7 +1869,7 @@ parsing the details.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
         <h3 id="name-corroborating-the-authoriza">
 <a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-corroborating-the-authoriza" class="section-name selfRef">Corroborating the Authorization Server</a>
         </h3>
-<p id="section-3.4-1">A requesting agent <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
+<p id="section-3.4-1">A client <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
 verify that its <code>resource</code> member identifies the resource being accessed as
 required by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code>
 does not appear in that document's <code>authorization_servers</code> array.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
@@ -1902,7 +1887,7 @@ document cannot carry.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
       <h2 id="name-the-negotiation">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-negotiation" class="section-name selfRef">The Negotiation</a>
       </h2>
-<p id="section-4-1">The requesting agent presents the ticket at the authorization server's token
+<p id="section-4-1">The client presents the ticket at the authorization server's token
 endpoint using the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> grant type, as
 <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.1. This profile does not change the grant type, the
 ticket's single-use rotation, or the meaning of <code>need_info</code>,
@@ -1923,7 +1908,7 @@ an identity assertion authorization grant
 <code>urn:ietf:params:oauth:token-type:id-jag</code>, in which case the authorization server
 <span class="bcp14">MUST</span> treat it as a claim about identity and reach, and <span class="bcp14">MUST NOT</span> treat it as
 conferring access.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">A requesting agent <span class="bcp14">MUST</span> send the credentials it exchanges for such an assertion
+<p id="section-4.1-3">A client <span class="bcp14">MUST</span> send the credentials it exchanges for such an assertion
 only to the identity provider they belong to, as configured at the agent, and
 <span class="bcp14">MUST NOT</span> send them to a provider or token endpoint that only the authorization
 server's request names. The authorization server says which provider it will
@@ -1942,7 +1927,8 @@ first, because which terms apply follows from which party the agent acts for.<a 
         <h3 id="name-responses">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-responses" class="section-name selfRef">Responses</a>
         </h3>
-<p id="section-4.2-1">The authorization server's responses are those of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.1.
+<p id="section-4.2-1">The authorization server's responses are those of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Sections 3.3.5
+and 3.3.6.
 Two are constrained by this profile.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.2-2">A <code>request_submitted</code> response indicates that the owner has been asked and has
 not yet answered. The authorization server <span class="bcp14">MUST</span> distinguish two kinds of pending
@@ -1950,13 +1936,13 @@ request, and <span class="bcp14">MUST</span> make the kind available to the owne
 <span class="break"></span><dl class="dlParallel" id="section-4.2-3">
           <dt id="section-4.2-3.1">connection:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-3.2">
-            <p id="section-4.2-3.2.1">The requesting agent has no standing relationship with this owner. The question
+            <p id="section-4.2-3.2.1">The client has no standing relationship with this owner. The question
 put to the owner is whether to have one. See <a href="#connections" class="auto internal xref">Section 9</a>.<a href="#section-4.2-3.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.2-3.3">operation:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-3.4">
-            <p id="section-4.2-3.4.1">The requesting agent has a standing relationship, and the owner's policy
+            <p id="section-4.2-3.4.1">The client has a standing relationship, and the owner's policy
 requires her to answer for this particular access.<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1964,7 +1950,7 @@ requires her to answer for this particular access.<a href="#section-4.2-3.4.1" c
 <p id="section-4.2-4">A <code>request_denied</code> response <span class="bcp14">MAY</span> carry an <code>error_description</code>. Where the refusal
 was reached without evaluating the owner's policy — because a quota was exhausted
 or the operator was blocked — the authorization server <span class="bcp14">SHOULD</span> say so, so that a
-well-behaved requesting agent can distinguish a refusal it might overcome from
+well-behaved client can distinguish a refusal it might overcome from
 one it cannot.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1973,12 +1959,11 @@ one it cannot.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
         <h3 id="name-waiting">
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-waiting" class="section-name selfRef">Waiting</a>
         </h3>
-<p id="section-4.3-1"><code>request_submitted</code> is a state to render, not a call to hold open. A requesting
-agent that can express waiting to its own user <span class="bcp14">SHOULD</span> hand the wait up rather
+<p id="section-4.3-1"><code>request_submitted</code> is a state to render, not a call to hold open. A client that can express waiting to its own user <span class="bcp14">SHOULD</span> hand the wait up rather
 than block, and a binding <span class="bcp14">SHOULD</span> define how. The decision belongs to the owner
 either way; what changes is whether the requesting party's client hangs on it.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <p id="section-4.3-2">A binding that surfaces the wait <span class="bcp14">MUST</span> be able to say that the party being waited
-on is not the requesting party's own user, and that the requesting agent's client
+on is not the requesting party's own user, and that the client
 <span class="bcp14">MUST NOT</span> attempt to satisfy the wait from that user. A wait that cannot name its
 subject will be answered by the wrong person.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
 </section>
@@ -1987,40 +1972,42 @@ subject will be answered by the wrong person.<a href="#section-4.3-2" class="pil
 </div>
 <div id="requesting-agent">
 <section id="section-5">
-      <h2 id="name-the-requesting-agent">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-requesting-agent" class="section-name selfRef">The Requesting Agent</a>
+      <h2 id="name-the-client">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-client" class="section-name selfRef">The Client</a>
       </h2>
 <div id="identity-levels">
 <section id="section-5.1">
         <h3 id="name-identity-levels">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-identity-levels" class="section-name selfRef">Identity Levels</a>
         </h3>
-<p id="section-5.1-1">A requesting agent presents itself at exactly one of two levels. The level
+<p id="section-5.1-1">A client presents itself at exactly one of two levels. The level
 determines the shape of the standing connection handle and nothing else.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5.1-2">
           <dt id="section-5.1-2.1">Pseudonymous:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.2">
-            <p id="section-5.1-2.2.1">The agent presents a bare public JWK <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span>. The key is the identity. The
+            <p id="section-5.1-2.2.1">The client presents a bare public JWK <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span>. The key is the identity. The
 connection handle is <code>jkt(k)</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-2.3">Identified:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.4">
-            <p id="section-5.1-2.4.1">The agent presents a credential from an issuer asserting its identity and
+            <p id="section-5.1-2.4.1">The client presents a credential from an issuer asserting its identity and
 binding it to a key — for example an <code>aa-agent+jwt</code> as defined by
 <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span>, whose <code>cnf.jwk</code> is the signing key. The
 authorization server <span class="bcp14">MUST</span> verify that credential against keys published by its
 issuer, <span class="bcp14">MUST</span> require that the issuer identifier use the <code>https</code> scheme, and
 <span class="bcp14">MUST</span> derive the connection handle from the issuer and subject rather than from
-the key. The issuer <span class="bcp14">MUST</span> qualify the handle whole, including any path.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+the key. The issuer <span class="bcp14">MUST</span> qualify the handle whole, including any path. The
+handle <span class="bcp14">MUST</span> be the subject, followed by <code>@</code> and the issuer identifier with its
+scheme and any trailing <code>/</code> removed, unless the subject already ends with that
+suffix, in which case the handle is the subject.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-5.1-3">The handle for an identified agent <span class="bcp14">MUST NOT</span> be derived from its key. Issuers that
 attest agents commonly bind a fresh key per session; a thumbprint-keyed
 relationship forgets such an agent on every run, which presents to the owner as
-an agent she has approved asking to be approved again. This was found by running
-it.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+an agent she has approved asking to be approved again.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <p id="section-5.1-4">Qualifying by the issuer's host alone is the natural shortcut and it merges
 strangers. A multi-tenant identity provider commonly serves every tenant from one
 host and tells them apart by path, so two tenants' agents with the same subject
@@ -2035,7 +2022,7 @@ a deployment <span class="bcp14">MUST</span> supply one.<a href="#section-5.1-5"
         <h3 id="name-descriptive-metadata">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-descriptive-metadata" class="section-name selfRef">Descriptive Metadata</a>
         </h3>
-<p id="section-5.2-1">A requesting agent <span class="bcp14">MAY</span> additionally present descriptive metadata, so that an
+<p id="section-5.2-1">A client <span class="bcp14">MAY</span> additionally present descriptive metadata, so that an
 owner who has never met it can be told something true about it:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-2.1">
@@ -2055,10 +2042,10 @@ one confirmed by the grant, the connection handle is unchanged by the presence o
 absence of either, and an authorization server <span class="bcp14">MUST NOT</span> admit a request it would
 otherwise refuse on the strength of descriptive metadata alone. Failure to
 resolve descriptive metadata <span class="bcp14">MUST</span> leave the request where it was rather than
-refusing it; an operator's outage is not evidence about an agent.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+refusing it; an operator's outage is not evidence about a client.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4">A metadata document proves only that it claims its own URL. Anyone can publish
 one, so resolving it establishes a name to display and nothing more. What raises
-the metadata above a name is the operator directory, which the agent does not
+the metadata above a name is the operator directory, which the client does not
 control — see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2070,7 +2057,7 @@ control — see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</sp
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-proof-of-possession" class="section-name selfRef">Proof of Possession</a>
       </h2>
 <p id="section-6-1">The requesting party token issued under this profile is a proof-of-possession
-token. A requesting agent <span class="bcp14">MUST</span> prove possession of the confirmed key on every
+token. A client <span class="bcp14">MUST</span> prove possession of the confirmed key on every
 request to the protected resource, and an enforcement point <span class="bcp14">MUST</span> verify it.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <div id="signature-profile">
 <section id="section-6.1">
@@ -2081,19 +2068,25 @@ request to the protected resource, and an enforcement point <span class="bcp14">
 <p id="section-6.1-2">A signature <span class="bcp14">MUST</span> cover at least the components <code>"@method"</code>, <code>"@authority"</code>,
 <code>"@path"</code> and <code>"authorization"</code>. A signer <span class="bcp14">MAY</span> cover more, and a verifier <span class="bcp14">MUST</span>
 accept a superset rather than requiring an exact set.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.1-3">Requiring an exact list is the intuitive implementation and it is wrong. It makes
+<p id="section-6.1-3">On a request that carries no <code>Authorization</code> header, such as a resource server
+introducing itself or an owner's own signed request, the <code>"authorization"</code>
+component is covered with the empty string as its value, so the covered set is
+the same on every request. <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> Section 2.5 would otherwise treat covering
+an absent field as an error; this is a departure from it, and the signer and the
+verifier apply it identically.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Requiring an exact list is the intuitive implementation and it is wrong. It makes
 this profile and <span>[<a href="#I-D.meunier-webbotauth-httpsig-protocol" class="cite xref">I-D.meunier-webbotauth-httpsig-protocol</a>]</span> unable to coexist on
 one request, because each adds a component the other did not expect. Covering
-<code>"authorization"</code> is the security property; an exact list was never one.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-<p id="section-6.1-4">A verifier <span class="bcp14">MUST</span> reconstruct the signature base using the <code>@authority</code> value it is
+<code>"authorization"</code> is the security property; an exact list was never one.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">A verifier <span class="bcp14">MUST</span> reconstruct the signature base using the <code>@authority</code> value it is
 configured with, and <span class="bcp14">MUST NOT</span> take it from the <code>Host</code> header or from any
 forwarded header. An authority read from the request is an authority the caller
 chose. This is a security rule and a portability rule with one cause: an
 enforcement point that recovers its authority from the routing layer breaks
 silently when the routing layer changes, with signatures failing to verify for a
-reason nothing in its logs names.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
-<p id="section-6.1-5">A verifier <span class="bcp14">MUST</span> echo the received <code>@signature-params</code> value verbatim when
-reconstructing the base, rather than re-serializing it from parsed components.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+reason nothing in its logs names.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.1-6">A verifier <span class="bcp14">MUST</span> echo the received <code>@signature-params</code> value verbatim when
+reconstructing the base, rather than re-serializing it from parsed components.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="content-digest">
@@ -2104,21 +2097,24 @@ reconstructing the base, rather than re-serializing it from parsed components.<a
 <p id="section-6.2-1">Where a request carries meaning in its body, the signature <span class="bcp14">MUST</span> cover a
 <code>Content-Digest</code> <span>[<a href="#RFC9530" class="cite xref">RFC9530</a>]</span> header, and the verifier <span class="bcp14">MUST</span> recompute the digest
 from the received body as well as verifying the signature over it.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">The four required components say who is asking and what they are asking of. They
+<p id="section-6.2-2">A request carries meaning in its body whenever it has one. That includes every
+tool call, whose operation and arguments are in the body, and every request to
+the owner or protection API that sends a body.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">The four required components say who is asking and what they are asking of. They
 say nothing about the bytes. That is adequate for a request whose meaning is in
 its URL and unsafe for one whose meaning is in its body — and the endpoints where
 an owner says yes or no are exactly the latter. Without this, an intermediary can
-leave the signature untouched and change the word.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
-<p id="section-6.2-3">These are two obligations, not one. Recomputing the digest from the received body
+leave the signature untouched and change the word.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">These are two obligations, not one. Recomputing the digest from the received body
 without reading the header is safe and is not conformant, and would reject any
 third-party signer whose serialization differs. A verifier <span class="bcp14">MUST</span> be able to
 <em>require</em> the digest rather than merely accept it when present, since a signer
-that omits it must not thereby escape the check.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">An enforcement point <span class="bcp14">MUST</span> check a covered <code>Content-Digest</code> against the body it
+that omits it must not thereby escape the check.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">An enforcement point <span class="bcp14">MUST</span> check a covered <code>Content-Digest</code> against the body it
 received, and <span class="bcp14">MUST</span> refuse a request whose signature covers one when it has no
 body to check it against. Covering the digest is the signer's statement that the
 bytes matter; an enforcement point that verifies the signature and never reads
-the body accepts that statement without testing it.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+the body accepts that statement without testing it.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2144,36 +2140,48 @@ the body accepts that statement without testing it.<a href="#section-6.2-4" clas
 }
 </pre><a href="#section-7.1-2" class="pilcrow">¶</a>
 </div>
-<p id="section-7.1-3">The requesting party token <span class="bcp14">MUST</span> be a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> signed by the authorization
-server, and <span class="bcp14">MUST</span> carry:<a href="#section-7.1-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7.1-4">
-          <dt id="section-7.1-4.1">cnf:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-4.2">
-            <p id="section-7.1-4.2.1"><span class="bcp14">REQUIRED</span>. A confirmation claim whose <code>jwk</code> member is the public key the
-requesting agent must prove possession of. This is the key that signed the
-claim token, and the key the enforcement point verifies requests against.<a href="#section-7.1-4.2.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-3">A client presents the token in the <code>Authorization</code> header as <code>PoP</code> followed by
+a space and the token, on a request signed as <a href="#signature-profile" class="auto internal xref">Section 6.1</a> specifies.
+The <code>PoP</code> scheme is this profile's; it is not registered in the HTTP
+Authentication Scheme Registry, and a binding that carries the token elsewhere
+says where.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">The requesting party token <span class="bcp14">MUST</span> be a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> signed by the authorization
+server, and <span class="bcp14">MUST</span> carry:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.1-5">
+          <dt id="section-7.1-5.1">cnf:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.2">
+            <p id="section-7.1-5.2.1"><span class="bcp14">REQUIRED</span>. A confirmation claim whose <code>jwk</code> member is the public key the
+client must prove possession of. This is the key that signed the
+claim token, and the key the enforcement point verifies requests against.<a href="#section-7.1-5.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.1-4.3">permissions:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-4.4">
-            <p id="section-7.1-4.4.1"><span class="bcp14">REQUIRED</span>. The array defined by <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 5.1.1 — each element
+<dt id="section-7.1-5.3">permissions:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.4">
+            <p id="section-7.1-5.4.1"><span class="bcp14">REQUIRED</span>. The array defined by <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 5.1.1 — each element
 carrying <code>resource_id</code>, <code>resource_scopes</code> and <span class="bcp14">OPTIONAL</span> <code>exp</code>, <code>iat</code> and <code>nbf</code> —
-carried here as a claim rather than being visible only through introspection.<a href="#section-7.1-4.4.1" class="pilcrow">¶</a></p>
+carried here as a claim rather than being visible only through introspection.<a href="#section-7.1-5.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.1-4.5">owner:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-4.6">
-            <p id="section-7.1-4.6.1"><span class="bcp14">REQUIRED</span>. The resource owner on whose behalf this token was issued. See
-<a href="#owner-scoped" class="auto internal xref">Section 11</a>.<a href="#section-7.1-4.6.1" class="pilcrow">¶</a></p>
+<dt id="section-7.1-5.5">owner:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.6">
+            <p id="section-7.1-5.6.1"><span class="bcp14">REQUIRED</span>. The resource owner on whose behalf this token was issued. See
+<a href="#owner-scoped" class="auto internal xref">Section 11</a>.<a href="#section-7.1-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-5.7">contract:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.8">
+            <p id="section-7.1-5.8.1"><span class="bcp14">REQUIRED</span> where the grant was issued on an agreement under <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.
+<code>s256</code> over the agreement's JWS compact serialization, the same value the
+receipt of <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> carries as <code>agreement</code>.<a href="#section-7.1-5.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-7.1-5">A bearer requesting party token is a credential that works for whoever picks it
+<p id="section-7.1-6">A bearer requesting party token is a credential that works for whoever picks it
 up, which is an unreasonable thing to hand software that makes thousands of calls
 across networks it does not control. Carrying <code>permissions</code> inline lets an
 enforcement point see what was granted without a round trip; introspection
 remains the authority on whether the grant is still live, which is a different
-question and the one that changes.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+question and the one that changes.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="operation-binding">
@@ -2193,8 +2201,9 @@ Such a token <span class="bcp14">MUST</span> carry:<a href="#section-7.2-1" clas
 <dt id="section-7.2-2.3">operation:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.4">
             <p id="section-7.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object with a <code>tool</code> member naming the operation and a
-<code>params_s256</code> member carrying <code>s256</code> over the canonical JSON serialization of
-the exact parameters approved, with object keys sorted.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+<code>params_s256</code> member carrying <code>s256</code> over the parameters approved, serialized
+as <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>: the <code>params</code> member of the agreement's <code>operation</code>
+              <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2204,7 +2213,7 @@ the exact parameters approved, with object keys sorted.<a href="#section-7.2-2.4
   "single_use": true,
   "operation": {
     "tool": "execute_trade",
-    "params_s256": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+    "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
   }
 }
 </pre><a href="#section-7.2-3" class="pilcrow">¶</a>
@@ -2302,7 +2311,7 @@ owner-approved action is performed twice. The failure is silent, it appears only
 under replication, and it cannot be tested for in a single-process deployment —
 which is where the specification has to carry it, because the implementation will
 not.<a href="#section-8.3-2" class="pilcrow">¶</a></p>
-<p id="section-8.3-3"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.1 says a permission ticket is single-use and does not say
+<p id="section-8.3-3"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 5.5 says a permission ticket is single-use and does not say
 where in enforcement it is spent, nor what "single-use" means when the
 authorization server has more than one replica. Both are stated here.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 </section>
@@ -2317,7 +2326,7 @@ whose <code>active</code> member is <code>false</code>, an <code>error</code> me
 it <span class="bcp14">MUST</span> distinguish a reason that further negotiation cannot change from one that
 it can.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <p id="section-8.4-2">An enforcement point receiving a reason of the first kind <span class="bcp14">MUST</span> refuse without
-issuing a fresh challenge. A bare <code>{"active": false}</code> sends a requesting agent
+issuing a fresh challenge. A bare <code>{"active": false}</code> sends a client
 around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
@@ -2336,13 +2345,13 @@ business.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
       <h2 id="name-standing-connections">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-standing-connections" class="section-name selfRef">Standing Connections</a>
       </h2>
-<p id="section-9-1">A connection is the standing relationship an owner has with one requesting agent,
+<p id="section-9-1">A connection is the standing relationship an owner has with one client,
 keyed by the handle of <a href="#identity-levels" class="auto internal xref">Section 5.1</a>.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">An authorization server implementing this profile <span class="bcp14">MUST</span>:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-3.1">
           <p id="section-9-3.1.1">refuse to grant, and instead put the request to the owner as a <code>connection</code>
-pending request, where no active connection exists for the requesting agent's
+pending request, where no active connection exists for the client's
 handle, whatever the owner's policy would otherwise decide;<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.2">
@@ -2402,7 +2411,7 @@ revocable, and <span class="bcp14">MUST NOT</span> be a fallback for another. An
 <p id="section-10-5">The second form is what lets the owner's authority be reached by something she
 runs — a personal agent on her own device — without a browser session and
 without an identity provider in the path. It is the same message-signature
-profile the requesting agent uses, pointed the other way. Every handler <span class="bcp14">MUST</span> act
+profile the client uses, pointed the other way. Every handler <span class="bcp14">MUST</span> act
 on the owner the credential proved rather than on one the request named. What
 that software can ask her authority to do is specified in <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>.<a href="#section-10-5" class="pilcrow">¶</a></p>
 </section>
@@ -2454,9 +2463,10 @@ required to reject. Aliases are resources too.<a href="#section-11-5" class="pil
       <h2 id="name-profiles-and-extensions">
 <a href="#section-12" class="section-number selfRef">12. </a><a href="#name-profiles-and-extensions" class="section-name selfRef">Profiles and Extensions</a>
       </h2>
-<p id="section-12-1">This document is both a profile and an extension of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> in the sense of
-its Section 4: it restricts UMA's available options in two places and defines new
-use of its extensibility points in several.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-1">Each departure below is labelled, in the sense of <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 4, as a
+profile (it restricts an option UMA 2.0 leaves open), an extension (it uses one
+of UMA 2.0's extensibility points), or a divergence (it replaces something UMA 2.0
+specifies).<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">The complete list of departures from <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> and <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> follows.
 Anything not named here, in this document or in another document of this set, is
 intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
@@ -2469,6 +2479,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">#</th>
             <th class="text-left" rowspan="1" colspan="1">Departure</th>
+            <th class="text-left" rowspan="1" colspan="1">Kind</th>
             <th class="text-left" rowspan="1" colspan="1">Baseline</th>
             <th class="text-left" rowspan="1" colspan="1">Where specified</th>
           </tr>
@@ -2477,6 +2488,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">1</td>
             <td class="text-left" rowspan="1" colspan="1">The authorization server proffers claim <em>content</em>, dereferenceable and counter-signed</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">The server names acceptable claim formats</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>
@@ -2485,6 +2497,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">2</td>
             <td class="text-left" rowspan="1" colspan="1">Proof-of-possession requesting party token carrying <code>permissions</code> as a claim</td>
+            <td class="text-left" rowspan="1" colspan="1">profile, extension</td>
             <td class="text-left" rowspan="1" colspan="1">Bearer token; permissions visible only through introspection</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#rpt" class="auto internal xref">Section 7.1</a>
@@ -2494,6 +2507,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">3</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>operation</code> and <code>single_use</code> claims</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Per-permission scopes and expiry only</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
@@ -2502,6 +2516,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">4</td>
             <td class="text-left" rowspan="1" colspan="1">Owner intervention as two kinds of pending request</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Resource-owner intervention out of scope</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#connections" class="auto internal xref">Section 9</a>
@@ -2510,6 +2525,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">5</td>
             <td class="text-left" rowspan="1" colspan="1">A standing connection keyed by an identity handle, owner-visible and owner-revocable</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Nothing directly; the persisted claims token is the ancestor</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#connections" class="auto internal xref">Section 9</a>
@@ -2518,6 +2534,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">6</td>
             <td class="text-left" rowspan="1" colspan="1">Discovery in more than one binding encoding from one registry, and challenge corroboration</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Metadata documents predate this; the challenge carries <code>as_uri</code> on faith</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#corroboration" class="auto internal xref">Section 3.4</a>, <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>
@@ -2526,6 +2543,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">7</td>
             <td class="text-left" rowspan="1" colspan="1">Public metadata stays structural; owner-bound instances served only to the owner's authority</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">The resource server pushes owner-bound registrations under the protection token</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>
@@ -2534,6 +2552,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">8</td>
             <td class="text-left" rowspan="1" colspan="1">The challenge is a set of parameters; each binding says how they travel</td>
+            <td class="text-left" rowspan="1" colspan="1">divergence</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>WWW-Authenticate</code> is mandated</td>
             <td class="text-left" rowspan="1" colspan="1">
@@ -2543,6 +2562,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">9</td>
             <td class="text-left" rowspan="1" colspan="1">Enforcement obligations stated as a conformance profile, not a component</td>
+            <td class="text-left" rowspan="1" colspan="1">profile</td>
             <td class="text-left" rowspan="1" colspan="1">Obligations named, host unnamed</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#obligations" class="auto internal xref">Section 8.1</a>
@@ -2551,6 +2571,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">10</td>
             <td class="text-left" rowspan="1" colspan="1">Consumption ordering normative; introspection carries a reason</td>
+            <td class="text-left" rowspan="1" colspan="1">profile, extension</td>
             <td class="text-left" rowspan="1" colspan="1">Unspecified where a single-use token is spent</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#ordering" class="auto internal xref">Section 8.2</a>, <a href="#introspection" class="auto internal xref">Section 8.4</a>
@@ -2559,6 +2580,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">11</td>
             <td class="text-left" rowspan="1" colspan="1">Descriptive agent metadata, display only</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">The agent is its key, or its issuer's token</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#descriptive-metadata" class="auto internal xref">Section 5.2</a>
@@ -2567,6 +2589,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">12</td>
             <td class="text-left" rowspan="1" colspan="1">Structured remediation in the challenge, plus the two members that let a third party decide</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">The challenge carries <code>as_uri</code> and <code>ticket</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">
@@ -2576,6 +2599,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">13</td>
             <td class="text-left" rowspan="1" colspan="1">A resource server introduces itself to an owner's authority by signing as its own origin</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">How a resource server comes to hold a protection token is unspecified</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>
@@ -2584,6 +2608,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">14</td>
             <td class="text-left" rowspan="1" colspan="1">Every owner-scoped artifact carries its owner; the authority is the owner's choice</td>
+            <td class="text-left" rowspan="1" colspan="1">profile</td>
             <td class="text-left" rowspan="1" colspan="1">One authorization server per protected resource, owner implicit in the deployment</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#owner-scoped" class="auto internal xref">Section 11</a>
@@ -2592,6 +2617,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">15</td>
             <td class="text-left" rowspan="1" colspan="1">A depth limit on the owner's pending queue, in two lanes</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">No opinion on how many pending requests an owner may be made to hold</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>
@@ -2600,7 +2626,8 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">16</td>
             <td class="text-left" rowspan="1" colspan="1">Owner-side refusal at operator granularity</td>
-            <td class="text-left" rowspan="1" colspan="1">No notion of the party operating a requesting agent</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
+            <td class="text-left" rowspan="1" colspan="1">No notion of the party operating a client</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>
 </td>
@@ -2608,6 +2635,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">17</td>
             <td class="text-left" rowspan="1" colspan="1">Assurance may only tighten; only the owner's own decisions may relax</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">No vocabulary for either</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>
@@ -2616,6 +2644,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">18</td>
             <td class="text-left" rowspan="1" colspan="1">An agent holding a connection may introduce a sibling, which then negotiates its own grant</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">No object between "a stranger" and "the same client"</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>
@@ -2624,6 +2653,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">19</td>
             <td class="text-left" rowspan="1" colspan="1">A layer above the resource owner that may only narrow</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">The resource rights administrator is named and given no wire surface</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>
@@ -2632,6 +2662,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">20</td>
             <td class="text-left" rowspan="1" colspan="1">Several owners of equal standing, with signed verdicts carried in the grant</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Exactly one authorization server per protected resource</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>
@@ -2640,6 +2671,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">21</td>
             <td class="text-left" rowspan="1" colspan="1">The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Silent on how the owner authenticates</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#owner-authentication" class="auto internal xref">Section 10</a>
@@ -2648,6 +2680,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">22</td>
             <td class="text-left" rowspan="1" colspan="1">The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Left to the deployment</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>
@@ -2793,7 +2826,7 @@ authority that owner named.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-the-record-names-a-counterp" class="section-name selfRef">The Record Names a Counterparty</a>
         </h3>
 <p id="section-14.2-1">An authorization server implementing this profile keeps a record of what was
-promised, decided and done, and that record names the requesting agent. It is
+promised, decided and done, and that record names the client. It is
 the owner's record of her own decisions and it is also a per-agent history, which
 is a more sensitive object than either half. Retention is deployment policy; this
 profile requires only that a decision the owner did not personally take <span class="bcp14">MUST NOT</span>
@@ -2805,7 +2838,7 @@ be recorded as one she did.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
         <h3 id="name-a-stated-purpose-is-not-eva">
 <a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-a-stated-purpose-is-not-eva" class="section-name selfRef">A Stated Purpose Is Not Evaluated</a>
         </h3>
-<p id="section-14.3-1">Where a requesting agent states why it wants access, the authorization server
+<p id="section-14.3-1">Where a client states why it wants access, the authorization server
 records it and shows it to the owner. It <span class="bcp14">MUST NOT</span> parse it, compare it to the
 purpose in the owner's terms, or let it affect the decision other than by its
 absence. An authority that reads a stated purpose and rules on whether it is
@@ -2821,15 +2854,189 @@ decision, which makes the same request answerable two ways. See <span>[<a href="
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<div id="profile-identifiers">
-<section id="section-15.1">
-        <h3 id="name-profile-identifiers">
-<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-profile-identifiers" class="section-name selfRef">Profile Identifiers</a>
+<p id="section-15-1">This document has no IANA actions. The identifiers it uses are listed in
+<a href="#used-identifiers" class="auto internal xref">Appendix A</a>.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
-<p id="section-15.1-1"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 4 asks that a profile or extension be given a uniquely
-identifying URI and that an authorization server supporting one advertise it in
-<code>uma_profiles_supported</code>. There is no IANA registry for these; they are recorded
-here.<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<dl class="references">
+<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span> and <span class="refAuthor">E. Smith</span>, <span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-client-id-metadata-document-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-identity-assertion-authz-grant">[I-D.ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-rar-metadata-remediation">[I-D.ietf-oauth-rar-metadata-remediation]</dt>
+        <dd>
+<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.meunier-webbotauth-registry">[I-D.meunier-webbotauth-registry]</dt>
+        <dd>
+<span class="refAuthor">Guerreiro, M.</span>, <span class="refAuthor">Kirazci, U.</span>, and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"Registry and Signature Agent card for Web bot auth"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-registry-03</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6750">[RFC6750]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7517">[RFC7517]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7638">[RFC7638]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Key (JWK) Thumbprint"</span>, <span class="seriesInfo">RFC 7638</span>, <span class="seriesInfo">DOI 10.17487/RFC7638</span>, <time datetime="2015-09" class="refDate">September 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7638">https://www.rfc-editor.org/rfc/rfc7638</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+        <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9421">[RFC9421]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Richer, J., Ed.</span>, and <span class="refAuthor">M. Sporny</span>, <span class="refTitle">"HTTP Message Signatures"</span>, <span class="seriesInfo">RFC 9421</span>, <span class="seriesInfo">DOI 10.17487/RFC9421</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9421">https://www.rfc-editor.org/rfc/rfc9421</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9530">[RFC9530]</dt>
+        <dd>
+<span class="refAuthor">Polli, R.</span> and <span class="refAuthor">L. Pardue</span>, <span class="refTitle">"Digest Fields"</span>, <span class="seriesInfo">RFC 9530</span>, <span class="seriesInfo">DOI 10.17487/RFC9530</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9530">https://www.rfc-editor.org/rfc/rfc9530</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AFedAuthz">[U4AFedAuthz]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Federated Authorization for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-fedauthz-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4ATerms">[U4ATerms]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner-Proffered Terms for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-terms-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMAFedAuthz">[UMAFedAuthz]</dt>
+        <dd>
+<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"Federated Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="seriesInfo">Kantara Recommendation</span>, <time datetime="2018-01-07" class="refDate">7 January 2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMAGrant">[UMAGrant]</dt>
+      <dd>
+<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"</span>, <span class="seriesInfo">Kantara Recommendation</span>, <time datetime="2018-01-07" class="refDate">7 January 2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.hardt-aauth-protocol">[I-D.hardt-aauth-protocol]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-protocol-02</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.meunier-webbotauth-httpsig-protocol">[I-D.meunier-webbotauth-httpsig-protocol]</dt>
+        <dd>
+<span class="refAuthor">Meunier, T.</span> and <span class="refAuthor">S. Major</span>, <span class="refTitle">"HTTP Message Signatures for automated traffic"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-httpsig-protocol-02</span>, <time datetime="2026-08-18" class="refDate">18 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7942">[RFC7942]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+        <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9635">[RFC9635]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span> and <span class="refAuthor">F. Imbault</span>, <span class="refTitle">"Grant Negotiation and Authorization Protocol (GNAP)"</span>, <span class="seriesInfo">RFC 9635</span>, <span class="seriesInfo">DOI 10.17487/RFC9635</span>, <time datetime="2024-10" class="refDate">October 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9635">https://www.rfc-editor.org/rfc/rfc9635</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AAAuth">[U4AAAuth]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-aauth-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4ALAB">[U4ALAB]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"UMA for Agents: a reference implementation"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://github.com/nickgamb/uma4agents">https://github.com/nickgamb/uma4agents</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4ALineage">[U4ALineage]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Agent Lineage for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-lineage-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AMCP">[U4AMCP]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Model Context Protocol Binding for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-mcp-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AMultiParty">[U4AMultiParty]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Multi-Party Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-multiparty-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AOwner">[U4AOwner]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"The Resource Owner's API for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-owner-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4APolicy">[U4APolicy]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-policy-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMAClaims2010">[UMAClaims2010]</dt>
+      <dd>
+<span class="refAuthor">Maler, E.</span> and <span class="refAuthor">P. Bryan</span>, <span class="refTitle">"Simple Access Authorization Claims"</span>, <time datetime="2010-04" class="refDate">April 2010</time>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="used-identifiers">
+<section id="appendix-A">
+      <h2 id="name-identifiers-used-by-this-do">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-identifiers-used-by-this-do" class="section-name selfRef">Identifiers Used by This Document</a>
+      </h2>
+<p id="appendix-A-1">This appendix lists the identifiers this document defines. It is informative and
+requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<div id="profile-identifiers">
+<section id="appendix-A.1">
+        <h3 id="name-profile-identifiers">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-profile-identifiers" class="section-name selfRef">Profile Identifiers</a>
+        </h3>
+<p id="appendix-A.1-1"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 4 asks that a profile or extension be given a uniquely
+identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 <span id="name-profile-identifying-uris"></span><table class="center" id="table-2">
           <caption>
 <a href="#table-2" class="selfRef">Table 2</a>:
@@ -2916,390 +3123,228 @@ here.<a href="#section-15.1-1" class="pilcrow">¶</a></p>
         </table>
 </section>
 </div>
-<div id="json-web-token-claims-registration">
-<section id="section-15.2">
-        <h3 id="name-json-web-token-claims-regis">
-<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-json-web-token-claims-regis" class="section-name selfRef">JSON Web Token Claims Registration</a>
+<div id="json-web-token-claims">
+<section id="appendix-A.2">
+        <h3 id="name-json-web-token-claims">
+<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-json-web-token-claims" class="section-name selfRef">JSON Web Token Claims</a>
         </h3>
-<p id="section-15.2-1">IANA is asked to register the following in the "JSON Web Token Claims" registry
-established by <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-15.2-2">
-          <dt id="section-15.2-2.1">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.2">
-            <p id="section-15.2-2.2.1"><code>permissions</code><a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.3">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.4">
-            <p id="section-15.2-2.4.1">Permissions granted to the requesting party, as defined by <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>
-Section 5.1.1<a href="#section-15.2-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.6">
-            <p id="section-15.2-2.6.1">IETF<a href="#section-15.2-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.8">
-            <p id="section-15.2-2.8.1"><a href="#rpt" class="auto internal xref">Section 7.1</a> of this document<a href="#section-15.2-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.9">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.10">
-            <p id="section-15.2-2.10.1"><code>owner</code><a href="#section-15.2-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.11">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.12">
-            <p id="section-15.2-2.12.1">The resource owner on whose behalf a token was issued<a href="#section-15.2-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.13">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.14">
-            <p id="section-15.2-2.14.1">IETF<a href="#section-15.2-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.15">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.16">
-            <p id="section-15.2-2.16.1"><a href="#owner-scoped" class="auto internal xref">Section 11</a> of this document<a href="#section-15.2-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.17">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.18">
-            <p id="section-15.2-2.18.1"><code>single_use</code><a href="#section-15.2-2.18.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.19">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.20">
-            <p id="section-15.2-2.20.1">Whether the token may be spent exactly once<a href="#section-15.2-2.20.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.21">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.22">
-            <p id="section-15.2-2.22.1">IETF<a href="#section-15.2-2.22.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.23">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.24">
-            <p id="section-15.2-2.24.1"><a href="#operation-binding" class="auto internal xref">Section 7.2</a> of this document<a href="#section-15.2-2.24.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.25">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.26">
-            <p id="section-15.2-2.26.1"><code>operation</code><a href="#section-15.2-2.26.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.27">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.28">
-            <p id="section-15.2-2.28.1">The single operation and parameter digest a token is bound to<a href="#section-15.2-2.28.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.29">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.30">
-            <p id="section-15.2-2.30.1">IETF<a href="#section-15.2-2.30.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.2-2.31">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.2-2.32">
-            <p id="section-15.2-2.32.1"><a href="#operation-binding" class="auto internal xref">Section 7.2</a> of this document<a href="#section-15.2-2.32.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
+<span id="name-jwt-claims-used-by-this-doc"></span><table class="center" id="table-3">
+          <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-jwt-claims-used-by-this-doc" class="selfRef">JWT claims used by this document.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Claim</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+              <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>permissions</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Permissions granted, as <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 5.1.1</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>owner</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource owner on whose behalf a token was issued</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>contract</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Digest of the agreement a grant was issued on</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>single_use</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Whether a token may be spent once</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>operation</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The single operation, and the digest of its parameters, a token is bound to</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
 </section>
 </div>
-<div id="authorization-details-type-registration">
-<section id="section-15.3">
-        <h3 id="name-authorization-details-type-">
-<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-authorization-details-type-" class="section-name selfRef">Authorization Details Type Registration</a>
+<div id="authorization-details-type">
+<section id="appendix-A.3">
+        <h3 id="name-authorization-details-type">
+<a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-authorization-details-type" class="section-name selfRef">Authorization Details Type</a>
         </h3>
-<p id="section-15.3-1">IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" sub-registry for authorization details types established by
-<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-15.3-2">
-          <dt id="section-15.3-2.1">Type Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.3-2.2">
-            <p id="section-15.3-2.2.1"><code>urn:uma4agents:authorization-details:tool-call</code><a href="#section-15.3-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.3-2.3">Type Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.3-2.4">
-            <p id="section-15.3-2.4.1">An attempted invocation of one named operation on a protected resource<a href="#section-15.3-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.3-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.3-2.6">
-            <p id="section-15.3-2.6.1">IETF<a href="#section-15.3-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.3-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.3-2.8">
-            <p id="section-15.3-2.8.1"><a href="#remediation" class="auto internal xref">Section 3.3</a> of this document<a href="#section-15.3-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
+<span id="name-authorization-details-type-"></span><table class="center" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-authorization-details-type-" class="selfRef">Authorization details type used by this document.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Type</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+              <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>urn:uma4agents:authorization-details:tool-call</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">An attempted invocation of one named operation on a protected resource</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
 </section>
 </div>
-<div id="oauth-authorization-server-metadata-registration">
-<section id="section-15.4">
-        <h3 id="name-oauth-authorization-server-">
-<a href="#section-15.4" class="section-number selfRef">15.4. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata Registration</a>
+<div id="other-values">
+<section id="appendix-A.4">
+        <h3 id="name-other-values">
+<a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-other-values" class="section-name selfRef">Other Values</a>
         </h3>
-<p id="section-15.4-1">IANA is asked to register the following in the "OAuth Authorization Server
-Metadata" registry established by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-15.4-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-15.4-2">
-          <dt id="section-15.4-2.1">Metadata Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.4-2.2">
-            <p id="section-15.4-2.2.1"><code>terms_endpoint</code><a href="#section-15.4-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.4-2.3">Metadata Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.4-2.4">
-            <p id="section-15.4-2.4.1">URL of the resource owner's terms roster<a href="#section-15.4-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.4-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.4-2.6">
-            <p id="section-15.4-2.6.1">IETF<a href="#section-15.4-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.4-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.4-2.8">
-            <p id="section-15.4-2.8.1"><span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span><a href="#section-15.4-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
-</section>
-</div>
-<div id="sec-combined-references">
-<section id="section-16">
-      <h2 id="name-references">
-<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
-      </h2>
-<div id="sec-normative-references">
-<section id="section-16.1">
-        <h3 id="name-normative-references">
-<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
-        </h3>
-<dl class="references">
-<dt id="RFC2119">[RFC2119]</dt>
-        <dd>
-<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC6749">[RFC6749]</dt>
-        <dd>
-<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC6750">[RFC6750]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7515">[RFC7515]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7517">[RFC7517]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7519">[RFC7519]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7638">[RFC7638]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Key (JWK) Thumbprint"</span>, <span class="seriesInfo">RFC 7638</span>, <span class="seriesInfo">DOI 10.17487/RFC7638</span>, <time datetime="2015-09" class="refDate">September 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7638">https://www.rfc-editor.org/rfc/rfc7638</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7662">[RFC7662]</dt>
-        <dd>
-<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8174">[RFC8174]</dt>
-        <dd>
-<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8414">[RFC8414]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9396">[RFC9396]</dt>
-        <dd>
-<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9421">[RFC9421]</dt>
-        <dd>
-<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Richer, J., Ed.</span>, and <span class="refAuthor">M. Sporny</span>, <span class="refTitle">"HTTP Message Signatures"</span>, <span class="seriesInfo">RFC 9421</span>, <span class="seriesInfo">DOI 10.17487/RFC9421</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9421">https://www.rfc-editor.org/rfc/rfc9421</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9530">[RFC9530]</dt>
-        <dd>
-<span class="refAuthor">Polli, R.</span> and <span class="refAuthor">L. Pardue</span>, <span class="refTitle">"Digest Fields"</span>, <span class="seriesInfo">RFC 9530</span>, <span class="seriesInfo">DOI 10.17487/RFC9530</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9530">https://www.rfc-editor.org/rfc/rfc9530</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9728">[RFC9728]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4AFedAuthz">[U4AFedAuthz]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Federated Authorization for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-fedauthz-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4ATerms">[U4ATerms]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner-Proffered Terms for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-terms-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="UMAFedAuthz">[UMAFedAuthz]</dt>
-        <dd>
-<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"Federated Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="seriesInfo">Kantara Recommendation</span>, <time datetime="2018-01-07" class="refDate">7 January 2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="UMAGrant">[UMAGrant]</dt>
-      <dd>
-<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"</span>, <span class="seriesInfo">Kantara Recommendation</span>, <time datetime="2018-01-07" class="refDate">7 January 2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-</dl>
-</section>
-</div>
-<div id="sec-informative-references">
-<section id="section-16.2">
-        <h3 id="name-informative-references">
-<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
-        </h3>
-<dl class="references">
-<dt id="I-D.hardt-aauth-protocol">[I-D.hardt-aauth-protocol]</dt>
-        <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-protocol-02</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
-        <dd>
-<span class="refAuthor">Parecki, A.</span> and <span class="refAuthor">E. Smith</span>, <span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-client-id-metadata-document-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-identity-assertion-authz-grant">[I-D.ietf-oauth-identity-assertion-authz-grant]</dt>
-        <dd>
-<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-rar-metadata-remediation">[I-D.ietf-oauth-rar-metadata-remediation]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.meunier-webbotauth-httpsig-protocol">[I-D.meunier-webbotauth-httpsig-protocol]</dt>
-        <dd>
-<span class="refAuthor">Meunier, T.</span> and <span class="refAuthor">S. Major</span>, <span class="refTitle">"HTTP Message Signatures for automated traffic"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-httpsig-protocol-02</span>, <time datetime="2026-08-18" class="refDate">18 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.meunier-webbotauth-registry">[I-D.meunier-webbotauth-registry]</dt>
-        <dd>
-<span class="refAuthor">Guerreiro, M.</span>, <span class="refAuthor">Kirazci, U.</span>, and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"Registry and Signature Agent card for Web bot auth"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-meunier-webbotauth-registry-03</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03">https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-registry-03</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7942">[RFC7942]</dt>
-        <dd>
-<span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9449">[RFC9449]</dt>
-        <dd>
-<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9635">[RFC9635]</dt>
-        <dd>
-<span class="refAuthor">Richer, J., Ed.</span> and <span class="refAuthor">F. Imbault</span>, <span class="refTitle">"Grant Negotiation and Authorization Protocol (GNAP)"</span>, <span class="seriesInfo">RFC 9635</span>, <span class="seriesInfo">DOI 10.17487/RFC9635</span>, <time datetime="2024-10" class="refDate">October 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9635">https://www.rfc-editor.org/rfc/rfc9635</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4AAAuth">[U4AAAuth]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-aauth-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4ALAB">[U4ALAB]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"UMA for Agents: a reference implementation"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://github.com/nickgamb/uma4agents">https://github.com/nickgamb/uma4agents</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4ALineage">[U4ALineage]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Agent Lineage for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-lineage-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4AMCP">[U4AMCP]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Model Context Protocol Binding for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-mcp-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4AMultiParty">[U4AMultiParty]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Multi-Party Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-multiparty-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4AOwner">[U4AOwner]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"The Resource Owner's API for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-owner-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="U4APolicy">[U4APolicy]</dt>
-        <dd>
-<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-policy-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="UMAClaims2010">[UMAClaims2010]</dt>
-      <dd>
-<span class="refAuthor">Maler, E.</span> and <span class="refAuthor">P. Bryan</span>, <span class="refTitle">"Simple Access Authorization Claims"</span>, <time datetime="2010-04" class="refDate">April 2010</time>. </dd>
-<dd class="break"></dd>
-</dl>
+<span id="name-other-values-used-by-this-d"></span><table class="center" id="table-5">
+          <caption>
+<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#name-other-values-used-by-this-d" class="selfRef">Other values used by this document.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Kind</th>
+              <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>insufficient_authorization</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Error value of the challenge</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#challenge-parameters" class="auto internal xref">Section 3.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>PoP</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Token type</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>authorization_server</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>ticket</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
 </section>
 </div>
 </section>
 </div>
 <div id="implementation-status">
-<section id="appendix-A">
+<section id="appendix-B">
       <h2 id="name-implementation-status">
-<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
       </h2>
-<p id="appendix-A-1">This section records the status of known implementations in the sense of
-<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-1">This section records the status of known implementations in the sense of
+<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <div id="uma-for-agents-reference-implementation">
-<section id="appendix-A.1">
+<section id="appendix-B.1">
         <h3 id="name-uma-for-agents-reference-im">
-<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-uma-for-agents-reference-im" class="section-name selfRef">UMA for Agents Reference Implementation</a>
+<a href="#appendix-B.1" class="section-number selfRef">B.1. </a><a href="#name-uma-for-agents-reference-im" class="section-name selfRef">UMA for Agents Reference Implementation</a>
         </h3>
-<span class="break"></span><dl class="dlParallel" id="appendix-A.1-1">
-          <dt id="appendix-A.1-1.1">Organization:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.2">
-            <p id="appendix-A.1-1.2.1">Independent<a href="#appendix-A.1-1.2.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-B.1-1">
+          <dt id="appendix-B.1-1.1">Organization:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.2">
+            <p id="appendix-B.1-1.2.1">Independent<a href="#appendix-B.1-1.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.3">Description:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.4">
-            <p id="appendix-A.1-1.4.1">A running deployment of this profile and the rest of its set: an authorization
+<dt id="appendix-B.1-1.3">Description:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.4">
+            <p id="appendix-B.1-1.4.1">A running deployment of this profile and the rest of its set: an authorization
 server, an enforcement point in two hosting shapes, a protected resource, an
-operator key directory, and requesting agents at both identity levels. It runs
+operator key directory, and clients at both identity levels. It runs
 under container orchestration and on a single host, against both an in-memory
-and a replicated store. It carries two requesting-agent implementations that
+and a replicated store. It carries two client implementations that
 share no code — one in Python, one in TypeScript — which meet on the wire and
 nowhere else; the second was written from these documents rather than from
-the first, and found one defect in the enforcement point on its first run.<a href="#appendix-A.1-1.4.1" class="pilcrow">¶</a></p>
+the first, and found one defect in the enforcement point on its first run.<a href="#appendix-B.1-1.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.5">Level of maturity:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.6">
-            <p id="appendix-A.1-1.6.1">Research. The implementation exists to establish that the requirements in this
-document can be met and to find the ones that cannot.<a href="#appendix-A.1-1.6.1" class="pilcrow">¶</a></p>
+<dt id="appendix-B.1-1.5">Level of maturity:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.6">
+            <p id="appendix-B.1-1.6.1">Research. The implementation exists to establish that the requirements in this
+document can be met and to find the ones that cannot.<a href="#appendix-B.1-1.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.7">Coverage:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.8">
-            <p id="appendix-A.1-1.8.1">Every normative requirement in this document is exercised by an automated
+<dt id="appendix-B.1-1.7">Coverage:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.8">
+            <p id="appendix-B.1-1.8.1">Every normative requirement in this document is exercised by an automated
 check, except those addressed to deployments or to bindings rather than to this
 profile's own components. The register at
 https://u4a.ai/spec/conformance.yaml names, for each requirement, the check
-that verifies it and the assertion that check prints.<a href="#appendix-A.1-1.8.1" class="pilcrow">¶</a></p>
+that verifies it and the assertion that check prints.<a href="#appendix-B.1-1.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.9">Licensing:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.10">
-            <p id="appendix-A.1-1.10.1">Apache 2.0.<a href="#appendix-A.1-1.10.1" class="pilcrow">¶</a></p>
+<dt id="appendix-B.1-1.9">Licensing:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.10">
+            <p id="appendix-B.1-1.10.1">Apache 2.0.<a href="#appendix-B.1-1.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.11">Contact:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.12">
-            <p id="appendix-A.1-1.12.1"><span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span><a href="#appendix-A.1-1.12.1" class="pilcrow">¶</a></p>
+<dt id="appendix-B.1-1.11">Contact:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.12">
+            <p id="appendix-B.1-1.12.1"><span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span><a href="#appendix-B.1-1.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="appendix-A.1-1.13">Notes:</dt>
-          <dd style="margin-left: 1.5em" id="appendix-A.1-1.14">
-            <p id="appendix-A.1-1.14.1">Several requirements in this document exist because the intuitive
+<dt id="appendix-B.1-1.13">Notes:</dt>
+          <dd style="margin-left: 1.5em" id="appendix-B.1-1.14">
+            <p id="appendix-B.1-1.14.1">Several requirements in this document exist because the intuitive
 implementation was written first and was wrong. <a href="#ordering" class="auto internal xref">Section 8.2</a>, <a href="#indivisibility" class="auto internal xref">Section 8.3</a>,
 <a href="#signature-profile" class="auto internal xref">Section 6.1</a> and <a href="#identity-levels" class="auto internal xref">Section 5.1</a> each record a defect found by
 running the implementation rather than by reading the specification it was
-built from.<a href="#appendix-A.1-1.14.1" class="pilcrow">¶</a></p>
+built from.<a href="#appendix-B.1-1.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3308,24 +3353,24 @@ built from.<a href="#appendix-A.1-1.14.1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This profile rests on <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> and <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>, and on the decade of
+<p id="appendix-C-1">This profile rests on <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> and <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span>, and on the decade of
 Kantara UMA Work Group discussion behind them. The idea that a resource owner
 might proffer terms rather than receive them appears in UMA's own 2010 work on
-access authorization claims <span>[<a href="#UMAClaims2010" class="cite xref">UMAClaims2010</a>]</span>.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
-<p id="appendix-B-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> supplied the agent identity and key-binding
+access authorization claims <span>[<a href="#UMAClaims2010" class="cite xref">UMAClaims2010</a>]</span>.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> supplied the agent identity and key-binding
 mechanics this profile composes with, and the observation that its resource
 token and UMA's permission ticket are the same object minted on opposite sides.
 <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> supplied the operator key directory.
 <span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span> supplied the remediation payload that
-<a href="#remediation" class="auto internal xref">Section 3.3</a> extends by two members.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
+<a href="#remediation" class="auto internal xref">Section 3.3</a> extends by two members.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>

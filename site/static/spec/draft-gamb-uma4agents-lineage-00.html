@@ -1240,7 +1240,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 16 March 2027</td>
+<td class="center">Expires 19 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1253,12 +1253,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-lineage-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-12" class="published">12 September 2026</time>
+<time datetime="2026-09-15" class="published">15 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-19">19 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1303,7 +1303,7 @@ revoking the agent that introduced others revokes them with it.<a href="#section
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1416,11 +1416,6 @@ revoking the agent that introduced others revokes them with it.<a href="#section
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-references" class="internal xref">References</a></p>
@@ -1434,13 +1429,16 @@ revoking the agent that introduced others revokes them with it.<a href="#section
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-identifiers-used-by-this-do" class="internal xref">Identifiers Used by This Document</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1494,7 +1492,7 @@ appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">�
       <h2 id="name-asserting-a-lineage">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-asserting-a-lineage" class="section-name selfRef">Asserting a Lineage</a>
       </h2>
-<p id="section-2-1">A requesting agent asserts that another agent introduced it in exactly one of
+<p id="section-2-1">A client asserts that another agent introduced it in exactly one of
 two ways.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <div id="introduction-document">
 <section id="section-2.1">
@@ -1572,7 +1570,9 @@ an introduction it will parse; the reference implementation refuses one over
 lineage instead, by placing the introducing agent's subject identifier in an
 <code>act</code> claim <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> of the introduced agent's credential. No second document
 is needed; the authorization server reads the claim it already verified.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
-<p id="section-2.2-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> defines this use of <code>act</code> in its agent credential.
+<p id="section-2.2-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> uses <code>act</code> on its auth token to record a delegation
+chain, not in its agent credential. Its agent token permits additional claims,
+and this document uses the same claim there.
 Nothing new is defined here; the claim is read.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1628,7 +1628,7 @@ active. A revoked agent goes back through first contact; an introduction
 </li>
           <li id="section-3.2-2.5">
             <p id="section-3.2-2.5.1">Under <a href="#introduction-document" class="auto internal xref">Section 2.1</a>, one operator has published both keys: the
-introduced agent is at accountability level 2 (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 5.1),
+introduced agent is at accountability level 2 (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 4.2),
 and the <em>same</em> directory at the <em>same</em> origin also holds the introducing
 key. Under <a href="#act-claim" class="auto internal xref">Section 2.2</a>, the issuer's attestation satisfies this check.<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
@@ -1852,66 +1852,8 @@ depth at which she is asked to trust it.<a href="#section-8-1" class="pilcrow">�
       <h2 id="name-iana-considerations">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<div id="media-type-registration">
-<section id="section-9.1">
-        <h3 id="name-media-type-registration">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
-        </h3>
-<p id="section-9.1-1">IANA is asked to register the following in the "Media Types" registry.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
-          <dt id="section-9.1-2.1">Type name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
-            <p id="section-9.1-2.2.1">application<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.3">Subtype name:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
-            <p id="section-9.1-2.4.1">u4a-introduction-v1+jws<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.5">Required parameters:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.6">
-            <p id="section-9.1-2.6.1">N/A<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.7">Optional parameters:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.8">
-            <p id="section-9.1-2.8.1">N/A<a href="#section-9.1-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.9">Encoding considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.10">
-            <p id="section-9.1-2.10.1">binary; a JWS in compact serialization<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.11">Security considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.12">
-            <p id="section-9.1-2.12.1">See <a href="#security-considerations" class="auto internal xref">Section 7</a> of this document<a href="#section-9.1-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.13">Interoperability considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.14">
-            <p id="section-9.1-2.14.1">N/A<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.15">Published specification:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.16">
-            <p id="section-9.1-2.16.1"><a href="#introduction-document" class="auto internal xref">Section 2.1</a> of this document<a href="#section-9.1-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.17">Applications that use this media type:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.18">
-            <p id="section-9.1-2.18.1">Applications implementing UMA 2.0 with this extension<a href="#section-9.1-2.18.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.19">Change controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.20">
-            <p id="section-9.1-2.20.1">IETF<a href="#section-9.1-2.20.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
+<p id="section-9-1">This document has no IANA actions. The identifiers it uses are listed in
+<a href="#used-identifiers" class="auto internal xref">Appendix A</a>.<a href="#section-9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -1991,33 +1933,75 @@ depth at which she is asked to trust it.<a href="#section-8-1" class="pilcrow">�
 </div>
 </section>
 </div>
-<div id="implementation-status">
+<div id="used-identifiers">
 <section id="appendix-A">
-      <h2 id="name-implementation-status">
-<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      <h2 id="name-identifiers-used-by-this-do">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-identifiers-used-by-this-do" class="section-name selfRef">Identifiers Used by This Document</a>
       </h2>
-<p id="appendix-A-1">This section records the status of known implementations in the sense of
-<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements this document in full,
+<p id="appendix-A-1">This appendix lists the identifiers this document defines. It is informative and
+requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span id="name-identifiers-used-by-this-doc"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-identifiers-used-by-this-doc" class="selfRef">Identifiers used by this document.</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+            <th class="text-left" rowspan="1" colspan="1">Kind</th>
+            <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>application/u4a-introduction-v1+jws</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Media type</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#introduction-document" class="auto internal xref">Section 2.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>introduction</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Agreement claim (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#introduction-document" class="auto internal xref">Section 2.1</a>
+</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="implementation-status">
+<section id="appendix-B">
+      <h2 id="name-implementation-status">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      </h2>
+<p id="appendix-B-1">This section records the status of known implementations in the sense of
+<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements this document in full,
 including both assertion forms of <a href="#asserting" class="auto internal xref">Section 2</a>. The admission decision is
 tested by minting introductions with the client library and verifying them with
 the server module, so the two sides are checked against each other; every
 refusal in <a href="#admit" class="auto internal xref">Section 3.2</a> is exercised, as are the three postures of <a href="#postures" class="auto internal xref">Section 4.2</a>,
 the ceiling of <a href="#ceiling" class="auto internal xref">Section 4.3</a>, approval flowing from an introduced agent to the
-agent that introduced it, and the cascade of <a href="#revocation" class="auto internal xref">Section 6</a> against live grants.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+agent that introduced it, and the cascade of <a href="#revocation" class="auto internal xref">Section 6</a> against live grants.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1"><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> supplied the <code>act</code> claim and <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> the use of
-it in an agent credential that <a href="#act-claim" class="auto internal xref">Section 2.2</a> reads.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-1"><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> supplied the <code>act</code> claim and <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> the use of
+it in an agent credential that <a href="#act-claim" class="auto internal xref">Section 2.2</a> reads.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>

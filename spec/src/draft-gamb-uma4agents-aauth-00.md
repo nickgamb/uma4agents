@@ -2,8 +2,8 @@
 title: "AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"
 abbrev: "AAuth Binding for UMA"
 docname: draft-gamb-uma4agents-aauth-00
-date: 2026-09-12
-category: std
+date: 2026-09-15
+category: info
 submissiontype: IETF
 ipr: trust200902
 area: Security
@@ -121,7 +121,7 @@ Its identifying URI is `https://u4a.ai/spec/aauth/1.0`.
 
 # The Identified Agent {#agent}
 
-A requesting agent presenting itself at the identified level of {{U4ACore}}
+A client presenting itself at the identified level of {{U4ACore}}
 Section 5.1 under this binding carries an AAuth agent credential — a JWT
 {{RFC7519}} with `typ` of `aa-agent+jwt` — in the `agent_token` header of the
 agreement JWS of {{U4ATerms}} Section 4.1.
@@ -137,8 +137,8 @@ The authorization server MUST:
 - treat `cnf.jwk` as the key that signed the agreement and that the grant is
   confirmed to.
 
-The connection handle is the credential's `sub`, qualified by the host of its
-`iss` as `sub@host`, and MUST NOT be derived from the key. AAuth binds a fresh
+The connection handle is formed from the credential's `sub` and `iss` as
+{{U4ACore}} Section 5.1 specifies, and MUST NOT be derived from the key. AAuth binds a fresh
 key per session; the subject is what persists.
 
 Where the credential carries an `act` claim {{RFC8693}} naming another agent's
@@ -180,7 +180,7 @@ profile requires. `sub` is the agent credential's `sub`, or the literal
     "resource_scopes": ["positions:read"],
     "exp": 1789602800
   }],
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s"
 }
 ~~~
 {: title="A requesting party token under this binding."}
@@ -259,9 +259,10 @@ at the pseudonymous level and this binding changes nothing about that.
 
 # IANA Considerations
 
-This document makes no request of IANA. The media types `aa-agent+jwt`,
-`aa-auth+jwt` and `aauth-resource+jwt` are defined by
-{{I-D.hardt-aauth-protocol}}.
+This document makes no request of IANA. The media types `aa-agent+jwt` and
+`aa-auth+jwt` are defined by {{I-D.hardt-aauth-protocol}}. The `typ` value
+`aauth-resource+jwt`, used here for signed resource metadata, is this binding's
+and is not an AAuth media type.
 
 --- back
 

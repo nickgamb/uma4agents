@@ -40,7 +40,7 @@ Two are named uses of machinery UMA already has.
 the owner approves a relationship, applied to the requesting-agent side rather
 than the resource-server side. Distinct from client registration: the agent's
 proof-of-possession key already plays that role. What is new in use is the owner
-approving a standing relationship with a requesting agent.
+approving a standing relationship with a client.
 
 **A standing-relationship handle.** The persisted claims token is the closest
 ancestor. Here it is made owner-visible and owner-revocable — a registry with a
@@ -67,7 +67,7 @@ knows which agents she activated.
 ## The twenty-six recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
-model — owner, requesting party, and reviving the 2010 term, *requesting agent*
+model — owner, requesting party, and the client acting for the requesting party
 — the ticket loop, offline grants and owner-dictated claims. Write it against
 properties rather than a wire protocol, so no vendor's roadmap can strand it.
 

@@ -1247,7 +1247,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 16 March 2027</td>
+<td class="center">Expires 19 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1260,12 +1260,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-multiparty-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-12" class="published">12 September 2026</time>
+<time datetime="2026-09-15" class="published">15 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-19">19 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1317,7 +1317,7 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1460,14 +1460,6 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
-                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
-                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-json-web-token-claims-regis" class="internal xref">JSON Web Token Claims Registration</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-references" class="internal xref">References</a></p>
@@ -1481,13 +1473,16 @@ trusted.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-identifiers-used-by-this-do" class="internal xref">Identifiers Used by This Document</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1509,7 +1504,7 @@ about whose agent, acting for whom, under whose ceiling — and there is nowhere
 in UMA 2.0 to put the answer.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">This document adds two arrangements. In both, the four beats of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> are
 untouched: the challenge, the ticket, the proffered terms, the agreement and the
-grant are the same on a shared resource as on a personal one. A requesting agent
+grant are the same on a shared resource as on a personal one. A client
 cannot tell the difference and does not need to. Everything added is either a
 document one party publishes or a question asked of a party that already
 existed.<a href="#section-1-3" class="pilcrow">¶</a></p>
@@ -1747,9 +1742,15 @@ and its standing with the member over her own resources is untouched;<a href="#s
 </li>
           <li class="normal" id="section-2.7-2.3">
             <p id="section-2.7-2.3.1">an introspection response for a grant so affected carries <code>error</code> of
-<code>organization_revoked</code> (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 6).<a href="#section-2.7-2.3.1" class="pilcrow">¶</a></p>
+<code>organization_revoked</code> (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5).<a href="#section-2.7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-2.7-3">The organization conveys each such action to the member's authorization server
+as a short-lived JWT with <code>typ</code> of <code>u4a-org-admin+jwt</code>, signed by the
+organization, naming the member as <code>sub</code>, the organization as <code>org</code> and the
+acting administrator as <code>admin</code>. The member's authorization server verifies it
+against the keys of the organization she enrolled with, and refuses one that
+does not name her.<a href="#section-2.7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enrolment">
@@ -1818,7 +1819,7 @@ Each holder has her own authorization server.<a href="#section-3.1-1.2.1" class=
           <dd style="margin-left: 1.5em" id="section-3.1-1.4">
             <p id="section-3.1-1.4.1">A party that publishes the mandate, folds the holders' terms into one
 document, collects verdicts, and issues a grant carrying them. It speaks the
-authorization-server surface of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> to the requesting agent, which
+authorization-server surface of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> to the client, which
 cannot tell it from an authorization server and does not need to.<a href="#section-3.1-1.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1871,7 +1872,7 @@ leaves it to configuration.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
         <h3 id="name-the-fold">
 <a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-the-fold" class="section-name selfRef">The Fold</a>
         </h3>
-<p id="section-3.3-1">When a requesting agent presents a ticket for a jointly held resource, the tally
+<p id="section-3.3-1">When a client presents a ticket for a jointly held resource, the tally
 <span class="bcp14">MUST</span> obtain each holder's terms over it from her authorization server and <span class="bcp14">MUST</span>
 fold them into one terms document: the shortest expiry, the intersection of
 scopes, the union of prohibitions, and ask-me if any holder asks. It proffers
@@ -1929,8 +1930,8 @@ of <code>u4a-verdict+jwt</code>, carrying:<a href="#section-3.4-1" class="pilcro
           <dd class="break"></dd>
 <dt id="section-3.4-2.15">cnf_jkt:</dt>
           <dd style="margin-left: 1.5em" id="section-3.4-2.16">
-            <p id="section-3.4-2.16.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The JWK thumbprint (RFC 7638) of the key that signed
-the agreement.<a href="#section-3.4-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-3.4-2.16.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. <code>jkt(k)</code>, as <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> defines it, of the key <code>k</code>
+that signed the agreement.<a href="#section-3.4-2.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.4-2.17">scope:</dt>
@@ -1984,12 +1985,12 @@ folding party be untrusted.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
   "account": "joint-brokerage-1",
   "negotiation": "fam_8f3aQ2Xc",
   "resource_id": "joint-brokerage-1/get_positions",
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy",
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s",
   "effect": "allow",
-  "cnf_jkt": "jkt:6cR6qTmCj6s0S95Mk3hS2pQ1vW8yZ0aB",
+  "cnf_jkt": "jkt:ESqNMeKw-z8gcDH-8y96ckX3h7TU6FtF9lqluDQ1Now",
   "scope": ["positions:read"],
   "expires_in": 3600,
-  "mandate_s256": "s256:Tq3nV0xK8rJ2mW5pL9cH4dF7gS1aZ6bY",
+  "mandate_s256": "s256:2Vm2OGY_mn3mY6G-N-Obxdgg49uzoxsK8brUPgw5_Gk",
   "iat": 1789430000,
   "exp": 1789430300
 }
@@ -2041,7 +2042,7 @@ and the tally holds the negotiation pending as <span>[<a href="#UMAGrant" class=
 <a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-verdicts-are-not-claims" class="section-name selfRef">Verdicts Are Not Claims</a>
         </h3>
 <p id="section-3.6-1">A verdict <span class="bcp14">MUST</span> travel from the holder's authorization server to the tally. It
-<span class="bcp14">MUST NOT</span> be gathered by the requesting agent and presented as a claim.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST NOT</span> be gathered by the client and presented as a claim.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
 <p id="section-3.6-2">A claim the requesting party gathers is a claim it can decline to gather. A
 holder's refusal has to reach the decision point without the cooperation of the
 party it refuses, and claims-gathering cannot carry it. The general boundary:
@@ -2286,108 +2287,8 @@ be held to, and this document prefers the disclosure.<a href="#section-5.2-1" cl
       <h2 id="name-iana-considerations">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<div id="media-type-registration">
-<section id="section-6.1">
-        <h3 id="name-media-type-registration">
-<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
-        </h3>
-<p id="section-6.1-1">IANA is asked to register <code>application/u4a-verdict+jwt</code>,
-<code>application/u4a-membership+jwt</code>, <code>application/u4a-org-notice+jwt</code> and
-<code>application/u4a-org-admin+jwt</code> in the "Media Types" registry, each with:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6.1-2">
-          <dt id="section-6.1-2.1">Required parameters:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1">N/A<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.3">Optional parameters:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.4">
-            <p id="section-6.1-2.4.1">N/A<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.5">Encoding considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.6">
-            <p id="section-6.1-2.6.1">binary; a JWT in compact serialization<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.7">Security considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.8">
-            <p id="section-6.1-2.8.1">See <a href="#security-considerations" class="auto internal xref">Section 4</a> of this document<a href="#section-6.1-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.9">Interoperability considerations:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.10">
-            <p id="section-6.1-2.10.1">N/A<a href="#section-6.1-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.11">Applications that use this media type:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.12">
-            <p id="section-6.1-2.12.1">Applications implementing UMA 2.0 with this extension<a href="#section-6.1-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.1-2.13">Change controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.14">
-            <p id="section-6.1-2.14.1">IETF<a href="#section-6.1-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-<p id="section-6.1-3">and with the following published specifications: <a href="#verdict" class="auto internal xref">Section 3.4</a> for
-<code>u4a-verdict+jwt</code>; <a href="#enrolment" class="auto internal xref">Section 2.8</a> for <code>u4a-membership+jwt</code> and
-<code>u4a-org-notice+jwt</code>; <a href="#org-acting" class="auto internal xref">Section 2.7</a> for <code>u4a-org-admin+jwt</code>.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="json-web-token-claims-registration">
-<section id="section-6.2">
-        <h3 id="name-json-web-token-claims-regis">
-<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-json-web-token-claims-regis" class="section-name selfRef">JSON Web Token Claims Registration</a>
-        </h3>
-<p id="section-6.2-1">IANA is asked to register the following in the "JSON Web Token Claims" registry
-established by <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6.2-2">
-          <dt id="section-6.2-2.1">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.2">
-            <p id="section-6.2-2.2.1"><code>joint</code><a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.3">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.4">
-            <p id="section-6.2-2.4.1">The mandate and verdicts under which a jointly held resource was released<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.6">
-            <p id="section-6.2-2.6.1">IETF<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.8">
-            <p id="section-6.2-2.8.1"><a href="#joint-grant" class="auto internal xref">Section 3.8</a> of this document<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.9">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.10">
-            <p id="section-6.2-2.10.1"><code>break_glass</code><a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.11">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.12">
-            <p id="section-6.2-2.12.1">That a grant was issued by an organization under its emergency clause, and
-the justification<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.13">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.14">
-            <p id="section-6.2-2.14.1">IETF<a href="#section-6.2-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-6.2-2.15">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-6.2-2.16">
-            <p id="section-6.2-2.16.1"><a href="#break-glass" class="auto internal xref">Section 2.9</a> of this document<a href="#section-6.2-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
+<p id="section-6-1">This document has no IANA actions. The identifiers it uses are listed in
+<a href="#used-identifiers" class="auto internal xref">Appendix A</a>.<a href="#section-6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2416,10 +2317,6 @@ the justification<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9728">[RFC9728]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4ACore">[U4ACore]</dt>
         <dd>
@@ -2458,6 +2355,10 @@ the justification<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="U4ALAB">[U4ALAB]</dt>
       <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"UMA for Agents: a reference implementation"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://github.com/nickgamb/uma4agents">https://github.com/nickgamb/uma4agents</a>&gt;</span>. </dd>
@@ -2467,14 +2368,134 @@ the justification<a href="#section-6.2-2.12.1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="implementation-status">
+<div id="used-identifiers">
 <section id="appendix-A">
-      <h2 id="name-implementation-status">
-<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      <h2 id="name-identifiers-used-by-this-do">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-identifiers-used-by-this-do" class="section-name selfRef">Identifiers Used by This Document</a>
       </h2>
-<p id="appendix-A-1">This section records the status of known implementations in the sense of
-<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements both parts. The clamp of
+<p id="appendix-A-1">This appendix lists the identifiers this document defines. It is informative and
+requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span id="name-identifiers-used-by-this-doc"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-identifiers-used-by-this-doc" class="selfRef">Identifiers used by this document.</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+            <th class="text-left" rowspan="1" colspan="1">Kind</th>
+            <th class="text-left" rowspan="1" colspan="1">Defined in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>application/u4a-verdict+jwt</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Media type</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#verdict" class="auto internal xref">Section 3.4</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>application/u4a-membership+jwt</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Media type</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>application/u4a-org-notice+jwt</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Media type</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>application/u4a-org-admin+jwt</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Media type</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#org-acting" class="auto internal xref">Section 2.7</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>joint</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#joint-grant" class="auto internal xref">Section 3.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>family</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#joint-grant" class="auto internal xref">Section 3.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>break_glass</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#break-glass" class="auto internal xref">Section 2.9</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>org</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>, <a href="#org-acting" class="auto internal xref">Section 2.7</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>kind</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#enrolment" class="auto internal xref">Section 2.8</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>admin</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">JWT claim <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#org-acting" class="auto internal xref">Section 2.7</a>
+</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="implementation-status">
+<section id="appendix-B">
+      <h2 id="name-implementation-status">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-implementation-status" class="section-name selfRef">Implementation Status</a>
+      </h2>
+<p id="appendix-B-1">This section records the status of known implementations in the sense of
+<span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements both parts. The clamp of
 <a href="#envelope" class="auto internal xref">Section 2.4</a> is tested exhaustively for one-directionality over every
 combination of envelope field and terms. The fold, the mandate validator and the
 count are tested in isolation; the full arrangement — two holders on two
@@ -2484,23 +2505,23 @@ embedded mandate rewrites who was entitled to be counted. Part I runs end to end
 including enrolment by invitation, the ceiling appearing in signed terms,
 <code>first-party-only</code> refusing a third party's agent, the organization's scoped
 view, administrator decisions not counting as the member's, break-glass, and
-leaving.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+leaving.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1"><span>[<a href="#PP2PI" class="cite xref">PP2PI</a>]</span> supplied the four states of co-administration that Part I answers and
+<p id="appendix-C-1"><span>[<a href="#PP2PI" class="cite xref">PP2PI</a>]</span> supplied the four states of co-administration that Part I answers and
 the observation, made in <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span>'s own terminology, that the resource
 rights administrator had been named and never mechanised. The metadata of
 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> is what lets one resource server name a different authority for a
-shared, a personal and a jointly held resource at three paths.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+shared, a personal and a jointly held resource at three paths.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>

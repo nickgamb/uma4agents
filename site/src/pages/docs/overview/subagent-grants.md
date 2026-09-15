@@ -122,10 +122,10 @@ agent's handle as its sponsor, so the signing key travels in the header where
 the signature checks it.
 
 **Or the agent's issuer names it.** An identified agent already carries an
-`aa-agent+jwt`, and AAuth uses RFC 8693's `act` claim — which it nests to
-record a delegation chain — to name the entity a request was made on behalf of.
-An agent server that sets `act.sub` to the spawning agent has asserted the
-lineage itself, and AAuth's agent token is explicitly extensible for this.
+`aa-agent+jwt`. AAuth puts RFC 8693's `act` claim on its auth token, where it
+nests to record a delegation chain; its agent token is explicitly extensible, and
+an agent server that sets `act.sub` in the agent token to the spawning agent has
+asserted the lineage itself.
 Nothing new is defined; the claim is read.
 
 The second is the better attestation. A sibling-signed introduction is the

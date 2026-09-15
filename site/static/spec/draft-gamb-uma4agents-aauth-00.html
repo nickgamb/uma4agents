@@ -1238,7 +1238,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Gamb &amp; Maler</td>
-<td class="center">Expires 16 March 2027</td>
+<td class="center">Expires 19 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1251,12 +1251,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-gamb-uma4agents-aauth-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-12" class="published">12 September 2026</time>
+<time datetime="2026-09-15" class="published">15 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-16">16 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-19">19 March 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1299,7 +1299,7 @@ resource may publish its structure in AAuth's resource metadata beside RFC
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 16 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1440,7 +1440,7 @@ appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">�
       <h2 id="name-the-identified-agent">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-the-identified-agent" class="section-name selfRef">The Identified Agent</a>
       </h2>
-<p id="section-2-1">A requesting agent presenting itself at the identified level of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>
+<p id="section-2-1">A client presenting itself at the identified level of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>
 Section 5.1 under this binding carries an AAuth agent credential — a JWT
 <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> with <code>typ</code> of <code>aa-agent+jwt</code> — in the <code>agent_token</code> header of the
 agreement JWS of <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> Section 4.1.<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -1463,8 +1463,8 @@ where one is present;<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
 confirmed to.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-2-4">The connection handle is the credential's <code>sub</code>, qualified by the host of its
-<code>iss</code> as <code>sub@host</code>, and <span class="bcp14">MUST NOT</span> be derived from the key. AAuth binds a fresh
+<p id="section-2-4">The connection handle is formed from the credential's <code>sub</code> and <code>iss</code> as
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 5.1 specifies, and <span class="bcp14">MUST NOT</span> be derived from the key. AAuth binds a fresh
 key per session; the subject is what persists.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <p id="section-2-5">Where the credential carries an <code>act</code> claim <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> naming another agent's
 subject, an authorization server implementing <span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span> reads it as that
@@ -1513,7 +1513,7 @@ profile requires. <code>sub</code> is the agent credential's <code>sub</code>, o
     "resource_scopes": ["positions:read"],
     "exp": 1789602800
   }],
-  "contract": "s256:mNTA0Zjg1YTBkYzQxZWY4YjkyMWM4ZGIy"
+  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s"
 }
 </pre>
 </div>
@@ -1636,9 +1636,10 @@ at the pseudonymous level and this binding changes nothing about that.<a href="#
       <h2 id="name-iana-considerations">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-9-1">This document makes no request of IANA. The media types <code>aa-agent+jwt</code>,
-<code>aa-auth+jwt</code> and <code>aauth-resource+jwt</code> are defined by
-<span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span>.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">This document makes no request of IANA. The media types <code>aa-agent+jwt</code> and
+<code>aa-auth+jwt</code> are defined by <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span>. The <code>typ</code> value
+<code>aauth-resource+jwt</code>, used here for signed resource metadata, is this binding's
+and is not an AAuth media type.<a href="#section-9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -1658,7 +1659,7 @@ at the pseudonymous level and this binding changes nothing about that.<a href="#
 <dd class="break"></dd>
 <dt id="I-D.hardt-httpbis-signature-key">[I-D.hardt-httpbis-signature-key]</dt>
         <dd>
-<span class="refAuthor">Hardt, D.</span> and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"HTTP Signature Keys"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-httpbis-signature-key-08</span>, <time datetime="2026-08-05" class="refDate">5 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-08">https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-08</a>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span> and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"HTTP Signature Keys"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-httpbis-signature-key-09</span>, <time datetime="2026-09-13" class="refDate">13 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-09">https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-09</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

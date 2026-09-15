@@ -41,11 +41,11 @@ and its rules.
 ## What each document covers
 
 **Core** — the grant. The challenge as a set of parameters rather than an HTTP
-header; two identity levels for the requesting agent; a proof-of-possession
+header; two identity levels for the client; a proof-of-possession
 token carrying its permissions as a claim; operation binding and single use;
 the order an enforcement point runs its checks in; the standing connection;
 the owner's credential to her own server; and which artifacts carry an owner.
-Its §11 is the extension register the
+Its §12 is the extension register the
 [deviations page](/docs/reference/deviations/) follows.
 
 **Owner-Proffered Terms** — claims-gathering in which the authorization server
