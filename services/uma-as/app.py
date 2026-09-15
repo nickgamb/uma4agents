@@ -3324,7 +3324,8 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         claims["single_use"] = True
         claims["operation"] = {
             "tool": operation["tool"],
-            "params_s256": s256(json.dumps(operation.get("params", {}), sort_keys=True).encode()),
+            "params_s256": s256(json.dumps(operation.get("params", {}), sort_keys=True,
+                                           separators=(",", ":"), ensure_ascii=False).encode()),
         }
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
@@ -3398,7 +3399,8 @@ def joint_binding(contract: dict, signer_jwk: dict, mandate: dict) -> dict:
     if op := contract.get("operation"):
         out["operation"] = {
             "tool": op["tool"],
-            "params_s256": s256(json.dumps(op.get("params", {}), sort_keys=True).encode()),
+            "params_s256": s256(json.dumps(op.get("params", {}), sort_keys=True,
+                                           separators=(",", ":"), ensure_ascii=False).encode()),
         }
     return out
 

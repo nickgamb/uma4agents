@@ -584,16 +584,16 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["and carries a signed verdict from each holder", "each signed by that holder's own authority, not the tally's"]
   - text: "a holder's authorization server MUST compare the folded document the agent signed against the terms she published, and MUST refuse on any difference in the direction of"
     verified: check
-    targets: [joint-check]
-    asserts: ["nor one that rewrites who was entitled to be counted"]
+    targets: [as-test]
+    asserts: ["a fold that widens her terms is refused"]
   - text: "A verdict MUST travel from the holder's authorization server to the tally."
     verified: check
     targets: [joint-check]
     asserts: ["each signed by that holder's own authority, not the tally's"]
   - text: "It MUST NOT be gathered by the requesting agent and presented as a claim."
     verified: check
-    targets: [joint-check]
-    asserts: ["a grant nobody's authority signed is refused"]
+    targets: [pep-test]
+    asserts: ["a verdict signed by a key its holder never published is not counted"]
   - text: "The tally MUST sum the weight of holders whose verdict is allow and compare it to the threshold."
     verified: check
     targets: [joint-test]
@@ -613,7 +613,7 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "An enforcement point protecting a jointly held resource MUST, before allowing a call under such a grant:"
     verified: check
     targets: [joint-check, pep-test]
-    asserts: ["a grant nobody's authority signed is refused", "nor one that rewrites who was entitled to be counted", "genuine verdicts do not carry a grant bound to another key", "nor a grant with scopes the agreement did not have", "nor one that outlives the agreement", "nor one stripped of the operation the holders agreed to", "nor verdicts about a different negotiation", "a published mandate that reweights a holder is not the one agreed to", "a published mandate that does not cover the resource counts for nothing"]
+    asserts: ["a verdict signed by a key its holder never published is not counted", "genuine verdicts do not carry a grant bound to another key", "nor a grant with scopes the agreement did not have", "nor one that outlives the agreement", "nor one stripped of the operation the holders agreed to", "nor verdicts about a different negotiation", "a published mandate that reweights a holder is not the one agreed to", "a published mandate that does not cover the resource counts for nothing"]
   - text: "The grant MUST also carry, as a family claim, the negotiation identifier its verdicts name, and the tally's introspection response MUST return it."
     verified: check
     targets: [joint-check, pep-test]
@@ -636,8 +636,8 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a mandate has a digest", "holder order and what is published beside it do not change it", "nor does an issuer's trailing slash", "a document that is not a mandate has none"]
   - text: "The tally member of the grant is for display and MUST NOT be trusted."
     verified: check
-    targets: [joint-check]
-    asserts: ["nor one that rewrites who was entitled to be counted"]
+    targets: [pep-test]
+    asserts: ["a published mandate that reweights a holder is not the one agreed to"]
   - text: "A charter claim MUST NOT match a jointly held resource, and a holder's authorization server MUST refuse to apply an organization's envelope or decision to one regardless."
     verified: check
     targets: [joint-check]

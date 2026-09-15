@@ -636,7 +636,8 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
             "tool": rec["contract"]["operation"]["tool"],
             "params_s256": s256(json.dumps(
                 rec["contract"]["operation"].get("params", {}),
-                sort_keys=True).encode())}
+                sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False).encode())}
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
                        headers={"typ": "aa-auth+jwt", "kid": KID})
     RPTS[jti] = {"claims": claims, "spent": False, "family": rec["family"]}

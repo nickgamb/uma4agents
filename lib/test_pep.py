@@ -203,7 +203,8 @@ check("a single-use tool refuses a grant bound to no operation",
       d.outcome == "deny" and d.error == "operation_required", d.error)
 
 bound = {"tool": "execute_trade",
-         "params_s256": s256(json.dumps(trade, sort_keys=True).encode())}
+         "params_s256": s256(json.dumps(trade, sort_keys=True, separators=(",", ":"),
+                                        ensure_ascii=False).encode())}
 e = granting(grant("alice-vault/execute_trade", ("trades:execute",),
                    single_use=True, operation=bound))
 d = present(e, tool="execute_trade", args=trade)

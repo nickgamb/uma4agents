@@ -443,7 +443,11 @@ def main() -> int:                                            # noqa: C901
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",
                                             f"/mcp/joint/{BOTH}", bad, hers))
-        check("a grant nobody's authority signed is refused",
+        # Re-signed by this script, so the tally's introspection refuses it
+        # before any verdict is counted. What this proves is the outer
+        # signature; the verdict and mandate checks themselves are exercised
+        # directly in lib/test_pep.py.
+        check("a grant the tally did not sign is refused",
               r.status_code in (401, 403), f"{r.status_code} {r.text[:160]}")
 
         # And the subtler forgery: every verdict genuine, but the electorate
@@ -465,7 +469,7 @@ def main() -> int:                                            # noqa: C901
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",
                                             f"/mcp/joint/{BOTH}", cooked, hers))
-        check("nor one that rewrites who was entitled to be counted",
+        check("nor one the tally did not sign that rewrites who was entitled to be counted",
               r.status_code in (401, 403), f"{r.status_code} {r.text[:160]}")
 
         print("\n-- 6. one refusal is enough, and nobody waits for the rest --")

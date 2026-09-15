@@ -931,7 +931,9 @@ class Enforcer:
         #    organization's clause is an exception for one act.
         if f.tool in self.single_use_tools or info.get("single_use"):
             op = info.get("operation") or {}
-            actual = s256(json.dumps(f.args or {}, sort_keys=True).encode())
+            # RFC 8785 form, the one the authorization server hashed.
+            actual = s256(json.dumps(f.args or {}, sort_keys=True, separators=(",", ":"),
+                                     ensure_ascii=False).encode())
             if not op and f.tool in self.single_use_tools:
                 # A tool this deployment treats as single-use takes a grant
                 # bound to one operation, and a break-glass override is no

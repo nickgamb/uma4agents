@@ -219,6 +219,16 @@ async def a_holders_verdict() -> None:
     check("so is a holder's weight", bool(holder_joint.moved(record, reweighted)))
     check("and an unchanged mandate is not", holder_joint.moved(record, dict(MANDATE)) == [])
 
+    print("\n== a folded agreement, against her own terms ==")
+    hers = {"resources": ["joint/*"],
+            "terms": {"expires_in": 600, "scope": ["read"], "prohibited": ["resale"]}}
+    fair = {"expires_in": 300, "scope": ["read"], "prohibited": ["resale"]}
+    check("a fold inside her terms passes",
+          holder_joint.verdict_problems(fair, hers, "joint/read") == [])
+    check("a fold that widens her terms is refused",
+          bool(holder_joint.verdict_problems({**fair, "scope": ["read", "write"]},
+                                             hers, "joint/read")))
+
 
 async def main() -> int:
     app.STORE = MemoryStore()
