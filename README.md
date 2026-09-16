@@ -283,6 +283,7 @@ agreed. Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `make kind-up` / `make kind-down` | The whole Kubernetes lab, from nothing / delete it |
 | `make k8s-smoke-test`, `k8s-policy-test` | Verify the deployed lab; prove the trust boundary denies |
 | `make k8s-multi-owner-check`, `k8s-establishment-check`, `k8s-org-check` | The same three, where each party is a namespace with no path to the others |
+| `make k8s-embedded-check`, `k8s-flow-check` | The resource enforcing itself with no gateway in the path, and four identity regimes reaching one unchanged owner — both where the mesh and the namespace boundaries still apply |
 | `make k8s-demo-all`, `k8s-load`, `k8s-chaos` | Walk Alice's day; 24 agents at once; break it mid-grant |
 | `make reset` | Rewind demo state |
 | `make trust-ca` | Trust the local CA in your system store |

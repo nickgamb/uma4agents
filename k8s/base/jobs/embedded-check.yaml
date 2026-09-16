@@ -1,0 +1,73 @@
+# The resource protecting itself — in the cluster.
+#
+# The same clients/demo-driver/embedded_check.py the compose stack runs, from
+# Bob's namespace, against a vault that carries the enforcement obligations
+# in-process. No gateway and no ext_authz service anywhere in the path.
+#
+# Worth running here rather than only under compose, and this is the one where
+# the difference is the whole point. Core section 8.1 says the obligations are
+# a conformance profile rather than a topology; proving that only under compose
+# proves it where there is no topology to speak of. Here the mesh, the waypoint
+# and the namespace boundaries are all still in force, and the claim becomes
+# the narrower and more useful one: no enforcement *hop*, same grant.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: embedded-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: embedded-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: embedded-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/embedded_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+            # The vault's own published identity, reached through the edge
+            # like any other caller from outside. Not a ClusterIP: the
+            # signature base and the metadata the authority pulls both have
+            # to be the name the public would use.
+            - name: VAULT_URL
+              value: https://embedded.uma.lab/mcp
+            - name: UMA_EXPECTED_AUTHORITY
+              value: embedded.uma.lab
+            - name: AS_INTERNAL
+              value: https://alice-as.uma.lab
+            - name: KEYCLOAK
+              value: https://keycloak.uma.lab
+          volumeMounts:
+            - { name: driver, mountPath: /driver/embedded_check.py, subPath: embedded_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

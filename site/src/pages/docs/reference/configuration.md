@@ -60,14 +60,14 @@ rather than holding a call open across it.
 |---|---|---|
 | `UMA_AS_PUBLIC` | `https://alice-as.uma.lab` | The authority's public identifier, put in challenges |
 | `UMA_AS_INTERNAL` | `http://uma-as:9000` | Where to reach it for protection API calls |
-| `UMA_AS_RS_CLIENT_ID` | `meridian-gateway` | This resource server's client id, for PAT issuance |
-| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret, where one authority was provisioned alongside it |
+| `UMA_AS_RS_CLIENT_ID` | `meridian-gateway` | This resource server's client id, for PAT issuance. Read only where there is a secret — an authority nobody provisioned this pair against is one this resource server has no name at, so it registers under its own origin instead and this is ignored |
+| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret, where one authority was provisioned alongside it. Setting it empty is a decision rather than an omission: it selects the other identity, where the credential is a key published at the resource's own origin and the owner approves it once |
 | `UMA_PEP_RS_SECRETS` | `{"<owner>": "<secret>"}` | Per owner, and the interesting part is who is missing. An owner named here is one whose authority this resource server holds a credential for. Any other owner it serves is one it must introduce itself to, by signing with the key it publishes at its own origin |
 | `UMA_EXTRA_OWNERS` | — | Comma-separated. Every owner named gets `/mcp/<owner>`, with her own tool namespace, her own PAT and her own RFC 9728 metadata |
 | `UMA_OWNER_AUTHORITIES` | — | JSON, owner → `{public, internal}`. Which authority governs which owner. This is the one thing that stays configuration: which server speaks for a person is a fact only that person holds, so she tells the resource server, the way she tells it an address |
 | `UMA_REALM` | `alice-vault` | Protection realm named in the challenge |
 | `UMA_OWNER` | `alice` | The owner whose resources are protected |
-| `UMA_PEP_SIGNING_KEY` | `/keys/uma-pep-ed25519.pem` | Key for `signed_metadata` and signed queries |
+| `UMA_PEP_SIGNING_KEY` | `/keys/uma-pep-ed25519.pem`, and `/keys/vault-ed25519.pem` in the resource that enforces for itself | Key for `signed_metadata` and signed queries, and the one an authority fetches to decide whether this resource server is who it says it is. Two defaults because two hosts run this code: a deployment that shares one key between them has to name it in both |
 | `UMA_EXPECTED_AUTHORITY` | `gateway.uma.lab` | The authority used to rebuild the RFC 9421 signature base |
 | `UMA_ALLOWED_ORIGINS` | derived from the authority | Origins accepted on MCP requests |
 | `UMA_PEP_SCHEME` | `https` | The scheme of the URLs it publishes. `http` for a deployment with no certificate authority |

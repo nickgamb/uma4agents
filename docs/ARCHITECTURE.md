@@ -106,7 +106,11 @@ headless demo driver), and `uma4a_pep.py` — the enforcement core, expressed in
 request *facts* rather than any server's request object, so the ext_authz
 service and the in-process extension reach identical verdicts from one
 implementation. `make embedded-check` proves that by running the whole grant
-with no gateway in the path.
+with no gateway in the path, and `make k8s-embedded-check` proves the narrower
+and more useful version of it: a second vault carrying the obligations
+in-process, beside the gateway one, against the same authority — with the
+mesh, the waypoint and the namespace boundaries all still in force. No
+enforcement *hop*, same grant.
 
 **MCP protocol note.** The lab speaks MCP 2026-07-28. The handshake is
 `server/discover`, not `initialize` — the latter cannot negotiate past

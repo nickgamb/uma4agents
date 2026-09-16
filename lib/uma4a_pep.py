@@ -404,6 +404,13 @@ class Enforcer:
         this side's problem to repair under declarative registration — the AS
         re-reads what we publish when it meets one, which is the whole point
         of the trade.
+
+        The event says which of two things went wrong, because they are fixed
+        in different places and by different people. An authority that
+        answered and refused this resource server is a credential problem on
+        one of the two sides; an authority that could not be reached at all is
+        a network between them. Reporting the first as the second sends the
+        next reader to the wrong layer — it sent one there for an afternoon.
         """
         body = {"resource_id": resource_id, "resource_scopes": scopes}
         try:
@@ -417,6 +424,12 @@ class Enforcer:
                                           timeout=5.0)
                 r.raise_for_status()
                 return r.json()["ticket"]
+        except httpx.HTTPStatusError as exc:
+            self.event("permission.mint_refused",
+                       authority=self.as_public, client_id=self.client_id,
+                       status=exc.response.status_code,
+                       error=_error_of(exc.response) or str(exc)[:200])
+            return None
         except httpx.HTTPError as exc:
             self.event("permission.mint_failed", error=str(exc)[:200])
             return None

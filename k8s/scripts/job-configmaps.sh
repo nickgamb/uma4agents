@@ -14,6 +14,11 @@
 # maps are rebuilt in full from the working tree on every run, so there is
 # nothing for a three-way merge to merge, and nothing worth spending the
 # ceiling on.
+#
+# It is well past that ceiling now — the scripts below total over 290 KiB — so
+# this is not a margin that can be won back by trimming. Anything that puts
+# `apply` back here fails on the next script added, and fails by leaving the
+# old ConfigMap in place rather than by saying so.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -33,6 +38,8 @@ kubectl -n "$NS" create configmap demo-driver \
   --from-file=joint_check.py="$ROOT/clients/demo-driver/joint_check.py" \
   --from-file=consequence_check.py="$ROOT/clients/demo-driver/consequence_check.py" \
   --from-file=clearance_check.py="$ROOT/clients/demo-driver/clearance_check.py" \
+  --from-file=embedded_check.py="$ROOT/clients/demo-driver/embedded_check.py" \
+  --from-file=flow_check.py="$ROOT/clients/demo-driver/flow_check.py" \
   --dry-run=client -o yaml | kubectl replace --force -f - >/dev/null
 
 kubectl -n "$NS" create configmap agent-shim \

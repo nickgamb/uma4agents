@@ -74,6 +74,47 @@ def owner_token(client: httpx.Client) -> str:
     return r.json()["access_token"]
 
 
+def admit_resource_server(client: httpx.Client) -> str:
+    """Let the vault in, if she has not already.
+
+    It holds no secret from this authority: it registered by signing with the
+    key it publishes at its own origin, which earns a place in her registry
+    marked `pending` and nothing more. Until she approves it there is no
+    protected resource to negotiate over, so this is beat zero rather than
+    part of the check.
+
+    Identified by its origin rather than a name, because that is what a
+    resource server nobody provisioned this authority against *is*.
+    """
+    rs = os.environ.get("EMBEDDED_RS", "https://embedded.uma.lab")
+    try:
+        hdrs = {"Authorization": f"Bearer {owner_token(client)}"}
+    except Exception as exc:                                    # noqa: BLE001
+        return f"could not sign in as the owner: {exc}"
+    for _ in range(12):
+        registry = {r["client_id"]: r for r in client.get(
+            f"{AS_INTERNAL}/owner/resource-servers", headers=hdrs,
+            timeout=15.0).json()}
+        entry = registry.get(rs)
+        if entry and entry.get("status") == "active":
+            return ""
+        if entry and entry.get("status") == "pending":
+            client.post(f"{AS_INTERNAL}/owner/resource-servers/decision",
+                        json={"client_id": rs, "decision": "approved"},
+                        headers=hdrs, timeout=15.0)
+            continue
+        # Not there yet. The vault does not register at startup: it
+        # introduces itself the first time a grant attempt is refused for
+        # want of a PAT (see Enforcer.establish). One unauthenticated call
+        # is what provokes that — ordinary discovery, not a back door.
+        try:
+            rpc(client, "tools/call", {"name": "get_positions", "arguments": {}})
+        except Exception:                                       # noqa: BLE001
+            pass
+        time.sleep(2.0)
+    return f"{rs} never appeared in her registry"
+
+
 def approve_in_background(client: httpx.Client) -> None:
     """Stand in for Alice's portal tap."""
     def run():
@@ -98,7 +139,7 @@ def approve_in_background(client: httpx.Client) -> None:
 
 
 def main() -> int:
-    ca = "/driver/rootCA.pem"
+    ca = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
     with httpx.Client(verify=ca) as client:
         print("\n== Beat 0: the resource advertises that it enforces a grant ==")
         d = rpc(client, "server/discover", {})
@@ -110,9 +151,30 @@ def main() -> int:
         say(f"capabilities.extensions names the AS: {mine['authorization_servers']}")
         say(f"protocol negotiated: {d['result']['supportedVersions']}")
 
+        print("\n== Beat 0.5: Alice admits a resource server she has never seen ==")
+        # Before beat 1, because until she has admitted it there is no ticket
+        # to be had: a resource server holding no secret from her authority
+        # cannot mint one, and says so rather than challenging. The gateway
+        # vault beside it was provisioned with a secret and skips this; this
+        # one arrives as a stranger, which is the ordinary case for a resource
+        # server nobody configured this authority against.
+        if problem := admit_resource_server(client):
+            print(f"FAIL: {problem}")
+            return 1
+        say("she has admitted the embedded resource server")
+
         print("\n== Beat 1: unauthorized tools/call, straight to the resource ==")
-        r = rpc(client, "tools/call", {"name": "get_positions", "arguments": {}})
-        err = r.get("error") or {}
+        # Tolerant of the gap between her approval and this resource server
+        # noticing it. It backs off before asking her authority again — on
+        # purpose, so that a withdrawn resource server cannot put the same
+        # question in front of her as fast as traffic arrives — so the first
+        # calls after she says yes are still answered "not yet".
+        for _ in range(30):
+            r = rpc(client, "tools/call", {"name": "get_positions", "arguments": {}})
+            err = r.get("error") or {}
+            if (err.get("data") or {}).get("error") != "authorization_pending":
+                break
+            time.sleep(2.0)
         if err.get("code") != UMA_CHALLENGE:
             print(f"FAIL: expected {UMA_CHALLENGE}, got {json.dumps(r)[:300]}")
             return 1

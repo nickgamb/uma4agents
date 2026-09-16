@@ -71,7 +71,9 @@ decision back into its own response type.
 The lab does this in `lib/uma4a_pep.py`, where `AuthzFacts` is the input and
 `Decision` is the output, and `make embedded-check` runs the entire grant with
 no gateway in the path to prove the two hosts reach identical verdicts from one
-implementation.
+implementation. `make k8s-embedded-check` runs the same grant in the cluster,
+where the two shapes stand side by side against one authority and everything
+else — the mesh, the waypoint, the namespace boundaries — is still in the way.
 
 ## Choosing a gateway
 

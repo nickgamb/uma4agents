@@ -1,0 +1,86 @@
+# Four identity regimes, one unchanged owner — in the cluster.
+#
+# The same clients/demo-driver/flow_check.py the compose stack runs. Four
+# requesting sides, arranged four ways — a bare key, an AAuth enrolment with a
+# rotating session key, a CIMD document, and a key in a Web Bot Auth directory
+# — negotiating against one authorization server, and the claim is that her
+# side did the same thing all four times.
+#
+# Worth running here rather than only under compose, because the requesting
+# side is the half that differs most between the two deployments. Bob's
+# operator provisions its key directory here and refuses one offered at
+# runtime, which is what lets it run two replicas; AAuth enrolment still
+# happens at runtime against the person server. So "agent identity stayed on
+# the requesting side" is asserted where the requesting side is arranged the
+# way a firm would actually arrange it.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flow-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: flow-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: flow-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 2>/dev/null
+              exec python3 /driver/flow_check.py
+          env:
+            - { name: PYTHONPATH, value: /driver/lib }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+            - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
+            - { name: UMA4A_GATEWAY, value: "https://gateway.uma.lab/mcp" }
+            - { name: UMA4A_AS, value: "https://alice-as.uma.lab" }
+            - { name: UMA4A_OIDC, value: "https://keycloak.uma.lab" }
+            - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
+            - { name: UMA4A_AGENT_ISSUER, value: "https://ps.uma.lab" }
+            # The person server enrols at runtime against this token, which is
+            # the shape it runs in both deployments — unlike the operator
+            # below, it holds state and runs one replica.
+            - name: PS_ADMIN_TOKEN
+              valueFrom: { secretKeyRef: { name: ps-admin, key: token } }
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom: { secretKeyRef: { name: operator-register, key: token } }
+            # The private half of a key Bob's operator already publishes, for
+            # the one regime that needs the directory to hold it. Its own
+            # identity rather than one the other checks use: the three
+            # key-only regimes have to be indistinguishable to Alice, and a
+            # key with a standing connection behind it would not be. Absent
+            # under compose, where the operator accepts a key at runtime.
+            - { name: UMA4A_PUBLISHED_KEYS, value: /published }
+          volumeMounts:
+            - { name: driver, mountPath: /driver/flow_check.py, subPath: flow_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: published, mountPath: /published, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: published
+          secret:
+            secretName: agent-published-key
+            items:
+              - { key: flow-published-ed25519.pem, path: flow-published-ed25519.pem }
+        - name: keys
+          emptyDir: {}

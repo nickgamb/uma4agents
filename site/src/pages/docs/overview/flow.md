@@ -35,7 +35,11 @@ side arranged four ways:
 | Published | a Web Bot Auth directory its keys can be looked up in |
 
 Across all four, the terms proffered, the grant issued and her policy are
-identical. `make flow-check` in the lab runs it.
+identical. `make flow-check` in the lab runs it, and `make k8s-flow-check`
+runs it in the cluster — where the operator publishes a key directory it was
+provisioned with and refuses one offered at runtime, so the published regime
+signs with a key that operator really issued rather than one it registered for
+itself.
 
 ## Two levels, not four
 

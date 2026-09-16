@@ -84,7 +84,10 @@ verifies the signature, checks the operation binding, and spends the grant.
 Keeping them apart is what lets one enforcement core run in two places. The lab
 ships it as a gateway callout and embedded in the resource, and `make
 embedded-check` proves the two reach identical verdicts from the same
-implementation.
+implementation. `make k8s-embedded-check` proves the narrower version: both
+shapes running at once against one authority, with a service mesh, a waypoint
+and namespace boundaries all still between them. No enforcement *hop*, same
+grant.
 
 ## What is deliberately absent
 

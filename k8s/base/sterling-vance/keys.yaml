@@ -80,6 +80,13 @@ spec:
           # already has standing, and "a newcomer she can name" would not be a
           # newcomer.
           #
+          # `flow-published` is the identity flow-check's Web Bot Auth regime
+          # signs with, and it is its own rather than one of the above for the
+          # reason that check exists: it compares four requesting sides that
+          # must be indistinguishable to Alice, and an identity carrying a
+          # standing connection from another check would be offered terms on
+          # the strength of it.
+          #
           # The rest are an orchestrator and its workers. A fleet has to be
           # provisioned rather than self-published for the reason this whole
           # script exists: an agent that can put its own key in the directory
@@ -94,7 +101,7 @@ spec:
           # worker run more than once. Revocation is permanent by design; the
           # agent that comes back is a different agent.
           command: ["python3", "/script/agent-keys.py", "agent-published-key",
-                    "attested", "newcomer", "lead",
+                    "attested", "newcomer", "lead", "flow-published",
                     "--rotate",
                     "worker-a", "worker-b", "worker-c",
                     "outsider", "bystander", "grandchild"]

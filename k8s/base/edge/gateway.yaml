@@ -129,6 +129,26 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: meridian
+    # The same resource server in its other shape: enforcing in-process, with
+    # nothing in front of it. Its own hostname because the authority pulls a
+    # registry only from https on the resource's own origin, and its own
+    # listener — scoped to meridian like every other one here — because a
+    # hostname admitting routes from any namespace is what let one party
+    # serve its keys under another's name.
+    - name: embedded
+      protocol: HTTPS
+      port: 443
+      hostname: embedded.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: meridian
     - name: joint-tally
       protocol: HTTPS
       port: 443

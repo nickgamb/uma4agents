@@ -15,7 +15,16 @@ That is a claim, so it is checked:
 
 ```
 make flow-check
+make k8s-flow-check
 ```
+
+The second is not the first one repeated. Bob's operator publishes a key
+directory it was provisioned with in the cluster and refuses a key offered at
+runtime — which is what lets it run more than one replica — so the regime that
+needs the directory to hold its key signs with one that operator really
+issued. The compose stack accepts a key at registration time instead. The
+claim being checked is the same; the requesting side is arranged the way a
+firm would actually arrange it.
 
 ## What it does
 

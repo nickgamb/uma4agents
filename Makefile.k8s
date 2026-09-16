@@ -376,6 +376,28 @@ k8s-consequence-check:
 k8s-clearance-check:
 	$(call run_job,clearance-check,cat $(K8S)/base/jobs/clearance-check.yaml,600s)
 
+## k8s-embedded-check: the resource enforcing its owner's policy in-process,
+## with no gateway and no ext_authz service in the path. The compose twin
+## flips one vault between modes; here a second vault runs the embedded shape
+## beside the gateway one, against the same authority. See docs/PROTOCOL.md.
+.PHONY: k8s-embedded-check
+k8s-embedded-check:
+	$(call run_job,embedded-check,cat $(K8S)/base/jobs/embedded-check.yaml,420s)
+
+## k8s-flow-check: four agents, four identity regimes, one unchanged owner.
+## The requesting side is the half that differs most between the two
+## deployments — Bob's operator provisions its key directory here rather than
+## accepting a key at runtime — so this is where "agent identity stayed on the
+## requesting side" is worth asserting. See docs/FLOW.md.
+##
+## Through k8s-spawn-keys because one of the four regimes signs with a key that
+## operator published, and the operator reads its directory once at startup. On
+## a cluster where the key was provisioned after it booted, the directory that
+## answers would not hold the key being checked.
+.PHONY: k8s-flow-check
+k8s-flow-check: k8s-spawn-keys
+	$(call run_job,flow-check,cat $(K8S)/base/jobs/flow-check.yaml,900s)
+
 ## kagent: an agent framework nobody modified, governed by Alice's policy.
 ##
 ## Off by default because it brings a model with it, and that is a cost nobody

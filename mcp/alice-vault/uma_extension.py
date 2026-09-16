@@ -137,12 +137,32 @@ def build(tools: dict[str, tuple[str, list[str]]],
           single_use: set[str],
           consequence: dict[str, str] | None = None) -> UmaEnforcement:
     """Wire an enforcer from the environment, mirroring the gateway host."""
+    import uma_publish
+
     authority = os.environ.get("UMA_EXPECTED_AUTHORITY", "gateway.uma.lab")
+    # The same origin `uma_publish` serves the metadata at, and built the same
+    # way: the identifier this resource registers under has to be the one the
+    # authority will dereference, or it authenticates as nobody.
+    public_base = f"{os.environ.get('UMA_PEP_SCHEME', 'https')}://{authority}"
+    secret = os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret")
     enforcer = Enforcer(
         as_internal=os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000"),
         as_public=os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab"),
-        client_id=os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway"),
-        client_secret=os.environ.get("UMA_AS_RS_CLIENT_SECRET", "gateway-dev-secret"),
+        # Which identity this resource server has here follows from whether
+        # anyone provisioned the pair — the same rule the gateway host
+        # applies, because it is the same question. With a secret it is the
+        # name it was given; without one it is its own origin, and it
+        # introduces itself by signing with the key it publishes there.
+        client_id=(os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
+                   if secret else public_base),
+        client_secret=secret,
+        # Loaded only on the branch that needs it. A deployment holding a
+        # secret may have this file mounted read-only, or not at all, and
+        # `key()` would create one.
+        signing_key=None if secret else uma_publish.key(),
+        key_id=uma_publish.KID,
+        resource_uri=f"{public_base}/mcp",
+        rs_name=os.environ.get("UMA_PEP_RS_NAME", f"{authority} (embedded)"),
         realm=os.environ.get("UMA_REALM", "alice-vault"),
         tools=tools,
         single_use_tools=single_use,

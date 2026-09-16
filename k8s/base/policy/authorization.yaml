@@ -149,6 +149,17 @@ spec:
             principals:
               - cluster.local/ns/uma-edge/sa/edge
               - cluster.local/ns/meridian/sa/uma-pep
+              # The same resource server enforcing in-process. It calls
+              # this surface because it carries the same obligations;
+              # only the process they run in differs. Named separately
+              # rather than folded into the gateway's identity — they are
+              # two workloads, and one SPIFFE identity for both would be
+              # the modelling error this lab exists to avoid.
+              #
+              # Alice's authority only. It serves her book, so Carol's
+              # authority, the organization and the tally learn nothing
+              # about it — each of those has its own copy of this rule.
+              - cluster.local/ns/meridian/sa/alice-vault-embedded
       to:
         - operation:
             paths:

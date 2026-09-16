@@ -48,6 +48,10 @@ ISSUER = os.environ.get("UMA4A_AGENT_ISSUER", "https://ps.uma.lab")
 PS_ADMIN = os.environ.get("PS_ADMIN_TOKEN", "uma4agents-ps-admin")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 KEYS = "/driver/keys"
+# Where a deployment left the private half of a key its operator already
+# publishes, if it is the kind of operator that provisions its directory
+# rather than accepting a key at runtime. See build_published.
+PUBLISHED_KEYS = os.environ.get("UMA4A_PUBLISHED_KEYS")
 
 META = mcp_meta("u4a-flow-check")
 
@@ -124,9 +128,35 @@ def build_described(client: httpx.Client) -> AgentKeys:
 
 def build_published(client: httpx.Client) -> AgentKeys:
     """Web Bot Auth. The operator publishes the key so a stranger can
-    attribute it. Discovery, never authority."""
+    attribute it. Discovery, never authority.
+
+    Two shapes of operator, and which one applies is a property of the
+    deployment rather than of this check. One provisions its directory and
+    refuses a key offered at runtime — that is the shape a firm runs, and it
+    is what lets it run more than one replica. The other accepts the key when
+    the agent is activated, which holds state and runs one. So a provisioned
+    key is used when the deployment left one here, and registering is the
+    fallback rather than the assumption: `publish` returns None when it is
+    refused, and this regime would quietly become the pseudonymous one.
+    """
+    directory = f"{OPERATOR}/.well-known/http-message-signatures-directory"
+    # Its own provisioned identity, not one of the keys the other checks use.
+    # The three key-only regimes here have to be indistinguishable to Alice,
+    # and the other two are fresh every run; an identity that already held a
+    # standing connection would be offered terms on the strength of it and
+    # differ from its siblings for a reason this check is not about.
+    provisioned = f"{PUBLISHED_KEYS}/flow-published-ed25519.pem" if PUBLISHED_KEYS else None
+    if provisioned and os.path.exists(provisioned):
+        keys = AgentKeys.load_or_create(provisioned)
+        keys.signature_agent = directory
+        return keys
     keys = AgentKeys.load_or_create(f"{KEYS}/flow-published.pem")
     keys.signature_agent = keys.publish(client, OPERATOR)
+    if keys.signature_agent is None:
+        raise SystemExit(
+            "FAIL: the operator would not publish this agent's key, and no "
+            "provisioned key was mounted — the published regime would have "
+            "run as the pseudonymous one and proved nothing")
     return keys
 
 
