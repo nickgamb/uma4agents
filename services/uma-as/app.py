@@ -36,6 +36,8 @@ import assurance
 import introduction
 import joint
 import org
+import uma4a_clearance
+import uma4a_consequence
 import uma4a_joint
 import uma4a_profiles
 import policy
@@ -362,6 +364,16 @@ def resources_for(owner: str) -> dict[str, dict]:
     """
     return {rid: d for rid, d in RESOURCES.items()
             if d.get("owner") in (None, owner)}
+
+
+def consequence_of(owner: str, resource_id: str) -> str | None:
+    """What the resource server declares this operation leaves behind.
+
+    None when nothing has been declared — which her rules can test for, and
+    which nothing else here treats as a claim in either direction.
+    """
+    return uma4a_consequence.normalise(
+        (resources_for(owner).get(resource_id) or {}).get("consequence"))
 
 
 def jwk_thumbprint(jwk: dict) -> str:
@@ -1085,6 +1097,12 @@ def pull_registrations(client_id: str, rs: dict) -> int:
             "resource_scopes": res["resource_scopes"],
             "name": res.get("name"),
             "type": res.get("type"),
+            # What the resource server says this operation leaves behind. Its
+            # statement to make: it is the party that would have to undo the
+            # act. Normalised on the way in, so a word this server does not
+            # know is stored as no declaration rather than as a fifth class
+            # nothing can compare against.
+            "consequence": uma4a_consequence.normalise(res.get("consequence")),
             "icon_uri": None,
             "description": None,
             "registered_via": "pull",
@@ -1282,6 +1300,7 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
         "contract": claims.get("contract"),
         "single_use": claims.get("single_use", False),
         "operation": claims.get("operation"),
+        "consequence": claims.get("consequence"),
     }
 
 
@@ -1606,6 +1625,67 @@ async def org_envelope(owner: str) -> dict | None:
     return {**client.envelope, "excluded": sorted(await jointly_held(owner))}
 
 
+async def clearance_unmet(owner: str, tier: dict,
+                          resource_id: str) -> tuple[list[str], dict]:
+    """(why this tier's clearance is unsatisfied, what was attested).
+
+    An authorization that is not this server's to give. Her terms decide
+    whether an agent may touch her things; they cannot decide whether the act
+    is lawful for the party behind it, and a requesting party asserting its
+    own licence would be a compliance check performed by the party it is
+    about.
+
+    So the requirement is hers or her organization's, and the *answer* comes
+    from the organization over this server's own membership credential —
+    never from the agent. See lib/uma4a_clearance.py for why a fact that may
+    be adverse to the requesting party cannot travel as its claim.
+
+    Every failure here is a refusal. An organization that cannot be reached
+    has not attested to anything, and the direction to fail in is the one the
+    ceiling already fails in.
+    """
+    required = dict(tier.get("clearance") or {})
+    envelope = await org_envelope(owner)
+    if envelope and org.reaches(resource_id, envelope):
+        required = uma4a_clearance.tighten(
+            required, envelope.get("require_clearance") or {})
+    if not required:
+        return [], {}
+
+    client = await org_client(owner)
+    if client is None:
+        return ["these terms require a clearance, and this authority has no "
+                "organization that could attest to one"], {}
+    token, error = await client.clearance()
+    if error:
+        return [f"the organization could not be reached to check the "
+                f"clearance: {error}"], {}
+    if not token:
+        return ["the organization holds no clearance for this owner"], {}
+
+    record = await org_record(owner)
+    issuer = (record or {}).get("issuer") or client.issuer
+    facts = None
+    for fresh in (False, True):
+        try:
+            # Off the event loop: resolving keys may fetch, and a slow peer
+            # would otherwise stall every request this process is serving.
+            keys = await asyncio.to_thread(issuer_keys, issuer, fresh)
+            facts = uma4a_clearance.verify(
+                token, keys=keys, issuer=issuer, audience=ISSUER,
+                subject=owner, now=now())
+            break
+        except uma4a_clearance.ClearanceError as exc:
+            # A rotated key looks exactly like a forged one until the keys
+            # are re-read, which is why this gets one second chance and not
+            # a loop. The same allowance the agent-credential path makes.
+            if fresh:
+                return [str(exc)], {}
+        except Exception as exc:                                # noqa: BLE001
+            return [f"the clearance could not be checked: {exc}"], {}
+    return uma4a_clearance.unmet(required, facts or {}), (facts or {})
+
+
 async def organization_blocks(owner: str, resource_id: str) -> str | None:
     """Why a request over this resource cannot proceed, or None.
 
@@ -1793,7 +1873,12 @@ async def org_notice(request: Request) -> dict:
     # second: a toast she was not at her desk for is not a record, and the
     # ledger is what she will read afterwards.
     if kind in ("break_glass_opened", "break_glass", "break_glass_used"):
-        await ledger_add(owner, "break_glass", claims.get("jti") or "-", {
+        # One family for all three stages of one override. `family` is the
+        # override's id; `jti` is read as well because an organization that
+        # has not been updated still sends it there, and a member's authority
+        # does not get to require that her organization upgrade first.
+        await ledger_add(owner, "break_glass",
+                         claims.get("family") or claims.get("jti") or "-", {
             "stage": kind,
             "organization": (record.get("envelope") or {}).get("name"),
             "resource_id": claims.get("resource_id"),
@@ -3357,6 +3442,19 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
         ],
         "contract": contract_hash,
     }
+    # What the resource said the act leaves behind at the moment she answered.
+    # Carried so the enforcement point can tell that the question it is about
+    # to perform is still the question she was asked — see uma4a_pep.authorize.
+    if declared := consequence_of(owner, rec["resource_id"]):
+        claims["consequence"] = declared
+    # That a clearance was checked, and not what it said. The facts are about
+    # the member — her licence, where she is registered — and the party that
+    # would read them here is the agent that asked. A digest proves the check
+    # happened and discloses nothing; her ledger keeps the facts, on her side.
+    if attested := (rec.get("clearance") or {}):
+        claims["clearance"] = s256(json.dumps(
+            attested, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False).encode())
     if operation is not None:
         claims["single_use"] = True
         claims["operation"] = {
@@ -3626,7 +3724,8 @@ async def joint_verdict(request: Request) -> dict:
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
-                    "mission": contract.get("mission")},
+                    "mission": contract.get("mission"),
+                    "consequence": consequence_of(owner, resource_id)},
         "tier": tier_id,
     }
     requirement, reasons = policy.evaluate(tier, facts)
@@ -3825,6 +3924,27 @@ async def token(request: Request) -> JSONResponse:
         await close_negotiation(rec)
         return JSONResponse({"error": "request_denied"}, status_code=403)
 
+    # Before a word of her terms is dictated: an authorization nobody in
+    # this negotiation is entitled to give. If the act needs a licence, or a
+    # jurisdiction, the party that can say so is not the one asking.
+    #
+    # Checked here rather than at the grant so the agent is refused before it
+    # signs anything: an agreement committing it to terms it was never going
+    # to be allowed to act under is a record of a bargain that never existed.
+    unmet, attested = await clearance_unmet(rec["owner"], tier, rec["resource_id"])
+    if unmet:
+        event("policy.evaluated", corr=family, result="clearance-unmet",
+              tier=tier_id)
+        await ledger_add(rec["owner"], "refused", family,
+                         {"tier": tier_id, "because": unmet,
+                          "resource_id": rec["resource_id"]},
+                         handle=rec.get("handle"))
+        await close_negotiation(rec)
+        return JSONResponse(
+            {"error": "request_denied", "error_description": "; ".join(unmet)},
+            status_code=403)
+    rec["clearance"] = attested
+
     # Beat 1a: an organization that federates identity wants to know whose
     # agent this is before anybody's terms are read.
     #
@@ -3919,6 +4039,10 @@ async def token(request: Request) -> JSONResponse:
         "operation": contract.get("operation"),
         "reason": contract.get("reason"),
         "mission": contract.get("mission"),
+        "consequence": consequence_of(rec["owner"], rec["resource_id"]),
+        # What somebody else vouched for, on the record she keeps. It is not
+        # in the grant: see issue_rpt, where only a digest travels.
+        **({"clearance": rec["clearance"]} if rec.get("clearance") else {}),
     }, handle=handle)
 
     # Day-1 handshake: an agent without a standing connection pends — the same
@@ -4023,7 +4147,9 @@ async def token(request: Request) -> JSONResponse:
         "request": {"expires_in": contract.get("expires_in", 0),
                     "max_expires_in": tier["terms"]["expires_in"],
                     "reason": contract.get("reason"),
-                    "mission": contract.get("mission")},
+                    "mission": contract.get("mission"),
+                    "consequence": consequence_of(rec["owner"],
+                                                  rec["resource_id"])},
         "tier": rec["tier"],
     }
     requirement, reasons = policy.evaluate(tier, facts)
@@ -4767,6 +4893,7 @@ async def owner_resources(request: Request) -> list:
             "name": desc.get("name") or rid,
             "type": desc.get("type"),
             "resource_scopes": desc["resource_scopes"],
+            "consequence": desc.get("consequence"),
             "tier": tier_id,
             "tier_name": tier["name"] if tier else None,
             "ask_me": tier["ask_me"] if tier else None,

@@ -108,6 +108,9 @@ class OrgClient:
         self.envelope = envelope
         self.fetched = time.time()
         self.failing: str | None = None
+        # What the organization attests about her, and when it was read.
+        self._clearance: str | None = None
+        self._clearance_at = 0.0
 
     @property
     def headers(self) -> dict:
@@ -143,6 +146,46 @@ class OrgClient:
         self.fetched = time.time()
         self.failing = None
         return self.envelope, None
+
+    async def clearance(self) -> tuple[str | None, str | None]:
+        """(attestation, error) — what the organization will say about her.
+
+        A signed statement, fetched rather than received: the same reasoning
+        as the envelope. A pushed attestation that failed to arrive would
+        leave this server enforcing a clearance nobody could see had lapsed,
+        and the failure would be silent on both sides.
+
+        It is deliberately *not* cached beyond a short window. The whole point
+        of a licence is that it can stop being true, and a copy held for an
+        hour is a copy that outlives the fact it describes.
+        """
+        if (self._clearance is not None
+                and time.time() - self._clearance_at < ENVELOPE_TTL_S):
+            return self._clearance, None
+        httpx = _httpx()
+        try:
+            async with httpx.AsyncClient(verify=CA_BUNDLE or True,
+                                         timeout=HTTP_TIMEOUT_S) as c:
+                r = await c.get(f"{self.issuer}/member/clearance",
+                                headers=self.headers)
+            if r.status_code == 404:
+                # The organization holds nothing about her. Not an error, and
+                # not a pass: a requirement with no attestation behind it is
+                # unmet, and the caller says so in those words.
+                #
+                # Deliberately not cached. An absence is not a fact, and
+                # holding on to one would leave a clearance granted a moment
+                # ago unusable for the rest of the window — protecting
+                # nothing, and looking exactly like a bug to whoever just
+                # granted it.
+                self._clearance, self._clearance_at = None, 0.0
+                return "", None
+            r.raise_for_status()
+        except httpx.HTTPError as exc:
+            return None, str(exc)
+        self._clearance = r.json().get("clearance") or ""
+        self._clearance_at = time.time()
+        return self._clearance, None
 
     async def decide(self, facts: dict) -> dict:
         """Ask the organization about one request.

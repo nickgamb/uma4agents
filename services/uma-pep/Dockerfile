@@ -6,6 +6,8 @@ COPY lib/uma4a_http_sig.py .
 COPY lib/uma4a_org.py .
 COPY lib/uma4a_joint.py .
 COPY lib/uma4a_pep.py .
+COPY lib/uma4a_consequence.py .
+COPY lib/uma4a_clearance.py .
 COPY services/uma-pep/app.py .
 EXPOSE 9002
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9002"]

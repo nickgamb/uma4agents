@@ -32,5 +32,7 @@ kubectl -n "$NS" create configmap demo-lib \
   --from-file=uma4a_http_sig.py="$ROOT/lib/uma4a_http_sig.py" \
   --from-file=uma4a_enroll.py="$ROOT/lib/uma4a_enroll.py" \
   --from-file=uma4a_pep.py="$ROOT/lib/uma4a_pep.py" \
+  --from-file=uma4a_consequence.py="$ROOT/lib/uma4a_consequence.py" \
+  --from-file=uma4a_clearance.py="$ROOT/lib/uma4a_clearance.py" \
   --from-file=uma4a_org.py="$ROOT/lib/uma4a_org.py" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null

@@ -29,7 +29,8 @@ import time
 
 def prm_document(public_base: str, as_public: str,
                  tools: dict[str, tuple[str, list[str]]],
-                 leaf: str = "mcp") -> dict:
+                 leaf: str = "mcp",
+                 consequence: dict[str, str] | None = None) -> dict:
     """RFC 9728 Protected Resource Metadata — *structural* only.
 
     It says what shape the resource has and where authority lives. It does not
@@ -51,8 +52,13 @@ def prm_document(public_base: str, as_public: str,
         "scopes_supported": scopes,
         "bearer_methods_supported": ["header"],
         "resource_signing_alg_values_supported": ["EdDSA"],
+        # `consequence` appears only where the resource has something to say.
+        # An absent member is "undeclared", which is not the same claim as
+        # "nothing to put back" and must not be read as one.
         "tool_surfaces": [
-            {"tool": tool, "resource_scopes": ss}
+            {"tool": tool, "resource_scopes": ss,
+             **({"consequence": (consequence or {})[tool]}
+                if (consequence or {}).get(tool) else {})}
             for tool, (rid, ss) in tools.items()
         ],
         "owner_resources_endpoint": f"{public_base}/owner-resources",
@@ -78,7 +84,8 @@ def sign_metadata(doc: dict, key, kid: str) -> dict:
 
 
 def aauth_document(public_base: str, as_public: str,
-                   tools: dict[str, tuple[str, list[str]]]) -> dict:
+                   tools: dict[str, tuple[str, list[str]]],
+                   consequence: dict[str, str] | None = None) -> dict:
     """The AAuth binding's encoding of the same structural facts.
 
     `access_mode` names the topology — four-party, the federated shape where
@@ -89,8 +96,15 @@ def aauth_document(public_base: str, as_public: str,
     import base64
     import hashlib
 
+    # The same structural fact in the other encoding, including what each
+    # operation leaves behind: one registry, two documents, and a client that
+    # reads either learns the same thing. The digest is over this list, so a
+    # resource that re-declares an operation gets a new vocabulary id — which
+    # is the content-addressing working, not a break.
     ops = [
-        {"operation": tool, "resource_scopes": ss}
+        {"operation": tool, "resource_scopes": ss,
+         **({"consequence": (consequence or {})[tool]}
+            if (consequence or {}).get(tool) else {})}
         for tool, (rid, ss) in sorted(tools.items())
     ]
     digest = base64.urlsafe_b64encode(
@@ -111,14 +125,24 @@ def aauth_document(public_base: str, as_public: str,
 
 
 def owner_resources_document(public_base: str, owner: str,
-                             tools: dict[str, tuple[str, list[str]]]) -> dict:
-    """The protected half: whose instances sit behind this resource."""
+                             tools: dict[str, tuple[str, list[str]]],
+                             consequence: dict[str, str] | None = None) -> dict:
+    """The protected half: whose instances sit behind this resource.
+
+    The declared class rides here as well as in the public document, because
+    this listing is what the owner's authorization server pulls into its
+    registry — and the registry is what her policy reads. Carrying it only in
+    the public document would leave her authority knowing the shape of the
+    resource and nothing about what its operations cost.
+    """
     return {
         "owner": owner,
         "resource": f"{public_base}/mcp",
         "resources": [
             {"_id": rid, "tool": tool, "resource_scopes": ss,
-             "name": f"Alice's vault: {tool}", "type": "mcp-tool"}
+             "name": f"Alice's vault: {tool}", "type": "mcp-tool",
+             **({"consequence": (consequence or {})[tool]}
+                if (consequence or {}).get(tool) else {})}
             for tool, (rid, ss) in tools.items()
         ],
     }

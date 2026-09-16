@@ -31,6 +31,8 @@ that needs installing, which is what lets `lib/test_org.py` and
 """
 
 import copy
+
+import uma4a_clearance
 import fnmatch
 
 # Belt-and-braces slack when an enforcement point compares a grant's
@@ -199,6 +201,23 @@ def clamp(tier: dict, envelope: dict) -> tuple[dict, list[dict]]:
         })
         tier["ask_me"] = True
 
+    # Clearance narrows the same way every other field here does: what the
+    # charter requires is added to what she already required, and where both
+    # name a claim only the values both accept survive. There is no envelope
+    # field that can drop a requirement she wrote.
+    required = envelope.get("require_clearance") or {}
+    if required:
+        before = dict(tier.get("clearance") or {})
+        after = uma4a_clearance.tighten(before, required)
+        if after != before:
+            changes.append({
+                "field": "require_clearance",
+                "was": before, "now": after,
+                "text": "Only while the organization can attest: "
+                        + ", ".join(sorted(after)),
+            })
+            tier["clearance"] = after
+
     return tier, changes
 
 
@@ -224,7 +243,14 @@ def patch_for(tier: dict, envelope: dict) -> tuple[dict | None, list[dict]]:
     # narrow what is there, not to add fields to her document.
     if "scope" in clamped["terms"]:
         terms["scope"] = clamped["terms"]["scope"]
-    return {"ask_me": clamped["ask_me"], "terms": terms}, changes
+    patch = {"ask_me": clamped["ask_me"], "terms": terms}
+    # A clearance the charter requires is an addition to her tier rather than
+    # a field inside her terms, so it has to be carried here explicitly. It
+    # was computed by `clamp` above and would otherwise be dropped on the way
+    # to the store — the ceiling would show her a change it never made.
+    if clamped.get("clearance"):
+        patch["clearance"] = clamped["clearance"]
+    return patch, changes
 
 
 def would_exceed(spec: dict, resources: list[str], envelope: dict) -> list[str]:

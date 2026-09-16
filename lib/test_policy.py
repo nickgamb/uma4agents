@@ -35,7 +35,7 @@ def facts(*, binding=1, provenance=0, accountability=0,
           revocations=0, denials=0, tiers_seen=(), expires_in=0,
           max_expires_in=3600, reason=None, mission=None,
           introduced=False, lineage_new_at_tier=True,
-          tier_id="tier1") -> dict:
+          consequence=None, tier_id="tier1") -> dict:
     return {
         "assurance": {"binding": binding, "provenance": provenance,
                       "accountability": accountability},
@@ -50,7 +50,12 @@ def facts(*, binding=1, provenance=0, accountability=0,
                      "trajectory": {"denials": denials,
                                     "tiers": list(tiers_seen)}},
         "request": {"expires_in": expires_in, "max_expires_in": max_expires_in,
-                    "reason": reason, "mission": mission},
+                    "reason": reason, "mission": mission,
+                    # The resource server's statement about its own operation,
+                    # read from her registry by the caller. None is what an
+                    # undeclared operation looks like here, and it is a case
+                    # the rules below are mostly about.
+                    "consequence": consequence},
         "tier": tier_id,
     }
 
@@ -433,6 +438,66 @@ check("no sub-agent rule lowers an ask-me tier",
       policy.evaluate({"ask_me": True, "rules": lineage["rules"]},
                       facts(active=True, accountability=2, introduced=True,
                             lineage_new_at_tier=False))[0] == policy.ASK)
+
+
+# --- what the act leaves behind -----------------------------------------------
+#
+# The class is published by the party that performs the operation, so unlike
+# every other fact the requesting side supplies, reading it is not reading the
+# counterparty's own account of itself. It still may only tighten: the rule she
+# gets out of it is "ask me about anything that cannot be undone", which names
+# no tool and so holds for tools she has never seen.
+
+def _over(rules) -> dict:
+    return {"ask_me": False, "rules": rules, "terms": {"expires_in": 3600}}
+
+
+undoable = _over([{"when": ["request.consequence_at_or_above:irreversible"],
+                   "then": "ask"}])
+check("a tier that grants automatically still asks about what cannot be undone",
+      policy.evaluate(undoable, facts(consequence="irreversible"))[0] == policy.ASK)
+check("and goes on granting what can be",
+      policy.evaluate(undoable, facts(consequence="reversible"))[0] == policy.AUTO)
+check("the order is by remedy, so forward-recoverable is not yet irreversible",
+      policy.evaluate(undoable, facts(consequence="forward_recoverable"))[0] == policy.AUTO)
+
+costly = _over([{"when": ["request.consequence_at_or_above:compensatable"],
+                 "then": "ask"}])
+check("a lower floor catches everything at or past it",
+      all(policy.evaluate(costly, facts(consequence=c))[0] == policy.ASK
+          for c in ("compensatable", "forward_recoverable", "irreversible")))
+check("and nothing below it",
+      policy.evaluate(costly, facts(consequence="reversible"))[0] == policy.AUTO)
+
+# Absent is unknown. Not benign — she may refuse it — and not severe, because
+# an operation nobody has described is not evidence about anything.
+check("an undeclared operation does not fire a rule about severity",
+      policy.evaluate(undoable, facts(consequence=None))[0] == policy.AUTO)
+undescribed = _over([{"when": ["request.consequence_unknown"], "then": "ask"}])
+check("but she can ask about anything nobody has described",
+      policy.evaluate(undescribed, facts(consequence=None))[0] == policy.ASK)
+check("and that rule leaves described operations alone",
+      policy.evaluate(undescribed, facts(consequence="irreversible"))[0] == policy.AUTO)
+check("a word this vocabulary does not know is no declaration, not a fifth class",
+      policy.evaluate(undescribed, facts(consequence="catastrophic"))[0] == policy.ASK)
+
+# The asymmetry, at save time rather than at evaluation time.
+check("a consequence class cannot be made to grant automatically",
+      refused([{"when": ["request.consequence_at_or_above:irreversible"],
+                "then": "auto"}]))
+check("nor can nobody-has-said",
+      refused([{"when": ["request.consequence_unknown"], "then": "auto"}]))
+check("a class the vocabulary does not know cannot be saved at all",
+      refused([{"when": ["request.consequence_at_or_above:catastrophic"],
+                "then": "ask"}]))
+check("and the condition is not writable without one",
+      refused([{"when": ["request.consequence_at_or_above"], "then": "ask"}]))
+
+_vocab = {v["condition"]: v for v in policy.vocabulary()}
+check("her policy surface offers the classes, none of them able to relax",
+      any(c.startswith("request.consequence") for c in _vocab)
+      and not any(_vocab[c]["may_relax"] for c in _vocab
+                  if c.startswith("request.consequence")))
 
 
 # --- her attention has a floor and a ceiling -----------------------------------

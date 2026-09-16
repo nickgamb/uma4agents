@@ -34,6 +34,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
+import uma4a_consequence
 from uma4a_http_sig import VerifyError, verify
 from uma4a_pep import (MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp,
                        s256)
@@ -88,7 +89,8 @@ ALLOWED_ORIGINS = {
 # The lab's is Alice's vault. Any other deployment supplies its own with
 # UMA_PEP_TOOLS, a JSON document of
 #
-#   {"<tool>": {"resource": "<id>", "scopes": [...], "single_use": false}}
+#   {"<tool>": {"resource": "<id>", "scopes": [...],
+#               "consequence": "reversible|compensatable|forward_recoverable|irreversible"}}
 #
 # which is the whole of what has to be described to put this in front of an
 # MCP server somebody else wrote.
@@ -97,10 +99,20 @@ _LAB_TOOLS = {
     "get_transactions": ("alice-vault/get_transactions", ["transactions:read"]),
     "execute_trade": ("alice-vault/execute_trade", ["trades:execute"]),
 }
-_LAB_SINGLE_USE = {"execute_trade"}
+# What the lab's resource says its own operations leave behind. The vault
+# publishes the same table (mcp/alice-vault/server.py): one fact, held by the
+# party that performs the act, in whichever of its two deployment shapes is
+# running.
+_LAB_CONSEQUENCE = {
+    "get_positions": "reversible",
+    "get_transactions": "reversible",
+    "execute_trade": "irreversible",
+}
+_LAB_SINGLE_USE = {t for t, c in _LAB_CONSEQUENCE.items()
+                   if uma4a_consequence.single_use(c)}
 
 
-def _load_tools(path: str) -> tuple[dict, set]:
+def _load_tools(path: str) -> tuple[dict, set, dict]:
     """Read a tool surface from disk, or fail loudly.
 
     Deliberately not falling back to the lab's surface on a malformed file: a
@@ -113,7 +125,7 @@ def _load_tools(path: str) -> tuple[dict, set]:
         doc = json.load(f)
     if not isinstance(doc, dict) or not doc:
         raise ValueError(f"{path} must be a non-empty object of tool definitions")
-    tools, single_use = {}, set()
+    tools, single_use, classes = {}, set(), {}
     for tool, spec in doc.items():
         if tool.startswith("_"):          # room for comments in the document
             continue
@@ -126,17 +138,31 @@ def _load_tools(path: str) -> tuple[dict, set]:
         if not isinstance(scopes, list) or not all(isinstance(x, str) for x in scopes):
             raise ValueError(f"{path}: {tool!r} needs a list of scopes")
         tools[tool] = (rid, scopes)
+        if (raw := spec.get("consequence")) is not None:
+            # Loudly, for the same reason the rest of this function is loud: a
+            # resource server that misspells the class it means would publish
+            # a document with no claim in it at all, and the absence reads as
+            # "nobody has said", which is a different statement from the one
+            # it was trying to make.
+            if not (cls := uma4a_consequence.normalise(raw)):
+                raise ValueError(
+                    f"{path}: {tool!r} declares consequence {raw!r}, which is "
+                    f"not one of {', '.join(uma4a_consequence.CLASSES)}")
+            classes[tool] = cls
+            if uma4a_consequence.single_use(cls):
+                single_use.add(tool)
         if spec.get("single_use"):
             single_use.add(tool)
     if not tools:
         raise ValueError(f"{path} defined no tools")
-    return tools, single_use
+    return tools, single_use, classes
 
 
 if _tools_path := os.environ.get("UMA_PEP_TOOLS"):
-    TOOLS, _CONFIGURED_SINGLE_USE = _load_tools(_tools_path)
+    TOOLS, _CONFIGURED_SINGLE_USE, CONSEQUENCE = _load_tools(_tools_path)
 else:
     TOOLS, _CONFIGURED_SINGLE_USE = _LAB_TOOLS, _LAB_SINGLE_USE
+    CONSEQUENCE = _LAB_CONSEQUENCE
 # Owners besides the primary one that this gateway fronts, each at its own
 # path. A resource server holding many people's accounts holds a distinct
 # protected resource for each: `/mcp` is Alice's, `/mcp/carol` is Carol's,
@@ -370,6 +396,7 @@ def _enforcer_for(owner: str) -> Enforcer:
         realm=REALM,
         tools=tools_for(owner),
         single_use_tools=SINGLE_USE_TOOLS,
+        consequence=CONSEQUENCE,
         protected_methods=PROTECTED_METHODS,
         open_methods=OPEN_METHODS,
         expected_authority=EXPECTED_AUTHORITY,
@@ -424,6 +451,7 @@ def _shared_enforcer_for(owner: str) -> Enforcer:
         # without anything here restarting.
         tools={},
         single_use_tools=SINGLE_USE_TOOLS,
+        consequence=CONSEQUENCE,
         protected_methods=PROTECTED_METHODS,
         open_methods=OPEN_METHODS,
         expected_authority=EXPECTED_AUTHORITY,
@@ -512,6 +540,7 @@ def joint_enforcer(account: str) -> Enforcer | None:
             realm=account,
             tools=joint_tools(account),
             single_use_tools=SINGLE_USE_TOOLS,
+        consequence=CONSEQUENCE,
             protected_methods=PROTECTED_METHODS,
             open_methods=OPEN_METHODS,
             expected_authority=EXPECTED_AUTHORITY,
@@ -873,8 +902,12 @@ def prm_document(owner: str = None, leaf: str = None, enforcer=None,
         "scopes_supported": scopes,
         "bearer_methods_supported": ["header"],
         "resource_signing_alg_values_supported": ["EdDSA"],
+        # Declared where this resource has something to say about the
+        # operation. Absent means undeclared, which is not a claim that
+        # nothing is left behind.
         "tool_surfaces": [
-            {"tool": tool, "resource_scopes": ss}
+            {"tool": tool, "resource_scopes": ss,
+             **({"consequence": CONSEQUENCE[tool]} if CONSEQUENCE.get(tool) else {})}
             for tool, (rid, ss) in tools.items()
         ],
         "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources{tail}",
@@ -980,7 +1013,8 @@ def r3_vocabulary() -> dict:
     *universal type layer* (operations + their scopes) a stable identifier —
     the same facts, referenceable independent of any one owner."""
     operations = [
-        {"tool": tool, "resource_scopes": ss}
+        {"tool": tool, "resource_scopes": ss,
+         **({"consequence": CONSEQUENCE[tool]} if CONSEQUENCE.get(tool) else {})}
         for tool, (rid, ss) in TOOLS.items()
     ]
     digest = s256(json.dumps(operations, sort_keys=True).encode())
@@ -1128,6 +1162,11 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
             "resources": [
                 {"_id": rid, "tool": tool.rsplit(":", 1)[-1],
                  "resource_scopes": ss, "type": "mcp-tool",
+                 # The listing her authority pulls into its registry, which is
+                 # what her policy reads. The public document carries the same
+                 # member; this is the copy that reaches her rules.
+                 **({"consequence": CONSEQUENCE[tool.rsplit(":", 1)[-1]]}
+                    if CONSEQUENCE.get(tool.rsplit(":", 1)[-1]) else {}),
                  "name": (f"Shared: {tool.rsplit(':', 1)[-1]}" if rid in shared_ids
                           else f"Joint: {tool.rsplit(':', 1)[-1]}" if rid in joint_ids
                           else f"{who.title()}'s vault: {tool}")}

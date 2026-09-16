@@ -1,0 +1,61 @@
+# What an operation leaves behind — in the cluster.
+#
+# The same clients/demo-driver/consequence_check.py the compose stack runs,
+# from Bob's namespace, so the declaration is followed the whole way through
+# the real path: the vault states it, the enforcement point publishes it in
+# the metadata it signs, her authorization server pulls it into her registry,
+# and a rule she wrote reads it there.
+#
+# Worth running here rather than only under compose, for the same reason
+# intent-check is: her registry is a pull into a replicated server, so "the
+# class her policy read is the class the resource published" stops being an
+# assumption about one process.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: consequence-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: consequence-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: consequence-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/consequence_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: driver, mountPath: /driver/consequence_check.py, subPath: consequence_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

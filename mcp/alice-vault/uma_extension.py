@@ -134,7 +134,8 @@ class UmaEnforcement(Extension):
 
 
 def build(tools: dict[str, tuple[str, list[str]]],
-          single_use: set[str]) -> UmaEnforcement:
+          single_use: set[str],
+          consequence: dict[str, str] | None = None) -> UmaEnforcement:
     """Wire an enforcer from the environment, mirroring the gateway host."""
     authority = os.environ.get("UMA_EXPECTED_AUTHORITY", "gateway.uma.lab")
     enforcer = Enforcer(
@@ -145,6 +146,7 @@ def build(tools: dict[str, tuple[str, list[str]]],
         realm=os.environ.get("UMA_REALM", "alice-vault"),
         tools=tools,
         single_use_tools=single_use,
+        consequence=consequence or {},
         protected_methods={"tools/call"},
         open_methods=set(),        # the interceptor only ever sees tools/call
         expected_authority=authority,

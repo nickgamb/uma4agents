@@ -15,6 +15,9 @@ rules for how an owner edit is applied.
 import copy
 import os
 
+import uma4a_clearance
+import uma4a_consequence
+
 # Default policy — the state Alice's "morning scene" produces. The store seeds
 # itself from this once; every later read comes from the store.
 DEFAULT_TIERS: dict[str, dict] = {
@@ -358,6 +361,14 @@ ASSURANCE_CONDITIONS = {
     "request.max_expiry",              # it asked for the tier's ceiling
     "request.reason_absent",           # it did not say what it wanted this for
     "request.mission_absent",          # it cited no mandate for the errand
+    # What the *resource* says the operation leaves behind (see
+    # lib/uma4a_consequence.py). Published by the party that performs the act
+    # rather than by the one asking for it, which is what makes it readable at
+    # all — and on this side of the line because reading it can only tighten:
+    # "ask me about anything that cannot be undone" names no tool, so it holds
+    # for tools she has never seen.
+    "request.consequence_at_or_above",  # :<class>
+    "request.consequence_unknown",      # nothing was declared about it
 }
 
 CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
@@ -373,7 +384,8 @@ LEVEL_ARGS = {"assurance.binding_below", "assurance.provenance_below",
               "assurance.accountability_below"}
 COUNT_ARGS = {"standing.denials_above", "standing.tiers_above",
               "standing.calls_above"}
-TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS
+CLASS_ARGS = {"request.consequence_at_or_above"}
+TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS | CLASS_ARGS
 
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
@@ -405,6 +417,18 @@ VOCABULARY = [
      "label": "it did not say what it wants the access for"},
     {"condition": "request.mission_absent", "takes": None,
      "label": "it cited no mandate for what it is doing"},
+    # Enumerated per class for the same reason the assurance levels are: each
+    # is a different sentence she might mean. `reversible` is left out because
+    # every declared operation is at or above it, and a rule that fires on
+    # everything is not a sentence anybody writes on purpose.
+    {"condition": "request.consequence_at_or_above:compensatable", "takes": None,
+     "label": "undoing it would take a second action, or more"},
+    {"condition": "request.consequence_at_or_above:forward_recoverable", "takes": None,
+     "label": "it cannot be undone, only recovered from"},
+    {"condition": "request.consequence_at_or_above:irreversible", "takes": None,
+     "label": "it cannot be undone at all"},
+    {"condition": "request.consequence_unknown", "takes": None,
+     "label": "nobody has said whether it can be undone"},
     {"condition": "standing.none", "takes": None,
      "label": "I have no standing connection with this agent"},
     {"condition": "standing.first_at_tier", "takes": None,
@@ -496,6 +520,9 @@ def validate_rules(rules) -> None:
                 try:
                     if name in DURATION_ARGS:
                         parse_duration(value)
+                    elif name in CLASS_ARGS:
+                        if uma4a_consequence.normalise(value) is None:
+                            raise ValueError("not a consequence class")
                     elif int(value) < 0:
                         # A negative count would make the condition always true
                         # and the rule always fire, which reads as a working
@@ -503,7 +530,9 @@ def validate_rules(rules) -> None:
                         raise ValueError("negative")
                 except (TypeError, ValueError):
                     kind = ("duration" if name in DURATION_ARGS
-                            else "count" if name in COUNT_ARGS else "level")
+                            else "count" if name in COUNT_ARGS
+                            else "consequence class" if name in CLASS_ARGS
+                            else "level")
                     raise ValueError(
                         f"{name!r} takes a {kind}, got {value!r}") from None
             elif value is not None:
@@ -571,6 +600,16 @@ def _matches(condition: str, facts: dict) -> bool:
         return not (facts["request"].get("reason") or "").strip()
     if name == "request.mission_absent":
         return not facts["request"].get("mission")
+    # Undeclared is not a quiet yes and not a quiet no. `at_or_above` stays
+    # false for it — an operation nobody has described is not evidence of
+    # severity — and the owner who wants to refuse the undescribed has a
+    # condition of her own to say so with.
+    if name == "request.consequence_at_or_above":
+        return uma4a_consequence.at_or_above(
+            facts["request"].get("consequence"), value)
+    if name == "request.consequence_unknown":
+        return uma4a_consequence.normalise(
+            facts["request"].get("consequence")) is None
     return False
 
 
@@ -683,6 +722,11 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
         "resources": resources,
         "ask_me": bool(spec.get("ask_me")),
         "rules": copy.deepcopy(rules),
+        # What somebody other than the requesting party must be able to attest
+        # before this tier grants anything — see lib/uma4a_clearance.py. Hers
+        # to write; the organization above her can only add to it.
+        "clearance": uma4a_clearance.validate_requirement(
+            spec.get("clearance"), label="clearance"),
         "terms": {
             # v1 because this document has never been served before. Every
             # later edit bumps it, and every version stays dereferenceable.
@@ -712,6 +756,13 @@ def apply_patch(tier: dict, patch: dict) -> dict:
     if "rules" in patch:
         validate_rules(patch["rules"])       # raises rather than storing
         tier["rules"] = copy.deepcopy(patch["rules"])
+    if "clearance" in patch:
+        # Validated before it is stored, like the rules. The organization
+        # patches this field too — that is how a charter's requirement reaches
+        # a tier she wrote before she joined — so it has to survive being
+        # written by either party.
+        tier["clearance"] = uma4a_clearance.validate_requirement(
+            patch["clearance"], label="clearance")
     terms_patch = patch.get("terms", {})
     # `scope` is in this list and is not something her portal offers her: the
     # scopes a tier covers follow from the resources it governs, so editing

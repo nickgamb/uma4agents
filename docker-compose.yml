@@ -794,6 +794,27 @@ services:
       - driver-keys:/driver/keys
     profiles: ["test"]
 
+  # What an operation leaves behind, declared by the resource that performs
+  # it and read by her policy. Proves the declaration travels — vault to
+  # published metadata to her registry to a rule she wrote — and that reading
+  # it can only ever tighten.
+  consequence-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/consequence_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./clients/demo-driver/consequence_check.py:/driver/consequence_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
   subagent-check:
     image: python:3.12-slim
     entrypoint:
@@ -911,6 +932,30 @@ services:
       UMA_AS_RESOURCE_REFRESH_S: ${UMA_AS_RESOURCE_REFRESH_S:-15}
     volumes:
       - ./clients/demo-driver/org_check.py:/driver/org_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  # An authorization neither she nor the agent may give: a licence, a
+  # jurisdiction. The organization attests it to her authority over her
+  # authority's own credential, and never through the agent.
+  clearance-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/clearance_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
+      PYTHONUNBUFFERED: "1"
+      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
+      ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
+      UMA4A_AGENT_OPERATOR: https://agent.uma.lab
+      UMA_AS_ORG_TTL_S: ${UMA_AS_ORG_TTL_S:-30}
+    volumes:
+      - ./clients/demo-driver/clearance_check.py:/driver/clearance_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys

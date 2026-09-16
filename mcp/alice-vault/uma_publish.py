@@ -92,13 +92,14 @@ async def as_keys() -> list:
     return _AS_KEYS["keys"]
 
 
-def attach(mcp, tools: dict[str, tuple[str, list[str]]]) -> None:
+def attach(mcp, tools: dict[str, tuple[str, list[str]]],
+           consequence: dict[str, str] | None = None) -> None:
     """Register the three discovery routes on the MCP server's HTTP app."""
 
     @mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
     @mcp.custom_route("/.well-known/oauth-protected-resource/mcp", methods=["GET"])
     async def prm(request: Request) -> JSONResponse:
-        doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools)
+        doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools, consequence=consequence)
         return JSONResponse(sign_metadata(doc, key(), KID))
 
     @mcp.custom_route("/.well-known/oauth-protected-resource/mcp/{owner}",
@@ -115,12 +116,14 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]]) -> None:
         who = request.path_params["owner"]
         if who != OWNER:
             return JSONResponse({"error": "no such resource"}, status_code=404)
-        doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools, leaf=f"mcp/{who}")
+        doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools, leaf=f"mcp/{who}",
+                           consequence=consequence)
         return JSONResponse(sign_metadata(doc, key(), KID))
 
     @mcp.custom_route("/.well-known/aauth-resource.json", methods=["GET"])
     async def aauth(request: Request) -> JSONResponse:
-        return JSONResponse(aauth_document(PUBLIC_BASE, AS_PUBLIC, tools))
+        return JSONResponse(aauth_document(PUBLIC_BASE, AS_PUBLIC, tools,
+                                           consequence=consequence))
 
     @mcp.custom_route("/jwks", methods=["GET"])
     async def jwks(request: Request) -> JSONResponse:

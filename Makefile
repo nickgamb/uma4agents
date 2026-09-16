@@ -210,6 +210,22 @@ assurance-check:
 intent-check:
 	docker compose --profile test run --rm intent-check
 
+## consequence-check: what an operation leaves behind, declared by the
+## resource that would have to undo it and read by her policy — so "ask me
+## about anything that cannot be undone" is a rule she writes once, and it
+## holds for tools she has never seen. See docs/CONSEQUENCE.md.
+.PHONY: consequence-check
+consequence-check:
+	docker compose --profile test run --rm consequence-check
+
+## clearance-check: an authorization that is nobody's in the negotiation to
+## give — a licence, a jurisdiction. The organization attests it to her
+## authority, the charter requires it, and her terms cannot edit it out. See
+## docs/CLEARANCE.md.
+.PHONY: clearance-check
+clearance-check:
+	docker compose --profile test run --rm clearance-check
+
 ## adapter: the U4A adapter as a service — the same shim Bob runs beside
 ## Claude Code, reachable over the network so an agent that is not a local
 ## process can use it. This is what lets an unmodified agent framework be
@@ -602,7 +618,9 @@ include Makefile.k8s
 .PHONY: check-all check-unit check-live
 check-unit: rules-test sig-test pep-test introduction-test org-test joint-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
-	establishment-check assurance-check intent-check subagent-check org-check \
+	establishment-check assurance-check intent-check consequence-check \
+	clearance-check \
+	subagent-check org-check \
 	joint-check xaa-check adapter-check shim-test embedded-check kwaai-check \
 	rotation-check ts-agent-check fixture
 check-all: check-unit spec-check check-live

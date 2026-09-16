@@ -43,6 +43,8 @@ from jwt.algorithms import OKPAlgorithm
 
 from urllib.parse import urlencode
 
+import uma4a_consequence
+
 from uma4a_http_sig import VerifyError, verify
 from uma4a_http_sig import sign as http_sign
 from uma4a_joint import MandateError, key_thumbprint, mandate_digest, validate_mandate
@@ -210,6 +212,7 @@ class Enforcer:
         realm: str,
         tools: dict[str, tuple[str, list[str]]],
         single_use_tools: set[str],
+        consequence: dict[str, str] | None = None,
         protected_methods: set[str],
         open_methods: set[str],
         expected_authority: str,
@@ -243,6 +246,12 @@ class Enforcer:
         self.realm = realm
         self.tools = tools
         self.single_use_tools = single_use_tools
+        # What this resource says each of its operations leaves behind, as it
+        # publishes it. Read to refuse a grant issued against a gentler claim
+        # than the one the resource now makes, and for nothing else: a class
+        # may tighten what a request needs and may never widen it.
+        self.consequence = {t: c for t, c in (consequence or {}).items()
+                            if uma4a_consequence.normalise(c)}
         self.protected_methods = protected_methods
         self.open_methods = open_methods
         self.expected_authority = expected_authority
@@ -936,6 +945,31 @@ class Enforcer:
             return Decision(outcome="deny", status=401, error="invalid_token",
                             description=f"proof-of-possession failed: {exc}")
 
+        # 3a. The grant was issued against what this resource said the
+        #     operation costs. If it now says something worse — a read that
+        #     has since become a disclosure — her authority answered a
+        #     different question, and that answer does not carry over.
+        #
+        #     Both sides of the comparison must be declared for this to
+        #     fire. A grant issued before anything was declared carries no
+        #     class, and refusing those would revoke every standing grant in
+        #     a deployment on the day it first described its tools; the next
+        #     negotiation carries the class and this holds from then on.
+        declared = self.consequence.get(f.tool or "")
+        granted = info.get("consequence")
+        if (declared and granted
+                and uma4a_consequence.rank(declared) is not None
+                and uma4a_consequence.rank(granted) is not None
+                and uma4a_consequence.rank(declared)
+                > uma4a_consequence.rank(granted)):
+            self.event("access.denied", reason="consequence-raised", tool=f.tool,
+                       granted=granted, declared=declared)
+            return Decision(outcome="deny", status=403,
+                            error="consequence_changed",
+                            description="this operation now declares a "
+                                        "consequence the grant was not issued "
+                                        "against")
+
         # 4. Operation binding: this trade, not trading authority.
         #    Single-use when this deployment says the tool is, *or* when the
         #    grant says it is. The second half is what the grant is for: a
@@ -999,13 +1033,20 @@ class Enforcer:
         can read most of a UMA challenge without knowing UMA. It also gives a
         downstream policy engine typed fields instead of only a digest.
         """
-        return [{
+        detail = {
             "type": "urn:uma4agents:authorization-details:tool-call",
             "locations": [self.resource_metadata_url.rsplit("/.well-known/", 1)[0]],
             "identifier": rid,
             "actions": [tool],
             "datatypes": scopes,
-        }]
+        }
+        # What the act leaves behind, where this resource declares it. The
+        # remediation object is the first thing the requesting side reads, so
+        # an agent learns it is about to ask for something that cannot be
+        # undone before it negotiates for it rather than afterwards.
+        if cls := self.consequence.get(tool):
+            detail["consequence"] = cls
+        return [detail]
 
     async def challenge(self, tool: str, rid: str, scopes: list[str]) -> Decision:
         """Beat 1: a real ticket from the AS, and where to take it."""

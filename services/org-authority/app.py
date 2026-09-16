@@ -62,6 +62,7 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import charter as charter_mod
+import uma4a_clearance as clearance_mod
 from uma4a_http_sig import VerifyError, verify
 
 ISSUER = os.environ.get("ORG_ISSUER", "https://northwind-org.uma.lab")
@@ -70,6 +71,10 @@ ORG_ID = os.environ.get("ORG_ID", "northwind")
 ORG_NAME = os.environ.get("ORG_NAME", "Northwind Capital")
 KEY_PATH = os.environ.get("ORG_SIGNING_KEY", "/keys/org-ed25519.pem")
 KID = os.environ.get("ORG_KID", "org-1")
+# How long a clearance attestation is good for. A member authority
+# re-reads it well inside this; the ceiling is short on purpose, because
+# the facts it carries are exactly the kind that stop being true.
+CLEARANCE_TTL_S = int(os.environ.get("ORG_CLEARANCE_TTL_S", "300"))
 OPA_URL = os.environ.get("OPA_URL", "http://opa:8181").rstrip("/")
 CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 
@@ -409,6 +414,30 @@ def require_admin(request: Request) -> str:
 def require_rs(request: Request) -> None:
     if not secrets.compare_digest(_bearer(request), RS_TOKEN):
         raise HTTPException(status_code=401, detail="unknown enforcement point")
+
+
+def clearance_token(owner: str) -> str | None:
+    """What this organization will attest about one member, signed.
+
+    Audienced at *her* authorization server, the one recorded at enrolment, so
+    an attestation cannot be presented at another authority. Short-lived on
+    purpose: a licence is exactly the kind of fact that lapses, and a
+    long-lived statement about it would outlive its own truth.
+
+    Returned to her authority over its membership credential and never to an
+    agent. The fact may be adverse to the party being asked about, and a fact
+    that may be adverse is one the subject must not be the courier for.
+    """
+    member = MEMBERS.get(owner)
+    if member is None or not (member.get("clearance") or {}):
+        return None
+    return jwt.encode(
+        {"iss": ISSUER, "sub": owner, "aud": member["as_uri"],
+         "org": ORG_ID, "iat": int(now()), "exp": int(now()) + CLEARANCE_TTL_S,
+         "jti": uuid.uuid4().hex,
+         clearance_mod.CLAIM: dict(member["clearance"])},
+        SIGNING_KEY, algorithm="EdDSA",
+        headers={"typ": clearance_mod.TYP, "kid": KID})
 
 
 def membership_token(owner: str) -> str:
@@ -771,6 +800,12 @@ async def member_join(request: Request) -> dict:
         # Filled in by her authority once it has clamped. Until then the
         # console shows the honest answer, which is that it does not know.
         "compliance": None,
+        # What this organization is prepared to attest about her — a licence,
+        # a jurisdiction, a registration. Empty until an administrator says
+        # otherwise, because an organization that has not recorded a licence
+        # does not hold one, and seeding a default here would be the service
+        # inventing the very fact it exists to vouch for.
+        "clearance": {},
     }
     note("member.joined", member=owner, as_uri=as_uri, via=how,
          role=MEMBERS[owner]["role"], charter_version=current()["version"])
@@ -835,6 +870,28 @@ async def member_leave(request: Request) -> dict:
     MEMBERS.pop(owner, None)
     note("member.left", member=owner)
     return {"left": ORG_ID, "member": owner}
+
+
+@app.get("/member/clearance")
+async def member_clearance(request: Request) -> dict:
+    """The attestation her authority enforces against.
+
+    Fetched by her authorization server rather than pushed at it, for the same
+    reason the envelope is: a push that failed would leave her authority
+    admitting requests on a clearance this organization has already withdrawn,
+    and neither side would know.
+
+    404 when there is nothing to say. Her authority reads that as unmet rather
+    than as an error — the absence of an attestation is not an outage, it is
+    the organization declining to vouch.
+    """
+    owner = require_member(request)
+    token = clearance_token(owner)
+    if token is None:
+        raise HTTPException(status_code=404,
+                            detail="this organization holds no clearance for "
+                                   "that member")
+    return {"clearance": token, "expires_in": CLEARANCE_TTL_S}
 
 
 @app.get("/member/envelope")
@@ -1019,9 +1076,16 @@ async def notify_member(owner: str, payload: dict) -> bool:
     if not as_uri:
         return False
     # Short-lived and single-use, so a captured notice cannot be posted again.
+    # `jti` is generated *after* the payload is spread, and the order is the
+    # whole of this fix. It used to come first, so a payload carrying its own
+    # `jti` replaced the notice's identity — and both break-glass notices
+    # carried the override's id. Her authority spends a notice once, keyed on
+    # `jti`, so the second one looked like a replay of the first and was
+    # refused: the member was told an override had been opened and never that
+    # it had been used, which is the half that matters.
     notice = jwt.encode({"iss": ISSUER, "sub": owner, "org": ORG_ID,
                          "iat": int(now()), "exp": int(now()) + 300,
-                         "jti": uuid.uuid4().hex, **payload},
+                         **payload, "jti": uuid.uuid4().hex},
                         SIGNING_KEY, algorithm="EdDSA",
                         headers={"typ": "u4a-org-notice+jwt", "kid": KID})
     try:
@@ -1180,7 +1244,9 @@ async def break_glass(request: Request) -> JSONResponse:
         "reason": reason,
         "authorised_by": authorised_by,
         "expires_in": ttl,
-        "jti": jti,
+        # The override's id, under a name of its own: every stage of one
+        # override shares it, and `jti` belongs to the notice carrying it.
+        "family": jti,
         "charter_version": current()["version"],
     })
     if not told:
@@ -1287,7 +1353,7 @@ async def audit_access(request: Request) -> dict:
          jti=body.get("family"))
     await notify_member(owner, {
         "kind": "break_glass_used",
-        "jti": body.get("family"),
+        "family": body.get("family"),
         "tool": body.get("tool"),
         "summary": body.get("summary"),
         "resource_id": rec.get("resource_id"),
@@ -1435,6 +1501,43 @@ async def admin_set_role(owner: str, request: Request) -> dict:
     await notify_member(owner, {"kind": "role_changed", "role": role_id,
                                 "by": admin})
     return {"owner": owner, "role": role_id}
+
+
+@app.put("/admin/members/{owner}/clearance")
+async def admin_set_clearance(owner: str, request: Request) -> dict:
+    """What this organization is prepared to attest about one member.
+
+    The counterpart to the charter's `require_clearance`: the charter says
+    what must be true, and this says what this organization will put its
+    signature behind. Both are the organization's, and deliberately so —
+    a member asserting her own licence is the arrangement this exists to
+    replace.
+
+    Withdrawing it is the same call with an empty object, and it takes effect
+    at her authority within the attestation's lifetime rather than at some
+    renewal — which is the property a licence that can lapse actually needs.
+    """
+    admin = require_admin(request)
+    member = MEMBERS.get(owner)
+    if member is None:
+        raise HTTPException(status_code=404, detail="not a member")
+    body = await request.json()
+    facts = body.get("clearance")
+    if facts is None or not isinstance(facts, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="send {\"clearance\": {...}} — an object of facts this "
+                   "organization will attest, or {} to withdraw it")
+    for key, value in facts.items():
+        if not isinstance(key, str) or not isinstance(value, (str, bool, int, float)):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{key!r} must be a simple fact — a string, number or "
+                       f"boolean this organization can stand behind")
+    member["clearance"] = dict(facts)
+    note("member.clearance_set", member=owner, by=admin,
+         claims=sorted(facts), withdrawn=not facts)
+    return {"owner": owner, "clearance": member["clearance"]}
 
 
 @app.get("/admin/roles")

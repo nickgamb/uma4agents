@@ -26,6 +26,8 @@ import pathlib
 
 from mcp.server.mcpserver import MCPServer
 
+import uma4a_consequence
+
 # Whose vault this process is. One instance per owner: her holdings are not
 # rows in a table somebody else can also reach, they are a different process
 # with a different fixture file, reached at a different address. A resource
@@ -37,7 +39,7 @@ FIXTURES = json.loads(pathlib.Path(
                    str(pathlib.Path(__file__).parent / "fixtures.json"))
 ).read_text())
 
-# The tool surface, and which calls are single-use. In gateway mode the PEP
+# The tool surface, and what each call leaves behind. In gateway mode the PEP
 # holds the same table; in embedded mode this is the one copy.
 TOOLS = {
     "get_positions": (f"{VAULT_OWNER}-vault/get_positions", ["positions:read"]),
@@ -45,14 +47,31 @@ TOOLS = {
                          ["transactions:read"]),
     "execute_trade": (f"{VAULT_OWNER}-vault/execute_trade", ["trades:execute"]),
 }
-SINGLE_USE_TOOLS = {"execute_trade"}
+
+# What the resource says about its own operations, published in the metadata
+# it signs. The two reads leave nothing to put back; the trade cannot be
+# unwound by the party that placed it, whatever happens next in the market.
+#
+# This is the resource's statement and it is the only party in a position to
+# make it. Her authority reads it as a policy input — "ask me about anything
+# that cannot be undone" — so she never has to enumerate tools by name.
+CONSEQUENCE = {
+    "get_positions": "reversible",
+    "get_transactions": "reversible",
+    "execute_trade": "irreversible",
+}
+# Derived rather than listed a second time. A tool that cannot be undone takes
+# a grant bound to one operation — that is what the operation binding is for —
+# and a deployment that kept the two lists separately kept one fact twice.
+SINGLE_USE_TOOLS = {t for t, c in CONSEQUENCE.items()
+                    if uma4a_consequence.single_use(c)}
 
 ENFORCEMENT_MODE = os.environ.get("ENFORCEMENT_MODE", "gateway")
 
 extensions = []
 if ENFORCEMENT_MODE == "embedded":
     import uma_extension
-    extensions.append(uma_extension.build(TOOLS, SINGLE_USE_TOOLS))
+    extensions.append(uma_extension.build(TOOLS, SINGLE_USE_TOOLS, CONSEQUENCE))
 
 mcp = MCPServer(f"{VAULT_OWNER}-vault", extensions=extensions)
 
@@ -64,7 +83,7 @@ if ENFORCEMENT_MODE == "embedded":
     # come from. In gateway mode the ext_authz service serves these and this
     # block does not run — one implementation either way, from lib/.
     import uma_publish
-    uma_publish.attach(mcp, TOOLS)
+    uma_publish.attach(mcp, TOOLS, CONSEQUENCE)
 
 
 @mcp.tool()

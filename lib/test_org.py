@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT / "services" / "org-authority"))
 
 import charter  # noqa: E402
 import org  # noqa: E402
+import uma4a_clearance  # noqa: E402
 import uma4a_org  # noqa: E402
 
 PASS, FAIL = [], []
@@ -403,6 +404,70 @@ check("a concrete namespace is accepted",
       charter.validate({"name": "t", "claims": ["northwind-vault/*"],
                         "envelope": {"max_expires_in": 3600}})["claims"]
       == ["northwind-vault/*"])
+
+print("\n-- clearance: a requirement the organization answers itself --")
+
+# The ceiling adds what the charter requires to terms she already wrote.
+_req = {"licence_active": [True], "jurisdiction": ["US-NY", "US-NJ"]}
+_clamped, _changes = org.clamp(tier(), envelope(require_clearance=_req))
+check("a charter's clearance requirement reaches a tier that had none",
+      _clamped.get("clearance") == _req, str(_clamped.get("clearance")))
+check("and it is reported to her as a change, like every other clamp",
+      any(c["field"] == "require_clearance" for c in _changes))
+
+# Where both name a claim, only what both accept survives. Narrowing only.
+_hers = tier(clearance={"jurisdiction": ["US-NY", "US-CA"], "desk": ["fixed-income"]})
+_both, _ = org.clamp(_hers, envelope(require_clearance=_req))
+check("where both require a claim, only values both accept survive",
+      _both["clearance"]["jurisdiction"] == ["US-NY"],
+      str(_both["clearance"]))
+check("a requirement she wrote and the charter is silent on is kept",
+      _both["clearance"]["desk"] == ["fixed-income"])
+check("and the charter's own claim is added",
+      _both["clearance"]["licence_active"] == [True])
+check("clamping twice changes nothing further",
+      org.clamp(_both, envelope(require_clearance=_req))[0] == _both)
+
+# Her own accounts are not the organization's business, here as everywhere.
+check("a charter's clearance requirement never reaches her own tier",
+      "clearance" not in org.clamp(own(), envelope(require_clearance=_req))[0])
+
+# The charter refuses a requirement that would not evaluate, in front of the
+# administrator who wrote it rather than inside every member's grant loop.
+for _bad in ({"licence_active": True}, {"licence_active": "yes"}, {"": [1]}):
+    try:
+        charter.validate({"name": "t", "claims": ["northwind-vault/*"],
+                          "envelope": {"max_expires_in": 3600,
+                                       "require_clearance": _bad}})
+        check(f"a requirement of {_bad!r} is refused", False, "it was accepted")
+    except ValueError as exc:
+        check(f"a requirement of {_bad!r} is refused", True, str(exc))
+_ok = charter.validate({"name": "t", "claims": ["northwind-vault/*"],
+                        "envelope": {"max_expires_in": 3600,
+                                     "require_clearance": _req}})
+check("a well-formed requirement is accepted and published in the envelope",
+      charter.envelope_of(_ok).get("require_clearance") == _req)
+check("and a member is told about it in words before she joins",
+      any("attest" in line for line in charter.summarize(_ok)),
+      str(charter.summarize(_ok)))
+
+print("\n-- clearance: what satisfies one --")
+check("a fact the attestation does not carry is unmet",
+      uma4a_clearance.unmet({"licence_active": [True]}, {}) != [])
+check("a fact with the wrong value is unmet",
+      uma4a_clearance.unmet({"jurisdiction": ["US-NY"]},
+                            {"jurisdiction": "US-CA"}) != [])
+check("a requirement nothing satisfies is unmet even when the claim is there",
+      uma4a_clearance.unmet({"jurisdiction": []},
+                            {"jurisdiction": "US-NY"}) != [])
+check("and a clearance that carries what was asked for is met",
+      uma4a_clearance.unmet(_req, {"licence_active": True,
+                                   "jurisdiction": "US-NY"}) == [])
+check("tightening adds a claim neither side had agreed to drop",
+      uma4a_clearance.tighten({"a": [1]}, {"b": [2]}) == {"a": [1], "b": [2]})
+check("and intersects one they both name",
+      uma4a_clearance.tighten({"a": [1, 2]}, {"a": [2, 3]}) == {"a": [2]})
+
 
 print(f"{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:

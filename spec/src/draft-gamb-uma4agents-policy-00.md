@@ -567,3 +567,11 @@ The decomposition of {{axes}} follows {{SP800-63-3}}. The operator key directory
 of {{I-D.meunier-webbotauth-registry}} and the client metadata document of
 {{I-D.ietf-oauth-client-id-metadata-document}} are what make the accountability
 axis derivable rather than asserted.
+
+The consequence vocabulary of {{consequence}} — reversible, compensatable,
+forward-recoverable, irreversible — is Nat Sakimura's, from "When Software
+Becomes Staff: Governance, Security & Safety for Agentic AI"
+(https://nat.sakimura.org/2026/05/19/when-software-becomes-staff-governance-security-safety-for-agentic-ai/).
+That work also states the objection this document answers structurally: a
+capability an agent declares about itself is advertising, so the declaration
+here is made by the resource and read by the party that bears the cost.

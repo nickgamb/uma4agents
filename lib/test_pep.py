@@ -195,6 +195,43 @@ early["permissions"][0]["nbf"] = int(time.time()) + 600
 d = present(granting(early))
 check("nor one before it becomes valid", d.outcome == "challenge", d.error)
 
+print("\n== a resource may not raise what an operation costs under a grant ==")
+# Her authority answered a question about an operation the resource described.
+# If the description changes afterwards, the answer was to a different question.
+d = present(granting(grant(consequence="reversible"),
+                     consequence={"get_positions": "irreversible"}))
+check("a grant issued against a reversible operation is refused once the "
+      "resource re-declares it irreversible",
+      d.outcome == "deny" and d.error == "consequence_changed", d.error)
+
+d = present(granting(grant(consequence="irreversible"),
+                     consequence={"get_positions": "irreversible"}))
+check("the class it was issued against is honoured", d.outcome == "allow", d.error)
+
+d = present(granting(grant(consequence="irreversible"),
+                     consequence={"get_positions": "reversible"}))
+check("a resource that lowers its own claim invalidates nothing",
+      d.outcome == "allow", d.error)
+
+# The day a deployment first describes its tools, every standing grant predates
+# the description. Refusing those would revoke the lot; the next negotiation
+# carries the class, and the check holds from then on.
+d = present(granting(grant(), consequence={"get_positions": "irreversible"}))
+check("a grant issued before anything was declared is not refused for it",
+      d.outcome == "allow", d.error)
+
+_declaring = Enforcer(**{**CONFIG, "consequence": {"execute_trade": "irreversible"}})
+_detail = _declaring.authorization_details(
+    "alice-vault/execute_trade", "execute_trade", ["trades:execute"])[0]
+check("the remediation object says what the act would leave behind, so an "
+      "agent learns it before it negotiates",
+      _detail.get("consequence") == "irreversible")
+_plain = _declaring.authorization_details(
+    "alice-vault/get_positions", "get_positions", ["positions:read"])[0]
+check("and says nothing where the resource has declared nothing",
+      "consequence" not in _plain)
+
+
 print("\n== operation binding follows the grant ==")
 trade = {"symbol": "VTI", "qty": 40}
 d = present(granting(grant("alice-vault/execute_trade", ("trades:execute",), single_use=True)),

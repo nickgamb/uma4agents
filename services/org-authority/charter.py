@@ -33,6 +33,8 @@ under, one layer up.
 """
 
 import copy
+
+import uma4a_clearance as clearance
 import re
 
 from uma4a_org import claims_match as _claims_match
@@ -144,6 +146,15 @@ DEFAULT_CHARTER: dict = {
         # Absent means unrestricted. `[]` means nothing may be granted, which
         # is a legitimate and very loud thing to write.
         "allowed_scopes": ["positions:read", "transactions:read", "trades:execute"],
+        # What the organization must be able to say about a member before her
+        # agents may act on its resources at all — a licence, a jurisdiction,
+        # a registration. Empty by default, because a firm that has not said
+        # what it requires does not have a requirement, and inventing one here
+        # would refuse every request in a deployment nobody had configured.
+        #
+        # It is a ceiling field like the others: a member may add to it in her
+        # own tiers and can never remove what the charter asks for.
+        "require_clearance": {},
         # Added to every member's terms whether she wrote them or not. These
         # are undertakings rather than mechanisms — see ENFORCED_PROHIBITIONS
         # in the AS — and the charter is where a firm states them once instead
@@ -275,6 +286,11 @@ def validate(charter: dict) -> dict:
           label="envelope.")
     _strings(envelope, ["allowed_scopes", "require_prohibited", "always_ask"],
              label="envelope.")
+    # A requirement that will not evaluate must fail in front of the
+    # administrator who wrote it. Published unchecked, it would refuse every
+    # request from every member at once and read as an outage.
+    envelope["require_clearance"] = clearance.validate_requirement(
+        envelope.get("require_clearance"), label="envelope.require_clearance")
 
     roles = out.setdefault("roles", {})
     if not isinstance(roles, dict):
@@ -576,6 +592,11 @@ def envelope_of(charter: dict, role: dict | None = None) -> dict:
         "allowed_scopes": envelope.get("allowed_scopes"),
         "require_prohibited": list(envelope.get("require_prohibited") or []),
         "always_ask": list(envelope.get("always_ask") or []),
+        # What the organization must be able to attest about her before her
+        # agents may act on its resources. It crosses because her authority is
+        # the party that enforces it, and because she is entitled to see, in
+        # her own portal, what her employer is asserting about her.
+        "require_clearance": dict(envelope.get("require_clearance") or {}),
         "break_glass": {
             "enabled": bool(glass.get("enabled")),
             "resources": list(glass.get("resources") or []),
@@ -642,6 +663,15 @@ def summarize(charter: dict, role: dict | None = None) -> list[str]:
     if envelope.get("require_prohibited"):
         out.append("Your terms over its resources will always forbid: "
                    f"{', '.join(envelope['require_prohibited'])}.")
+    if envelope.get("require_clearance"):
+        out.append(
+            "Its resources may only be reached while this organization can "
+            "attest that you hold: "
+            + ", ".join(f"{claim} ({' or '.join(str(v) for v in accepted)})"
+                        if accepted else f"{claim} (nothing accepted)"
+                        for claim, accepted in
+                        sorted(envelope["require_clearance"].items()))
+            + " — it says this about you; you do not assert it yourself.")
     if envelope.get("always_ask"):
         out.append("You will be asked every time for: "
                    f"{', '.join(envelope['always_ask'])} — even if your own "

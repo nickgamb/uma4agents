@@ -359,6 +359,23 @@ k8s-establishment-check:
 k8s-intent-check:
 	$(call run_job,intent-check,cat $(K8S)/base/jobs/intent-check.yaml,420s)
 
+## k8s-consequence-check: what an operation leaves behind, declared by the
+## resource that would have to undo it and read by her policy. Worth running
+## here as well as under compose: her registry is a pull into a replicated
+## server, so this is where "the class her rule read is the class the resource
+## published" stops being a property of one process. See docs/CONSEQUENCE.md.
+.PHONY: k8s-consequence-check
+k8s-consequence-check:
+	$(call run_job,consequence-check,cat $(K8S)/base/jobs/consequence-check.yaml,420s)
+
+## k8s-clearance-check: a licence the requesting party may not assert about
+## itself. The organization attests to her authority, over her authority's own
+## membership credential, and the charter's requirement reaches terms she had
+## already written. See docs/CLEARANCE.md.
+.PHONY: k8s-clearance-check
+k8s-clearance-check:
+	$(call run_job,clearance-check,cat $(K8S)/base/jobs/clearance-check.yaml,600s)
+
 ## kagent: an agent framework nobody modified, governed by Alice's policy.
 ##
 ## Off by default because it brings a model with it, and that is a cost nobody
