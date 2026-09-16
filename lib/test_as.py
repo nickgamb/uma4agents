@@ -241,10 +241,70 @@ async def an_unreachable_organization() -> None:
           str(decision))
 
 
+def a_clearance() -> None:
+    """An attestation about the member, from a party that is not the agent.
+
+    A licence is adverse-capable: its holder has every reason to say it is
+    current, so the fact travels from the organization to her authority and
+    never through the agent. What is checked here is that every way of
+    presenting somebody else's attestation, or a stale one, is refused.
+    """
+    import uma4a_clearance as clearance
+
+    key = Ed25519PrivateKey.generate()
+    jwk = json.loads(OKPAlgorithm.to_jwk(key.public_key()))
+    jwk.update({"kid": "org-1", "use": "sig", "alg": "EdDSA"})
+    other = Ed25519PrivateKey.generate()
+
+    def mint(signer=key, typ=clearance.TYP, **over):
+        claims = {"iss": "https://org.example", "sub": "alice",
+                  "aud": "https://alice-as.example", "iat": int(time.time()),
+                  "exp": int(time.time()) + 300, "jti": "notice-1",
+                  clearance.CLAIM: {"licence_active": True,
+                                    "jurisdiction": "US-NY"}}
+        claims.update(over)
+        return jwt.encode(claims, signer, algorithm="EdDSA",
+                          headers={"typ": typ, "kid": "org-1"})
+
+    def verified(token, **over):
+        args = {"keys": [jwk], "issuer": "https://org.example",
+                "audience": "https://alice-as.example", "subject": "alice",
+                "now": time.time()}
+        args.update(over)
+        return clearance.verify(token, **args)
+
+    def refused(name, token, **over):
+        try:
+            verified(token, **over)
+            check(name, False, "it verified")
+        except clearance.ClearanceError as exc:
+            check(name, True, str(exc))
+
+    check("an attestation from the organization verifies",
+          verified(mint()) == {"licence_active": True, "jurisdiction": "US-NY"})
+    refused("a membership token is not a clearance, whatever it carries",
+            mint(typ="u4a-membership+jwt"))
+    refused("an attestation about somebody else is refused",
+            mint(sub="carol"))
+    refused("an attestation audienced at another authority is refused",
+            mint(aud="https://carol-as.example"))
+    refused("an expired attestation is refused — a licence lapses",
+            mint(exp=int(time.time()) - 3600, iat=int(time.time()) - 7200))
+    refused("one signed by a key the organization does not publish is refused",
+            mint(signer=other))
+    refused("and one carrying no facts at all is refused",
+            jwt.encode({"iss": "https://org.example", "sub": "alice",
+                        "aud": "https://alice-as.example",
+                        "iat": int(time.time()), "exp": int(time.time()) + 300,
+                        "jti": "n2"}, key, algorithm="EdDSA",
+                       headers={"typ": clearance.TYP, "kid": "org-1"}))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
     identities()
+    a_clearance()
     await agreements_and_grants()
     await whose_approval()
     await a_holders_verdict()

@@ -200,8 +200,7 @@ print("\n== a resource may not raise what an operation costs under a grant ==")
 # If the description changes afterwards, the answer was to a different question.
 d = present(granting(grant(consequence="reversible"),
                      consequence={"get_positions": "irreversible"}))
-check("a grant issued against a reversible operation is refused once the "
-      "resource re-declares it irreversible",
+check("a grant does not survive the operation being re-declared worse",
       d.outcome == "deny" and d.error == "consequence_changed", d.error)
 
 d = present(granting(grant(consequence="irreversible"),

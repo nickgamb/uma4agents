@@ -48,6 +48,17 @@ normative:
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-core-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
+  U4AFedAuthz:
+    title: "Federated Authorization for Autonomous Agents"
+    author:
+      - ins: N. Gamb
+        name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-gamb-uma4agents-fedauthz-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
   U4ATerms:
     title: "Owner-Proffered Terms for User-Managed Access (UMA) 2.0"
     author:
@@ -237,6 +248,75 @@ A rule that tightens on the owner's own aggregate conduct — "she has denied th
 agent four times" — reads the owner's decisions and is still observed rather
 than relaxing, because "she has denied you repeatedly, so grant automatically"
 is not a sentence anyone should be able to save.
+
+## Declared Consequence {#consequence}
+
+A resource server may declare what an operation leaves behind, as
+{{U4AFedAuthz}} specifies: `reversible`, `compensatable`, `forward_recoverable`
+or `irreversible`, ordered by how much remedy remains after the act. An
+authorization server MAY offer conditions naming that declaration, so that an
+owner can write "ask me about anything that cannot be undone" without naming a
+tool — a rule that holds for operations she has never seen, at resource servers
+she has never heard of.
+
+An authorization server offering such a condition MUST treat it as one that may
+only tighten, under {{tightening}}. The declaration is made by the resource
+server rather than by the requesting party, which is what makes it readable at
+all; it is still a fact about the request rather than a decision of the owner's,
+and only her own decisions relax anything.
+
+An authorization server MUST NOT treat an operation carrying no declaration as
+satisfying a condition about how much remedy remains. It MAY offer a separate
+condition that names the absence itself, so that an owner who wishes to refuse
+what nobody will describe can say so. The two are different sentences: one is
+about an act that cannot be undone, the other about an act nobody has described,
+and an owner is entitled to hold different opinions of them.
+
+The order is by remedy and not by severity. An authorization server MUST NOT
+present it to an owner as a measure of harm, and MUST NOT combine it with the
+axes of {{assurance}} into a single score: a reversible act may still be
+catastrophic while it stands, and a composite is the mechanism by which one
+reading quietly excuses another.
+
+## Clearance {#clearance}
+
+Some authorizations are not the owner's to give. Whether an act is lawful for
+the party behind it — a licence that is current, a jurisdiction where the act is
+permitted — is a fact about the world, established by somebody else, and the
+owner's terms cannot settle it.
+
+A policy unit MAY require such facts. A requirement is a set of claims, each
+naming the values that satisfy it. Where a layer above the owner requires
+clearance as well ({{U4AMultiParty}}), the two MUST be combined by intersection:
+a claim either requires is required, and a claim both require is satisfied only
+by values both accept. The layer above may add a claim and narrow an accepted
+value, and MUST NOT remove a requirement the owner wrote.
+
+An authorization server MUST obtain a clearance from the attesting party the
+policy names, and MUST NOT accept one presented by the client as a claim token.
+The rule is the one
+{{U4AMultiParty}} arrives at for verdicts, from the other direction: a claim
+works when the requesting party is the only one who holds the fact, and fails
+when the fact may be adverse to it. A licence is adverse-capable — its holder
+has every reason to say it is current — so the attestation travels from the
+attesting party to the authorization server directly.
+
+An authorization server MUST verify the attestation's signature against keys the
+attesting party publishes, and MUST refuse it unless it names the subject the
+negotiation is about and names that authorization server as its audience. An
+attestation about one member, issued to one authority, is not evidence about
+another member or at another authority.
+
+Where a required clearance is unmet, an authorization server MUST refuse the
+negotiation before it dictates terms, and MUST record the reason. An agent that
+signed an agreement it was never going to be allowed to act under would hold a
+record of a bargain that never existed, and the owner's record would carry an
+undertaking that decided nothing.
+
+An authorization server that cannot reach the attesting party has no
+attestation, and so refuses under the rule above. A party that cannot be
+reached has not attested to anything, and the direction to fail in is the one
+the ceiling of {{U4AMultiParty}} already fails in.
 
 ## Evaluation Order {#evaluation}
 

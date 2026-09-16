@@ -66,6 +66,16 @@ done to the resource, on whose terms. Cross App Access and this profile turn
 out to compose rather than compete — the assertion arrives as a UMA claim,
 because it proves identity and carries no entitlement.
 
+**[docs/CONSEQUENCE.md](docs/CONSEQUENCE.md)** is what an operation leaves
+behind: the resource that would have to undo an act declares whether it can be,
+and her policy reads it — so "ask me about anything that cannot be undone" is a
+rule that names no tool and holds for tools she has never seen.
+
+**[docs/CLEARANCE.md](docs/CLEARANCE.md)** is the authorization that is nobody's
+here to give. Whether a desk holds a current licence is a fact about the world,
+and the party asking has every reason to misstate it, so it travels from the
+organization to her authority and never through the agent.
+
 **[docs/KWAAI-BINDING.md](docs/KWAAI-BINDING.md)** puts her side inside a
 personal AI, and **[docs/FIXTURE.md](docs/FIXTURE.md)** is the minimal
 fixture the protocol is tested on with nothing underneath it.

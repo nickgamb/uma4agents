@@ -37,6 +37,7 @@ Run against the full stack with `make clearance-check`, or in the cluster with
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -338,6 +339,42 @@ def main() -> int:                                             # noqa: C901
             check("and the call goes through at the resource",
                   resp.status_code == 200 and "error" not in body,
                   json.dumps(body)[:200])
+
+        # The grant says the check happened; it does not say what was found.
+        # The facts are about her — her licence, where she is registered — and
+        # the party that would read them here is the agent that asked.
+        if rpt:
+            body64 = rpt.split(".")[1]
+            claims = json.loads(base64.urlsafe_b64decode(
+                body64 + "=" * (-len(body64) % 4)))
+            carried = claims.get("clearance")
+            check("the grant carries that a clearance was checked, as a digest",
+                  isinstance(carried, str) and carried.startswith("s256:"),
+                  json.dumps(carried))
+            check("and does not hand the agent what was attested about her",
+                  "US-NY" not in json.dumps(claims)
+                  and "licence_active" not in json.dumps(claims),
+                  json.dumps(claims)[:200])
+
+        # There is no wire path by which the agent could supply one. Asked
+        # here, where the requirement is *satisfied*, so the negotiation gets
+        # as far as claims at all: while a clearance is outstanding the
+        # negotiation is refused before terms are dictated, which is the
+        # ordering the profile requires and a different refusal entirely.
+        r = mcp_call(c, f"{GATEWAY}{SHARED}", "tools/call",
+                     {"name": "get_positions", "arguments": {}}, META)
+        ticket = parse_challenge(r.headers.get("www-authenticate", ""))
+        if ticket is not None:
+            offered = c.post(f"{ticket.as_uri}/token", data={
+                "grant_type": "urn:ietf:params:oauth:grant-type:uma-ticket",
+                "ticket": ticket.ticket,
+                "claim_token": "eyJhbGciOiJub25lIn0.e30.",
+                "claim_token_format": "urn:uma4agents:format:clearance+jwt"},
+                timeout=15.0)
+            check("a clearance the agent offers is not a claim this authority takes",
+                  offered.status_code == 400
+                  and "invalid_claim_token_format" in offered.text,
+                  f"HTTP {offered.status_code} {offered.text[:160]}")
 
         promised = [e for e in ledger(c) if e.get("kind") == "promised"
                     and e.get("clearance")]

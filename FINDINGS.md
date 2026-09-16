@@ -55,7 +55,7 @@ carries the parts, but the agent-era *use* deserves normative naming:
 
 ## Recommendations to the working group
 
-Each recommendation below is now stated normatively in one of the seven
+Each recommendation below is now stated normatively in one of the nine
 Internet-Drafts in [`spec/`](spec/README.md). The map:
 
 | Rec | Draft, section |
@@ -86,6 +86,8 @@ Internet-Drafts in [`spec/`](spec/README.md). The map:
 | 24 | Core §11 |
 | 25 | Multi-Party Authorization, Part I |
 | 26 | Multi-Party Authorization, Part II |
+| 27 | Federated Authorization for Agents §2.1; Core §7.2; Owner Policy §3.3 |
+| 28 | Owner Policy §3.4; Multi-Party Authorization §2.4 |
 
 
 **1. A core "UMA for agents" grant spec, transport-agnostic.**
@@ -1004,8 +1006,94 @@ Four things are worth specifying alongside it:
 The honest gap is the bootstrapping of a mandate. Authoring one is exactly
 where "who decides who decides" lives, and this defers it to configuration.
 
-Built and demonstrated: `make joint-check` (29 assertions over six processes),
+Built and demonstrated: `make joint-check` (37 assertions over six processes),
 `make joint-test`, `docs/JOINT.md`.
+
+**27. Say what an operation leaves behind — and let the resource say it.**
+UMA 2.0 has scopes, which say what an operation *is*, and no vocabulary at all
+for what it *costs*. The consequence is that an owner who wants the only policy
+she actually wants — "ask me about anything that cannot be undone" — has to
+enumerate operations by name, one resource server at a time, forever, and get it
+right about software she has never seen.
+
+Every deployment already holds this knowledge. This one held it as two hardcoded
+sets in two processes, and the reason a trade was in them appeared in no
+document any other party could read.
+
+The recommendation is a declaration on the resource's published metadata, using
+Nat Sakimura's vocabulary for agentic systems: `reversible`, `compensatable`,
+`forward_recoverable`, `irreversible`, ordered by **how much remedy remains**
+rather than by how bad the outcome would be. Three properties make it safe to
+read, and they are the whole of the proposal:
+
+- **The resource declares it.** The party that would have to undo the act is the
+  only one in a position to say whether it can be. This is the exact inverse of
+  recommendation 12's rule about descriptive metadata, and for the same reason:
+  a party describing its own trustworthiness is advertising, while a party
+  describing what its own tools do is the party that will perform them.
+- **Reading it may only tighten.** A declared class may raise what a request
+  needs and may never lower it, which puts it on the same side of the line as
+  assurance.
+- **Absent is unknown** — neither benign nor grave. MCP's tool annotations
+  default an unannotated tool to destructive, which is correct for a client
+  deciding whether to prompt and wrong for policy: it would make every
+  undescribed operation in every existing deployment look irreversible on the
+  day the vocabulary shipped. The owner gets a separate condition for "nobody
+  has said", which is hers to use.
+
+Two further findings came out of running it. The grant should carry the class it
+was issued against, so that a resource re-declaring an operation as less
+recoverable does not silently inherit a decision the owner made about a
+different question. And the class belongs in the challenge, so an agent learns
+what it is about to ask for before it negotiates rather than afterwards.
+
+This is offered to the MCP tool-annotations work as much as to UMA. The
+difference that matters is not the vocabulary but who consumes it: a hint read
+by the client may be ignored, and a class read by the party that bears the cost
+cannot be.
+
+Built and demonstrated: `make consequence-check`, `make rules-test`,
+`make pep-test`, `docs/CONSEQUENCE.md`.
+
+---
+
+**28. Some authorizations are not the owner's to give — and a fact that may be
+adverse to the requesting party cannot travel as its claim.**
+UMA's claims-gathering assumes the requesting party holds the facts the
+authorization server needs, which is true of who it is and what it wants, and
+false of whether it is *permitted*. Whether the desk behind a trade holds a
+current licence, whether it is registered where the order would be placed,
+whether a buyer is old enough: these are facts about the world, established by
+somebody else, and the owner's terms cannot settle them.
+
+Asking the requesting party for them is not a compliance check. It is a
+compliance check performed by the party it is about.
+
+This is recommendation 26's rule, arrived at from the other direction and worth
+stating once for the whole profile: **a claim works when the requesting party is
+the only one who holds the fact, and fails when the fact may be adverse to it.**
+A verdict in a joint grant travels authority-to-authority for that reason; a
+licence should travel the same way.
+
+The recommendation: let a policy require facts that a named third party attests,
+fetched by the authorization server over its own credential with that party,
+verified against keys that party publishes, and bound — named subject, named
+audience, short expiry, because a licence is exactly the kind of fact that
+lapses. Three details earned their place in the running version:
+
+- **Refuse before terms are dictated.** An agent that signed an agreement it was
+  never going to be allowed to act under holds a record of a bargain that never
+  existed, and the owner's ledger carries an undertaking that decided nothing.
+- **The grant carries a digest, not the facts.** That the check happened is the
+  enforcement point's business; what it found is the subject's, and the party
+  that would read it out of the grant is the agent that asked.
+- **Where a layer above the owner requires one too, the two combine by
+  intersection.** The layer above may add a claim and narrow an accepted value,
+  and may not remove a requirement the owner wrote — which is the same
+  one-directional rule the rest of the ceiling already obeys.
+
+Built and demonstrated: `make clearance-check`, `make org-test`, `make as-test`,
+`docs/CLEARANCE.md`.
 
 ---
 

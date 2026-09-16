@@ -135,9 +135,22 @@ have instances behind it.
 This document adds two members to the metadata:
 
 tool_surfaces:
-: OPTIONAL. An array of objects, each with a `tool` member naming an operation
-  and a `resource_scopes` member listing the scopes that operation requires.
+: OPTIONAL. An array of objects, each with a `tool` member naming an operation,
+  a `resource_scopes` member listing the scopes that operation requires, and an
+  OPTIONAL `consequence` member declaring what performing it leaves behind.
   Structural only.
+
+A resource server MAY declare a `consequence` for an operation. Where it does,
+the value MUST be one of `reversible`, `compensatable`, `forward_recoverable`
+or `irreversible`, ordered by how much remedy remains after the act, and the
+declaration MUST be covered by `signed_metadata` so that a relayed copy stays
+attributable to the party that made it.
+
+The declaration is the resource server's because it is the party that would
+have to undo the act. An authorization server MUST NOT read the absence of the
+member as a declaration in either direction: an operation nobody has described
+is undescribed, which is neither a claim that it is harmless nor evidence that
+it is grave.
 
 owner_resources_endpoint:
 : REQUIRED. The URL of the protected listing of {{protected-layer}}.
@@ -158,6 +171,13 @@ resource instances it holds for one owner — their identifiers, names, and
 scopes — and MUST serve them only to a request signed with {{RFC9421}} by the
 authorization server that owner has named, verified against that authorization
 server's published keys.
+
+Where a resource server declares a `consequence` for an operation in
+{{public-layer}}, it MUST carry the same declaration on that operation's entry
+in this listing. This listing is what an authorization server reads into its
+registry, and a class that appeared only in the public document would describe
+the resource to clients while leaving the party that decides unable to read
+it.
 
 The signature profile is that of {{U4ACore}} Section 6.1, with `@authority` taken
 from the resource server's configuration.

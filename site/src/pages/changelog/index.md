@@ -20,6 +20,20 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 16 2026
+
+### v2026.09.12
+
+#### New
+
+- **Enforcement point and authorization server:** a resource server may declare what each of its operations leaves behind — `reversible`, `compensatable`, `forward_recoverable` or `irreversible` — as a `consequence` member on the tool surfaces it publishes, inside the metadata it already signs. Her authority pulls it into her registry, her rules may read it as a condition that may only tighten, and the challenge carries it so an agent learns what it is asking for before it negotiates. An operation nobody has described satisfies no rule about remedy; an owner who wants to refuse the undescribed has a condition of her own for that. The grant records the class it was issued against, and the enforcement point refuses a call whose operation has since been re-declared as leaving less remedy. `make consequence-check`.
+- **Organization authority:** a charter may require facts the organization is prepared to attest about a member — a licence, a jurisdiction — before her agents may act on its resources. Her authorization server fetches the attestation over its own membership credential and verifies it against the organization's published keys; a requirement from the charter is combined with one she wrote by intersection, so it reaches terms she had already written and she cannot edit it out. An unmet requirement refuses the negotiation before terms are dictated and records why. The grant carries a digest that the check happened rather than what it found. `make clearance-check`.
+- **Owner API:** `GET /owner/policies` and `GET /owner/resources` now carry the declared consequence and any clearance requirement, and `GET /owner/policy-vocabulary` offers the new conditions, each marked as unable to relax a requirement.
+
+#### Bug fixes
+
+- **Organization authority:** a notice took its `jti` from the payload it carried, and both break-glass notices carried the override's id there — so a member's authorization server, which spends a notice once, refused the second as a replay. The member was told an override had been opened and never that it had been used. The notice's identity is now generated last, and the override's id travels as `family`, which both sides read.
+
 ## September 15 2026
 
 ### v2026.09.11

@@ -125,7 +125,7 @@ her policy can do is require her to look when there is no reason at all.
 
 ```bash
 make k8s-smoke-test     # expect 13 passed, 0 failed
-make k8s-policy-test    # expect 11 passed, 0 failed
+make k8s-policy-test    # expect 22 passed, 0 failed
 make k8s-intent-check   # whose intent the grant carries
 ```
 
@@ -509,6 +509,11 @@ case — what to type, what to click, and what is worth saying while it happens:
   what to notice at each step, plus the five traps this deployment hit
 - **[docs/PROTOCOL.md](docs/PROTOCOL.md)** — the wire contract, and where
   this profile deviates from UMA 2.0 and why
+- **[docs/CONSEQUENCE.md](docs/CONSEQUENCE.md)** — what an operation leaves
+  behind, declared by the resource that performs it and read by her policy
+- **[docs/CLEARANCE.md](docs/CLEARANCE.md)** — a licence or a jurisdiction: an
+  authorization neither she nor the agent may assert, fetched from the party
+  that can
 - **[FINDINGS.md](FINDINGS.md)** — the recommendations to the spec authors,
   each backed by something in here that runs
 

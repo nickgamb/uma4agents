@@ -688,12 +688,38 @@ contract:
   `s256` over the agreement's JWS compact serialization, the same value the
   receipt of {{U4ATerms}} carries as `agreement`.
 
+consequence:
+: REQUIRED where the resource server declared one for the operation
+  ({{U4AFedAuthz}}) at the time the grant was issued. The class the owner's
+  authority answered against.
+
+clearance:
+: REQUIRED where the owner's policy required an attestation from a party other
+  than the requesting one ({{U4APolicy}}). It MUST be a digest over the
+  attested facts and MUST NOT carry the facts themselves: that a clearance was
+  checked is the enforcement point's business, and what it said is the
+  subject's.
+
 A bearer requesting party token is a credential that works for whoever picks it
 up, which is an unreasonable thing to hand software that makes thousands of calls
 across networks it does not control. Carrying `permissions` inline lets an
 enforcement point see what was granted without a round trip; introspection
 remains the authority on whether the grant is still live, which is a different
 question and the one that changes.
+
+## Consequence {#consequence}
+
+Where the grant carries a `consequence` and the resource server declares one for
+the operation at the time of the call, an enforcement point MUST refuse the
+request if the declared class now leaves less remedy than the class the grant
+carries. The owner's authority answered a question about the operation as it was
+described; a resource that re-describes it afterwards is asking a different
+question, and the answer to the first does not carry over.
+
+An enforcement point MUST NOT refuse a grant that carries no class. A deployment
+that describes its operations for the first time would otherwise invalidate every
+grant standing at that moment, which is a cost paid by owners for an improvement
+nobody asked them about.
 
 ## Operation Binding and Single Use {#operation-binding}
 
@@ -809,6 +835,10 @@ issuing a fresh challenge. A bare `{"active": false}` sends a client
 around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.
+
+An introspection response for an active token MUST carry the `consequence`
+claim where the grant carries one, so that an enforcement point can perform the
+comparison of {{consequence}} without decoding the token itself.
 
 An authorization server MUST NOT describe a token as active to a resource server
 whose protection API access token was issued for a different owner than the
@@ -944,6 +974,8 @@ intended to be stock UMA 2.0.
 | 20 | Several owners of equal standing, with signed verdicts carried in the grant | extension | Exactly one authorization server per protected resource | {{U4AMultiParty}} |
 | 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled key, or both, each independently sufficient | extension | Silent on how the owner authenticates | {{owner-authentication}} |
 | 22 | The owner's API: the surface through which her portal, her tools or her own agent operate her authorization server | extension | Left to the deployment | {{U4AOwner}} |
+| 23 | A resource declares what each operation leaves behind, and the owner's policy reads it | extension | No vocabulary for what an act costs | {{U4AFedAuthz}}, {{consequence}}, {{U4APolicy}} |
+| 24 | Facts a party other than the requesting one attests — a licence, a jurisdiction — required before a grant and fetched authority to authority | extension | Claims come from the requesting party | {{U4APolicy}}, {{U4AMultiParty}} |
 {: title="Departures from UMA 2.0."}
 
 # Security Considerations

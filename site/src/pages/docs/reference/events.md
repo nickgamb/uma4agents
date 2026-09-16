@@ -168,7 +168,7 @@ Twenty-three kinds are written. Grouped by what they are about:
 
 | Kind | Written when | `entry` carries |
 |---|---|---|
-| `promised` | An agent signs her terms and the contract is accepted | the tier, purpose, prohibited actions, expiry, agreement hash, terms URI, and the proposed operation, stated reason and cited mission where the contract carried them |
+| `promised` | An agent signs her terms and the contract is accepted | the tier, purpose, prohibited actions, expiry, agreement hash, terms URI, and the proposed operation, stated reason and cited mission where the contract carried them; `consequence` where the resource declared what the act leaves behind, and `clearance` — the facts somebody else attested — where her policy required one |
 | `approved` / `denied` | She answers a pend | the tier, and `by` when an organization administrator answered instead of her |
 | `connected` | An agent becomes a standing connection | its identity, and `introduced_by` when another agent put it forward |
 | `touched` | A call is actually allowed at the resource | what was reached |
@@ -193,7 +193,7 @@ Twenty-three kinds are written. Grouped by what they are about:
 | `org_clamped` | The charter tightened terms she had written | which of her fields moved |
 | `org_acted` | An administrator acted on her behalf | what, and which administrator |
 | `org_refused` | The charter refused a request her own policy would have allowed | the reasons, organization and charter version |
-| `break_glass` | An administrator used the emergency path | the justification |
+| `break_glass` | An administrator used the emergency path | the justification, and `stage` — `break_glass_opened`, `break_glass` or `break_glass_used`. All three share one `family`, the override's id; each notice carries its own `jti`, which is what stops the second being read as a replay of the first |
 
 **A resource she holds with somebody else**
 

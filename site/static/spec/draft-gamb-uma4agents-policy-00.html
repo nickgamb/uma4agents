@@ -1359,10 +1359,16 @@ counterparty on every row it honestly can.<a href="#section-abstract-2" class="p
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-what-may-only-tighten" class="internal xref">What May Only Tighten</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
-                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-evaluation-order" class="internal xref">Evaluation Order</a></p>
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-declared-consequence" class="internal xref">Declared Consequence</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
-                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-publication" class="internal xref">Publication</a></p>
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-clearance" class="internal xref">Clearance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-evaluation-order" class="internal xref">Evaluation Order</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.6">
+                <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-publication" class="internal xref">Publication</a></p>
 </li>
             </ul>
 </li>
@@ -1648,36 +1654,105 @@ than relaxing, because "she has denied you repeatedly, so grant automatically"
 is not a sentence anyone should be able to save.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="evaluation">
+<div id="consequence">
 <section id="section-3.3">
-        <h3 id="name-evaluation-order">
-<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-evaluation-order" class="section-name selfRef">Evaluation Order</a>
+        <h3 id="name-declared-consequence">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-declared-consequence" class="section-name selfRef">Declared Consequence</a>
         </h3>
-<p id="section-3.3-1">An authorization server <span class="bcp14">MUST</span> evaluate a policy unit's rules in two passes: first
+<p id="section-3.3-1">A resource server may declare what an operation leaves behind, as
+<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> specifies: <code>reversible</code>, <code>compensatable</code>, <code>forward_recoverable</code>
+or <code>irreversible</code>, ordered by how much remedy remains after the act. An
+authorization server <span class="bcp14">MAY</span> offer conditions naming that declaration, so that an
+owner can write "ask me about anything that cannot be undone" without naming a
+tool — a rule that holds for operations she has never seen, at resource servers
+she has never heard of.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">An authorization server offering such a condition <span class="bcp14">MUST</span> treat it as one that may
+only tighten, under <a href="#tightening" class="auto internal xref">Section 3.2</a>. The declaration is made by the resource
+server rather than by the requesting party, which is what makes it readable at
+all; it is still a fact about the request rather than a decision of the owner's,
+and only her own decisions relax anything.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">An authorization server <span class="bcp14">MUST NOT</span> treat an operation carrying no declaration as
+satisfying a condition about how much remedy remains. It <span class="bcp14">MAY</span> offer a separate
+condition that names the absence itself, so that an owner who wishes to refuse
+what nobody will describe can say so. The two are different sentences: one is
+about an act that cannot be undone, the other about an act nobody has described,
+and an owner is entitled to hold different opinions of them.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">The order is by remedy and not by severity. An authorization server <span class="bcp14">MUST NOT</span>
+present it to an owner as a measure of harm, and <span class="bcp14">MUST NOT</span> combine it with the
+axes of <a href="#assurance" class="auto internal xref">Section 4</a> into a single score: a reversible act may still be
+catastrophic while it stands, and a composite is the mechanism by which one
+reading quietly excuses another.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="clearance">
+<section id="section-3.4">
+        <h3 id="name-clearance">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-clearance" class="section-name selfRef">Clearance</a>
+        </h3>
+<p id="section-3.4-1">Some authorizations are not the owner's to give. Whether an act is lawful for
+the party behind it — a licence that is current, a jurisdiction where the act is
+permitted — is a fact about the world, established by somebody else, and the
+owner's terms cannot settle it.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">A policy unit <span class="bcp14">MAY</span> require such facts. A requirement is a set of claims, each
+naming the values that satisfy it. Where a layer above the owner requires
+clearance as well (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>), the two <span class="bcp14">MUST</span> be combined by intersection:
+a claim either requires is required, and a claim both require is satisfied only
+by values both accept. The layer above may add a claim and narrow an accepted
+value, and <span class="bcp14">MUST NOT</span> remove a requirement the owner wrote.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+<p id="section-3.4-3">An authorization server <span class="bcp14">MUST</span> obtain a clearance from the attesting party the
+policy names, and <span class="bcp14">MUST NOT</span> accept one presented by the client as a claim token.
+The rule is the one
+<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> arrives at for verdicts, from the other direction: a claim
+works when the requesting party is the only one who holds the fact, and fails
+when the fact may be adverse to it. A licence is adverse-capable — its holder
+has every reason to say it is current — so the attestation travels from the
+attesting party to the authorization server directly.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+<p id="section-3.4-4">An authorization server <span class="bcp14">MUST</span> verify the attestation's signature against keys the
+attesting party publishes, and <span class="bcp14">MUST</span> refuse it unless it names the subject the
+negotiation is about and names that authorization server as its audience. An
+attestation about one member, issued to one authority, is not evidence about
+another member or at another authority.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<p id="section-3.4-5">Where a required clearance is unmet, an authorization server <span class="bcp14">MUST</span> refuse the
+negotiation before it dictates terms, and <span class="bcp14">MUST</span> record the reason. An agent that
+signed an agreement it was never going to be allowed to act under would hold a
+record of a bargain that never existed, and the owner's record would carry an
+undertaking that decided nothing.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
+<p id="section-3.4-6">An authorization server that cannot reach the attesting party has no
+attestation, and so refuses under the rule above. A party that cannot be
+reached has not attested to anything, and the direction to fail in is the one
+the ceiling of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> already fails in.<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evaluation">
+<section id="section-3.5">
+        <h3 id="name-evaluation-order">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-evaluation-order" class="section-name selfRef">Evaluation Order</a>
+        </h3>
+<p id="section-3.5-1">An authorization server <span class="bcp14">MUST</span> evaluate a policy unit's rules in two passes: first
 every rule whose effect is <code>auto</code>, then every rule whose effect is stricter than
 the running result. A restriction that matches <span class="bcp14">MUST</span> win over a relaxation that
-also matched, whatever order the rules were written in.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
-<p id="section-3.3-2">A rule that cannot be evaluated — because a fact it names is absent or
+also matched, whatever order the rules were written in.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">A rule that cannot be evaluated — because a fact it names is absent or
 malformed — <span class="bcp14">MUST</span> be treated as matching if its effect is <code>ask</code> or <code>refuse</code> and
 as not matching if its effect is <code>auto</code>. Both land on more friction. The
 alternative treats a broken restriction as a working one and a broken
 relaxation as a refusal, and the first of those is the one an owner would not
-choose.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
-<p id="section-3.3-3">An authorization server <span class="bcp14">MUST NOT</span> evaluate any rule until it has established that
+choose.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<p id="section-3.5-3">An authorization server <span class="bcp14">MUST NOT</span> evaluate any rule until it has established that
 the client holds a standing connection with the owner, and <span class="bcp14">MUST</span> put a
 first contact to the owner regardless of what the rules would decide. No rule
-skips the first question.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+skips the first question.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="vocabulary">
-<section id="section-3.4">
+<section id="section-3.6">
         <h3 id="name-publication">
-<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-publication" class="section-name selfRef">Publication</a>
+<a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-publication" class="section-name selfRef">Publication</a>
         </h3>
-<p id="section-3.4-1">An authorization server <span class="bcp14">MUST</span> publish the conditions its rules may name, and for
+<p id="section-3.6-1">An authorization server <span class="bcp14">MUST</span> publish the conditions its rules may name, and for
 each <span class="bcp14">MUST</span> state whether it may relax. The owner's editing surface then teaches
 the rule at the moment it matters, rather than rejecting a save the owner has
-already composed.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+already composed.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2061,6 +2136,10 @@ records one such vocabulary without registering it.<a href="#section-11-1" class
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-core-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="U4AFedAuthz">[U4AFedAuthz]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Federated Authorization for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-fedauthz-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="U4ATerms">[U4ATerms]</dt>
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"Owner-Proffered Terms for User-Managed Access (UMA) 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-terms-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html</a>&gt;</span>. </dd>
@@ -2109,7 +2188,7 @@ records one such vocabulary without registering it.<a href="#section-11-1" class
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-a-condition-vocabulary" class="section-name selfRef">A Condition Vocabulary</a>
       </h2>
 <p id="appendix-A-1">This appendix is not normative. It records the vocabulary the reference
-implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> publishes under <a href="#vocabulary" class="auto internal xref">Section 3.4</a>, as one concrete
+implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> publishes under <a href="#vocabulary" class="auto internal xref">Section 3.6</a>, as one concrete
 instance of the kinds this document requires. Names are <code>namespace.condition</code>,
 with an argument after a colon where the condition takes one. Durations are
 written <code>90d</code>, <code>12h</code>, <code>45m</code> or as seconds.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
@@ -2285,7 +2364,7 @@ jointly held resources.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <p id="appendix-C-1">This section records the status of known implementations in the sense of
 <span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, and is to be removed before publication as an RFC.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <p id="appendix-C-2">The reference implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> implements this document in full. Its
-rule engine is tested for the properties of <a href="#evaluation" class="auto internal xref">Section 3.3</a> directly, including
+rule engine is tested for the properties of <a href="#evaluation" class="auto internal xref">Section 3.5</a> directly, including
 that the set of relaxing conditions is exactly the set the tests expect and that
 every other condition is refused under <code>auto</code> at the moment of saving. The
 attention bound and both lanes are exercised against a running authorization
@@ -2301,6 +2380,13 @@ server, as is the return of a blocked operator as an anonymous stranger.<a href=
 of <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> and the client metadata document of
 <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span> are what make the accountability
 axis derivable rather than asserted.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
+<p id="appendix-D-2">The consequence vocabulary of <a href="#consequence" class="auto internal xref">Section 3.3</a> — reversible, compensatable,
+forward-recoverable, irreversible — is Nat Sakimura's, from "When Software
+Becomes Staff: Governance, Security &amp; Safety for Agentic AI"
+(https://nat.sakimura.org/2026/05/19/when-software-becomes-staff-governance-security-safety-for-agentic-ai/).
+That work also states the objection this document answers structurally: a
+capability an agent declares about itself is advertising, so the declaration
+here is made by the resource and read by the party that bears the cost.<a href="#appendix-D-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">

@@ -242,6 +242,13 @@ require_prohibited:
 always_ask:
 : Patterns over which her policy units are set to ask her every time.
 
+require_clearance:
+: Claims the organization must be able to attest about the member before an
+  agent may act on claimed resources, each naming the values that satisfy it.
+  Combined with any requirement the member wrote by intersection, so the
+  ceiling may add a claim and narrow an accepted value and MUST NOT remove a
+  requirement she wrote. See {{U4APolicy}}.
+
 Every envelope field moves a member's terms in one direction only. There MUST
 be no field that lengthens an expiry, adds a scope, removes a prohibition, or
 turns off an ask.
@@ -330,6 +337,14 @@ or when the charter changes. A notice is a JWT with `typ` of
 server against the keys it publishes, whose `kind` is one of
 `membership_ended`, `role_changed`, `charter_changed`, `break_glass_opened`,
 `break_glass` or `break_glass_used`.
+
+Each notice MUST carry its own unique `jti`, and a member's authorization server
+MUST act on a given `jti` once. An identifier shared by several notices — the
+break-glass family of {{break-glass}} is three notices about one override — MUST
+travel in a member of its own rather than in `jti`. Where the two are conflated,
+the second notice about one override is indistinguishable from a replay of the
+first, and the stage an owner most needs to be told about is the one that is
+silently dropped.
 
 Leaving MUST withdraw the member's access to claimed resources and the ceiling
 over her, and MUST leave every narrowing the ceiling applied in place. Her terms

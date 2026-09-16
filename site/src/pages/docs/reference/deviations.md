@@ -488,6 +488,16 @@ than permissions are the policy suite and the store tests.
   "she personally approved something at this tier" is allowed to relax one of
   her rules, so a decision taken on her behalf must not produce it.
 
+- **What an operation leaves behind is declared by the resource** that would
+  have to undo it, published in the metadata it already signs, and read by the
+  owner's policy as a condition that may only tighten. An operation nobody has
+  described is undescribed — not safe, and not grave.
+- **A clearance is obtained from somebody other than the requesting party.**
+  A licence or a jurisdiction may be adverse to the party being asked about,
+  so it travels authority-to-authority and is refused before terms are
+  dictated. The grant carries a digest that the check happened; the facts stay
+  on the owner's side.
+
 **Not addressed.** Signing-key rotation — the key is minted once and shared by
 all replicas, and while `jwks_uri` makes rotation possible, nothing here
 exercises it. Multiple authorization servers behind one resource server — RFC

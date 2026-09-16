@@ -1506,24 +1506,37 @@ have instances behind it.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2.1-3">
           <dt id="section-2.1-3.1">tool_surfaces:</dt>
           <dd style="margin-left: 1.5em" id="section-2.1-3.2">
-            <p id="section-2.1-3.2.1"><span class="bcp14">OPTIONAL</span>. An array of objects, each with a <code>tool</code> member naming an operation
-and a <code>resource_scopes</code> member listing the scopes that operation requires.
+            <p id="section-2.1-3.2.1"><span class="bcp14">OPTIONAL</span>. An array of objects, each with a <code>tool</code> member naming an operation,
+a <code>resource_scopes</code> member listing the scopes that operation requires, and an
+<span class="bcp14">OPTIONAL</span> <code>consequence</code> member declaring what performing it leaves behind.
 Structural only.<a href="#section-2.1-3.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-2.1-3.3">owner_resources_endpoint:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.1-3.4">
-            <p id="section-2.1-3.4.1"><span class="bcp14">REQUIRED</span>. The URL of the protected listing of <a href="#protected-layer" class="auto internal xref">Section 2.2</a>.<a href="#section-2.1-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-2.1-4">The document <span class="bcp14">MUST</span> carry <code>signed_metadata</code> as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 2.2, signed by
+<p id="section-2.1-4">A resource server <span class="bcp14">MAY</span> declare a <code>consequence</code> for an operation. Where it does,
+the value <span class="bcp14">MUST</span> be one of <code>reversible</code>, <code>compensatable</code>, <code>forward_recoverable</code>
+or <code>irreversible</code>, ordered by how much remedy remains after the act, and the
+declaration <span class="bcp14">MUST</span> be covered by <code>signed_metadata</code> so that a relayed copy stays
+attributable to the party that made it.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.1-5">The declaration is the resource server's because it is the party that would
+have to undo the act. An authorization server <span class="bcp14">MUST NOT</span> read the absence of the
+member as a declaration in either direction: an operation nobody has described
+is undescribed, which is neither a claim that it is harmless nor evidence that
+it is grave.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2.1-6">
+          <dt id="section-2.1-6.1">owner_resources_endpoint:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-6.2">
+            <p id="section-2.1-6.2.1"><span class="bcp14">REQUIRED</span>. The URL of the protected listing of <a href="#protected-layer" class="auto internal xref">Section 2.2</a>.<a href="#section-2.1-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-2.1-7">The document <span class="bcp14">MUST</span> carry <code>signed_metadata</code> as <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 2.2, signed by
 a key published at the resource's own <code>jwks_uri</code>, so that a relayed copy stays
-attributable to the resource.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.1-5">A resource server <span class="bcp14">MAY</span> publish the same structural facts in more than one
+attributable to the resource.<a href="#section-2.1-7" class="pilcrow">¶</a></p>
+<p id="section-2.1-8">A resource server <span class="bcp14">MAY</span> publish the same structural facts in more than one
 encoding — for example the metadata of <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> alongside
 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> — from one registry. The instance layer beneath them, and the
-permission ticket, do not change with the encoding.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
+permission ticket, do not change with the encoding.<a href="#section-2.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="protected-layer">
@@ -1536,12 +1549,18 @@ resource instances it holds for one owner — their identifiers, names, and
 scopes — and <span class="bcp14">MUST</span> serve them only to a request signed with <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> by the
 authorization server that owner has named, verified against that authorization
 server's published keys.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
-<p id="section-2.2-2">The signature profile is that of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 6.1, with <code>@authority</code> taken
-from the resource server's configuration.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
-<p id="section-2.2-3">This is the privacy split. The public document says what the resource is; whose
+<p id="section-2.2-2">Where a resource server declares a <code>consequence</code> for an operation in
+<a href="#public-layer" class="auto internal xref">Section 2.1</a>, it <span class="bcp14">MUST</span> carry the same declaration on that operation's entry
+in this listing. This listing is what an authorization server reads into its
+registry, and a class that appeared only in the public document would describe
+the resource to clients while leaving the party that decides unable to read
+it.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2-3">The signature profile is that of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 6.1, with <code>@authority</code> taken
+from the resource server's configuration.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+<p id="section-2.2-4">This is the privacy split. The public document says what the resource is; whose
 things sit behind it is served only to the party the owner's own consent already
 connected. Publishing the second at an unauthenticated URI is a disclosure that
-push registration, for all its other costs, never made.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+push registration, for all its other costs, never made.<a href="#section-2.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

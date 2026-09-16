@@ -13,6 +13,22 @@
 # draft. The check names are the ones the suites print, verbatim.
 
 draft-gamb-uma4agents-core-00:
+  - text: "It MUST be a digest over the attested facts and MUST NOT carry the facts themselves"
+    verified: check
+    targets: [clearance-check, k8s-clearance-check]
+    asserts: ["the grant carries that a clearance was checked, as a digest", "and does not hand the agent what was attested about her"]
+  - text: "Where the grant carries a consequence and the resource server declares one for the operation"
+    verified: check
+    targets: [pep-test]
+    asserts: ["a grant does not survive the operation being re-declared worse", "the class it was issued against is honoured"]
+  - text: "An enforcement point MUST NOT refuse a grant that carries no class."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a grant issued before anything was declared is not refused for it"]
+  - text: "An introspection response for an active token MUST carry the consequence claim where the grant carries one"
+    verified: check
+    targets: [pep-test, consequence-check]
+    asserts: ["the class it was issued against is honoured", "and the call she approved goes through"]
   - text: "MUST include in its metadata the value https://u4a.ai/spec/core/1.0 in the uma_profiles_supported array"
     verified: check
     targets: [smoke-test, k8s-smoke-test]
@@ -248,6 +264,18 @@ draft-gamb-uma4agents-core-00:
     asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
 
 draft-gamb-uma4agents-fedauthz-00:
+  - text: "the value MUST be one of reversible, compensatable, forward_recoverable or irreversible"
+    verified: check
+    targets: [consequence-check, k8s-consequence-check]
+    asserts: ["the trade declares that it cannot be undone", "and the two reads declare that there is nothing to put back", "the class is covered by the resource's own signature"]
+  - text: "An authorization server MUST NOT read the absence of the member as a declaration in either direction"
+    verified: check
+    targets: [rules-test]
+    asserts: ["an undeclared operation does not fire a rule about severity", "but she can ask about anything nobody has described"]
+  - text: "it MUST carry the same declaration on that operation's entry in this listing"
+    verified: check
+    targets: [consequence-check, k8s-consequence-check]
+    asserts: ["the class arrives in her registry by the pull, not by configuration", "and it is there for every operation the resource described"]
   - text: "A resource server MUST publish protected resource metadata [RFC9728] for each resource it serves."
     verified: check
     targets: [smoke-test, k8s-smoke-test]
@@ -478,6 +506,18 @@ draft-gamb-uma4agents-mcp-00:
     asserts: ["truncated body: OK"]
 
 draft-gamb-uma4agents-multiparty-00:
+  - text: "Combined with any requirement the member wrote by intersection"
+    verified: check
+    targets: [org-test]
+    asserts: ["where both require a claim, only values both accept survive", "a requirement she wrote and the charter is silent on is kept"]
+  - text: "Each notice MUST carry its own unique jti"
+    verified: check
+    targets: [org-check, k8s-org-check]
+    asserts: ["every stage of it is in her own record"]
+  - text: "An identifier shared by several notices"
+    verified: check
+    targets: [org-check, k8s-org-check]
+    asserts: ["every stage of it is in her own record"]
   - text: "An organization MUST publish a charter, versioned, carrying:"
     verified: check
     targets: [org-test, org-check]
@@ -652,6 +692,37 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a holder cannot read her co-owner's queue", "and carries none of her co-owner's terms"]
 
 draft-gamb-uma4agents-policy-00:
+  - text: "An authorization server offering such a condition MUST treat it as one that may only tighten"
+    verified: check
+    targets: [rules-test]
+    asserts: ["a consequence class cannot be made to grant automatically", "nor can nobody-has-said"]
+  - text: "An authorization server MUST NOT treat an operation carrying no declaration as satisfying a condition"
+    verified: check
+    targets: [rules-test]
+    asserts: ["an undeclared operation does not fire a rule about severity"]
+  - text: "the two MUST be combined by intersection"
+    verified: check
+    targets: [org-test]
+    asserts: ["where both require a claim, only values both accept survive"]
+  - text: "The layer above may add a claim and narrow an accepted value, and MUST NOT remove a requirement the owner wrote"
+    verified: check
+    targets: [org-test, clearance-check]
+    asserts: ["a requirement she wrote and the charter is silent on is kept", "editing it away does not take"]
+  - text: "MUST NOT accept one presented by the client as a claim token"
+    verified: check
+    targets: [clearance-check, k8s-clearance-check]
+    asserts: ["a clearance the agent offers is not a claim this authority takes"]
+  - text: "An authorization server MUST verify the attestation's signature against keys the attesting party publishes"
+    verified: check
+    targets: [as-test]
+    asserts: ["an attestation from the organization verifies", "one signed by a key the organization does not publish is refused", "an attestation about somebody else is refused", "an attestation audienced at another authority is refused"]
+  - text: "Where a required clearance is unmet, an authorization server MUST refuse the negotiation before it dictates terms"
+    verified: check
+    targets: [clearance-check, k8s-clearance-check]
+    asserts: ["an agent that would otherwise be granted is refused", "and told which claim is missing, rather than 'denied'", "her record says why, in the same words she would be shown"]
+  - text: "An authorization server MUST NOT present it to an owner as a measure of harm"
+    verified: deployment
+    because: "a requirement on what an owner-facing surface may show. This profile publishes the conditions themselves at GET /owner/policy-vocabulary, each as a complete sentence with no score attached, and offers no composite anywhere"
   - text: "An authorization server MUST record who made a decision in the same step that records the decision"
     verified: check
     targets: [store-test, as-test]

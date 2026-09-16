@@ -56,6 +56,13 @@ service offering conditions.
 | [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-webbotauth-registry/) | A directory where an operator publishes its agents' keys | Display and discovery only |
 | [Client ID Metadata Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | A client described by URL rather than pre-registration | Display only |
 
+## What an act costs
+
+| Specification | Supplies | Where it appears |
+|---|---|---|
+| [MCP tool annotations](https://modelcontextprotocol.io/) — `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` | A server's own description of what a tool does, consumed where it is explicitly present | [What an operation leaves behind](/docs/overview/consequence/) |
+| [When Software Becomes Staff](https://nat.sakimura.org/2026/05/19/when-software-becomes-staff-governance-security-safety-for-agentic-ai/) (Sakimura, 2026) | The consequence vocabulary — reversible, compensatable, forward-recoverable, irreversible — and the argument that a self-asserted capability claim is advertising rather than governance | [What an operation leaves behind](/docs/overview/consequence/) |
+
 All three are consumed as inputs. None becomes an authorization input — see
 [identity is not authorization](/docs/overview/identity/).
 

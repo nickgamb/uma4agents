@@ -1418,7 +1418,10 @@ a negotiation is specified as a set of parameters rather than as an HTTP header.
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-requesting-party-token" class="internal xref">The Requesting Party Token</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-operation-binding-and-singl" class="internal xref">Operation Binding and Single Use</a></p>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-consequence" class="internal xref">Consequence</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-operation-binding-and-singl" class="internal xref">Operation Binding and Single Use</a></p>
 </li>
             </ul>
 </li>
@@ -2174,6 +2177,22 @@ carried here as a claim rather than being visible only through introspection.<a 
 <code>s256</code> over the agreement's JWS compact serialization, the same value the
 receipt of <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> carries as <code>agreement</code>.<a href="#section-7.1-5.8.1" class="pilcrow">¶</a></p>
 </dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-5.9">consequence:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.10">
+            <p id="section-7.1-5.10.1"><span class="bcp14">REQUIRED</span> where the resource server declared one for the operation
+(<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>) at the time the grant was issued. The class the owner's
+authority answered against.<a href="#section-7.1-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-5.11">clearance:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-5.12">
+            <p id="section-7.1-5.12.1"><span class="bcp14">REQUIRED</span> where the owner's policy required an attestation from a party other
+than the requesting one (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>). It <span class="bcp14">MUST</span> be a digest over the
+attested facts and <span class="bcp14">MUST NOT</span> carry the facts themselves: that a clearance was
+checked is the enforcement point's business, and what it said is the
+subject's.<a href="#section-7.1-5.12.1" class="pilcrow">¶</a></p>
+</dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-7.1-6">A bearer requesting party token is a credential that works for whoever picks it
@@ -2184,30 +2203,47 @@ remains the authority on whether the grant is still live, which is a different
 question and the one that changes.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="operation-binding">
+<div id="consequence">
 <section id="section-7.2">
-        <h3 id="name-operation-binding-and-singl">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-operation-binding-and-singl" class="section-name selfRef">Operation Binding and Single Use</a>
+        <h3 id="name-consequence">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-consequence" class="section-name selfRef">Consequence</a>
         </h3>
-<p id="section-7.2-1">Where the owner's policy requires her to approve a particular access rather than
+<p id="section-7.2-1">Where the grant carries a <code>consequence</code> and the resource server declares one for
+the operation at the time of the call, an enforcement point <span class="bcp14">MUST</span> refuse the
+request if the declared class now leaves less remedy than the class the grant
+carries. The owner's authority answered a question about the operation as it was
+described; a resource that re-describes it afterwards is asking a different
+question, and the answer to the first does not carry over.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">An enforcement point <span class="bcp14">MUST NOT</span> refuse a grant that carries no class. A deployment
+that describes its operations for the first time would otherwise invalidate every
+grant standing at that moment, which is a cost paid by owners for an improvement
+nobody asked them about.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="operation-binding">
+<section id="section-7.3">
+        <h3 id="name-operation-binding-and-singl">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-operation-binding-and-singl" class="section-name selfRef">Operation Binding and Single Use</a>
+        </h3>
+<p id="section-7.3-1">Where the owner's policy requires her to approve a particular access rather than
 a class of access, the authorization server <span class="bcp14">MUST</span> bind the grant to that access.
-Such a token <span class="bcp14">MUST</span> carry:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7.2-2">
-          <dt id="section-7.2-2.1">single_use:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-2.2">
-            <p id="section-7.2-2.2.1"><span class="bcp14">REQUIRED</span>. Boolean <code>true</code>.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
+Such a token <span class="bcp14">MUST</span> carry:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.3-2">
+          <dt id="section-7.3-2.1">single_use:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.3-2.2">
+            <p id="section-7.3-2.2.1"><span class="bcp14">REQUIRED</span>. Boolean <code>true</code>.<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.2-2.3">operation:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-2.4">
-            <p id="section-7.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object with a <code>tool</code> member naming the operation and a
+<dt id="section-7.3-2.3">operation:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.3-2.4">
+            <p id="section-7.3-2.4.1"><span class="bcp14">REQUIRED</span>. An object with a <code>tool</code> member naming the operation and a
 <code>params_s256</code> member carrying <code>s256</code> over the parameters approved, serialized
 as <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>: the <code>params</code> member of the agreement's <code>operation</code>
-              <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
+              <span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>.<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<div class="lang-json sourcecode" id="section-7.2-3">
+<div class="lang-json sourcecode" id="section-7.3-3">
 <pre>
 {
   "single_use": true,
@@ -2216,12 +2252,12 @@ as <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>: the <code>pa
     "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
   }
 }
-</pre><a href="#section-7.2-3" class="pilcrow">¶</a>
+</pre><a href="#section-7.3-3" class="pilcrow">¶</a>
 </div>
-<p id="section-7.2-4">Classic OAuth and UMA scopes authorize classes of action. "She approved this
+<p id="section-7.3-4">Classic OAuth and UMA scopes authorize classes of action. "She approved this
 trade" and "she authorized trading" are different facts, and a protocol with only
 scopes can express the second. This is the narrowest useful addition that
-expresses the first.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+expresses the first.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2330,12 +2366,15 @@ issuing a fresh challenge. A bare <code>{"active": false}</code> sends a client
 around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
-<p id="section-8.4-3">An authorization server <span class="bcp14">MUST NOT</span> describe a token as active to a resource server
+<p id="section-8.4-3">An introspection response for an active token <span class="bcp14">MUST</span> carry the <code>consequence</code>
+claim where the grant carries one, so that an enforcement point can perform the
+comparison of <a href="#consequence" class="auto internal xref">Section 7.2</a> without decoding the token itself.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+<p id="section-8.4-4">An authorization server <span class="bcp14">MUST NOT</span> describe a token as active to a resource server
 whose protection API access token was issued for a different owner than the
 token's, and <span class="bcp14">SHOULD</span> answer as it would for a token it does not know. A resource
 server holds one such token per owner it serves; the one it presents says whose
 resources it is asking about, and a grant against anybody else's is not its
-business.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+business.<a href="#section-8.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2510,7 +2549,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Per-permission scopes and expiry only</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
+              <a href="#operation-binding" class="auto internal xref">Section 7.3</a>
 </td>
           </tr>
           <tr>
@@ -2684,6 +2723,24 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">Left to the deployment</td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#U4AOwner" class="cite xref">U4AOwner</a>]</span>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">23</td>
+            <td class="text-left" rowspan="1" colspan="1">A resource declares what each operation leaves behind, and the owner's policy reads it</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
+            <td class="text-left" rowspan="1" colspan="1">No vocabulary for what an act costs</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>, <a href="#consequence" class="auto internal xref">Section 7.2</a>, <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">24</td>
+            <td class="text-left" rowspan="1" colspan="1">Facts a party other than the requesting one attests — a licence, a jurisdiction — required before a grant and fetched authority to authority</td>
+            <td class="text-left" rowspan="1" colspan="1">extension</td>
+            <td class="text-left" rowspan="1" colspan="1">Claims come from the requesting party</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>, <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>
 </td>
           </tr>
         </tbody>
@@ -3174,7 +3231,7 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
 </td>
               <td class="text-left" rowspan="1" colspan="1">Whether a token may be spent once</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
+                <a href="#operation-binding" class="auto internal xref">Section 7.3</a>
 </td>
             </tr>
             <tr>
@@ -3183,7 +3240,7 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
 </td>
               <td class="text-left" rowspan="1" colspan="1">The single operation, and the digest of its parameters, a token is bound to</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#operation-binding" class="auto internal xref">Section 7.2</a>
+                <a href="#operation-binding" class="auto internal xref">Section 7.3</a>
 </td>
             </tr>
           </tbody>

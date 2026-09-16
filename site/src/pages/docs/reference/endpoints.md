@@ -180,6 +180,7 @@ A party of its own, not a table inside anyone's authorization server.
 | `POST /decision` | The organization's answer about one request: `allow`, `ask` or `refuse`, and never anything that widens |
 | `POST /member/compliance` | Her authority reporting that the ceiling was applied and which of its fields bit. Never what her terms say |
 | `GET /member/invitation` | Whether this organization has asked for a named person |
+| `GET /member/clearance` | What this organization will attest about her, signed and audienced at her authority. Fetched by her authorization server, never by an agent. 404 when it holds nothing, which her authority reads as unmet rather than as an error |
 | `GET /membership/{owner}` | For an enforcement point: whether this owner is governed here, what is shared with her, and the ceiling to check grants against |
 | `POST /break-glass` | An agent redeeming a window, signing with the key the grant will bind to |
 | `POST /introspect`, `/consume` | RFC 7662 over the grants this service signed, shaped exactly like a member authority's answers |
@@ -195,6 +196,7 @@ charter version rather than editing the one in force:
 | `DELETE /admin/roles/{id}` | Remove a group. Refused while anybody is in it — deleting one fails closed for its members, which is an access change nobody would see happen |
 | `POST /admin/roles/default` | Which group somebody lands in when they join. `null` is valid: joining grants nothing until an administrator says what this person is |
 | `POST /admin/members/{owner}/role` | Move one member. The only endpoint in this console that widens anything |
+| `PUT /admin/members/{owner}/clearance` | What this organization is prepared to attest about one member. An empty object withdraws it, and access stops within the attestation's lifetime |
 
 ## The tally, for a resource held jointly
 

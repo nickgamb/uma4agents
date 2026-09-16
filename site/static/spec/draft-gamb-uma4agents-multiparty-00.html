@@ -1667,6 +1667,15 @@ somebody else operates.<a href="#section-2.3-3" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-2.4-2.8">
             <p id="section-2.4-2.8.1">Patterns over which her policy units are set to ask her every time.<a href="#section-2.4-2.8.1" class="pilcrow">¶</a></p>
 </dd>
+          <dd class="break"></dd>
+<dt id="section-2.4-2.9">require_clearance:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.4-2.10">
+            <p id="section-2.4-2.10.1">Claims the organization must be able to attest about the member before an
+agent may act on claimed resources, each naming the values that satisfy it.
+Combined with any requirement the member wrote by intersection, so the
+ceiling may add a claim and narrow an accepted value and <span class="bcp14">MUST NOT</span> remove a
+requirement she wrote. See <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>.<a href="#section-2.4-2.10.1" class="pilcrow">¶</a></p>
+</dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-2.4-3">Every envelope field moves a member's terms in one direction only. There <span class="bcp14">MUST</span>
@@ -1772,11 +1781,18 @@ or when the charter changes. A notice is a JWT with <code>typ</code> of
 server against the keys it publishes, whose <code>kind</code> is one of
 <code>membership_ended</code>, <code>role_changed</code>, <code>charter_changed</code>, <code>break_glass_opened</code>,
 <code>break_glass</code> or <code>break_glass_used</code>.<a href="#section-2.8-2" class="pilcrow">¶</a></p>
-<p id="section-2.8-3">Leaving <span class="bcp14">MUST</span> withdraw the member's access to claimed resources and the ceiling
+<p id="section-2.8-3">Each notice <span class="bcp14">MUST</span> carry its own unique <code>jti</code>, and a member's authorization server
+<span class="bcp14">MUST</span> act on a given <code>jti</code> once. An identifier shared by several notices — the
+break-glass family of <a href="#break-glass" class="auto internal xref">Section 2.9</a> is three notices about one override — <span class="bcp14">MUST</span>
+travel in a member of its own rather than in <code>jti</code>. Where the two are conflated,
+the second notice about one override is indistinguishable from a replay of the
+first, and the stage an owner most needs to be told about is the one that is
+silently dropped.<a href="#section-2.8-3" class="pilcrow">¶</a></p>
+<p id="section-2.8-4">Leaving <span class="bcp14">MUST</span> withdraw the member's access to claimed resources and the ceiling
 over her, and <span class="bcp14">MUST</span> leave every narrowing the ceiling applied in place. Her terms
 were narrowed with her agreement and republished under a new version; undoing
 that would silently widen what agents holding agreements over those versions are
-held to.<a href="#section-2.8-3" class="pilcrow">¶</a></p>
+held to.<a href="#section-2.8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="break-glass">

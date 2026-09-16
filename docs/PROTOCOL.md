@@ -656,6 +656,8 @@ list with the baseline and the reasoning for each.
 | 20 | Several owners of equal standing: mandate, signed verdicts bound to one negotiation and one agreement, a tally that carries them in the grant, re-verified at the enforcement point against the published mandate | Exactly one AS per protected resource | MultiParty Part II |
 | 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled device key, or both, each independently sufficient (`UMA_AS_OWNER_AUTH`) | Silent on how the owner authenticates | Core §10 |
 | 22 | The owner's API: `owner_endpoint` in the metadata, and the surface under it through which her portal, her tools or her own agent operate her authorization server | Left to the deployment | Owner |
+| 23 | `consequence` on a published tool surface — what an operation leaves behind, declared by the resource that performs it, read by her policy, carried on the grant and re-checked at the call | No vocabulary for what an act costs | FedAuthz §2.1; Core §7.2; Policy §3.3 |
+| 24 | Clearance: facts a party other than the requester must attest — a licence, a jurisdiction — fetched authority-to-authority, required by her tier or the charter above it, and refused before terms are dictated | Claims come from the requesting party | Policy §3.4; MultiParty §2.4 |
 
 Everything not listed here is intended to be stock UMA 2.0 / stock AAuth. An
 enterprise identity assertion presented as a `claim_token` (docs/XAA.md) is not
