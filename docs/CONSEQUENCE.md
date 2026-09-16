@@ -16,6 +16,22 @@ Run it: `make consequence-check`, or `make k8s-consequence-check` in the
 cluster. Unit tests, needing nothing running: `make rules-test` and
 `make pep-test`.
 
+![Six beats, top to bottom, each with what is actually on the wire beside it.
+One: the resource publishes its tool surfaces, and each one carries a
+consequence — get_positions reversible, execute_trade irreversible — inside the
+signed metadata, so a relayed copy stays attributable. Two: her authorization
+server pulls the same declaration into her registry through the protected
+owner-resources listing, so what her rules read is what the resource said.
+Three: she writes one rule, which names the class and no tool, and the same rule
+written to grant automatically is refused at save time because a consequence may
+only tighten. Four: an unauthorized call is challenged, and the remediation
+object inside the challenge carries the class, so the agent learns what the act
+would leave behind before it negotiates. Five: she is asked, and both the
+pending request and her ledger record the class as the reason rather than the
+tool. Six: the grant carries the class it was issued against, so when the
+resource later re-declares that operation as irreversible the enforcement point
+refuses with consequence_changed.](consequence-wire.svg)
+
 ## The vocabulary
 
 Four classes, from [Nat Sakimura's work on governance for agentic

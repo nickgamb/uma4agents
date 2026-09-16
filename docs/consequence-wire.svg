@@ -1,0 +1,132 @@
+<svg viewBox="0 0 1240 1180" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- consequence-wire — what an operation leaves behind, and what is actually
+       on the wire at each beat. The declaration starts at the resource and ends
+       as a refusal her authority never had to be told about.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+  </defs>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+    .k { fill: #9cdcfe; } .s { fill: #ce9178; } .n { fill: #b5cea8; }
+    .c { fill: #6a9955; } .p { fill: #d4d4d4; } .kw { fill: #c586c0; }
+    .ok { fill: #bcdb2c; } .no { fill: #e8836b; }
+  </style>
+
+  <rect width="1240" height="1180" fill="#0a0b0d"/>
+  <text x="40" y="46" fill="#ffffff" font-size="19" font-weight="650">What an operation leaves behind</text>
+  <text x="40" y="70" fill="#a9aeb6" font-size="13">The resource declares it, her authority reads it, and the rule she writes names no tool.</text>
+
+  <!-- ═══════════════ 1 ═══════════════ -->
+  <line x1="64" y1="140" x2="64" y2="276" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="120" r="15" fill="#8cc2d4"/>
+  <text x="64" y="125" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">1</text>
+  <rect x="96" y="98" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="122" fill="#ffffff" font-size="13.5" font-weight="650">The resource says what its own tools cost</text>
+  <text x="116" y="142" fill="#757b83" font-size="11.5">it is the party that would have to undo the act</text>
+
+  <rect x="600" y="94" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="94" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="110" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="110" fill="#757b83" font-size="10.5" class="mono">GET /.well-known/oauth-protected-resource/mcp</text>
+  <text xml:space="preserve" x="616" y="140" class="mono"><tspan class="p">{ </tspan><tspan class="k">"tool_surfaces"</tspan><tspan class="p">: [</tspan></text>
+  <text xml:space="preserve" x="616" y="157" class="mono"><tspan class="p">    { </tspan><tspan class="k">"tool"</tspan><tspan class="p">: </tspan><tspan class="s">"get_positions"</tspan><tspan class="p">,  </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"reversible"</tspan><tspan class="p"> },</tspan></text>
+  <text xml:space="preserve" x="616" y="174" class="mono"><tspan class="p">    { </tspan><tspan class="k">"tool"</tspan><tspan class="p">: </tspan><tspan class="s">"execute_trade"</tspan><tspan class="p">, </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p"> } ],</tspan></text>
+  <text xml:space="preserve" x="616" y="191" class="mono"><tspan class="p">  </tspan><tspan class="k">"signed_metadata"</tspan><tspan class="p">: </tspan><tspan class="s">"eyJ0eXAiOiJvYXV0aC1wcm90ZWN0..."</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="616" y="215" class="mono"><tspan class="c">// inside the signature, so a relayed copy stays attributable</tspan></text>
+
+  <!-- ═══════════════ 2 ═══════════════ -->
+  <line x1="64" y1="316" x2="64" y2="452" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="296" r="15" fill="#8cc2d4"/>
+  <text x="64" y="301" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">2</text>
+  <rect x="96" y="274" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="298" fill="#ffffff" font-size="13.5" font-weight="650">Her authority pulls it into her registry</text>
+  <text x="116" y="318" fill="#757b83" font-size="11.5">what her rules read is what the resource said</text>
+
+  <rect x="600" y="270" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="270" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="286" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="286" fill="#757b83" font-size="10.5" class="mono">GET /owner-resources/alice   (RFC 9421, signed by her AS)</text>
+  <text xml:space="preserve" x="616" y="316" class="mono"><tspan class="p">{ </tspan><tspan class="k">"resources"</tspan><tspan class="p">: [ {</tspan></text>
+  <text xml:space="preserve" x="616" y="333" class="mono"><tspan class="p">    </tspan><tspan class="k">"_id"</tspan><tspan class="p">: </tspan><tspan class="s">"alice-vault/execute_trade"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="350" class="mono"><tspan class="p">    </tspan><tspan class="k">"resource_scopes"</tspan><tspan class="p">: [</tspan><tspan class="s">"trades:execute"</tspan><tspan class="p">],</tspan></text>
+  <text xml:space="preserve" x="616" y="367" class="mono"><tspan class="p">    </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p"> } ] }</tspan></text>
+  <text xml:space="preserve" x="616" y="391" class="mono"><tspan class="c">// absent would mean undeclared — not safe, and not grave</tspan></text>
+
+  <!-- ═══════════════ 3 ═══════════════ -->
+  <line x1="64" y1="492" x2="64" y2="628" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="472" r="15" fill="#bcdb2c"/>
+  <text x="64" y="477" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">3</text>
+  <rect x="96" y="450" width="452" height="60" rx="9" fill="#121317" stroke="#6f8410" stroke-width="1.5"/>
+  <text x="116" y="474" fill="#ffffff" font-size="13.5" font-weight="650">She writes one rule, and it names no tool</text>
+  <text x="116" y="494" fill="#757b83" font-size="11.5">it holds for tools she has never seen</text>
+
+  <rect x="600" y="446" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="446" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="462" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="462" fill="#757b83" font-size="10.5" class="mono">PUT /owner/policies/tier3</text>
+  <text xml:space="preserve" x="616" y="492" class="mono"><tspan class="p">{ </tspan><tspan class="k">"rules"</tspan><tspan class="p">: [ {</tspan></text>
+  <text xml:space="preserve" x="616" y="509" class="mono"><tspan class="p">    </tspan><tspan class="k">"when"</tspan><tspan class="p">: [</tspan><tspan class="s">"request.consequence_at_or_above:irreversible"</tspan><tspan class="p">],</tspan></text>
+  <text xml:space="preserve" x="616" y="526" class="mono"><tspan class="p">    </tspan><tspan class="k">"then"</tspan><tspan class="p">: </tspan><tspan class="s">"ask"</tspan><tspan class="p"> } ] }</tspan></text>
+  <text xml:space="preserve" x="616" y="550" class="mono"><tspan class="c">// "then": "auto" is refused at save time — it may only tighten</tspan></text>
+  <text xml:space="preserve" x="616" y="567" class="mono"><tspan class="no">400 </tspan><tspan class="p">a consequence class cannot relax a requirement</tspan></text>
+
+  <!-- ═══════════════ 4 ═══════════════ -->
+  <line x1="64" y1="668" x2="64" y2="804" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="648" r="15" fill="#8cc2d4"/>
+  <text x="64" y="653" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">4</text>
+  <rect x="96" y="626" width="452" height="60" rx="9" fill="#121317" stroke="#5e8fa3" stroke-width="1.5"/>
+  <text x="116" y="650" fill="#ffffff" font-size="13.5" font-weight="650">The refusal tells the agent what it would cost</text>
+  <text x="116" y="670" fill="#757b83" font-size="11.5">before it negotiates, rather than afterwards</text>
+
+  <rect x="600" y="622" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="622" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="638" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="638" fill="#757b83" font-size="10.5" class="mono">401 Unauthorized — WWW-Authenticate: UMA</text>
+  <text xml:space="preserve" x="616" y="668" class="mono"><tspan class="p">authorization_remediation (base64url) decodes to:</tspan></text>
+  <text xml:space="preserve" x="616" y="685" class="mono"><tspan class="p">{ </tspan><tspan class="k">"authorization_details"</tspan><tspan class="p">: [ {</tspan></text>
+  <text xml:space="preserve" x="616" y="702" class="mono"><tspan class="p">    </tspan><tspan class="k">"actions"</tspan><tspan class="p">: [</tspan><tspan class="s">"execute_trade"</tspan><tspan class="p">],</tspan></text>
+  <text xml:space="preserve" x="616" y="719" class="mono"><tspan class="p">    </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p"> } ] }</tspan></text>
+  <text xml:space="preserve" x="616" y="743" class="mono"><tspan class="c">// the same object in both encodings, header or JSON-RPC</tspan></text>
+
+  <!-- ═══════════════ 5 ═══════════════ -->
+  <line x1="64" y1="844" x2="64" y2="980" stroke="#24262c" stroke-width="2"/>
+  <circle cx="64" cy="824" r="15" fill="#f2b955"/>
+  <text x="64" y="829" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">5</text>
+  <rect x="96" y="802" width="452" height="60" rx="9" fill="#121317" stroke="#8a6316" stroke-width="1.5"/>
+  <text x="116" y="826" fill="#ffffff" font-size="13.5" font-weight="650">She is asked — and the record says why</text>
+  <text x="116" y="846" fill="#757b83" font-size="11.5">the class, not the tool, is the reason</text>
+
+  <rect x="600" y="798" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="798" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="814" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="814" fill="#757b83" font-size="10.5" class="mono">GET /owner/pending   →   GET /owner/ledger</text>
+  <text xml:space="preserve" x="616" y="844" class="mono"><tspan class="p">{ </tspan><tspan class="k">"tier"</tspan><tspan class="p">: </tspan><tspan class="s">"tier3"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="861" class="mono"><tspan class="p">  </tspan><tspan class="k">"because"</tspan><tspan class="p">: [</tspan><tspan class="s">"request.consequence_at_or_above:irreversible"</tspan><tspan class="p">] }</tspan></text>
+  <text xml:space="preserve" x="616" y="885" class="mono"><tspan class="p">{ </tspan><tspan class="k">"kind"</tspan><tspan class="p">: </tspan><tspan class="s">"promised"</tspan><tspan class="p">, </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="616" y="902" class="mono"><tspan class="p">  </tspan><tspan class="k">"operation"</tspan><tspan class="p">: { </tspan><tspan class="k">"tool"</tspan><tspan class="p">: </tspan><tspan class="s">"execute_trade"</tspan><tspan class="p"> } }</tspan></text>
+
+  <!-- ═══════════════ 6 ═══════════════ -->
+  <circle cx="64" cy="1000" r="15" fill="#e8836b"/>
+  <text x="64" y="1005" fill="#0a0b0d" font-size="13" font-weight="700" text-anchor="middle">6</text>
+  <rect x="96" y="978" width="452" height="60" rx="9" fill="#121317" stroke="#b0442a" stroke-width="1.5"/>
+  <text x="116" y="1002" fill="#ffffff" font-size="13.5" font-weight="650">And it cannot be raised underneath her</text>
+  <text x="116" y="1022" fill="#757b83" font-size="11.5">a read that becomes a disclosure is a different question</text>
+
+  <rect x="600" y="974" width="600" height="146" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="600" y="974" width="600" height="24" rx="8" fill="#232529"/>
+  <rect x="600" y="990" width="600" height="8" fill="#232529"/>
+  <text xml:space="preserve" x="616" y="990" fill="#757b83" font-size="10.5" class="mono">the grant, and the call that follows a re-declaration</text>
+  <text xml:space="preserve" x="616" y="1020" class="mono"><tspan class="c">// RPT claims — the class she answered against</tspan></text>
+  <text xml:space="preserve" x="616" y="1037" class="mono"><tspan class="p">{ </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"reversible"</tspan><tspan class="p">, </tspan><tspan class="k">"single_use"</tspan><tspan class="p">: </tspan><tspan class="kw">false</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="616" y="1061" class="mono"><tspan class="c">// the resource now publishes "irreversible" for that tool</tspan></text>
+  <text xml:space="preserve" x="616" y="1078" class="mono"><tspan class="no">403 </tspan><tspan class="k">consequence_changed</tspan><tspan class="p"> — the grant was not issued</tspan></text>
+  <text xml:space="preserve" x="616" y="1095" class="mono"><tspan class="p">    against this</tspan></text>
+
+  <text x="40" y="1152" fill="#757b83" font-size="12">Undeclared is neither: a rule about remedy never fires on it, and an owner who wants to refuse the undescribed says so herself.</text>
+</svg>

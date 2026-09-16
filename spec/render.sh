@@ -35,6 +35,18 @@ for md in "$SRC"/*.md; do
         echo "FAIL (xml2rfc warnings)"; cat /tmp/x2r.out; status=1; continue
     fi
 
+    # Drop xml2rfc's generator banner from the HTML.
+    #
+    # It lists every Python package in the render environment, including
+    # xml2rfc's transitive dependencies, which nothing pins — so a draft
+    # nobody edited renders to different bytes the day platformdirs ships a
+    # release. The Dockerfile pins the two tools for exactly the reason this
+    # undoes: a spec that renders differently next month is a spec whose diffs
+    # stop meaning anything. CI asserts the committed renders match a fresh
+    # one, and that assertion is only worth making if a difference means the
+    # document changed. The .xml and .txt outputs carry no such banner.
+    sed -i '/^<!-- Generator version information:/,/^-->$/d' "$OUT/$name.html"
+
     echo "ok"
 done
 
