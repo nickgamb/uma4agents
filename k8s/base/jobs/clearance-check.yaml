@@ -40,6 +40,17 @@ spec:
             # not provision would fail the job before it ran a line.
             - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
             - { name: UMA4A_ORG, value: https://northwind-org.uma.lab }
+            - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom: { secretKeyRef: { name: operator-register, key: token } }
+            # The private half of a key Bob's operator already publishes. It
+            # provisions its directory and refuses a key registered at runtime,
+            # so an agent that wants to be attributable here signs with a key
+            # that operator issued. Without this the agent tops out at
+            # accountability 1 and the firm's charter, which requires 2,
+            # refuses it before the clearance is ever reached. Absent under
+            # compose, where the operator accepts a key at runtime.
+            - { name: UMA4A_PUBLISHED_KEYS, value: /published }
             - name: PYTHONPATH
               value: /driver/lib
             - name: PYTHONUNBUFFERED
@@ -50,6 +61,7 @@ spec:
             - { name: driver, mountPath: /driver/clearance_check.py, subPath: clearance_check.py, readOnly: true }
             - { name: lib, mountPath: /driver/lib, readOnly: true }
             - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: published, mountPath: /published, readOnly: true }
             - { name: keys, mountPath: /driver/keys }
           workingDir: /driver
           resources:
@@ -62,5 +74,10 @@ spec:
           configMap: { name: demo-lib }
         - name: ca
           configMap: { name: uma-lab-ca-bundle }
+        - name: published
+          secret:
+            secretName: agent-published-key
+            items:
+              - { key: attested-ed25519.pem, path: attested-ed25519.pem }
         - name: keys
           emptyDir: {}

@@ -309,7 +309,13 @@ def main() -> int:                                             # noqa: C901
 
         print("\n== 3 · nothing attested, so nothing is granted ==")
         set_clearance(c, {})
-        keys = attested_agent(c, f"clearance-{RUN}")
+        # `attested`, not a per-run name: where the operator provisions its
+        # directory (the cluster) the key has to be one it already publishes,
+        # or the agent never reaches the accountability the firm's charter
+        # requires and is refused before the clearance is reached at all.
+        # Under compose there is no provisioned directory and this registers
+        # at runtime, as every other check there does.
+        keys = attested_agent(c, "attested")
         rpt, why = negotiate(c, keys)
         check("an agent that would otherwise be granted is refused",
               rpt is None, "it was granted")

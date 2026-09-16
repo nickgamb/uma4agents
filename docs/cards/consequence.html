@@ -353,7 +353,7 @@
 <div class="wrap">
   <header class="masthead">
     <h1>What an Operation Leaves Behind</h1>
-    <p class="standfirst">She stops naming tools and starts naming the act.</p>
+    <p class="standfirst">Alice replaces a rule that names one tool with a rule about the act. Nothing else changes.</p>
   </header>
   <section class="screens">
     <div class="screen left">
@@ -370,7 +370,7 @@
 
   <section class="setup">
     <h2>Pre-demo setup</h2>
-    <p class="setup-note">From cold to ready. Three commands on a Mac, one in a Codespace, about 15 minutes.</p>
+    <p class="setup-note">From cold to ready. Four commands on a Mac, two in a Codespace, about 20 minutes.</p>
 
     <div class="table-scroll">
       <table>
@@ -384,9 +384,7 @@
             <div class="cmdwrap"><code class="cmd">brew install kind helm
 make dns-setup</code></div>
           </td>
-          <td class="say">
-            Points your OS resolver at the lab's DNS so <strong>*.uma.lab</strong> works in a browser. One sudo. <strong>Skip both in a Codespace</strong> — it uses <code>/etc/hosts</code> instead.
-          </td>
+          <td class="say">Points your OS resolver at the lab's DNS so <strong>*.uma.lab</strong> works in a browser. One sudo. <strong>Skip both in a Codespace</strong> — it uses <code>/etc/hosts</code> instead.</td>
         </tr>
         <tr class="term">
           <td class="num">2</td>
@@ -394,9 +392,7 @@ make dns-setup</code></div>
             <span class="where">Build the lab</span>
             <div class="cmdwrap"><code class="cmd">make kind-up</code></div>
           </td>
-          <td class="say">
-            Three-node kind cluster, Istio ambient, kgateway, cert-manager, CloudNativePG, and every party in its own namespace. <strong>~13 minutes cold.</strong> If the compose stack is running it will stop you — both want :443 and :53, so run <code>make down</code> and try again.
-          </td>
+          <td class="say">Three-node kind cluster, Istio ambient, kgateway, cert-manager, CloudNativePG, and every party in its own namespace. <strong>~13 minutes cold.</strong> If the compose stack is running it will stop you — both want :443 and :53, so run <code>make down</code> and try again.</td>
         </tr>
         <tr class="term">
           <td class="num">3</td>
@@ -406,9 +402,16 @@ make dns-setup</code></div>
 sudo security add-trusted-cert -d -r trustRoot \
   -k /Library/Keychains/System.keychain /tmp/u4a-k8s-ca.pem</code></div>
           </td>
-          <td class="say">
-            cert-manager issues the lab CA inside the cluster; this trusts it locally so her portal loads with no warning. <strong>Re-run after every <code>kind-up</code></strong> — a new cluster means a new CA. In a Codespace run <code>make codespaces-web</code> instead.
+          <td class="say">cert-manager issues the lab CA inside the cluster; this trusts it locally so her portal loads with no warning. <strong>Re-run after every <code>kind-up</code></strong> — a new cluster means a new CA. In a Codespace run <code>make codespaces-web</code> instead.</td>
+        </tr>
+        <tr class="term">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Bring up the agent</span>
+            <div class="cmdwrap"><code class="cmd">export ANTHROPIC_API_KEY=sk-ant-...
+make kagent</code></div>
           </td>
+          <td class="say">kagent's controller, the U4A adapter in Bob's namespace, and a model for the agent to think with. Your key goes into a Kubernetes Secret and nowhere else. See <strong>Switching the model</strong> below.</td>
         </tr>
         </tbody>
       </table>
@@ -419,18 +422,30 @@ sudo security add-trusted-cert -d -r trustRoot \
     <div class="afters">
       <div class="after">
         <span class="after-label">In a Codespace</span>
-        <p>Only step 2. No resolver to edit, no CA to trust — <code>kind-up</code> publishes her portal for you.</p>
+        <p>Only steps 2 and 4. No resolver to edit, no CA to trust — <code>kind-up</code> publishes her portal for you.</p>
       </div>
       <div class="after">
         <span class="after-label">Running it again</span>
         <div class="cmdwrap"><code class="cmd">make k8s-reset</code></div>
       </div>
     </div>
+
+    <div class="models-block">
+      <div class="model">
+        <span class="model-label">Another provider</span>
+        <div class="cmdwrap"><code class="cmd">export OPENAI_API_KEY=sk-...
+make kagent MODEL=openai</code></div>
+      </div>
+      <div class="model">
+        <span class="model-label">A model in the cluster</span>
+        <div class="cmdwrap"><code class="cmd">make kagent MODEL=ollama</code></div>
+      </div>
+    </div>
   </section>
 
   <section class="runthrough">
     <h2>The run-through</h2>
-    <p class="run-note">Step 1 is the one the room came for: she deletes a rule that names a tool and writes one that names the act.</p>
+    <p class="run-note">The agent is stock kagent. It never learns what her rule says — it only ever sees a tool call that is slow, or one that fails. Everything that changes happens on the right screen.</p>
 
     <div class="table-scroll">
       <table>
@@ -442,59 +457,50 @@ sudo security add-trusted-cert -d -r trustRoot \
           <td class="num">0</td>
           <td class="act">
             <span class="where">Her portal</span>
-            <span class="click">Settings › Security › Agent Authorization</span>
+            <span class="click">Settings → Security → Agent Authorization</span>
           </td>
           <td class="say">
-            <span class="lede">Find <strong>Trade execution</strong>. <em>Ask me every time</em> is on.</span>
-            Somebody decided once that this tool was the dangerous one. It is a list of tool names, kept by hand.
-          </td>
-        </tr>
-
-        <tr class="port">
-          <td class="num">1</td>
-          <td class="act">
-            <span class="where">Her portal</span>
-            <span class="click">toggle off · add rule · Save changes</span>
-          </td>
-          <td class="say">
-            <span class="lede">The rule is <strong>if it cannot be undone at all — ask me first</strong>.</span>
-            Then try the same condition with <em>grant without asking</em>. Her authority will not save it: reading what an act costs can raise what a request needs, never lower it.
+            <span class="lede">Open <strong>Trade execution</strong> and look at <em>Ask me every time</em>.</span>
+            It is on because somebody once decided this tool was the dangerous one. A list of tool names, kept by hand, that says nothing about <strong>why</strong>.
           </td>
         </tr>
 
         <tr class="term">
+          <td class="num">1</td>
+          <td class="act">
+            <span class="where">Terminal — tier 1</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
+          </td>
+          <td class="say"><span class="lede">Let the agent in first</span>, so the later beats are about her rule and not about first contact.</td>
+        </tr>
+
+        <tr class="port">
           <td class="num">2</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier1</code></div>
+            <span class="where">Her portal — badge shows 1</span>
+            <span class="click">Approve</span>
           </td>
-          <td class="say">
-            <span class="lede">Bob's agent asks for her holdings and stops.</span>
-            She has never met it, so this is first contact rather than the new rule. <strong>Approve it on the right.</strong>
-          </td>
+          <td class="say"><span class="lede">Held for her.</span> She has never met this agent. The holdings come back on the left.</td>
         </tr>
 
         <tr class="term">
           <td class="num">3</td>
           <td class="act">
-            <span class="where">Terminal — watch the right screen</span>
-            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier1</code></div>
+            <span class="where">Terminal — tier 3</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
           </td>
-          <td class="say">
-            <span class="lede">The same read, now that she knows the agent.</span>
-            It goes straight through and <strong>nothing appears in her portal</strong>. The vault publishes that reading holdings is <code>reversible</code>.
-          </td>
+          <td class="say"><span class="lede">Now ask it to sell something.</span> It stops, because that toggle is on.</td>
         </tr>
 
-        <tr class="term">
+        <tr class="port">
           <td class="num">4</td>
           <td class="act">
-            <span class="where">Terminal — watch it</span>
-            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier3</code></div>
+            <span class="where">Her portal</span>
+            <span class="click">read the card · Deny</span>
           </td>
           <td class="say">
-            <span class="lede">The agent asks to place a trade, and it stops.</span>
-            Nobody added the trade endpoint to a list.
+            <span class="lede">Refused.</span>
+            <strong>Read the pending card before denying.</strong> It names the tier and what the agent promised. It does not say what the act would do, because nothing in her policy knows.
           </td>
         </tr>
 
@@ -502,36 +508,66 @@ sudo security add-trusted-cert -d -r trustRoot \
           <td class="num">5</td>
           <td class="act">
             <span class="where">Her portal</span>
-            <span class="click">open the request · Approve</span>
+            <span class="click">toggle off · add rule · Save changes</span>
           </td>
           <td class="say">
-            <span class="lede">Under <strong>Why you</strong>: <em>it cannot be undone at all</em>.</span>
-            That is her rule, reading what the vault published about its own operation.
+            <span class="lede">The rule is <strong>if it cannot be undone at all — ask me first</strong>.</span>
+            Trade execution now has <strong>no rule naming it</strong>. Nothing about the vault changed, and the agent was never told.
           </td>
         </tr>
 
         <tr class="term">
           <td class="num">6</td>
           <td class="act">
-            <span class="where">Terminal</span>
-            <div class="cmdwrap"><code class="cmd">make k8s-audit</code></div>
+            <span class="where">Terminal — tier 1 again</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="What is in Alice's portfolio?" SIM=0</code></div>
           </td>
           <td class="say">
-            <span class="lede">The trade completes.</span>
-            The promise on her record carries the class alongside the tier and the operation.
+            <span class="lede">Straight through, and <strong>the portal never moves</strong>.</span>
+            Reading holdings is published as <code>reversible</code>, so a rule about what cannot be undone has nothing to say about it.
           </td>
         </tr>
 
         <tr class="term">
           <td class="num">7</td>
           <td class="act">
-            <span class="where">Terminal — if there is time</span>
-            <div class="cmdwrap"><code class="cmd">make k8s-consequence-check</code></div>
+            <span class="where">Terminal — tier 3 again</span>
+            <div class="cmdwrap"><code class="cmd">make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0</code></div>
+          </td>
+          <td class="say"><span class="lede">Ask it to sell again.</span> It stops again.</td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">8</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">read Why you · Approve</span>
           </td>
           <td class="say">
-            <span class="lede">Twenty-two assertions over the same path.</span>
-            The class is inside the signature on the resource's metadata, it reaches her registry by a pull, and a resource that re-declares an operation cannot spend a grant she issued against the old claim.
+            <span class="lede">The card now says <em>it cannot be undone at all</em>.</span>
+            Nobody put the trade endpoint on a list. The vault publishes that the act is <code>irreversible</code>, her authority pulled that in, and the rule from step 5 read it.
           </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">9</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">add the same condition · grant without asking</span>
+          </td>
+          <td class="say">
+            <span class="lede">Her authority refuses to save it.</span>
+            What an act costs can raise what a request needs and never lower it, so the one rule she cannot write is the one that waves an irreversible act through.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">10</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-audit</code></div>
+          </td>
+          <td class="say"><span class="lede">Her record carries the class beside the tier and the operation</span>, so what was at stake is answerable later without looking up what <code>execute_trade</code> does.</td>
         </tr>
 
         </tbody>
@@ -540,15 +576,15 @@ sudo security add-trusted-cert -d -r trustRoot \
 
     <div class="afters">
       <div class="after">
-        <span class="after-label">Who decides the class?</span>
+        <span class="after-label">What to point at</span>
+        <p>The rule names no tool, no agent and no operator. The vault could add a fourth endpoint tomorrow and, if it publishes that the endpoint cannot be undone, her rule covers it the first time an agent asks — with no edit on her side.</p>
+      </div>
+      <div class="after">
+        <span class="after-label">If someone asks: who decides the class?</span>
         <p>The resource server, in the metadata it signs. It is the party that would have to undo the act. An agent's description of itself stays display-only for the opposite reason.</p>
       </div>
       <div class="after">
-        <span class="after-label">What about tools nobody has described?</span>
-        <p>Undeclared is unknown. A rule about remedy does not fire on it, and she has a separate condition if she wants those refused too.</p>
-      </div>
-      <div class="after">
-        <span class="after-label">Is this a risk score?</span>
+        <span class="after-label">If someone asks: is this a risk score?</span>
         <p>No. The classes order by how much remedy remains, not by how bad the outcome is, and nothing here adds them up.</p>
       </div>
     </div>

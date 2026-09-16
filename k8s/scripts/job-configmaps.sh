@@ -4,6 +4,16 @@
 # Mounted from ConfigMaps built here rather than baked into an image, for the
 # same reason the compose stack bind-mounts them: the thing being tested is
 # the code in this working tree, not a copy of it from some earlier build.
+#
+# `replace --force` rather than `apply`, and the reason is a ceiling rather
+# than a preference. `apply` records the entire previous object in a
+# kubectl.kubernetes.io/last-applied-configuration annotation, and annotations
+# are capped at 256 KiB. demo-driver reached 251 KiB carrying eleven check
+# scripts; the twelfth was refused outright, leaving a stale ConfigMap in the
+# cluster and jobs that mounted an empty directory over their own script. These
+# maps are rebuilt in full from the working tree on every run, so there is
+# nothing for a three-way merge to merge, and nothing worth spending the
+# ceiling on.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -21,11 +31,13 @@ kubectl -n "$NS" create configmap demo-driver \
   --from-file=establishment_check.py="$ROOT/clients/demo-driver/establishment_check.py" \
   --from-file=org_check.py="$ROOT/clients/demo-driver/org_check.py" \
   --from-file=joint_check.py="$ROOT/clients/demo-driver/joint_check.py" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  --from-file=consequence_check.py="$ROOT/clients/demo-driver/consequence_check.py" \
+  --from-file=clearance_check.py="$ROOT/clients/demo-driver/clearance_check.py" \
+  --dry-run=client -o yaml | kubectl replace --force -f - >/dev/null
 
 kubectl -n "$NS" create configmap agent-shim \
   --from-file=shim.py="$ROOT/clients/agent-shim/shim.py" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  --dry-run=client -o yaml | kubectl replace --force -f - >/dev/null
 
 kubectl -n "$NS" create configmap demo-lib \
   --from-file=uma4a_grant.py="$ROOT/lib/uma4a_grant.py" \
@@ -35,4 +47,4 @@ kubectl -n "$NS" create configmap demo-lib \
   --from-file=uma4a_consequence.py="$ROOT/lib/uma4a_consequence.py" \
   --from-file=uma4a_clearance.py="$ROOT/lib/uma4a_clearance.py" \
   --from-file=uma4a_org.py="$ROOT/lib/uma4a_org.py" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  --dry-run=client -o yaml | kubectl replace --force -f - >/dev/null
