@@ -108,6 +108,7 @@ const nav = {
         { title: "Her personal AI", to: "/docs/guides/demo-personal-ai/" },
         { title: "The firm's book", to: "/docs/guides/demo-the-firms-book/" },
         { title: "Sub-agent grants", to: "/docs/guides/demo-subagent-grants/" },
+        { title: "What an operation leaves behind", to: "/docs/guides/demo-consequence/" },
       ],
     },
     {

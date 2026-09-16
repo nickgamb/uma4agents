@@ -16,6 +16,18 @@ Run it: `make consequence-check`, or `make k8s-consequence-check` in the
 cluster. Unit tests, needing nothing running: `make rules-test` and
 `make pep-test`.
 
+![The shape, in two lanes. The declaration lane: Meridian's vault declares a
+class per tool — the two reads reversible, the trade irreversible — which is
+published in RFC 9728 metadata inside the resource's own signature, pulled into
+her registry rather than configured there, and read by a rule that names the act
+rather than the tool. The request lane: Bob's agent calls the trade holding no
+grant, the 401 challenge carries the class so the agent knows before it
+negotiates, she is asked because the act cannot be undone rather than because of
+its name, and the grant records the class it was issued against. Across the
+bottom, the enforcement point compares what the resource declares now against
+what the grant was issued against: the same class or gentler proceeds, worse is
+refused.](consequence.svg)
+
 ![Six beats, top to bottom, each with what is actually on the wire beside it.
 One: the resource publishes its tool surfaces, and each one carries a
 consequence — get_positions reversible, execute_trade irreversible — inside the

@@ -134,6 +134,7 @@ then deciding as the owner.
 | [Two owners, one account](docs/cards/joint-ownership.html) | A jointly held account neither owner can release alone |
 | [Two owners, two authorities](docs/cards/multi-owner.html) | One agent asking two owners, who answer differently |
 | [Her own agent](docs/cards/first-party.html) | Being hers buys less friction and no more access |
+| [What an operation leaves behind](docs/cards/consequence.html) | One rule that names the act rather than the tool, and holds for tools she has never seen |
 | [Sub-agent grants](docs/cards/subagent-grants.html) | An agent spawns workers; none carry its key and each is authorized on its own |
 | [Her personal AI](docs/cards/personal-ai.html) | Standing consent answering, and refusing what it cannot ask her about |
 | [The firm's book](docs/cards/organization.html) | A resource that is hers to administer only while she is a member |

@@ -1,0 +1,603 @@
+<meta charset="utf-8">
+<title>What an Operation Leaves Behind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ground:      #f0f0ea;
+    --surface:     #ffffff;
+    --surface-2:   #f6f6f1;
+    --line:        #d9d9d0;
+    --line-soft:   #e6e6de;
+    --ink:         #16171a;
+    --ink-mid:     #4a4d54;
+    --ink-dim:     #6f737b;
+    --lime:        #6f8410;
+    --lime-chip:   #eaf2c4;
+    --teal:        #3d6d81;
+    --teal-chip:   #dcecf2;
+    --amber:       #8a6316;
+    --amber-chip:  #f7e6c4;
+    --coral:       #b0442a;
+    --coral-chip:  #f7ddd5;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:     #0a0b0d;
+      --surface:    #121317;
+      --surface-2:  #16181d;
+      --line:       #24262c;
+      --line-soft:  #1c1e23;
+      --ink:        #ffffff;
+      --ink-mid:    #a9aeb6;
+      --ink-dim:    #757b83;
+      --lime:       #bcdb2c;
+      --lime-chip:  #262c10;
+      --teal:       #8cc2d4;
+      --teal-chip:  #16262c;
+      --amber:      #f2b955;
+      --amber-chip: #2e2413;
+      --coral:      #e8836b;
+      --coral-chip: #2e1a15;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:     #0a0b0d;
+    --surface:    #121317;
+    --surface-2:  #16181d;
+    --line:       #24262c;
+    --line-soft:  #1c1e23;
+    --ink:        #ffffff;
+    --ink-mid:    #a9aeb6;
+    --ink-dim:    #757b83;
+    --lime:       #bcdb2c;
+    --lime-chip:  #262c10;
+    --teal:       #8cc2d4;
+    --teal-chip:  #16262c;
+    --amber:      #f2b955;
+    --amber-chip: #2e2413;
+    --coral:      #e8836b;
+    --coral-chip: #2e1a15;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 40px 24px 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 10px; }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(30px, 4.6vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 17px;
+    color: var(--ink-mid);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  /* ---- screens ---- */
+  .screens { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .screens { grid-template-columns: 1fr; } }
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .screen .side {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .screen.left  { border-top: 2px solid var(--lime); }
+  .screen.right { border-top: 2px solid var(--teal); }
+  .screen.left  .side { color: var(--lime); }
+  .screen.right .side { color: var(--teal); }
+  .screen .what { font-size: 16px; font-weight: 600; }
+  .screen .detail { font-size: 13.5px; color: var(--ink-dim); font-family: var(--mono); }
+
+  /* ---- section headers ---- */
+  .setup, .runthrough { display: flex; flex-direction: column; gap: 10px; }
+  .setup h2, .runthrough h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0;
+  }
+  .setup-note, .run-note { margin: 0 0 4px; font-size: 14.5px; color: var(--ink-mid); max-width: 70ch; }
+  .setup-after { margin: 12px 0 0; font-size: 14.5px; color: var(--ink-mid); max-width: 78ch; }
+  .setup-after strong { color: var(--ink); }
+  .afters { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; align-items: start; }
+  .after {
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .after-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .after p { margin: 0; font-size: 14px; color: var(--ink-mid); }
+  .after .cmdwrap { margin: 3px 0 4px; }
+  .after code.cmd { font-size: 12px; }
+  .models-block {
+    margin-top: 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .models { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 14px 18px; align-items: start; }
+  .model { display: flex; flex-direction: column; gap: 7px; }
+  .model-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--lime);
+  }
+  .model .cmdwrap { margin: 0; }
+  .after p strong { color: var(--ink); font-weight: 600; }
+  .after code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+  .rule { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
+  .setup-table tbody td { padding-top: 15px; padding-bottom: 15px; }
+
+  /* ---- table ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 880px; table-layout: fixed; }
+  col.c-num { width: 62px; }
+  col.c-act { width: 44%; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-align: left;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody td { padding: 17px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.num {
+    font-family: var(--mono);
+    font-size: 19px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding-right: 0;
+    line-height: 1.2;
+  }
+  tr.term td.num { color: var(--lime); }
+  tr.port td.num { color: var(--teal); }
+
+  .where {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  tr.term .where { color: var(--lime); }
+  tr.port .where { color: var(--teal); }
+  .where::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 1px;
+    background: currentColor;
+    flex: none;
+  }
+
+  .cmdwrap { position: relative; display: flex; flex-direction: column; }
+  code.cmd {
+    display: block;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-left: 2px solid var(--lime);
+    border-radius: 2px;
+    padding: 10px 58px 10px 12px;
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  .copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 4px 7px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 120ms ease, border-color 120ms ease;
+  }
+  .copy:hover { color: var(--lime); border-color: var(--lime); }
+  .copy:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  .copy.done { color: var(--lime); border-color: var(--lime); }
+
+  .click {
+    font-size: 16.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 4px 11px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+  .btn.approve { color: var(--teal);  background: var(--teal-chip);  border-color: var(--teal); }
+  .btn.deny    { color: var(--coral); background: var(--coral-chip); border-color: var(--coral); }
+  .btn.plain   { color: var(--ink-mid); background: var(--surface-2); border-color: var(--line); }
+
+  .say { font-size: 15px; color: var(--ink-mid); }
+  .say strong { color: var(--ink); font-weight: 600; }
+  .say .lede { color: var(--ink); font-weight: 600; display: block; margin-bottom: 3px; }
+
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    margin-bottom: 8px;
+  }
+  .chip.held    { color: var(--amber); background: var(--amber-chip); }
+  .chip.refused { color: var(--coral); background: var(--coral-chip); }
+  .chip.through { color: var(--lime);  background: var(--lime-chip); }
+  .chip.tier    { color: var(--ink-dim); background: var(--surface-2); border: 1px solid var(--line-soft); }
+
+  /* ---- callouts ---- */
+  .note {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 3px;
+    background: var(--surface);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .note.warn { border-left-color: var(--coral); }
+  .note h3 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--amber);
+  }
+  .note.warn h3 { color: var(--coral); }
+  .note p { margin: 0; font-size: 14.5px; color: var(--ink-mid); max-width: 74ch; }
+  .note p strong { color: var(--ink); font-weight: 600; }
+  .note code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .cols { grid-template-columns: 1fr; } }
+
+  a { color: var(--teal); }
+  a:focus-visible, td:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+<div class="wrap">
+  <header class="masthead">
+    <h1>What an Operation Leaves Behind</h1>
+    <p class="standfirst">She stops naming tools and starts naming the act.</p>
+  </header>
+  <section class="screens">
+    <div class="screen left">
+      <span class="side">Left screen</span>
+      <span class="what">Terminal</span>
+      <span class="detail">~/Documents/Github/uma4agents</span>
+    </div>
+    <div class="screen right">
+      <span class="side">Right screen</span>
+      <span class="what">Alice's portal</span>
+      <span class="detail">https://portal.uma.lab</span>
+    </div>
+  </section>
+
+  <section class="setup">
+    <h2>Pre-demo setup</h2>
+    <p class="setup-note">From cold to ready. Three commands on a Mac, one in a Codespace, about 15 minutes.</p>
+
+    <div class="table-scroll">
+      <table>
+        <colgroup><col class="c-num"><col class="c-act"><col class="c-say"></colgroup>
+        <thead><tr><th>#</th><th>Run this</th><th>What it does</th></tr></thead>
+        <tbody>
+        <tr class="term">
+          <td class="num">1</td>
+          <td class="act">
+            <span class="where">Once per machine</span>
+            <div class="cmdwrap"><code class="cmd">brew install kind helm
+make dns-setup</code></div>
+          </td>
+          <td class="say">
+            Points your OS resolver at the lab's DNS so <strong>*.uma.lab</strong> works in a browser. One sudo. <strong>Skip both in a Codespace</strong> — it uses <code>/etc/hosts</code> instead.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="num">2</td>
+          <td class="act">
+            <span class="where">Build the lab</span>
+            <div class="cmdwrap"><code class="cmd">make kind-up</code></div>
+          </td>
+          <td class="say">
+            Three-node kind cluster, Istio ambient, kgateway, cert-manager, CloudNativePG, and every party in its own namespace. <strong>~13 minutes cold.</strong> If the compose stack is running it will stop you — both want :443 and :53, so run <code>make down</code> and try again.
+          </td>
+        </tr>
+        <tr class="term">
+          <td class="num">3</td>
+          <td class="act">
+            <span class="where">Trust the CA</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-trust-ca
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain /tmp/u4a-k8s-ca.pem</code></div>
+          </td>
+          <td class="say">
+            cert-manager issues the lab CA inside the cluster; this trusts it locally so her portal loads with no warning. <strong>Re-run after every <code>kind-up</code></strong> — a new cluster means a new CA. In a Codespace run <code>make codespaces-web</code> instead.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="setup-after">Open <strong>https://portal.uma.lab</strong> on the right and log in as <strong>alice / alice-demo</strong>.</p>
+
+    <div class="afters">
+      <div class="after">
+        <span class="after-label">In a Codespace</span>
+        <p>Only step 2. No resolver to edit, no CA to trust — <code>kind-up</code> publishes her portal for you.</p>
+      </div>
+      <div class="after">
+        <span class="after-label">Running it again</span>
+        <div class="cmdwrap"><code class="cmd">make k8s-reset</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="runthrough">
+    <h2>The run-through</h2>
+    <p class="run-note">Step 1 is the one the room came for: she deletes a rule that names a tool and writes one that names the act.</p>
+
+    <div class="table-scroll">
+      <table>
+        <colgroup><col class="c-num"><col class="c-act"><col class="c-say"></colgroup>
+        <thead><tr><th>#</th><th>Do this</th><th>Say this</th></tr></thead>
+        <tbody>
+
+        <tr class="port">
+          <td class="num">0</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">Settings › Security › Agent Authorization</span>
+          </td>
+          <td class="say">
+            <span class="lede">Find <strong>Trade execution</strong>. <em>Ask me every time</em> is on.</span>
+            Somebody decided once that this tool was the dangerous one. It is a list of tool names, kept by hand.
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">1</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">toggle off · add rule · Save changes</span>
+          </td>
+          <td class="say">
+            <span class="lede">The rule is <strong>if it cannot be undone at all — ask me first</strong>.</span>
+            Then try the same condition with <em>grant without asking</em>. Her authority will not save it: reading what an act costs can raise what a request needs, never lower it.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">2</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier1</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">Bob's agent asks for her holdings and stops.</span>
+            She has never met it, so this is first contact rather than the new rule. <strong>Approve it on the right.</strong>
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">3</td>
+          <td class="act">
+            <span class="where">Terminal — watch the right screen</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier1</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">The same read, now that she knows the agent.</span>
+            It goes straight through and <strong>nothing appears in her portal</strong>. The vault publishes that reading holdings is <code>reversible</code>.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">4</td>
+          <td class="act">
+            <span class="where">Terminal — watch it</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-demo ACT=tier3</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">The agent asks to place a trade, and it stops.</span>
+            Nobody added the trade endpoint to a list.
+          </td>
+        </tr>
+
+        <tr class="port">
+          <td class="num">5</td>
+          <td class="act">
+            <span class="where">Her portal</span>
+            <span class="click">open the request · Approve</span>
+          </td>
+          <td class="say">
+            <span class="lede">Under <strong>Why you</strong>: <em>it cannot be undone at all</em>.</span>
+            That is her rule, reading what the vault published about its own operation.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">6</td>
+          <td class="act">
+            <span class="where">Terminal</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-audit</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">The trade completes.</span>
+            The promise on her record carries the class alongside the tier and the operation.
+          </td>
+        </tr>
+
+        <tr class="term">
+          <td class="num">7</td>
+          <td class="act">
+            <span class="where">Terminal — if there is time</span>
+            <div class="cmdwrap"><code class="cmd">make k8s-consequence-check</code></div>
+          </td>
+          <td class="say">
+            <span class="lede">Twenty-two assertions over the same path.</span>
+            The class is inside the signature on the resource's metadata, it reaches her registry by a pull, and a resource that re-declares an operation cannot spend a grant she issued against the old claim.
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="afters">
+      <div class="after">
+        <span class="after-label">Who decides the class?</span>
+        <p>The resource server, in the metadata it signs. It is the party that would have to undo the act. An agent's description of itself stays display-only for the opposite reason.</p>
+      </div>
+      <div class="after">
+        <span class="after-label">What about tools nobody has described?</span>
+        <p>Undeclared is unknown. A rule about remedy does not fire on it, and she has a separate condition if she wants those refused too.</p>
+      </div>
+      <div class="after">
+        <span class="after-label">Is this a risk score?</span>
+        <p>No. The classes order by how much remedy remains, not by how bad the outcome is, and nothing here adds them up.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script>
+  (function () {
+    function copy(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).catch(fallback);
+      }
+      return fallback();
+
+      function fallback() {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        try { document.execCommand("copy"); } catch (e) { /* selection is still there to copy by hand */ }
+        document.body.removeChild(ta);
+        return Promise.resolve();
+      }
+    }
+
+    document.querySelectorAll(".cmdwrap").forEach(function (wrap) {
+      var code = wrap.querySelector("code.cmd");
+      if (!code) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copy";
+      btn.textContent = "Copy";
+      btn.setAttribute("aria-label", "Copy command to clipboard");
+      btn.addEventListener("click", function () {
+        copy(code.textContent.trim()).then(function () {
+          btn.textContent = "Copied";
+          btn.classList.add("done");
+          setTimeout(function () {
+            btn.textContent = "Copy";
+            btn.classList.remove("done");
+          }, 1400);
+        });
+      });
+      wrap.appendChild(btn);
+    });
+  })();
+</script>

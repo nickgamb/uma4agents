@@ -1,0 +1,157 @@
+<svg viewBox="0 0 1800 1110" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <!-- consequence — the shape, with what is on the wire at each beat.
+       Companion to consequence-wire.svg, which is the sequence.
+       Paint order is deliberate: boxes, then connectors, then every label last,
+       so no line is ever drawn over text.
+       Colour: site/src/style/theme.js -->
+  <defs>
+    <marker id="t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8cc2d4"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bcdb2c"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8836b"/>
+    </marker>
+  </defs>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+    .k { fill: #9cdcfe; } .s { fill: #ce9178; } .n { fill: #b5cea8; }
+    .c { fill: #6a9955; } .p { fill: #d4d4d4; } .kw { fill: #c586c0; }
+    .ok { fill: #bcdb2c; } .no { fill: #e8836b; }
+    .box { fill: #121317; }
+    .lane { fill: none; stroke-dasharray: 7 5; stroke-width: 1.4; }
+  </style>
+
+  <rect width="1800" height="1110" fill="#0a0b0d"/>
+
+  <!-- ===== lanes ===== -->
+  <rect class="lane" x="72" y="118" width="1656" height="176" rx="12" stroke="#5e8fa3"/>
+  <rect class="lane" x="72" y="348" width="1656" height="176" rx="12" stroke="#bcdb2c"/>
+
+  <!-- ===== boxes ===== -->
+  <rect class="box" x="100" y="150" width="380" height="118" rx="10" stroke="#5e8fa3" stroke-width="1.6"/>
+  <rect class="box" x="540" y="150" width="400" height="118" rx="10" stroke="#5e8fa3" stroke-width="1.6"/>
+  <rect class="box" x="1000" y="150" width="380" height="118" rx="10" stroke="#3a4a52" stroke-width="1.4"/>
+  <rect class="box" x="1440" y="150" width="280" height="118" rx="10" stroke="#3a4a52" stroke-width="1.4"/>
+
+  <rect class="box" x="100" y="380" width="380" height="118" rx="10" stroke="#3a4a52" stroke-width="1.4"/>
+  <rect class="box" x="540" y="380" width="400" height="118" rx="10" stroke="#5e8fa3" stroke-width="1.6"/>
+  <rect class="box" x="1000" y="380" width="380" height="118" rx="10" stroke="#bcdb2c" stroke-width="1.6"/>
+  <rect class="box" x="1440" y="380" width="280" height="118" rx="10" stroke="#bcdb2c" stroke-width="1.6"/>
+
+  <rect class="box" x="100" y="586" width="1620" height="108" rx="12" stroke="#3a4a52" stroke-width="1.6"/>
+  <rect x="1206" y="614" width="232" height="34" rx="6" fill="#0d0f13" stroke="#2d3138"/>
+  <rect x="1462" y="614" width="232" height="34" rx="6" fill="#0d0f13" stroke="#2d3138"/>
+
+  <!-- ===== connectors ===== -->
+  <line x1="484" y1="209" x2="532" y2="209" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#t)"/>
+  <line x1="944" y1="209" x2="992" y2="209" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#t)"/>
+  <line x1="1384" y1="209" x2="1432" y2="209" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#t)"/>
+
+  <line x1="484" y1="439" x2="532" y2="439" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#t)"/>
+  <line x1="944" y1="439" x2="992" y2="439" stroke="#8cc2d4" stroke-width="1.8" marker-end="url(#t)"/>
+  <line x1="1384" y1="439" x2="1432" y2="439" stroke="#bcdb2c" stroke-width="1.8" marker-end="url(#g)"/>
+
+  <!-- the declaration reaches the rule that reads it -->
+  <path d="M1580 274 L1580 380" fill="none" stroke="#8cc2d4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#t)"/>
+  <!-- the grant, and the call it is spent on -->
+  <path d="M1580 504 L1580 560 L900 560 L900 580" fill="none" stroke="#bcdb2c" stroke-width="1.6" marker-end="url(#g)"/>
+
+  <!-- ===== mono windows ===== -->
+  <rect x="80" y="770" width="540" height="300" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="80" y="770" width="540" height="26" rx="8" fill="#232529"/>
+  <rect x="80" y="788" width="540" height="8" fill="#232529"/>
+
+  <rect x="650" y="770" width="540" height="300" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="650" y="770" width="540" height="26" rx="8" fill="#232529"/>
+  <rect x="650" y="788" width="540" height="8" fill="#232529"/>
+
+  <rect x="1220" y="770" width="500" height="300" rx="8" fill="#1b1d21" stroke="#2d3036" stroke-width="1.2"/>
+  <rect x="1220" y="770" width="500" height="26" rx="8" fill="#232529"/>
+  <rect x="1220" y="788" width="500" height="8" fill="#232529"/>
+
+  <!-- ===== labels ===== -->
+  <text x="40" y="58" fill="#ffffff" font-size="21" font-weight="600">What an operation leaves behind</text>
+  <text x="40" y="82" fill="#757b83" font-size="14">The resource declares it · her authority reads it · the grant carries it</text>
+
+  <text x="96" y="110" fill="#5e8fa3" font-size="12" font-weight="600" letter-spacing="0.14em">THE DECLARATION</text>
+  <text x="96" y="340" fill="#bcdb2c" font-size="12" font-weight="600" letter-spacing="0.14em">THE REQUEST</text>
+
+  <text x="124" y="186" fill="#ffffff" font-size="14.5" font-weight="600">Meridian's vault</text>
+  <text x="124" y="211" fill="#8cc2d4" font-size="12" class="mono">get_positions · reversible</text>
+  <text x="124" y="231" fill="#8cc2d4" font-size="12" class="mono">get_transactions · reversible</text>
+  <text x="124" y="251" fill="#e8836b" font-size="12" class="mono">execute_trade · irreversible</text>
+
+  <text x="564" y="186" fill="#ffffff" font-size="14.5" font-weight="600">Published metadata</text>
+  <text x="564" y="211" fill="#757b83" font-size="12.5">RFC 9728 · tool_surfaces</text>
+  <text x="564" y="233" fill="#757b83" font-size="12.5">inside signed_metadata</text>
+  <text x="564" y="255" fill="#757b83" font-size="12.5">the resource's own key</text>
+
+  <text x="1024" y="186" fill="#ffffff" font-size="14.5" font-weight="600">Her registry</text>
+  <text x="1024" y="211" fill="#757b83" font-size="12.5">pulled, not configured</text>
+  <text x="1024" y="233" fill="#757b83" font-size="12.5">owner-resources listing</text>
+
+  <text x="1464" y="186" fill="#ffffff" font-size="14.5" font-weight="600">Her rule</text>
+  <text x="1464" y="211" fill="#757b83" font-size="12.5">names the act,</text>
+  <text x="1464" y="233" fill="#757b83" font-size="12.5">never the tool</text>
+
+  <text x="124" y="416" fill="#ffffff" font-size="14.5" font-weight="600">Bob's agent</text>
+  <text x="124" y="441" fill="#757b83" font-size="12.5">calls execute_trade</text>
+  <text x="124" y="463" fill="#757b83" font-size="12.5">holding no grant</text>
+
+  <text x="564" y="416" fill="#ffffff" font-size="14.5" font-weight="600">401 · the challenge</text>
+  <text x="564" y="441" fill="#757b83" font-size="12.5">carries the class, so the agent</text>
+  <text x="564" y="463" fill="#757b83" font-size="12.5">knows before it negotiates</text>
+
+  <text x="1024" y="416" fill="#ffffff" font-size="14.5" font-weight="600">She is asked</text>
+  <text x="1024" y="441" fill="#757b83" font-size="12.5">because it cannot be undone,</text>
+  <text x="1024" y="463" fill="#757b83" font-size="12.5">not because of its name</text>
+
+  <text x="1464" y="416" fill="#ffffff" font-size="14.5" font-weight="600">The grant</text>
+  <text x="1464" y="441" fill="#757b83" font-size="12.5">carries the class it</text>
+  <text x="1464" y="463" fill="#757b83" font-size="12.5">was issued against</text>
+
+  <text x="124" y="622" fill="#ffffff" font-size="14.5" font-weight="600">The enforcement point compares what the resource declares now with what the grant was issued against</text>
+  <text x="124" y="648" fill="#757b83" font-size="12.5">same class, or gentler → the call proceeds. Worse → refused, because her answer was to a different question.</text>
+  <text x="1230" y="636" fill="#bcdb2c" font-size="12" class="mono">allow</text>
+  <text x="1486" y="636" fill="#e8836b" font-size="12" class="mono">403 consequence_changed</text>
+
+  <circle cx="508" cy="209" r="13" fill="#8cc2d4"/><text x="508" y="214" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">1</text>
+  <circle cx="968" cy="209" r="13" fill="#8cc2d4"/><text x="968" y="214" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">2</text>
+  <circle cx="1408" cy="209" r="13" fill="#8cc2d4"/><text x="1408" y="214" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">3</text>
+  <circle cx="508" cy="439" r="13" fill="#8cc2d4"/><text x="508" y="444" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">4</text>
+  <circle cx="968" cy="439" r="13" fill="#8cc2d4"/><text x="968" y="444" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">5</text>
+  <circle cx="1408" cy="439" r="13" fill="#bcdb2c"/><text x="1408" y="444" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">6</text>
+  <circle cx="900" cy="560" r="13" fill="#bcdb2c"/><text x="900" y="565" fill="#0a0b0d" font-size="12" font-weight="700" text-anchor="middle">7</text>
+
+  <text xml:space="preserve" x="96" y="787" fill="#757b83" font-size="10.5" class="mono">1 · what the resource publishes</text>
+  <text xml:space="preserve" x="96" y="822" class="mono"><tspan class="p">{ </tspan><tspan class="k">"tool"</tspan><tspan class="p">: </tspan><tspan class="s">"execute_trade"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="96" y="842" class="mono"><tspan class="p">  </tspan><tspan class="k">"resource_scopes"</tspan><tspan class="p">: [</tspan><tspan class="s">"trades:execute"</tspan><tspan class="p">],</tspan></text>
+  <text xml:space="preserve" x="96" y="862" class="mono"><tspan class="p">  </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="96" y="896" class="mono"><tspan class="k">"signed_metadata"</tspan><tspan class="p">: </tspan><tspan class="s">"eyJ0eXAiOiJvYXV0aC1w..."</tspan></text>
+  <text xml:space="preserve" x="96" y="930" class="mono"><tspan class="c">// the class is inside the signature</tspan></text>
+  <text xml:space="preserve" x="96" y="964" class="mono"><tspan class="c">// absent would mean undeclared —</tspan></text>
+  <text xml:space="preserve" x="96" y="984" class="mono"><tspan class="c">// not safe, and not grave</tspan></text>
+
+  <text xml:space="preserve" x="666" y="787" fill="#757b83" font-size="10.5" class="mono">3 · the rule she writes</text>
+  <text xml:space="preserve" x="666" y="822" class="mono"><tspan class="p">{ </tspan><tspan class="k">"when"</tspan><tspan class="p">: [</tspan></text>
+  <text xml:space="preserve" x="666" y="842" class="mono"><tspan class="p">    </tspan><tspan class="s">"request.consequence_at_or_above:irreversible"</tspan></text>
+  <text xml:space="preserve" x="666" y="862" class="mono"><tspan class="p">  ], </tspan><tspan class="k">"then"</tspan><tspan class="p">: </tspan><tspan class="s">"ask"</tspan><tspan class="p"> }</tspan></text>
+  <text xml:space="preserve" x="666" y="896" class="mono"><tspan class="c">// it names no tool, no agent, no operator</tspan></text>
+  <text xml:space="preserve" x="666" y="930" class="mono"><tspan class="kw">"then"</tspan><tspan class="p">: </tspan><tspan class="kw">"auto"</tspan></text>
+  <text xml:space="preserve" x="666" y="950" class="mono"><tspan class="no">400 </tspan><tspan class="p">a consequence class cannot</tspan></text>
+  <text xml:space="preserve" x="666" y="970" class="mono"><tspan class="p">    relax a requirement</tspan></text>
+  <text xml:space="preserve" x="666" y="1004" class="mono"><tspan class="c">// reading what an act costs may only tighten</tspan></text>
+
+  <text xml:space="preserve" x="1236" y="787" fill="#757b83" font-size="10.5" class="mono">6 · 7 · the grant, and the guard</text>
+  <text xml:space="preserve" x="1236" y="822" class="mono"><tspan class="p">{ </tspan><tspan class="k">"consequence"</tspan><tspan class="p">: </tspan><tspan class="s">"irreversible"</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="1236" y="842" class="mono"><tspan class="p">  </tspan><tspan class="k">"single_use"</tspan><tspan class="p">: </tspan><tspan class="kw">true</tspan><tspan class="p">,</tspan></text>
+  <text xml:space="preserve" x="1236" y="862" class="mono"><tspan class="p">  </tspan><tspan class="k">"operation"</tspan><tspan class="p">: { </tspan><tspan class="k">"tool"</tspan><tspan class="p">: </tspan><tspan class="s">"execute_trade"</tspan><tspan class="p"> } }</tspan></text>
+  <text xml:space="preserve" x="1236" y="896" class="mono"><tspan class="c">// the class she answered against</tspan></text>
+  <text xml:space="preserve" x="1236" y="930" class="mono"><tspan class="c">// if the resource now says worse:</tspan></text>
+  <text xml:space="preserve" x="1236" y="950" class="mono"><tspan class="no">403 </tspan><tspan class="k">consequence_changed</tspan></text>
+  <text xml:space="preserve" x="1236" y="984" class="mono"><tspan class="c">// a grant carrying no class is</tspan></text>
+  <text xml:space="preserve" x="1236" y="1004" class="mono"><tspan class="c">// never refused for it</tspan></text>
+</svg>
