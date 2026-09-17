@@ -146,7 +146,8 @@ def after(client: httpx.Client) -> int:
 
 def main() -> int:
     phase = sys.argv[sys.argv.index("--phase") + 1] if "--phase" in sys.argv else "before"
-    with httpx.Client(verify="/driver/rootCA.pem") as client:
+    with httpx.Client(verify=os.environ.get("UMA4A_CACERT",
+                                            "/driver/rootCA.pem")) as client:
         status = before(client) if phase == "before" else after(client)
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if phase == "after" and not FAILED and not status:

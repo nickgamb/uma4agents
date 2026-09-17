@@ -806,6 +806,14 @@ spec:
               - /consume
               - /audit/access
               - /jwks
+              # What the organization publishes about itself, read over the
+              # internal name rather than through the edge. It shapes the
+              # wording of a refusal and decides nothing — but without it the
+              # enforcement point refuses an agent opaquely, and the person it
+              # is refusing on behalf of never learns she was invitable.
+              # Public at the edge already; the mesh is the only thing that
+              # was in the way, and a stack with no mesh never noticed.
+              - /.well-known/*
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
@@ -860,6 +868,48 @@ spec:
         - source:
             principals:
               - cluster.local/ns/northwind/sa/org-authority
+---
+# The enterprise's directory. Reached from outside only: an employee signs in
+# to it, and a member's authorization server resolves it to decide whether an
+# assertion about one of Northwind's employees really came from Northwind.
+# Nothing inside the cluster has business with it directly.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: northwind-idp-edge
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: northwind-idp
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
+---
+# The token-exchange broker, likewise. A member's authority fetches the keys
+# it publishes and takes its assertions as claim tokens; both arrive over its
+# public hostname, so both arrive through the edge. It holds nothing any
+# in-cluster workload should be asking it for over a private name.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: xaa-broker-edge
+  namespace: northwind
+spec:
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: xaa-broker
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/uma-edge/sa/edge
 ---
 # ────────────────────────────────────────────────────────────────────────
 # tally — the party that counts, and is not trusted

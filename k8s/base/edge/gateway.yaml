@@ -233,6 +233,39 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: aauth
+    # The enterprise's own two surfaces: the directory its people are asserted
+    # by, and the broker that exchanges an employee's token for an assertion
+    # naming which employee and which application. Scoped to northwind like
+    # every other name here — an enterprise that could publish under another
+    # party's hostname would make the refusal this check asserts meaningless.
+    - name: northwind-idp
+      protocol: HTTPS
+      port: 443
+      hostname: northwind-idp.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: northwind
+    - name: northwind-xaa
+      protocol: HTTPS
+      port: 443
+      hostname: northwind-xaa.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: northwind
 ---
 # kgateway provisions a Service for the Gateway; pin it to the NodePort the
 # kind cluster maps to the host's :443, so https://portal.uma.lab works in a

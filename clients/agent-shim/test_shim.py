@@ -24,7 +24,12 @@ from mcp.client.stdio import stdio_client
 from mcp.client.session import ClientRequestContext
 from mcp.types import ElicitRequestParams, ElicitResult
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Where the shim, the shared library and the CA bundle are, relative to each
+# other. A checkout answers this with its own root; a deployment that mounts
+# the three from ConfigMaps answers it with wherever it put them, which is why
+# this is a variable rather than three of them.
+REPO = os.environ.get("UMA4A_REPO") or os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AS_URI = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 OIDC_ISSUER = os.environ.get("UMA4A_OIDC_ISSUER",
                              "https://keycloak.uma.lab/realms/alice")

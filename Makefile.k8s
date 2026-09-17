@@ -123,6 +123,14 @@ k8s-apply:
 		--from-file=carol-realm.json=keycloak/carol-realm.json \
 		--from-file=northwind-realm.json=keycloak/northwind-realm.json \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@# Northwind's own directory, in Northwind's namespace. A separate realm
+	@# on the provider above would have made the enterprise a tenant of
+	@# Meridian's identity, which is the arrangement Cross App Access exists
+	@# to avoid — and would make "a token from Meridian's provider is not an
+	@# employee assertion" untestable.
+	@kubectl -n northwind create configmap northwind-realms \
+		--from-file=employees-realm.json=keycloak-northwind/employees-realm.json \
+		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@kubectl apply -f $(K8S)/base/idp/ >/dev/null
 	@kubectl apply -f $(K8S)/base/alice/ >/dev/null
 	@kubectl apply -f $(K8S)/base/carol/ >/dev/null
@@ -397,6 +405,89 @@ k8s-embedded-check:
 .PHONY: k8s-flow-check
 k8s-flow-check: k8s-spawn-keys
 	$(call run_job,flow-check,cat $(K8S)/base/jobs/flow-check.yaml,900s)
+
+## k8s-ts-agent-check: the four beats from a second implementation, sharing no
+## code with the Python client. Two implementations meeting on the wire is the
+## evidence a specification needs and one client cannot give.
+.PHONY: k8s-ts-agent-check
+k8s-ts-agent-check:
+	$(call run_job,ts-agent-check,cat $(K8S)/base/jobs/ts-agent-check.yaml,420s)
+
+## k8s-shim-test: the adapter under a scripted MCP client — the elicitation
+## path, the standing-config fallback, and the pend handed back as a wait
+## rather than a call held open. The shim is spawned by the check, the way it
+## runs beside an agent on somebody's machine. See docs/KAGENT.md.
+.PHONY: k8s-shim-test
+k8s-shim-test:
+	$(call run_job,shim-test,cat $(K8S)/base/jobs/shim-test.yaml,600s)
+
+## k8s-rotation-check: the authority rotates its signing key under live grants.
+##
+## Three replicas share one signing key from a Secret, so a rotation that
+## reached one and not the others would publish two JWKS behind one Service.
+## That is the failure a single process cannot exhibit, and the reason this is
+## worth running here: a grant issued before the rotation still spends, one
+## issued after carries the new kid, both kids are published, and the resource
+## server accepts a pull signed with the new key.
+##
+## Restores the original key afterwards. Grants issued under the interim key do
+## not survive the restore, which is the point of a check and not of a
+## deployment.
+.PHONY: k8s-rotation-check
+k8s-rotation-check:
+	@$(K8S)/scripts/job-configmaps.sh
+	@kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1
+	@echo
+	@echo "==> Before the rotation: a grant, kept"
+	@kubectl apply -f $(K8S)/base/jobs/rotation-check.yaml >/dev/null
+	@kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null
+	@kubectl -n $(NS_AGENT) logs job/rotation-check
+	@echo
+	@echo "==> Rotating the key all three replicas mount"
+	@$(K8S)/scripts/rotate-as-key.sh stage
+	@echo
+	@echo "==> After the rotation"
+	@# The second phase reads what the first kept, from the same volume: the
+	@# PersistentVolume binds to one node and every later pod mounting it is
+	@# scheduled there, which is what carries the grant across the rollout.
+	@kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1
+	@sed 's|value: before|value: after|' $(K8S)/base/jobs/rotation-check.yaml \
+		| kubectl apply -f - >/dev/null
+	@set +e; kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null 2>&1; \
+	kubectl -n $(NS_AGENT) logs job/rotation-check; \
+	ok=$$(kubectl -n $(NS_AGENT) get job rotation-check -o jsonpath='{.status.succeeded}'); \
+	echo; echo "==> Restoring the original key"; \
+	$(K8S)/scripts/rotate-as-key.sh restore; \
+	test "$$ok" = "1"
+
+## k8s-xaa-check: Cross App Access beside UMA. An enterprise identity provider
+## says which employee and which application; her authority says what may be
+## done and on whose terms. Three ceilings, one per party, and none of them can
+## raise another's.
+##
+## Worth running here because the parties are genuinely separate: Northwind's
+## directory is a second identity provider in the enterprise's own namespace,
+## so "a token from Meridian's provider is not an employee assertion" is a
+## statement about two servers run by two parties. See docs/XAA.md.
+.PHONY: k8s-xaa-check
+k8s-xaa-check:
+	$(call run_job,xaa-check,cat $(K8S)/base/jobs/xaa-check.yaml,900s)
+
+## k8s-kwaai-check: the personal-AI binding on the deployed stack — her device
+## key alongside her portal session, both accepted, one ledger. Runs inside
+## pAI-OS in her namespace, beside the ability it imports and against the
+## device key only she holds, so there is no second copy of either. See
+## docs/KWAAI-BINDING.md.
+.PHONY: k8s-kwaai-check
+k8s-kwaai-check: k8s-paios
+	@kubectl -n alice exec deploy/paios -- env \
+		UMA4A_OWNER_KEY=/owner/owner-ed25519.pem \
+		UMA4A_CACERT=/certs/rootCA.pem \
+		UMA4A_AS=https://alice-as.uma.lab \
+		UMA4A_OIDC=https://keycloak.uma.lab \
+		UMA4A_GATEWAY=https://gateway.uma.lab/mcp \
+		PYTHONPATH=/opt/u4a/lib \
+		python /opt/u4a/check.py
 
 ## kagent: an agent framework nobody modified, governed by Alice's policy.
 ##

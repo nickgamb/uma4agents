@@ -1,0 +1,82 @@
+# The authority rotates its signing key under live grants — in the cluster.
+#
+# The same clients/demo-driver/rotation_check.py the compose stack runs, in
+# two phases either side of a rollout `make k8s-rotation-check` performs:
+#
+#   --phase before   negotiate a grant and keep it
+#   --phase after    the kept grant still spends; a fresh one carries the new
+#                    kid; both kids are published; and the resource server
+#                    accepted a pull signed with the new key
+#
+# Worth running here rather than only under compose, and this is the one where
+# replication is the whole point. Three authorization servers share one signing
+# key from a Secret; a rotation that reached one replica and not the others
+# would publish two JWKS behind one Service and fail about two thirds of the
+# verifications, which is exactly the failure a single process cannot exhibit.
+#
+# The two phases share a volume because the grant kept by the first is read by
+# the second — an emptyDir per Job would lose it, and the check would be
+# asserting nothing across the rotation it is named for.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rotation-held
+  namespace: sterling-vance
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: { storage: 64Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rotation-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: rotation-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: rotation-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/rotation_check.py --phase ${PHASE}
+          env:
+            - { name: PHASE, value: before }
+            - { name: PYTHONPATH, value: /driver/lib }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+            - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
+            - { name: UMA4A_AS, value: "https://alice-as.uma.lab" }
+            - { name: UMA4A_GATEWAY, value: "https://gateway.uma.lab/mcp" }
+            - { name: UMA4A_GATEWAY_AUTHORITY, value: "gateway.uma.lab" }
+            - { name: KEYCLOAK, value: "https://keycloak.uma.lab" }
+          volumeMounts:
+            - { name: driver, mountPath: /driver/rotation_check.py, subPath: rotation_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            # Shared across both phases, which is what makes the kept grant
+            # survive the rollout between them.
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          persistentVolumeClaim: { claimName: rotation-held }

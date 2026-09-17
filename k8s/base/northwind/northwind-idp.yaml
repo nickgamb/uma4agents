@@ -1,0 +1,90 @@
+# Northwind's own directory. Not Meridian's, and that is the whole point.
+#
+# A second identity provider, in the enterprise's namespace, holding the
+# employees Northwind employs. Meridian runs one too — `idp/keycloak.yaml`,
+# where Alice and Carol sign in to their portals — and a token from it is
+# worth nothing as a statement about who Northwind employs. The check asserts
+# exactly that: an ID token minted by Meridian's provider is refused as an
+# employee assertion, and the refusal is only meaningful because these are
+# genuinely two servers run by two parties rather than two realms on one.
+#
+# In Northwind's namespace rather than `idp` for the same reason. `idp` is the
+# provider both owners resolve and neither runs; this one is the enterprise's
+# own, and an enterprise that could not run its own directory would not be the
+# party the Cross App Access arrangement describes.
+#
+# start-dev with an in-memory database, like the other one: the realm is
+# imported at boot and there is no identity state worth keeping between runs.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: northwind-idp
+  namespace: northwind
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: northwind-idp
+  namespace: northwind
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: northwind-idp }
+  ports:
+    - { name: http, port: 8081, targetPort: 8081 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: northwind-idp
+  namespace: northwind
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: northwind-idp }
+  template:
+    metadata:
+      labels: { app: northwind-idp, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: northwind-idp
+      containers:
+        - name: northwind-idp
+          image: quay.io/keycloak/keycloak:26.4.5
+          args: ["start-dev", "--import-realm", "--health-enabled=true",
+                 "--http-port=8081"]
+          ports:
+            - { name: http, containerPort: 8081 }
+            - { name: mgmt, containerPort: 9000 }
+          env:
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin }
+            - { name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: northwind-admin }
+            - { name: KC_HEALTH_ENABLED, value: "true" }
+            - { name: KC_HOSTNAME, value: "https://northwind-idp.uma.lab" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            # The edge terminates TLS, so the forwarded scheme has to be
+            # believed or every redirect comes back as http.
+            - { name: KC_PROXY_HEADERS, value: xforwarded }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-Xms256m -Xmx512m" }
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import, readOnly: true }
+          # Realm import is slow on a laptop, and a liveness probe firing
+          # during it restarts the pod forever. The startup probe buys the
+          # time; liveness only takes over once it has passed.
+          startupProbe:
+            httpGet: { path: /health/started, port: 9000 }
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: 9000 }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: realm
+          configMap: { name: northwind-realms }

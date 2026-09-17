@@ -19,7 +19,10 @@ from the two parties entitled to give them.
 
 ![Cross App Access beside UMA in seven beats. An agent calls Northwind's book at Meridian's gateway and is refused with a UMA challenge naming the member's own authorization server. That authority answers need_info, but not with terms: it asks first who the agent acts for, and names the identity provider it will accept, the audience, the resource and the scope. The agent — which knew nothing about Northwind when it started — takes that to Okta and performs an ordinary RFC 8693 token exchange. Okta returns an ID-JAG naming the employee, the application and the approved scope, and carrying no entitlement over any resource. Only then does her authority dictate her terms, capped by Northwind's charter rather than by Okta. The agent signs, receives an ordinary RPT and spends it. The last beat lays out three ceilings side by side — the connection an administrator approved, the charter's grants, and her own terms — each set by a different party, none able to widen another.](cross-app-access.gif)
 
-Run it with `make xaa-check`.
+Run it with `make xaa-check`, or `make k8s-xaa-check` in the cluster — where
+Northwind's directory is a second identity provider in the enterprise's own
+namespace rather than another realm on Meridian's, which is what makes the
+refusal of a Meridian-minted token a statement about two parties.
 
 ## What ID-JAG is
 

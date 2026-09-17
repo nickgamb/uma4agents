@@ -30,3 +30,32 @@ spec:
   rules:
     - backendRefs:
         - { name: org-console, port: 9050 }
+---
+# The enterprise's directory, published by the enterprise. A member's
+# authorization server resolves this name to decide whether an assertion about
+# one of Northwind's employees came from Northwind.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: northwind-idp
+  namespace: northwind
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["northwind-idp.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: northwind-idp, port: 8081 }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: xaa-broker
+  namespace: northwind
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["northwind-xaa.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: xaa-broker, port: 9080 }

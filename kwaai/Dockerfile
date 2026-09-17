@@ -42,6 +42,12 @@ COPY kwaai/abilities/u4a-owner-authority /opt/paios/abilities/u4a-owner-authorit
 COPY kwaai/ability /opt/u4a/ability
 COPY lib /opt/u4a/lib
 COPY kwaai/paios_check.py /opt/u4a/paios_check.py
+# The binding check itself, beside the ability it imports — `check.py` resolves
+# `ability/` relative to its own directory, so where it sits is what makes it
+# runnable. In the cluster it runs here, in her namespace, against her own
+# device key: `make k8s-kwaai-check`. There is no second copy of the ability
+# for it to drift from.
+COPY kwaai/check.py /opt/u4a/check.py
 
 RUN mkdir -p /driver/keys
 

@@ -1,0 +1,63 @@
+# The four beats from a second implementation — in the cluster.
+#
+# A requesting agent written in TypeScript, sharing no code with the Python
+# one: it discovers, corroborates the challenge against published metadata,
+# signs the terms, waits for her, spends the grant, and is refused where it
+# should be. Two implementations meeting on the wire is the evidence a
+# specification needs and one client cannot give.
+#
+# No npm here, and that is deliberate rather than a shortcut. `dist/` is
+# committed for the same reason the rendered drafts are — what the check runs
+# is the artifact, not a build that could differ from it — and the agent
+# imports node builtins and its own module, nothing else. TypeScript is a
+# development dependency. So a stock node image and two files are the whole
+# requirement, and this Job reaches no registry.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ts-agent-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: ts-agent-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: ts-agent-check
+          image: node:20.15.0
+          command: ["node", "/agent/check.js"]
+          env:
+            - { name: UMA4A_GATEWAY, value: "https://gateway.uma.lab/mcp" }
+            - { name: UMA4A_GATEWAY_AUTHORITY, value: "gateway.uma.lab" }
+            - { name: UMA4A_AS, value: "https://alice-as.uma.lab" }
+            - { name: KEYCLOAK, value: "https://keycloak.uma.lab" }
+            # Node takes a trust anchor from the environment and nothing else;
+            # there is no per-call option for it, so both names point at the
+            # same bundle — the agent reads one to report it, Node reads the
+            # other to use it.
+            - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }
+            - { name: NODE_EXTRA_CA_CERTS, value: /certs/rootCA.pem }
+            - { name: UMA4A_KEYS, value: /agent/keys }
+          volumeMounts:
+            - { name: agent, mountPath: /agent/check.js, subPath: check.js, readOnly: true }
+            - { name: agent, mountPath: /agent/uma4a.js, subPath: uma4a.js, readOnly: true }
+            # What makes the two files above ES modules rather than CommonJS.
+            - { name: agent, mountPath: /agent/package.json, subPath: package.json, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /agent/keys }
+          workingDir: /agent
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: agent
+          configMap: { name: ts-agent }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

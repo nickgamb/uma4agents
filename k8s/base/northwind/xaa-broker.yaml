@@ -1,0 +1,117 @@
+# Cross App Access, beside UMA rather than instead of it.
+#
+# The enterprise's token-exchange endpoint: an employee's ID token from
+# Northwind's own directory goes in, and an ID-JAG naming *which employee* and
+# *which application* comes out, audienced at whichever member authority holds
+# the resource. Her authorization server takes it as a claim token and still
+# dictates her terms — the assertion says who the agent acts for, never what it
+# may do.
+#
+# Three ceilings, one per party, and this service owns exactly one: it will not
+# assert a scope no administrator approved. The charter is the organization's,
+# the terms are the member's, and neither is expressible here.
+#
+# One replica holding its own state, like the organization's authority beside
+# it: the approved connections and the signing key live in this process, and
+# two of them would be two brokers answering behind one name.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: xaa-broker
+  namespace: northwind
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xaa-broker
+  namespace: northwind
+  labels:
+    istio.io/use-waypoint: waypoint
+spec:
+  selector: { app: xaa-broker }
+  ports:
+    - { name: http, port: 9080, targetPort: 9080 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xaa-broker
+  namespace: northwind
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: xaa-broker }
+  template:
+    metadata:
+      labels: { app: xaa-broker, istio.io/use-waypoint: waypoint }
+    spec:
+      serviceAccountName: xaa-broker
+      containers:
+        - name: xaa-broker
+          image: localhost:5001/u4a/xaa-broker:dev
+          imagePullPolicy: Always
+          ports:
+            - { name: http, containerPort: 9080 }
+          env:
+            - { name: XAA_ISSUER, value: "https://northwind-xaa.uma.lab" }
+            # Northwind's own directory. Meridian's Keycloak is a different
+            # party and its word about who Northwind employs is worth nothing.
+            - { name: XAA_IDP_ISSUER, value: "https://northwind-idp.uma.lab/realms/employees" }
+            - { name: XAA_ADMINS, value: "dana" }
+            - { name: XAA_IDP_ADMIN_CLIENT, value: "northwind-idp-admin" }
+            - name: XAA_ADMIN_TOKEN
+              valueFrom: { secretKeyRef: { name: xaa-config, key: admin-token } }
+            - name: XAA_CLIENTS
+              valueFrom: { secretKeyRef: { name: xaa-config, key: clients } }
+            # The edges Dana approved. Two, because Northwind's book is
+            # administered by two members and each runs her own authority —
+            # the assertion has to be audienced at whichever one holds the
+            # resource.
+            - name: XAA_SEED_CONNECTIONS
+              value: >-
+                [{"id": "nw-alice", "requesting_client": "northwind-research-agent",
+                  "audience": "https://alice-as.uma.lab",
+                  "resource": "https://gateway.uma.lab/mcp",
+                  "scopes": ["get_positions", "get_balance"]},
+                 {"id": "nw-carol", "requesting_client": "northwind-research-agent",
+                  "audience": "https://carol-as.uma.lab",
+                  "resource": "https://gateway.uma.lab/mcp",
+                  "scopes": ["get_positions", "get_balance"]}]
+            - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }
+          volumeMounts:
+            - { name: keys, mountPath: /keys }
+            - { name: ca, mountPath: /certs, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /health, port: 9080 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        # Its signing key, generated on first start. The same honest cost the
+        # organization's authority pays for being one process: restarting the
+        # pod mints a new one, and the member authorities fetch the new key
+        # from the origin rather than holding a copy.
+        - { name: keys, emptyDir: {} }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+---
+# The broker's own secrets. Separate from `org-config` because they belong to
+# a different surface of the same firm: the organization's authority speaks
+# about membership, this one speaks about employees and applications, and a
+# deployment that shared one credential between them would have collapsed two
+# ceilings into one.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: xaa-config
+  namespace: northwind
+stringData:
+  admin-token: xaa-admin-dev-token
+  clients: '{"northwind-research-agent": "northwind-agent-secret"}'

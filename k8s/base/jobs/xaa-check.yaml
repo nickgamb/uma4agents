@@ -1,0 +1,93 @@
+# Cross App Access beside UMA — in the cluster.
+#
+# The same clients/demo-driver/xaa_check.py the compose stack runs. An
+# enterprise identity provider says which employee and which application; her
+# authorization server says what may be done and on whose terms. Three
+# ceilings, one per party, and no party can raise another's.
+#
+# Worth running here rather than only under compose because the parties are
+# actually separate here. Northwind's directory is a second identity provider
+# in the enterprise's own namespace, not a realm on Meridian's — so "a token
+# from Meridian's own provider is not an employee assertion" is a statement
+# about two servers run by two parties, which is what it is supposed to be.
+#
+# It mutates and restores: the charter is federated, Alice enrols, and the
+# check puts both back on the way out. Run it after the others rather than
+# before, and note that its `finally` restoring the charter is what keeps the
+# rest of the suite negotiating against the arrangement they expect.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: xaa-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: xaa-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: xaa-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' cryptography 2>/dev/null
+              exec python3 /driver/xaa_check.py
+          env:
+            - { name: PYTHONPATH, value: /driver/lib }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+            - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
+            - { name: UMA4A_GATEWAY, value: "https://gateway.uma.lab/mcp" }
+            - { name: UMA4A_AS, value: "https://alice-as.uma.lab" }
+            - { name: UMA4A_CAROL_AS, value: "https://carol-as.uma.lab" }
+            - { name: UMA4A_OIDC, value: "https://keycloak.uma.lab" }
+            - { name: UMA4A_ORG, value: "https://northwind-org.uma.lab" }
+            - { name: UMA4A_XAA, value: "https://northwind-xaa.uma.lab" }
+            - { name: UMA4A_NORTHWIND_IDP, value: "https://northwind-idp.uma.lab/realms/employees" }
+            - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
+            - { name: UMA4A_ALICE_OPERATOR, value: "https://alice-agent.uma.lab" }
+            # The same values the organization and the broker are configured
+            # with. Plain here for the same reason org-check's are: these are
+            # lab credentials, and inventing a Secret the cluster does not
+            # provision would fail the job before it ran a line.
+            - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
+            - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
+            - { name: XAA_AGENT_SECRET, value: northwind-agent-secret }
+            # Read from the same values the enforcement point is configured
+            # with, so a wait here cannot drift into a false failure. Both
+            # are caches it owns: how long it may describe the organization
+            # from a stored copy, and how long it may act on a stored answer
+            # about who is a member.
+            - { name: UMA_PEP_ORG_DISCOVERY_TTL_S, value: "15" }
+            - { name: UMA_PEP_MEMBERSHIP_TTL_S, value: "10" }
+            - name: UMA4A_OPERATOR_REGISTER_TOKEN
+              valueFrom: { secretKeyRef: { name: operator-register, key: token } }
+          volumeMounts:
+            - { name: driver, mountPath: /driver/xaa_check.py, subPath: xaa_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        # No provisioned agent key here, unlike org-check beside it. The agent
+        # in this story is the enterprise's own application, identified by a
+        # client credential at the broker rather than by a key its operator
+        # published — which is the distinction Cross App Access draws and this
+        # check turns on.
+        - name: keys
+          emptyDir: {}

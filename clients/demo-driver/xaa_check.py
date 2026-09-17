@@ -80,6 +80,14 @@ BOOK_PATH = "/shared/alice"
 # of the organization. Read from the same variable the service is configured
 # with, so a wait here cannot drift into a flaky failure.
 ORG_DISCOVERY_TTL = float(os.environ.get("UMA_PEP_ORG_DISCOVERY_TTL_S", "15")) + 2
+# How long the enforcement point may act on a cached answer about membership.
+# Read from the same variable the gateway is configured with, so this cannot
+# drift into a flaky wait. It caches the negative answer as readily as the
+# positive one, which is correct — a gateway that re-asked on every refusal
+# would be answering an unauthenticated caller's questions about somebody's
+# employment — and it means enrolling is not visible at the resource until
+# the window passes.
+MEMBERSHIP_TTL = float(os.environ.get("UMA_PEP_MEMBERSHIP_TTL_S", "10")) + 2
 META = mcp_meta("u4a-xaa-check")
 
 PASS: list[str] = []
@@ -230,6 +238,12 @@ def _main() -> int:                                            # noqa: C901
           r3.status_code >= 400, f"accepted {r3.status_code}")
     c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
            json={"assertion": employee_id_token(c, "alice"), "agreed": True})
+    # She is a member again. The gateway does not know it yet: the run above
+    # left and rejoined several times, and the answer it cached during the
+    # first of those stands for its window. Waited out here rather than at
+    # the beat that needs it, so what the next section reports is the
+    # arrangement rather than the clock.
+    time.sleep(MEMBERSHIP_TTL)
 
     print("\n3. the terms over the firm's book are still hers to write")
     c.post(f"{AS}/owner/policies", headers=alice, timeout=15.0,
@@ -325,6 +339,16 @@ def _main() -> int:                                            # noqa: C901
             rr = mcp_call(c, f"{GATEWAY}{BOOK_PATH}", "tools/call",
                           {"name": "get_positions", "arguments": {}}, META)
             ch = parse_challenge(rr.headers.get("www-authenticate", ""))
+            if ch is None:
+                # A refusal rather than a challenge. Reported with what came
+                # back, because the two are told apart by the body and not by
+                # the status — and because dereferencing it here turned a
+                # failed assertion into a traceback that said nothing about
+                # which of the two beats had stopped being challenged.
+                check("the same assertion cannot open a second negotiation",
+                      False, f"no challenge on attempt {len(codes) + 1}: "
+                             f"{rr.status_code} {rr.text[:160]}")
+                break
             # The ticket rotates on every beat, so the identity claim has to
             # be presented against the one the challenge beat handed back.
             asked = c.post(f"{ch.as_uri}/token", timeout=15.0,
@@ -336,9 +360,10 @@ def _main() -> int:                                            # noqa: C901
                 "grant_type": "urn:ietf:params:oauth:grant-type:uma-ticket",
                 "ticket": asked.get("ticket") or ch.ticket, "claim_token": once,
                 "claim_token_format": ID_JAG_FORMAT}).json().get("error"))
-        check("the same assertion cannot open a second negotiation",
-              codes[0] == "need_info" and codes[1] == "request_denied",
-              str(codes))
+        if len(codes) == 2:
+            check("the same assertion cannot open a second negotiation",
+                  codes[0] == "need_info" and codes[1] == "request_denied",
+                  str(codes))
 
     print("\n8. the assertion is bound to one authority and one person")
     r = exchange(c, idt, CAROL_AS, "get_positions")
@@ -386,6 +411,12 @@ def _main() -> int:                                            # noqa: C901
                json={"assertion": employee_id_token(c, "alice"), "agreed": True})
     check("signing in at her employer is the whole of the enrolment",
           r.status_code == 200, f"{r.status_code} {r.text[:140]}")
+    # And the gateway has to hear about it. The section above asked for the
+    # firm's book while she was not a member, so what it has cached is a
+    # negative — held for the same window as any other answer, which is the
+    # point of caching it at all. Without this the grant below is refused for
+    # the state she was in a moment ago rather than the one she is in.
+    time.sleep(MEMBERSHIP_TTL)
     c.post(f"{AS}/owner/policies", headers=alice, timeout=15.0,
            json={"id": "firmbook", "name": "Northwind book", "ask_me": False,
                  "resources": [f"{BOOK}/get_positions", f"{BOOK}/get_transactions"],

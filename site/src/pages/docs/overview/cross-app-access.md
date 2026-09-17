@@ -170,6 +170,11 @@ by assertion, the two-beat negotiation, all three ceilings biting separately,
 and the boundaries — one authority, one person, one use, and nothing outside
 the organization's own resources.
 
+`make k8s-xaa-check` runs the same thing in the cluster. There Northwind's
+directory is a second identity provider in the enterprise's own namespace
+rather than another realm on Meridian's, which is what makes the refusal of a
+Meridian-minted token a statement about two parties rather than two realms.
+
 ### Two identity providers, and they are different companies
 
 Conflating them is the easiest mistake here. Meridian runs one, which

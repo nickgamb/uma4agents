@@ -202,6 +202,22 @@ class OrgClient:
                                          timeout=HTTP_TIMEOUT_S) as c:
                 r = await c.post(f"{self.issuer}/decision", json=facts,
                                  headers=self.headers)
+            if r.status_code == 403:
+                # The same answer `refresh` gets, and it means the same thing:
+                # this token belongs to an enrolment that is no longer
+                # current. Told apart from an unreachable organization
+                # because the two are repaired differently — one by asking
+                # again with the token on record, the other by waiting — and
+                # because reporting an authority that answered as one that
+                # could not be reached sends whoever reads it to the network.
+                #
+                # Still a refusal. The caller decides whether it is worth
+                # retrying; nothing here proceeds on a token the organization
+                # has rejected.
+                return {"effect": "refuse", "governed": True,
+                        "membership_ended": True,
+                        "because": ["that membership is no longer current at "
+                                    "your organization"]}
             r.raise_for_status()
             return r.json()
         except httpx.HTTPError as exc:

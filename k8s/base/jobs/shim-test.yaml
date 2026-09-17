@@ -1,0 +1,64 @@
+# The adapter under a scripted MCP client — in the cluster.
+#
+# The same clients/agent-shim/test_shim.py the compose stack runs. It spawns
+# the shim as a stdio MCP server, exactly as Claude Code would, and drives it
+# through the three cases that matter: a client that can render Alice's terms
+# and approve them, a client that cannot and falls back to Bob's standing
+# configuration, and the pend handed back as a rendered wait rather than a
+# call held open.
+#
+# The shim is spawned here rather than dialled, so this Job does not need the
+# agent-shim Deployment — it is the requesting side's own process, the way it
+# runs beside an agent on somebody's laptop. What it does need is her
+# authorization server and her identity provider, which is why it is worth
+# running against the deployed shape at all.
+#
+# The layout under /shim reproduces a checkout, because `test_shim.py` locates
+# the shim, the library and the CA relative to one root. UMA4A_REPO names that
+# root; the mounts put the three where it will look for them.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: shim-test
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: shim-test }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: shim-test
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q 'mcp>=2,<3' httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /shim/clients/agent-shim/test_shim.py
+          env:
+            - { name: UMA4A_REPO, value: /shim }
+            - { name: UMA4A_AS, value: "https://alice-as.uma.lab" }
+            - { name: UMA4A_OIDC_ISSUER, value: "https://keycloak.uma.lab/realms/alice" }
+            - { name: UMA4A_GATEWAY, value: "https://gateway.uma.lab/mcp" }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+          volumeMounts:
+            - { name: shim, mountPath: /shim/clients/agent-shim/shim.py, subPath: shim.py, readOnly: true }
+            - { name: shim, mountPath: /shim/clients/agent-shim/test_shim.py, subPath: test_shim.py, readOnly: true }
+            - { name: lib, mountPath: /shim/lib, readOnly: true }
+            - { name: ca, mountPath: /shim/certs, readOnly: true }
+          workingDir: /shim
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: shim
+          configMap: { name: agent-shim }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }

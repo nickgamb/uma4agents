@@ -127,6 +127,16 @@ spec:
             # configuration.
             - name: UMA_PEP_MEMBERSHIP_TTL_S
               value: "10"
+            # How long this gateway may describe the organization from a
+            # cached copy. It only ever shapes the wording of a refusal —
+            # never a decision — but a charter that has just started or
+            # stopped federating identity should reach an agent's refusal
+            # within a sensible time, and the checks read this same number
+            # rather than guess it. Left at its default, the process would
+            # hold a description for two minutes while a check that waited
+            # seventeen seconds read the charter before last.
+            - name: UMA_PEP_ORG_DISCOVERY_TTL_S
+              value: "15"
             # Jointly held accounts. The tally is named here rather than read
             # off a grant: a resource server that accepted whichever issuer
             # embedded a plausible mandate would be taking the electorate

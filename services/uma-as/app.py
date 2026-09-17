@@ -1741,7 +1741,10 @@ async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
     if not org.reaches(rec["resource_id"], await org_envelope(rec["owner"]) or {}):
         return {}
     contract = rec.get("contract") or {}
-    verdict = await client.decide({
+    # Built once. The retry below asks the same question with a current
+    # token, and a second transcription of these fields is how the two
+    # quietly stop being the same question.
+    asked = {
         "resource_id": rec["resource_id"],
         "scopes": list(rec.get("resource_scopes") or []),
         "tier": rec.get("tier"),
@@ -1752,7 +1755,30 @@ async def organization_verdict(rec: dict, tier: dict, facts: dict) -> dict:
         "operation": contract.get("operation"),
         "assurance": facts["assurance"],
         "standing": facts["standing"],
-    })
+    }
+    verdict = await client.decide(asked)
+    if verdict.get("membership_ended"):
+        # The organization rejected the token this process was holding. The
+        # same reasoning as the refresh path in `org_client`, and it has to be
+        # repeated here because a decision is asked for per request rather
+        # than on the envelope's schedule: this client is per process, the
+        # record is shared, and a rejoin mints a new token. A replica that
+        # missed the rejoin is told its token is not current — true of the
+        # token, false of the membership — and would otherwise refuse every
+        # request over the organization's resources until its envelope
+        # happened to go stale.
+        #
+        # Once. A membership that has genuinely ended answers the same way
+        # with the current token, and asking a third time would only hammer
+        # the organization while somebody is being removed.
+        record = await org_record(rec["owner"])
+        if record and record.get("token") != client.token:
+            event("org.client_stale", owner=rec["owner"])
+            _ORG.pop(rec["owner"], None)
+            client = await org_client(rec["owner"])
+            if client is None:
+                return {}
+            verdict = await client.decide(asked)
     if not verdict.get("governed"):
         return {}
     return {**verdict, "organization": client.envelope.get("name"),

@@ -100,6 +100,10 @@ make up
 make kwaai-check
 ```
 
+Or `make k8s-kwaai-check` in the cluster, which runs it inside pAI-OS in her
+own namespace — beside the ability it imports, and against the device key only
+she holds, so neither is a second copy.
+
 ```
 == Two credentials, one owner ==
    her portal session: still accepted
