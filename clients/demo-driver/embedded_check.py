@@ -77,26 +77,38 @@ def owner_token(client: httpx.Client) -> str:
 def admit_resource_server(client: httpx.Client) -> str:
     """Let the vault in, if she has not already.
 
-    It holds no secret from this authority: it registered by signing with the
-    key it publishes at its own origin, which earns a place in her registry
-    marked `pending` and nothing more. Until she approves it there is no
-    protected resource to negotiate over, so this is beat zero rather than
-    part of the check.
+    Only a resource server holding no secret from this authority has anything
+    to be admitted. It registered by signing with the key it publishes at its
+    own origin, which earns a place in her registry marked `pending` and
+    nothing more; until she approves it there is no protected resource to
+    negotiate over, so this is beat zero rather than part of the check.
 
     Identified by its origin rather than a name, because that is what a
-    resource server nobody provisioned this authority against *is*.
+    resource server nobody provisioned this authority against *is*. Which
+    also means the deployment that *did* provision one has nothing to do
+    here: it is in her registry under the name it was given, its origin
+    never appears, and waiting for one would be waiting for something that
+    is not coming.
     """
-    rs = os.environ.get("EMBEDDED_RS", "https://embedded.uma.lab")
+    rs = os.environ.get("EMBEDDED_RS", f"https://{AUTHORITY}")
     try:
         hdrs = {"Authorization": f"Bearer {owner_token(client)}"}
     except Exception as exc:                                    # noqa: BLE001
         return f"could not sign in as the owner: {exc}"
-    for _ in range(12):
+    for attempt in range(12):
         registry = {r["client_id"]: r for r in client.get(
             f"{AS_INTERNAL}/owner/resource-servers", headers=hdrs,
             timeout=15.0).json()}
         entry = registry.get(rs)
         if entry and entry.get("status") == "active":
+            return ""
+        # Nothing under this origin, and nothing anywhere waiting for her:
+        # this authority was provisioned with the resource server under a
+        # name instead, and there is nobody to admit. Read once, before the
+        # poke below, so the seeded deployment does not pay for a question
+        # that does not apply to it.
+        if entry is None and attempt == 0 and not any(
+                r.get("status") == "pending" for r in registry.values()):
             return ""
         if entry and entry.get("status") == "pending":
             client.post(f"{AS_INTERNAL}/owner/resource-servers/decision",
