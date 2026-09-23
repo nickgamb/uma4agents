@@ -114,7 +114,7 @@ are stable; the `details` of each are what the emitting code puts there.
 
 **`services/uma-pep`:** `mandate.unreachable`, `owner_resources.denied`, `owner_resources.served`, `registration.declarative`, `upstream.unreachable`
 
-**`services/xaa-broker`:** `connection.configured`, `connection.withdrawn`, `exchange.issued`, `exchange.refused`
+**`services/xaa-broker`:** `connection.configured`, `connection.seeded`, `connection.withdrawn`, `exchange.issued`, `exchange.refused`
 
 ## The ledger, as a projection
 

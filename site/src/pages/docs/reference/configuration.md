@@ -207,7 +207,7 @@ with a code as before.
 | `XAA_ISSUER` | `https://northwind-xaa.uma.lab` | Its own origin. A member's authority verifies assertions against the keys published here, and accepts them only from the issuer her organization's charter names |
 | `XAA_IDP_ISSUER` | `https://northwind-idp.uma.lab/realms/employees` | The **customer's own** directory, not Meridian's. A subject token signed by anything else is not an employee assertion, whatever it claims — the provider that authenticates people into Meridian's surfaces has no standing to say who a client company employs |
 | `XAA_CLIENTS` | `{}` | Applications registered with the provider, and the secret each authenticates the exchange with |
-| `XAA_SEED_CONNECTIONS` | `[]` | The edges an administrator approved — one requesting application, one authorization server it may be sent to, one resource, and the widest scope the enterprise will assert for. Policy about which applications may talk at all, never about what may be done to a resource |
+| `XAA_SEED_CONNECTIONS` | `[]` | The edges an administrator approved — one requesting application, one authorization server it may be sent to, one resource, and the widest scope the enterprise will assert for. Policy about which applications may talk at all, never about what may be done to a resource. The broker holds connections in memory and applies these at every start, logging each as `connection.seeded`, so a withdrawal made at run time lasts until the next restart |
 | `XAA_ADMINS` | `dana` | Who may configure connections, by realm username |
 | `XAA_JAG_TTL_S` | `300` | How long an assertion lives. Short by construction — it is spent immediately at one authorization server and is not a credential anybody should hold |
 

@@ -677,6 +677,12 @@ async def check(request: Request, rest: str = "") -> Response:
 
     method, tool, args = parse_mcp(body) if body else (None, None, None)
 
+    # Origin before the short-circuit below, so it covers the stream GET and
+    # the session DELETE as well as the calls that go on to be authorized.
+    # Every enforcer here serves the same origins.
+    if (refused := ENFORCER.origin_refused(h.get("origin"))):
+        return deny(refused.status, {"error": refused.error})
+
     # Nothing to authorize: no body, or a method that carries no invocation.
     if request.method != "POST" or (method is None and tool is None and not body):
         return Response(status_code=200)

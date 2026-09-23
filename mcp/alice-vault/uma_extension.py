@@ -133,6 +133,29 @@ class UmaEnforcement(Extension):
         )
 
 
+def origin_guard(app, enforcer: Enforcer, path: str = "/mcp"):
+    """The Origin rule for every request to the MCP endpoint.
+
+    The extension above sees tools/call and nothing else; initialize, the
+    stream GET and the session DELETE never reach it. So the rule is applied
+    at the transport, ahead of the SDK, with the same code the gateway uses.
+    The discovery documents are left readable from any origin: they are
+    public, and a browser client has to be able to fetch them.
+    """
+    from starlette.responses import JSONResponse
+
+    async def guarded(scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith(path):
+            origin = dict(scope["headers"]).get(b"origin")
+            refused = enforcer.origin_refused(origin.decode() if origin else None)
+            if refused:
+                await JSONResponse({"error": refused.error},
+                                   status_code=refused.status)(scope, receive, send)
+                return
+        await app(scope, receive, send)
+    return guarded
+
+
 def build(tools: dict[str, tuple[str, list[str]]],
           single_use: set[str],
           consequence: dict[str, str] | None = None) -> UmaEnforcement:

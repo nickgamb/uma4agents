@@ -129,6 +129,16 @@ def main() -> int:
             return 1
         print("   a decision body changed after signing: 401")
 
+        # Misconfigured, the ability is refused rather than unreachable, and
+        # has to say which. It once resent a refused answer every two seconds
+        # as "unsent", and logged a refused poll as the network being down.
+        misnamed = OwnerAuthority(host=ai, authority_url=AS_PUBLIC,
+                                  authority_name="elsewhere.uma.lab")
+        if (outcome := misnamed.decide(client, "fam_regression", True)) != "refused":
+            print(f"FAIL: an answer her authority refused came back as {outcome!r}")
+            return 1
+        print("   an answer her authority refuses is reported as refused, not retried")
+
         unsigned_body = _sign(method="POST", authority="alice-as.uma.lab",
                               path="/owner/pending/fam_regression/decision",
                               authorization="", key=ai._key, keyid="owner")

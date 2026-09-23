@@ -844,12 +844,21 @@ class Enforcer:
         return Decision(outcome="deny", status=403, error="access_revoked",
                         description="the resource owner revoked this agent")
 
+    def origin_refused(self, origin: str | None) -> "Decision | None":
+        """MCP 2026-07-28 makes Origin validation a MUST, for every request to
+        the endpoint: the GET that opens a server-to-client stream and the
+        DELETE that ends a session are as reachable from a hostile page as a
+        tool call. So hosts apply this to all of them, and `authorize` applies
+        it again for the requests that reach it."""
+        if origin and origin not in self.allowed_origins:
+            self.event("access.denied", reason="bad-origin", origin=origin)
+            return Decision(outcome="deny", status=403, error="invalid_origin")
+        return None
+
     async def authorize(self, f: AuthzFacts) -> Decision:
         """Decide one request. The ordering below is normative — see PROTOCOL.md."""
-        # MCP 2026-07-28 makes Origin validation a MUST.
-        if f.origin and f.origin not in self.allowed_origins:
-            self.event("access.denied", reason="bad-origin", origin=f.origin)
-            return Decision(outcome="deny", status=403, error="invalid_origin")
+        if refused := self.origin_refused(f.origin):
+            return refused
 
         # SEP-2243 mirrors the method and target into headers so a proxy can
         # route without parsing a body. Two parsers over one message is the

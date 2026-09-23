@@ -514,7 +514,7 @@ draft-gamb-uma4agents-mcp-00:
   - text: "An enforcement point MUST validate the Origin header [RFC6454]"
     verified: check
     targets: [pep-test, embedded-check]
-    asserts: ["a request from an origin the resource does not serve is refused"]
+    asserts: ["a request from an origin the resource does not serve is refused", "and so are an initialize and a stream GET from it, which no tool-call hook sees"]
   - text: "it MUST detect that the body it received was truncated and MUST refuse with a reason naming the truncation"
     verified: check
     targets: [smoke-test]

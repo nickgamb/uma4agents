@@ -134,13 +134,15 @@ class OwnerAuthority:
         return [Request.from_pending(p) for p in r.json()]
 
     def decide(self, client: httpx.Client, family: str, approved: bool) -> str:
-        """Send her answer. "sent", "moot", or "retry".
+        """Send her answer. "sent", "moot", "refused" or "retry".
 
         Moot is her authority saying nothing is pending under that family any
         more — somebody else answered, or it expired — and there is nothing
-        left to send. Retry is everything else that is not a yes from her
-        authority: unreachable, or a server error. The answer is hers and it
-        is kept, so it is sent again rather than asked again.
+        left to send. Retry is her authority unreachable or failing: the
+        answer is hers and it is kept, so it is sent again rather than asked
+        again. Refused is her authority declining this request — a key it does
+        not recognise, a body it will not take — which sending again every
+        two seconds will not change.
         """
         try:
             r = self._call(client, "POST", f"/owner/pending/{family}/decision",
@@ -151,10 +153,15 @@ class OwnerAuthority:
         if r.status_code == 404:
             self.host.log("decision.moot", {"family": family})
             return "moot"
-        if r.status_code >= 300:
+        if r.status_code >= 500:
             self.host.log("decision.unsent", {"family": family,
                                               "status": r.status_code})
             return "retry"
+        if r.status_code >= 300:
+            self.host.log("decision.refused", {"family": family,
+                                               "status": r.status_code,
+                                               "detail": r.text[:200]})
+            return "refused"
         return "sent"
 
     def enrol(self) -> bytes:
@@ -204,6 +211,15 @@ class OwnerAuthority:
                     send(family, approved, record, detail)
                 try:
                     waiting = self.pending(client)
+                except httpx.HTTPStatusError as exc:
+                    # Reached, and refused. Almost always configuration — an
+                    # authority name or an enrolled key that does not match —
+                    # and it has to say so, not that the network is down.
+                    self.host.log("authority.refused", {
+                        "status": exc.response.status_code,
+                        "detail": exc.response.text[:200]})
+                    time.sleep(poll_seconds)
+                    continue
                 except Exception as exc:                       # noqa: BLE001
                     self.host.log("authority.unreachable", {"error": str(exc)})
                     time.sleep(poll_seconds)

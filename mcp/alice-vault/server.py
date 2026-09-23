@@ -114,4 +114,13 @@ def execute_trade(symbol: str, side: str, quantity: int) -> dict:
 if __name__ == "__main__":
     # SDK 2.0 moved host/port from the constructor to run(), and defaults host
     # to 127.0.0.1 — which binds to nothing reachable from inside a container.
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=9020)
+    if ENFORCEMENT_MODE == "embedded":
+        # Served through the Origin guard, which has to sit in front of the
+        # transport rather than inside the tool-call interceptor.
+        import uvicorn
+
+        app = uma_extension.origin_guard(mcp.streamable_http_app(host="0.0.0.0"),
+                                         extensions[0].enforcer)
+        uvicorn.run(app, host="0.0.0.0", port=9020)
+    else:
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=9020)

@@ -285,9 +285,13 @@ class Upstream:
         if self._discovered:
             return
         r, payload = await self.request("server/discover", {})
-        if r.status_code != 200 or not payload or "result" in payload is None:
+        if r.status_code != 200 or not payload:
             raise RuntimeError(f"server/discover failed: {r.status_code} {r.text[:200]}")
-        result = payload.get("result") or {}
+        if "result" not in payload:
+            # A resource that does not implement discovery says so here, and
+            # that is the problem to report — not a version it never offered.
+            raise RuntimeError(f"server/discover failed: {payload.get('error') or payload}")
+        result = payload["result"] or {}
         versions = result.get("supportedVersions", [])
         if PROTOCOL_VERSION not in versions:
             raise RuntimeError(
