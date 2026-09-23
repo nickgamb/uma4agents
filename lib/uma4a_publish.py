@@ -166,29 +166,34 @@ class AuthorityKeys:
 
     Cached for `ttl_s`. A signature that fails against the cached set may have
     been made with a key published since, which is what rotation looks like
-    from here, so a failure may force a refetch — but not more often than
-    `min_refresh_s`. Otherwise every unsigned request to a public route would
-    be one request to the authority, sent on the caller's behalf.
+    from here, so a failure may force a refetch — but not within
+    `min_refresh_s` of the last forced one. Otherwise every unsigned request
+    to a public route would be one request to the authority, sent on the
+    caller's behalf. The floor is between forced refetches only: the first
+    failure after a rotation always gets a fresh look, however recently the
+    cache was filled on schedule.
     """
 
     def __init__(self, jwks_url: str, ttl_s: float = 300, min_refresh_s: float = 30):
         self.jwks_url, self.ttl_s, self.min_refresh_s = jwks_url, ttl_s, min_refresh_s
         self._keys: list = []
-        self._expires = self._fetched = 0.0
+        self._expires = self._forced = 0.0
 
     def may_refresh(self) -> bool:
-        return time.time() - self._fetched >= self.min_refresh_s
+        return time.time() - self._forced >= self.min_refresh_s
 
     async def get(self, refresh: bool = False) -> list:
-        if (refresh and self.may_refresh()) or time.time() >= self._expires:
+        forced = refresh and self.may_refresh()
+        if forced:
+            self._forced = time.time()
+        if forced or time.time() >= self._expires:
             import httpx
 
             async with httpx.AsyncClient() as client:
                 r = await client.get(self.jwks_url, timeout=5.0)
                 r.raise_for_status()
             self._keys = r.json()["keys"]
-            self._fetched = time.time()
-            self._expires = self._fetched + self.ttl_s
+            self._expires = time.time() + self.ttl_s
         return self._keys
 
 
