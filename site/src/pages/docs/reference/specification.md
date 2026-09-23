@@ -17,6 +17,9 @@ constitute it, four are optional extensions, and two are bindings.
 
 Each document has an identifying URI. An authorization server lists the ones it
 implements in its `uma_profiles_supported` metadata, as UMA 2.0 Grant §4 asks.
+A binding is listed where it places obligations on the authorization server:
+the AAuth binding does, and the MCP binding, which governs only how a challenge
+travels between agent and resource, does not.
 
 | Draft | Title | In the set | URI |
 |---|---|---|---|

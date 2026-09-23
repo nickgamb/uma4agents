@@ -69,6 +69,11 @@ must_fail("a swapped Signature-Agent must not verify",
                          signature=h2["Signature"], public_key=pub,
                          signature_agent="https://evil.example"))
 
+must_fail("a Signature-Agent the signature does not cover is refused",
+          lambda: verify(**A, signature_input=h["Signature-Input"],
+                         signature=h["Signature"], public_key=pub,
+                         signature_agent="https://evil.example"))
+
 must_fail("verifier that cannot resolve a covered component refuses",
           lambda: verify(**A, signature_input=h2["Signature-Input"],
                          signature=h2["Signature"], public_key=pub))
@@ -77,6 +82,18 @@ stripped = h["Signature-Input"].replace('"authorization" ', "").replace(' "autho
 must_fail("dropping a required component is rejected",
           lambda: verify(**A, signature_input=stripped,
                          signature=h["Signature"], public_key=pub))
+
+_covered = ('"@method"', '"@authority"', '"@path"', '"authorization"')
+_params = (f'({" ".join(_covered)});created={int(__import__("time").time())}'
+           ';keyid="agent-1";alg="rsa-pss-sha512"')
+_values = {'"@method"': A["method"], '"@authority"': A["authority"],
+           '"@path"': A["path"], '"authorization"': A["authorization"]}
+_lines = "\n".join([f"{c}: {_values[c]}" for c in _covered]
+                   + [f'"@signature-params": {_params}'])
+_sig = __import__("base64").b64encode(k.sign(_lines.encode())).decode()
+must_fail("a signature claiming another algorithm is refused",
+          lambda: verify(**A, signature_input=f"sig1={_params}",
+                         signature=f"sig1=:{_sig}:", public_key=pub))
 
 h3 = sign(**A, key=k, keyid="agent-1", expires_in=-10)
 must_fail("an expired signature is rejected",

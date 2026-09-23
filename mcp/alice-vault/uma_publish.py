@@ -18,11 +18,11 @@ import logging
 import os
 import sys
 
-import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from uma4a_publish import (
+    AuthorityKeys,
     aauth_document,
     owner_resources_document,
     prm_document,
@@ -78,18 +78,7 @@ def key():
     return _KEY
 
 
-_AS_KEYS: dict = {"expires": 0.0, "keys": []}
-
-
-async def as_keys() -> list:
-    import time
-
-    if _AS_KEYS["expires"] < time.time():
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{AS_INTERNAL}/jwks", timeout=5.0)
-            r.raise_for_status()
-        _AS_KEYS.update(expires=time.time() + 300, keys=r.json()["keys"])
-    return _AS_KEYS["keys"]
+AS_KEYS = AuthorityKeys(f"{AS_INTERNAL}/jwks")
 
 
 def attach(mcp, tools: dict[str, tuple[str, list[str]]],
@@ -122,8 +111,8 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]],
 
     @mcp.custom_route("/.well-known/aauth-resource.json", methods=["GET"])
     async def aauth(request: Request) -> JSONResponse:
-        return JSONResponse(aauth_document(PUBLIC_BASE, AS_PUBLIC, tools,
-                                           consequence=consequence))
+        doc = aauth_document(PUBLIC_BASE, AS_PUBLIC, tools, consequence=consequence)
+        return JSONResponse(sign_metadata(doc, key(), KID, typ="aauth-resource+jwt"))
 
     @mcp.custom_route("/jwks", methods=["GET"])
     async def jwks(request: Request) -> JSONResponse:
@@ -142,13 +131,13 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]],
         pointed the other way. Everything above this line is public; this is
         the line.
         """
-        reason = verify_owner_as_query(
+        reason = await verify_owner_as_query(
             method=request.method,
             authority=AUTHORITY,
             path="/owner-resources",
             signature_input=request.headers.get("signature-input", ""),
             signature=request.headers.get("signature", ""),
-            as_jwks=await as_keys(),
+            keys=AS_KEYS,
         )
         if reason is not None:
             log.info(json.dumps({"event": "owner_resources.denied", "reason": reason}))
@@ -158,7 +147,8 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]],
                                       f"authorization server: {reason}"},
                 status_code=401)
         log.info(json.dumps({"event": "owner_resources.served", "owner": OWNER}))
-        return JSONResponse(owner_resources_document(PUBLIC_BASE, OWNER, tools))
+        return JSONResponse(owner_resources_document(PUBLIC_BASE, OWNER, tools,
+                                                     consequence=consequence))
 
     print(json.dumps({
         "event": "publishing.self",

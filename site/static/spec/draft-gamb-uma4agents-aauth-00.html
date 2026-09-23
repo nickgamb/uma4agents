@@ -1541,8 +1541,10 @@ structural facts its <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</s
 <dt id="section-5-2.9">r3_vocabularies:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.10">
           <p id="section-5-2.10.1">An array of vocabularies, each with <code>format</code>, an <code>operations</code> array naming
-each operation and its <code>resource_scopes</code>, and a <code>digest</code> that is <code>s256</code>
-over the canonical serialization of <code>operations</code> with keys sorted.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+each operation and its <code>resource_scopes</code>, and a <code>digest</code> that is <code>s256</code> over
+<code>operations</code> serialized as <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>. For the <code>mcp</code> format the member
+naming an operation is <code>tool</code>, as in the <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> document's
+<code>tool_surfaces</code>.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.11">owner_resources_endpoint:</dt>
@@ -1661,6 +1663,10 @@ and is not an AAuth media type.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <dt id="RFC8693">[RFC8693]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+        <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9421">[RFC9421]</dt>
         <dd>

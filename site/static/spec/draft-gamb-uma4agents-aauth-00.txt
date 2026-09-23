@@ -84,7 +84,7 @@ Table of Contents
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
    10. References  . . . . . . . . . . . . . . . . . . . . . . . . .   6
      10.1.  Normative References . . . . . . . . . . . . . . . . . .   6
-     10.2.  Informative References . . . . . . . . . . . . . . . . .   7
+     10.2.  Informative References . . . . . . . . . . . . . . . . .   8
    Appendix A.  Implementation Status  . . . . . . . . . . . . . . .   8
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .   8
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   8
@@ -242,8 +242,9 @@ Internet-Draft            AAuth Binding for UMA           September 2026
 
    r3_vocabularies:  An array of vocabularies, each with format, an
       operations array naming each operation and its resource_scopes,
-      and a digest that is s256 over the canonical serialization of
-      operations with keys sorted.
+      and a digest that is s256 over operations serialized as [RFC8785].
+      For the mcp format the member naming an operation is tool, as in
+      the [RFC9728] document's tool_surfaces.
 
    owner_resources_endpoint:  The protected listing of [U4AFedAuthz]
       Section 2.2.  The same URL as in the RFC 9728 document.
@@ -271,7 +272,6 @@ Internet-Draft            AAuth Binding for UMA           September 2026
 7.  Security Considerations
 
    The considerations of [U4ACore] and [I-D.hardt-aauth-protocol] apply.
-
 
 
 
@@ -356,6 +356,11 @@ Internet-Draft            AAuth Binding for UMA           September 2026
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/rfc/rfc8693>.
 
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
    [RFC9421]  Backman, A., Ed., Richer, J., Ed., and M. Sporny, "HTTP
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
@@ -382,17 +387,14 @@ Internet-Draft            AAuth Binding for UMA           September 2026
               Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
-10.2.  Informative References
-
-
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft            AAuth Binding for UMA           September 2026
 
+
+10.2.  Informative References
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
@@ -438,8 +440,6 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
-
-
 
 
 

@@ -46,8 +46,9 @@ documents.
       and that an authorization server supporting it advertise that URI in its
       `uma_profiles_supported` metadata. This project is both a profile and a
       set of extensions; the deviations are enumerated in docs/PROTOCOL.md
-      under "Extension register". It does not yet mint or advertise a profile
-      URI.
+      under "Extension register". Each document in the specification set has
+      an identifying URI, https://u4a.ai/spec/<part>/1.0, and the
+      authorization server advertises the ones it implements.
 
   RFC 9728  OAuth 2.0 Protected Resource Metadata
   RFC 9421  HTTP Message Signatures

@@ -86,7 +86,7 @@ draft-gamb-uma4agents-core-00:
   - text: "a Signature-Agent [I-D.meunier-webbotauth-registry] naming a directory of keys the operator publishes, which MUST be covered by the request signature where it is present"
     verified: check
     targets: [sig-test, smoke-test]
-    asserts: ["covers signature-agent, with tag + expires", "a swapped Signature-Agent must not verify", "signatures directory: OK"]
+    asserts: ["covers signature-agent, with tag + expires", "a swapped Signature-Agent must not verify", "a Signature-Agent the signature does not cover is refused", "signatures directory: OK"]
   - text: "an authorization server MUST NOT admit a request it would otherwise refuse on the strength of descriptive metadata alone"
     verified: check
     targets: [assurance-check, first-party-check]
@@ -1067,8 +1067,8 @@ draft-gamb-uma4agents-aauth-00:
   - text: "The alg parameter MUST be ed25519, and every key this binding mints or verifies is an Ed25519 key in OKP form"
     verified: check
     targets: [sig-test, smoke-test]
-    asserts: ["baseline round trip", "jwks: OK"]
+    asserts: ["baseline round trip", "a signature claiming another algorithm is refused", "jwks: OK"]
   - text: "Both documents MUST be generated from one registry of the resource's operations."
     verified: check
-    targets: [smoke-test]
-    asserts: ["resource metadata (alice): OK", "aauth-resource: OK"]
+    targets: [smoke-test, embedded-check]
+    asserts: ["resource metadata (alice): OK", "aauth-resource: OK", "its AAuth resource document is the binding's shape, and signed"]

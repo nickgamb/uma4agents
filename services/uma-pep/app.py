@@ -26,7 +26,6 @@ import sys
 import time
 
 import httpx
-import jwt
 from urllib.parse import urlparse
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -35,9 +34,9 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import uma4a_consequence
-from uma4a_http_sig import VerifyError, verify
-from uma4a_pep import (MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp,
-                       s256)
+from uma4a_publish import (AuthorityKeys, aauth_document, owner_resources_document,
+                           prm_document, sign_metadata, verify_owner_as_query)
+from uma4a_pep import MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp
 
 AS_PUBLIC = os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab")
 AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
@@ -468,6 +467,12 @@ def _shared_enforcer_for(owner: str) -> Enforcer:
 _MANDATES: dict[str, tuple[float, dict]] = {}
 
 
+class Unreadable(Exception):
+    """A party this gateway reads to know what it serves could not be reached,
+    and nothing recent stands in for it. Not the same answer as "nothing is
+    served": her authority reads a listing's absences as withdrawals."""
+
+
 async def mandate_of(account: str) -> dict | None:
     """The mandate for one jointly held account, from the tally that publishes
     it. Cached briefly: it names who is entitled to a say, and a holder
@@ -483,9 +488,11 @@ async def mandate_of(account: str) -> dict | None:
             r = await client.get(f"{JOINT_TALLY_INTERNAL}/mandate/{account}")
             r.raise_for_status()
             doc = r.json()
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, ValueError) as exc:
         event("mandate.unreachable", account=account, error=str(exc)[:160])
-        return cached[1] if cached else None
+        if cached:
+            return cached[1]
+        raise Unreadable(f"the tally for {account} could not be reached") from exc
     _MANDATES[account] = (time.time() + MANDATE_TTL_S, doc)
     return doc
 
@@ -569,9 +576,13 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
         enforcer = SHARED[owner] = _shared_enforcer_for(owner)
     try:
         doc = await enforcer.membership(fresh=fresh)
-    except Exception:                                           # noqa: BLE001
+    except Exception as exc:                                    # noqa: BLE001
         # Unreachable past the grace window: nothing is shared that cannot be
-        # established as shared.
+        # established as shared. A caller publishing what she administers
+        # asks fresh, and is told it could not be established rather than
+        # that there is nothing.
+        if fresh:
+            raise Unreadable("the organization could not be reached") from exc
         return None
     if not doc.get("member"):
         return None
@@ -867,51 +878,21 @@ async def sidecar(request: Request, rest: str = "") -> Response:
                     media_type=up.headers.get("content-type"))
 
 
-def prm_document(owner: str = None, leaf: str = None, enforcer=None,
-                 tools: dict = None, owner_resources_tail: str = None) -> dict:
-    """RFC 9728 Protected Resource Metadata — *structural* only. It says
-    what shape the resource has (tools, scopes) and where authority lives
-    (authorization_servers, the owner-resources query endpoint); it does
-    not say whose instances sit behind it. Publishing which resources an
-    owner has at an unauthenticated well-known URI would be a privacy leak
-    the old push registration never had — owner-bound ids live behind
-    /owner-resources ("protected webfinger" for her stuff).
+def _prm(owner: str, leaf: str, enforcer=None, tools: dict = None) -> dict:
+    """The signed RFC 9728 document for one resource this gateway fronts.
 
-    `leaf` is the path this document is *served for*, and it is separate from
-    the owner on purpose. RFC 9728 §3.3 has the client refuse a document
-    whose `resource` is not the resource it is accessing, and `lib/
-    uma4a_grant.py` implements that refusal. So the alias at /mcp has to
-    claim /mcp — naming the owner's canonical path there would hand every
-    client at the alias a document it is required to reject, which is what
-    it did until `make shim-test` said so.
+    `leaf` is the path it is served for, separate from the owner on purpose:
+    the alias at /mcp has to claim /mcp, or every client reaching it there is
+    handed a document RFC 9728 §3.3 requires it to reject. The authorization
+    server named is the one that governs this owner, because two owners of
+    one resource server may name two.
     """
-    owner = owner or OWNER
-    tools = tools if tools is not None else tools_for(owner)
-    leaf = leaf or f"mcp/{owner}"
-    tail = owner_resources_tail or f"/{owner}"
     enforcer = enforcer or ENFORCERS.get(owner)
-    scopes = sorted({s for _, (rid, ss) in tools.items() for s in ss})
-    return {
-        "resource": f"{PUBLIC_BASE}/{leaf}",
-        # Per owner, because this is the document an agent reads to find out
-        # whose authority governs what it just got refused by. Two owners of
-        # the same resource server can name two different authorization
-        # servers, and this is where that becomes visible.
-        "authorization_servers": [enforcer.as_public if enforcer else AS_PUBLIC],
-        "jwks_uri": f"{PUBLIC_BASE}/jwks",
-        "scopes_supported": scopes,
-        "bearer_methods_supported": ["header"],
-        "resource_signing_alg_values_supported": ["EdDSA"],
-        # Declared where this resource has something to say about the
-        # operation. Absent means undeclared, which is not a claim that
-        # nothing is left behind.
-        "tool_surfaces": [
-            {"tool": tool, "resource_scopes": ss,
-             **({"consequence": CONSEQUENCE[tool]} if CONSEQUENCE.get(tool) else {})}
-            for tool, (rid, ss) in tools.items()
-        ],
-        "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources{tail}",
-    }
+    doc = prm_document(PUBLIC_BASE, enforcer.as_public if enforcer else AS_PUBLIC,
+                       tools if tools is not None else tools_for(owner),
+                       leaf=leaf, consequence=CONSEQUENCE,
+                       owner_resources_path=f"/owner-resources/{owner}")
+    return sign_metadata(doc, PEP_KEY, PEP_KID)
 
 
 @app.get("/.well-known/oauth-protected-resource/mcp/shared/{owner}")
@@ -927,15 +908,17 @@ async def shared_resource_metadata(owner: str) -> Response:
     document for a resource nobody has been given would send an agent to
     negotiate with an authority that has never heard of it.
     """
-    enforcer = await shared_enforcer(owner, fresh=True)
+    try:
+        enforcer = await shared_enforcer(owner, fresh=True)
+    except Unreadable as exc:
+        return JSONResponse({"error": "temporarily_unavailable",
+                             "error_description": str(exc)}, status_code=503)
     if enforcer is None:
         return JSONResponse({"error": "no such resource"}, status_code=404)
     # One listing, the owner's. These resources are hers to administer even
     # though they are not hers to own, and her authority reads everything it
     # protects for her from one place.
-    doc = prm_document(owner, f"{SHARED_PREFIX}/{owner}", enforcer=enforcer,
-                       tools=enforcer.tools)
-    return JSONResponse(_sign_prm(doc))
+    return JSONResponse(_prm(owner, f"{SHARED_PREFIX}/{owner}", enforcer, enforcer.tools))
 
 
 @app.get("/.well-known/oauth-protected-resource/mcp/joint/{account}")
@@ -951,9 +934,7 @@ async def joint_resource_metadata(account: str) -> Response:
     enforcer = joint_enforcer(account)
     if enforcer is None:
         return JSONResponse({"error": "no such resource"}, status_code=404)
-    doc = prm_document(account, f"{JOINT_PREFIX}/{account}", enforcer=enforcer,
-                       tools=enforcer.tools)
-    return JSONResponse(_sign_prm(doc))
+    return JSONResponse(_prm(account, f"{JOINT_PREFIX}/{account}", enforcer, enforcer.tools))
 
 
 @app.get("/.well-known/oauth-protected-resource/mcp/{owner}")
@@ -968,7 +949,7 @@ async def protected_resource_metadata_for(owner: str) -> Response:
     """
     if owner not in ALL_OWNERS:
         return JSONResponse({"error": "no such resource"}, status_code=404)
-    return JSONResponse(_signed_prm(owner, f"mcp/{owner}"))
+    return JSONResponse(_prm(owner, f"mcp/{owner}"))
 
 
 @app.get("/.well-known/oauth-protected-resource")
@@ -980,74 +961,17 @@ async def protected_resource_metadata() -> dict:
     the primary owner's resource reached by a second name, not an ownerless
     one: the authority it names is hers.
     """
-    return _signed_prm(OWNER, "mcp")
-
-
-def _sign_prm(doc: dict) -> dict:
-    doc["signed_metadata"] = jwt.encode(
-        {**doc, "iss": doc["resource"], "iat": int(time.time())},
-        PEP_KEY, algorithm="EdDSA",
-        headers={"typ": "oauth-protected-resource+jwt", "kid": PEP_KID},
-    )
-    return doc
-
-
-def _signed_prm(owner: str, leaf: str) -> dict:
-    doc = prm_document(owner, leaf)
-    # RFC 9728 signed_metadata: the same claims as a JWT under the
-    # resource's key (jwks_uri above), so a relayed or cached copy of this
-    # document stays attributable to the resource that published it.
-    doc["signed_metadata"] = jwt.encode(
-        {**doc, "iss": doc["resource"], "iat": int(time.time())},
-        PEP_KEY, algorithm="EdDSA",
-        headers={"typ": "oauth-protected-resource+jwt", "kid": PEP_KID},
-    )
-    return doc
-
-
-def r3_vocabulary() -> dict:
-    """An AAuth Rich Resource Requests (R3) vocabulary describing this
-    resource's operations in a format the agent already speaks (MCP), so a
-    caller that knows only the hostname can learn the API. Content-addressed:
-    the digest is over the canonical operation list, which gives the
-    *universal type layer* (operations + their scopes) a stable identifier —
-    the same facts, referenceable independent of any one owner."""
-    operations = [
-        {"tool": tool, "resource_scopes": ss,
-         **({"consequence": CONSEQUENCE[tool]} if CONSEQUENCE.get(tool) else {})}
-        for tool, (rid, ss) in TOOLS.items()
-    ]
-    digest = s256(json.dumps(operations, sort_keys=True).encode())
-    return {"format": "mcp", "operations": operations, "digest": digest}
-
-
-def aauth_resource_document() -> dict:
-    """The AAuth-binding encoding of the *same public structural layer* the
-    PRM document carries — AAuth's `/.well-known/aauth-resource.json`. Same
-    tool surfaces, expressed as an R3 vocabulary; `access_mode` names the
-    four-party (federated) topology this gateway already runs (PS federates
-    with the owner's AS). Crucially it points at the *same*
-    owner_resources_endpoint: the protected instance layer ("protected
-    webfinger") is binding-independent — only the public encoding changes."""
-    return {
-        "resource": f"{PUBLIC_BASE}/mcp",
-        "access_mode": "four-party",
-        "access_servers": [AS_PUBLIC],
-        "jwks_uri": f"{PUBLIC_BASE}/jwks",
-        "r3_vocabularies": [r3_vocabulary()],
-        "owner_resources_endpoint": f"{PUBLIC_BASE}/owner-resources",
-    }
+    return _prm(OWNER, "mcp")
 
 
 @app.get("/.well-known/aauth-resource.json")
 async def aauth_resource_metadata() -> dict:
-    doc = aauth_resource_document()
-    doc["signed_metadata"] = jwt.encode(
-        {**doc, "iss": doc["resource"], "iat": int(time.time())},
-        PEP_KEY, algorithm="EdDSA",
-        headers={"typ": "aauth-resource+jwt", "kid": PEP_KID},
-    )
-    return doc
+    """The AAuth binding's encoding of the same public structural layer the
+    RFC 9728 document carries, from the same registry. It points at the same
+    owner-resources listing: the protected instance layer does not change
+    with the encoding."""
+    return sign_metadata(aauth_document(PUBLIC_BASE, AS_PUBLIC, TOOLS, CONSEQUENCE),
+                         PEP_KEY, PEP_KID, typ="aauth-resource+jwt")
 
 
 @app.get("/jwks")
@@ -1063,25 +987,12 @@ async def pep_jwks() -> dict:
 # not in Alice's JWKS and never will be. A single cache here would authorise
 # one authority to read every owner's listing, which is the exact confusion
 # this whole partition exists to prevent.
-_AS_KEYS_CACHE: dict[str, dict] = {}
+_AS_KEYS: dict[str, AuthorityKeys] = {}
 
 
-async def as_verification_keys(owner: str = None, refresh: bool = False) -> list:
-    """The owner's authorization server's published keys, cached.
-
-    `refresh` forces a fetch: a signature that fails against the cached set
-    may have been made with a key published since, which is what rotation
-    looks like from here, and the fix is to look again rather than refuse
-    for the life of the cache.
-    """
+def authority_keys(owner: str) -> AuthorityKeys:
     _, as_internal = authority_for(owner or OWNER)
-    entry = _AS_KEYS_CACHE.setdefault(as_internal, {"expires": 0.0, "keys": []})
-    if refresh or entry["expires"] < time.time():
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{as_internal}/jwks", timeout=5.0)
-            r.raise_for_status()
-        entry.update(expires=time.time() + 300, keys=r.json()["keys"])
-    return entry["keys"]
+    return _AS_KEYS.setdefault(as_internal, AuthorityKeys(f"{as_internal}/jwks"))
 
 
 async def _require_as_signature(request: Request, who: str,
@@ -1092,25 +1003,16 @@ async def _require_as_signature(request: Request, who: str,
     other way: this listing is served only to a caller that proves possession
     of her authorization server's signing key.
     """
-    last_error = "no signature"
-    # Twice at most: once against the cached set, and once more against a
-    # freshly fetched one, so a key the authority rotated to since the last
-    # fetch is accepted on the first request that uses it.
-    for refresh in (False, True):
-        for jwk_dict in await as_verification_keys(who, refresh=refresh):
-            try:
-                verify(method=request.method, authority=EXPECTED_AUTHORITY,
-                       path=path, authorization="",
-                       signature_input=request.headers.get("signature-input", ""),
-                       signature=request.headers.get("signature", ""),
-                       public_key=OKPAlgorithm.from_jwk(json.dumps(jwk_dict)))
-                return None
-            except VerifyError as exc:
-                last_error = str(exc)
-    event("owner_resources.denied", reason=last_error, owner=who)
+    reason = await verify_owner_as_query(
+        request.method, EXPECTED_AUTHORITY, path,
+        request.headers.get("signature-input", ""),
+        request.headers.get("signature", ""), authority_keys(who))
+    if reason is None:
+        return None
+    event("owner_resources.denied", reason=reason, owner=who)
     return deny(401, {"error": "invalid_signature",
                       "error_description": "this listing is served only to "
-                      f"the owner's authorization server: {last_error}"})
+                      f"the owner's authorization server: {reason}"})
 
 
 @app.get("/owner-resources/{owner}")
@@ -1136,45 +1038,33 @@ async def owner_resources(request: Request, owner: str = None) -> Response:
     # listing. An organization's resource appears here only while she holds a
     # role that grants it — which is what makes membership the thing that
     # brings it into existence at her authority, and leaving the thing that
-    # removes it.
-    shared = await shared_enforcer(who, fresh=True)
-    shared_ids = set()
-    if shared is not None:
-        for tool, (rid, ss) in shared.tools.items():
-            tools[f"shared:{tool}"] = (rid, ss)
-            shared_ids.add(rid)
-    # And the accounts she holds jointly with somebody else. They arrive by
-    # the same route as the organization's, and for the same reason: a
+    # removes it. The accounts she holds jointly arrive by the same route: a
     # resource has to exist at her authority before she can write terms over
-    # it, and her terms are half of what an agent will be held to here.
-    joint_ids = set()
-    for account, jtools in (await joint_held_by(who)).items():
+    # it.
+    #
+    # Her authority reads what is absent here as withdrawn. So a party that
+    # could not be asked makes the listing unavailable, not shorter.
+    try:
+        shared = await shared_enforcer(who, fresh=True)
+        joint = await joint_held_by(who)
+    except Unreadable as exc:
+        event("owner_resources.unavailable", owner=who, error=str(exc))
+        return deny(503, {"error": "temporarily_unavailable",
+                          "error_description": str(exc)})
+    labels = {}
+    for tool, (rid, ss) in (shared.tools.items() if shared else ()):
+        tools[f"shared:{tool}"] = (rid, ss)
+        labels[rid] = f"Shared: {tool}"
+    for account, jtools in joint.items():
         for tool, (rid, ss) in jtools.items():
             tools[f"joint:{account}:{tool}"] = (rid, ss)
-            joint_ids.add(rid)
-    leaf = f"mcp/{who}"
+            labels[rid] = f"Joint: {tool}"
     event("owner_resources.served", owner=who, count=len(tools),
-          shared=len(shared_ids), joint=len(joint_ids))
-    return Response(
-        content=json.dumps({
-            "owner": who,
-            "resource": f"{PUBLIC_BASE}/{leaf}",
-            "resources": [
-                {"_id": rid, "tool": tool.rsplit(":", 1)[-1],
-                 "resource_scopes": ss, "type": "mcp-tool",
-                 # The listing her authority pulls into its registry, which is
-                 # what her policy reads. The public document carries the same
-                 # member; this is the copy that reaches her rules.
-                 **({"consequence": CONSEQUENCE[tool.rsplit(":", 1)[-1]]}
-                    if CONSEQUENCE.get(tool.rsplit(":", 1)[-1]) else {}),
-                 "name": (f"Shared: {tool.rsplit(':', 1)[-1]}" if rid in shared_ids
-                          else f"Joint: {tool.rsplit(':', 1)[-1]}" if rid in joint_ids
-                          else f"{who.title()}'s vault: {tool}")}
-                for tool, (rid, ss) in tools.items()
-            ],
-        }),
-        media_type="application/json",
-    )
+          shared=sum(v.startswith("Shared") for v in labels.values()),
+          joint=sum(v.startswith("Joint") for v in labels.values()))
+    return JSONResponse(owner_resources_document(
+        PUBLIC_BASE, who, tools, CONSEQUENCE, leaf=f"mcp/{who}",
+        name=lambda key, rid: labels.get(rid) or f"{who.title()}'s vault: {key}"))
 
 
 @app.get("/health")

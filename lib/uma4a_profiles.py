@@ -21,12 +21,12 @@ MCP = "https://u4a.ai/spec/mcp/1.0"
 AAUTH = "https://u4a.ai/spec/aauth/1.0"
 
 # What the reference authorization server implements: the three required
-# documents and every optional extension.
+# documents, every optional extension, and the one binding that places
+# obligations on an authorization server. The AAuth binding does; the MCP
+# binding governs how a challenge travels between agent and resource, and asks
+# nothing of the authority, so an authority does not list it.
 AUTHORIZATION_SERVER = [CORE, TERMS, FEDAUTHZ, POLICY, LINEAGE, MULTIPARTY, OWNER,
                         AAUTH]
-
-# The bindings are advertised too: an agent reading the list learns which
-# transports and credentials the authority behind it speaks.
 
 # What a tally implements. It speaks the core surface to a requesting agent,
 # proffers folded terms, and is the counting party of the multi-party

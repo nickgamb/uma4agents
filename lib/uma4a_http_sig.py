@@ -152,6 +152,13 @@ def verify(method: str, authority: str, path: str, authorization: str,
         keyid = params.split('keyid="', 1)[1].split('"', 1)[0]
     except (IndexError, ValueError) as exc:
         raise VerifyError(f"malformed Signature-Input: {exc}") from exc
+    # The key is Ed25519. A signature that says it was made some other way
+    # disagrees with its own key, and is refused rather than verified as if
+    # it had said nothing.
+    if 'alg="' in params:
+        alg = params.split('alg="', 1)[1].split('"', 1)[0]
+        if alg != "ed25519":
+            raise VerifyError(f"alg {alg!r} is not ed25519")
 
     if abs(time.time() - created) > max_age_s:
         raise VerifyError("signature outside the freshness window")
@@ -170,6 +177,10 @@ def verify(method: str, authority: str, path: str, authorization: str,
     missing = [c for c in REQUIRED_COMPONENTS if c not in covered]
     if missing:
         raise VerifyError(f"signature does not cover {', '.join(missing)}")
+    # A Signature-Agent names where this key is published. Sent but not
+    # signed, it is a claim anyone on the path could have added.
+    if signature_agent and '"signature-agent"' not in covered:
+        raise VerifyError("Signature-Agent was sent but the signature does not cover it")
 
     # The body, if the caller cares about it.
     #
