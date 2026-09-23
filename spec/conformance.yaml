@@ -25,10 +25,14 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [pep-test]
     asserts: ["a grant issued before anything was declared is not refused for it"]
-  - text: "An introspection response for an active token MUST carry the consequence claim where the grant carries one"
+  - text: "An introspection response for an active token MUST carry cnf and permissions, and single_use, operation, contract and consequence where the token carries them"
     verified: check
-    targets: [pep-test, consequence-check]
-    asserts: ["the class it was issued against is honoured", "and the call she approved goes through"]
+    targets: [as-test, pep-test, consequence-check]
+    asserts: ["and is given what enforcement reads, from the answer rather than the token", "the class it was issued against is honoured", "and the call she approved goes through"]
+  - text: "REQUIRED, as [RFC7519]. aud names the resource server the token is for"
+    verified: check
+    targets: [as-test]
+    asserts: ["the grant carries iss, aud, jti and exp"]
   - text: "MUST include in its metadata the value https://u4a.ai/spec/core/1.0 in the uma_profiles_supported array"
     verified: check
     targets: [smoke-test, k8s-smoke-test]
@@ -830,7 +834,7 @@ draft-gamb-uma4agents-policy-00:
     verified: check
     targets: [assurance-check]
     asserts: ["and the ones past the cap are refused with a reason, not queued"]
-  - text: "An agent that holds an active connection MUST NOT be counted against the bound and MUST NOT be refused for it."
+  - text: "An agent that holds an active connection MUST NOT be counted against the bound and MUST NOT be refused for it, unless it holds that connection by introduction"
     verified: check
     targets: [assurance-check]
     asserts: ["an established agent is unaffected by the queue being full"]

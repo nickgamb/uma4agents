@@ -105,8 +105,12 @@ it sounds: a shared secret for the owner API is a permanent skeleton key for
 every decision the design exists to protect, and it will end up in an
 environment variable in a repository.
 
-Validate the token properly. Signature against published keys, issuer, audience,
-expiry, and that the subject is the owner whose resources are being decided on.
+Validate the token properly: signature against published keys, issuer, expiry,
+that it was issued to a client you run for her, and that it identifies the owner
+whose resources are being decided on. The reference checks the client in `azp`,
+because an access token's `aud` names what it may be sent to rather than who
+obtained it, and identifies her by `preferred_username`, the identifier her
+realm and her authority share.
 
 ## 5. Handle the decisions
 
@@ -145,7 +149,7 @@ did what happened match what I agreed to.
 - A pending item survives a database failover, and she can still answer it
 - A request expires cleanly and the agent is told why
 - Revoking a connection kills its live grants immediately, not at expiry
-- The owner API refuses a token from a different subject
+- The owner API refuses a token that identifies somebody else
 - The parameters she approved hash to the value the grant carries
 
 ## Troubleshooting

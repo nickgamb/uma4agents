@@ -93,7 +93,7 @@ toolchain present, `*.uma.lab` already resolving, and the walkthrough open
 beside a terminal. Thirteen minutes to a running three-node cluster, then:
 
 ```bash
-make k8s-smoke-test   # 13 checks
+make k8s-smoke-test   # 15 checks
 make k8s-demo-all     # Alice's whole day
 make codespaces-web   # her portal, in a browser tab
 ```

@@ -139,6 +139,11 @@ async def agreements_and_grants() -> None:
         mine = await app.introspect(None, token=token, consume=None)
     check("the owner's own resource server is told the grant is live",
           mine.get("active") is True, str(mine))
+    check("and is given what enforcement reads, from the answer rather than the token",
+          mine.get("cnf") == claims["cnf"] and mine.get("permissions") == claims["permissions"]
+          and mine.get("contract") == claims["contract"], str(mine))
+    check("the grant carries iss, aud, jti and exp",
+          all(claims.get(k) for k in ("iss", "aud", "jti", "exp")), str(sorted(claims)))
     with patch.object(app, "require_pat", AsyncMock(return_value="carol")):
         theirs = await app.introspect(None, token=token, consume=None)
     check("a resource server holding another owner's PAT is told nothing",

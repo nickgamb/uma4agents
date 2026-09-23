@@ -33,7 +33,7 @@ generated from the same tool registry.
 
 1. **RFC 9728 Protected Resource Metadata** — `authorization_servers`,
    `tool_surfaces`, `jwks_uri`, `signed_metadata`. Mandatory for MCP servers
-   since 2026-07-28; fetched, not negotiated.
+   since 2025-06-18; fetched, not negotiated.
 2. **AAuth resource metadata** — the same structural facts under an R3
    content-addressed vocabulary, for the AAuth binding.
 3. **`capabilities.extensions`** — new here. A resource enforcing in-process

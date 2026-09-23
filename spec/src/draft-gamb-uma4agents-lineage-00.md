@@ -262,8 +262,11 @@ An owner MUST be able to express each of the following per policy unit, using
 the conditions of {{U4APolicy}}:
 
 Per agent:
-: Every agent is asked once at this unit, introduced or not. This is the
-  default and what happens when she writes nothing.
+: Every agent is asked once at this unit, introduced or not: an `ask` rule on
+  the condition that this agent has never been granted here. A unit with no
+  rules does not behave this way — it resolves to its baseline ({{U4APolicy}}
+  Section 2) — so an authorization server that offers this posture by default
+  does so by seeding the rule.
 
 Lineage-wide:
 : Whoever in the lineage earns this unit, the rest inherit it. Expressed by

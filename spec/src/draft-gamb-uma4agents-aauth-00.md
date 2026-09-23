@@ -96,6 +96,10 @@ resource may publish its structure in AAuth's resource metadata beside RFC
 
 # Introduction
 
+This binding is written against revision 02 of {{I-D.hardt-aauth-protocol}},
+since replaced by draft-hardt-oauth-aauth-protocol. Where this document
+describes AAuth, it describes that revision.
+
 {{I-D.hardt-aauth-protocol}} defines agent identity bound to a session key, a
 signature convention over HTTP requests, and four access modes, of which the
 fourth — federated, where an authorization server the resource names decides

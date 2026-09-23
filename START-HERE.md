@@ -124,12 +124,12 @@ her policy can do is require her to look when there is no reason at all.
 ## 6. Check the boundary holds
 
 ```bash
-make k8s-smoke-test     # expect 13 passed, 0 failed
+make k8s-smoke-test     # expect 15 passed, 0 failed
 make k8s-policy-test    # expect 22 passed, 0 failed
 make k8s-intent-check   # whose intent the grant carries
 ```
 
-Eight of those eleven are **refusals**. A policy suite that only proves the
+Nineteen of those twenty-two are **refusals**. A policy suite that only proves the
 allows would pass on a cluster with no policy at all.
 
 The intent check is the same shape. It tampers with her terms four ways and

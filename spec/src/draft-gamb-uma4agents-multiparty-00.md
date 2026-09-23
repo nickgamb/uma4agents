@@ -261,7 +261,8 @@ one of her own edits. It MUST NOT apply the envelope only at grant time.
 The clamp is applied on write so that the ceiling appears in the terms document
 the requesting side dereferences and signs, rather than being applied invisibly
 at the door. A terms document MUST state that a layer above the owner is in
-force over its resources: an agent reads the document before it signs anything,
+force over its resources, in its `organization` member ({{U4ATerms}}
+Section 2): an agent reads the document before it signs anything,
 and that is the only moment at which "these terms are not hers alone" is
 information it can act on.
 

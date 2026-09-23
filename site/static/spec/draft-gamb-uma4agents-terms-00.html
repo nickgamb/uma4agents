@@ -1517,13 +1517,23 @@ not to do. <span class="bcp14">MAY</span> be empty.<a href="#section-2-3.10.1" c
 </dl>
 <p id="section-2-4">A terms document <span class="bcp14">MAY</span> carry any other member; a member this document does not
 define is an undertaking the requesting side signs, not a control the
-enforcement point applies. One member is defined here:<a href="#section-2-4" class="pilcrow">¶</a></p>
+enforcement point applies. It is signed by citation: the agreement names the
+document by its <code>terms_uri</code>, whose content never changes (<a href="#immutable" class="auto internal xref">Section 2.1</a>), and
+does not echo it. Two members are defined here:<a href="#section-2-4" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-5">
         <dt id="section-2-5.1">per_operation:</dt>
         <dd style="margin-left: 1.5em" id="section-2-5.2">
           <p id="section-2-5.2.1"><span class="bcp14">OPTIONAL</span>. Boolean. Where <code>true</code>, a grant under these terms is bound to one
 operation and spent once, as <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 7.2, and the agreement <span class="bcp14">MUST</span>
 name the operation proposed.<a href="#section-2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-5.3">organization:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-5.4">
+          <p id="section-2-5.4.1">Present where a layer above the owner is in force over these resources
+(<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> Section 2.4), and absent otherwise. An object naming that
+layer: its <code>name</code>, <code>id</code> and <code>issuer</code>, the <code>charter_version</code> the terms were
+clamped under, and <code>requires</code>, a list of what it requires in sentences.<a href="#section-2-5.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>

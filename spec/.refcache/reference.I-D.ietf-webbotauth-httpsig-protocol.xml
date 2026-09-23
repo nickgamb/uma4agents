@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-webbotauth-httpsig-protocol" target="https://datatracker.ietf.org/doc/html/draft-ietf-webbotauth-httpsig-protocol-00">
+   <front>
+      <title>HTTP Message Signatures for automated traffic</title>
+      <author initials="T." surname="Meunier" fullname="Thibault Meunier">
+         <organization>Cloudflare</organization>
+      </author>
+      <author initials="S." surname="Major" fullname="Sandor Major">
+         <organization>Google</organization>
+      </author>
+      <date month="September" day="1" year="2026" />
+      <abstract>
+	 <t>   This document describes a protocol for identifying automated traffic
+   using [HTTP-MESSAGE-SIGNATURES].  The goal is to allow automated HTTP
+   clients to cryptographically sign outbound requests, allowing HTTP
+   servers to verify their identity with confidence.
+
+   It defines the Signature-Agent header field for in-band key
+   discovery, a key directory format based on JWKS, and a well-known URI
+   at which that directory is served.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-webbotauth-httpsig-protocol-00" />
+   
+</reference>

@@ -74,30 +74,30 @@ Table of Contents
      1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
    2.  The Terms Document  . . . . . . . . . . . . . . . . . . . . .   3
      2.1.  Versions Are Immutable  . . . . . . . . . . . . . . . . .   4
-     2.2.  Representations . . . . . . . . . . . . . . . . . . . . .   4
+     2.2.  Representations . . . . . . . . . . . . . . . . . . . . .   5
    3.  Proffering  . . . . . . . . . . . . . . . . . . . . . . . . .   5
      3.1.  Authorization Server Metadata . . . . . . . . . . . . . .   6
    4.  The Agreement . . . . . . . . . . . . . . . . . . . . . . . .   6
-     4.1.  The Signing Key . . . . . . . . . . . . . . . . . . . . .   6
-     4.2.  Claims  . . . . . . . . . . . . . . . . . . . . . . . . .   6
+     4.1.  The Signing Key . . . . . . . . . . . . . . . . . . . . .   7
+     4.2.  Claims  . . . . . . . . . . . . . . . . . . . . . . . . .   7
      4.3.  What the Requesting Side May Author . . . . . . . . . . .   8
-   5.  The Receipt . . . . . . . . . . . . . . . . . . . . . . . . .   8
-   6.  Declining . . . . . . . . . . . . . . . . . . . . . . . . . .   9
-   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   5.  The Receipt . . . . . . . . . . . . . . . . . . . . . . . . .   9
+   6.  Declining . . . . . . . . . . . . . . . . . . . . . . . . . .  10
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  10
      7.1.  The Agreement Binds the Key That Will Act . . . . . . . .  10
-     7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .  10
-     7.3.  Terms Are Not a Sandbox . . . . . . . . . . . . . . . . .  10
-   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  10
-     8.1.  The Roster Is the Owner's . . . . . . . . . . . . . . . .  10
-     8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  11
-   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
-   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
-     10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
-     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
-   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
+     7.2.  The Digest Is Over the Transmitted Octets . . . . . . . .  11
+     7.3.  Terms Are Not a Sandbox . . . . . . . . . . . . . . . . .  11
+   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  11
+     8.1.  The Roster Is the Owner's . . . . . . . . . . . . . . . .  11
+     8.2.  The Terms Document Is Public  . . . . . . . . . . . . . .  12
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .  12
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  13
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  13
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  14
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
 
 1.  Introduction
 
@@ -185,11 +185,20 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
    A terms document MAY carry any other member; a member this document
    does not define is an undertaking the requesting side signs, not a
-   control the enforcement point applies.  One member is defined here:
+   control the enforcement point applies.  It is signed by citation: the
+   agreement names the document by its terms_uri, whose content never
+   changes (Section 2.1), and does not echo it.  Two members are defined
+   here:
 
    per_operation:  OPTIONAL.  Boolean.  Where true, a grant under these
       terms is bound to one operation and spent once, as [U4ACore]
       Section 7.2, and the agreement MUST name the operation proposed.
+
+   organization:  Present where a layer above the owner is in force over
+      these resources ([U4AMultiParty] Section 2.4), and absent
+      otherwise.  An object naming that layer: its name, id and issuer,
+      the charter_version the terms were clamped under, and requires, a
+      list of what it requires in sentences.
 
 2.1.  Versions Are Immutable
 
@@ -203,6 +212,20 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    later, which removes the only property that distinguishes this from a
    consent dialog.
 
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 2.2.  Representations
 
    An authorization server MUST serve a terms document as JSON, and MUST
@@ -215,16 +238,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    4.4.2.  The requirement that they share a URI is what makes the
    human-readable statement and the machine-readable one the same terms
    rather than two documents that may drift.
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 4]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 3.  Proffering
 
@@ -250,6 +263,25 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    resource_id:  REQUIRED.  The resource the terms are being proffered
       over.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
    {
      "error": "need_info",
      "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
@@ -273,14 +305,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
        }
      }]
    }
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 5]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
               Figure 1: A need_info response proffering terms.
 
@@ -307,6 +331,13 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    compact serialization is encoded as a whole, so decoding the claim
    token yields the JWS.
 
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 4.1.  The Signing Key
 
    The JWS protected header MUST carry exactly one of:
@@ -330,14 +361,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    purpose, nonce and family of the proffered template, and MUST carry
    an aud naming the authorization server that proffered them.
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 6]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
    It MUST carry a positive expires_in no greater than the template's, a
    scope array that is a subset of the template's, and a prohibited
    array that is a superset of the template's.
@@ -346,6 +369,30 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    an operation member: an object whose tool member names the operation
    proposed and whose params member is a JSON object holding the
    parameters proposed for it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
    {
      "iss": "agent:6cR6qTmCj6s0S95M",
@@ -384,16 +431,6 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    long the access will be used, and a grant issued past it would leave
    the receipt and the grant disagreeing about what was agreed.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
 4.3.  What the Requesting Side May Author
 
    The agreement MAY carry the following, and MUST NOT carry anything
@@ -405,6 +442,14 @@ Internet-Draft            Owner-Proffered Terms           September 2026
       its content affect the decision.
 
    mission:  OPTIONAL.  An object citing a mandate the requesting side
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
       is acting under, with an approver member that is an https URL and
       an s256 member that is a content digest.  The authorization server
       MUST record the citation and MUST NOT dereference it.
@@ -443,16 +488,23 @@ Internet-Draft            Owner-Proffered Terms           September 2026
       transmitted: the JWS compact serialization obtained by decoding
       the claim token.
 
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
    agreement_jws:  REQUIRED.  The complete agreement JWS, as received.
 
    family:  REQUIRED.  The negotiation this receipt completes.
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
    {
      "iss": "https://alice-as.example",
@@ -493,25 +545,22 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 7.  Security Considerations
 
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
-
 7.1.  The Agreement Binds the Key That Will Act
 
    See Section 4.1.  If the agreement could be signed by one key and the
    grant confirmed to another, the party that agreed and the party that
    acts would be different parties, and the agreement would say nothing
    about the requests made under it.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
 
 7.2.  The Digest Is Over the Transmitted Octets
 
@@ -557,7 +606,14 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -613,7 +669,7 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 11]
+Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -669,7 +725,7 @@ Appendix A.  Identifiers Used by This Document
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 12]
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -725,7 +781,7 @@ Acknowledgments
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 13]
+Gamb & Maler              Expires 19 March 2027                [Page 14]
 
 Internet-Draft            Owner-Proffered Terms           September 2026
 
@@ -781,4 +837,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 14]
+Gamb & Maler              Expires 19 March 2027                [Page 15]

@@ -1688,8 +1688,11 @@ the conditions of <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</
 <span class="break"></span><dl class="dlParallel" id="section-4.2-2">
           <dt id="section-4.2-2.1">Per agent:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-2.2">
-            <p id="section-4.2-2.2.1">Every agent is asked once at this unit, introduced or not. This is the
-default and what happens when she writes nothing.<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-4.2-2.2.1">Every agent is asked once at this unit, introduced or not: an <code>ask</code> rule on
+the condition that this agent has never been granted here. A unit with no
+rules does not behave this way — it resolves to its baseline (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>
+Section 2) — so an authorization server that offers this posture by default
+does so by seeding the rule.<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.2-2.3">Lineage-wide:</dt>

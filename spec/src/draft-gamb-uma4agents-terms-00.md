@@ -188,12 +188,20 @@ proffered_by:
 
 A terms document MAY carry any other member; a member this document does not
 define is an undertaking the requesting side signs, not a control the
-enforcement point applies. One member is defined here:
+enforcement point applies. It is signed by citation: the agreement names the
+document by its `terms_uri`, whose content never changes ({{immutable}}), and
+does not echo it. Two members are defined here:
 
 per_operation:
 : OPTIONAL. Boolean. Where `true`, a grant under these terms is bound to one
   operation and spent once, as {{U4ACore}} Section 7.2, and the agreement MUST
   name the operation proposed.
+
+organization:
+: Present where a layer above the owner is in force over these resources
+  ({{U4AMultiParty}} Section 2.4), and absent otherwise. An object naming that
+  layer: its `name`, `id` and `issuer`, the `charter_version` the terms were
+  clamped under, and `requires`, a list of what it requires in sentences.
 
 ## Versions Are Immutable {#immutable}
 

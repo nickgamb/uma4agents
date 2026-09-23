@@ -88,7 +88,7 @@ normative:
 informative:
   RFC9635:
   RFC9449:
-  I-D.meunier-webbotauth-httpsig-protocol:
+  I-D.ietf-webbotauth-httpsig-protocol:
   I-D.hardt-aauth-protocol:
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
@@ -602,7 +602,7 @@ an absent field as an error; this is a departure from it, and the signer and the
 verifier apply it identically.
 
 Requiring an exact list is the intuitive implementation and it is wrong. It makes
-this profile and {{I-D.meunier-webbotauth-httpsig-protocol}} unable to coexist on
+this profile and {{I-D.ietf-webbotauth-httpsig-protocol}} unable to coexist on
 one request, because each adds a component the other did not expect. Covering
 `"authorization"` is the security property; an exact list was never one.
 
@@ -668,6 +668,10 @@ says where.
 
 The requesting party token MUST be a JWT {{RFC7519}} signed by the authorization
 server, and MUST carry:
+
+iss, aud, jti, exp:
+: REQUIRED, as {{RFC7519}}. `aud` names the resource server the token is for;
+  `jti` is what consumption is recorded against.
 
 cnf:
 : REQUIRED. A confirmation claim whose `jwk` member is the public key the
@@ -836,13 +840,18 @@ around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.
 
-An introspection response for an active token MUST carry the `consequence`
-claim where the grant carries one, so that an enforcement point can perform the
-comparison of {{consequence}} without decoding the token itself.
+An introspection response for an active token MUST carry `cnf` and
+`permissions`, and `single_use`, `operation`, `contract` and `consequence` where
+the token carries them, with the token's values. The steps of {{ordering}} read
+them from the introspection response and not from the token, so that what an
+enforcement point acts on comes from the same answer that said the token is
+active, and it never needs to verify the authorization server's signature
+itself.
 
 An authorization server MUST NOT describe a token as active to a resource server
 whose protection API access token was issued for a different owner than the
-token's, and SHOULD answer as it would for a token it does not know. A resource
+token's, and MUST answer as it would for a token it does not know
+({{U4AFedAuthz}} Section 5). A resource
 server holds one such token per owner it serves; the one it presents says whose
 resources it is asking about, and a grant against anybody else's is not its
 business.

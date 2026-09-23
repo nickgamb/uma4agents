@@ -170,7 +170,7 @@ she did not write.
 
 ~~~ json
 {
-  "ask_me": false,
+  "ask_me": true,
   "rules": [
     {"when": ["assurance.accountability_below:1"], "then": "ask"},
     {"when": ["standing.age_above:90d", "standing.never_revoked"],
@@ -178,7 +178,7 @@ she did not write.
   ]
 }
 ~~~
-{: title="Rules on one policy unit."}
+{: title="A unit that asks, except for an agent of ninety days' unbroken standing, unless nobody stands behind it."}
 
 The effects are `auto`, `ask` and `refuse`, in increasing order of strictness.
 `ask_me` is the unit's baseline: `ask` where true, `auto` where false.
@@ -325,10 +325,15 @@ every rule whose effect is `auto`, then every rule whose effect is stricter than
 the running result. A restriction that matches MUST win over a relaxation that
 also matched, whatever order the rules were written in.
 
+The running result starts at the unit's baseline. A matching `auto` rule in the
+first pass sets it to `auto`, which is how an owner lets some requests through a
+unit that otherwise asks; on a unit whose baseline is already `auto`, an `auto`
+rule changes nothing.
+
 A rule that cannot be evaluated — because a fact or condition it names is
 absent, unknown or malformed — MUST be treated as matching if its effect is
-`ask` or `refuse` and as not matching if its effect is `auto`. Both land on more friction. The
-alternative treats a broken restriction as a working one and a broken
+`ask` or `refuse` and as not matching if its effect is `auto`. Both land on more
+friction. The alternative treats a broken restriction as a working one and a broken
 relaxation as a refusal, and the first of those is the one an owner would not
 choose.
 
@@ -436,7 +441,10 @@ how many questions the owner can be made to hold, not how fast they arrive.
 An authorization server MUST bound the number of pending requests from agents
 that hold no standing connection. Past the bound it MUST refuse with `429` and
 `error` of `request_denied`, and MUST NOT queue. An agent that holds an active
-connection MUST NOT be counted against the bound and MUST NOT be refused for it.
+connection MUST NOT be counted against the bound and MUST NOT be refused for it,
+unless it holds that connection by introduction ({{U4ALineage}} Section 5): an
+introduced agent skipped the owner's first question, not her queue, and is
+counted as a first contact would be.
 
 {{UMAGrant}} Section 3.3.6 answers `request_denied` with `403`. The bound uses
 `429` because the refusal reports the state of the owner's queue rather than a

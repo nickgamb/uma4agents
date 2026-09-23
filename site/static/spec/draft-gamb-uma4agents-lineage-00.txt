@@ -85,12 +85,12 @@ Table of Contents
      4.2.  Three Postures  . . . . . . . . . . . . . . . . . . . . .   7
      4.3.  The Ceiling . . . . . . . . . . . . . . . . . . . . . . .   7
    5.  Attention . . . . . . . . . . . . . . . . . . . . . . . . . .   7
-   6.  Revocation  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   6.  Revocation  . . . . . . . . . . . . . . . . . . . . . . . . .   8
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .   8
      7.1.  Nothing Is Handed Down  . . . . . . . . . . . . . . . . .   8
      7.2.  The Introducer Is Looked Up, Never Named  . . . . . . . .   8
      7.3.  Depth Is a Check, Not an Emergent Property  . . . . . . .   8
-     7.4.  Same Operator Means Same Directory  . . . . . . . . . . .   8
+     7.4.  Same Operator Means Same Directory  . . . . . . . . . . .   9
      7.5.  Fan-Out Is a Ceiling, Not a Rule  . . . . . . . . . . . .   9
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
@@ -344,8 +344,11 @@ Internet-Draft                Agent Lineage               September 2026
    unit, using the conditions of [U4APolicy]:
 
    Per agent:  Every agent is asked once at this unit, introduced or
-      not.  This is the default and what happens when she writes
-      nothing.
+      not: an ask rule on the condition that this agent has never been
+      granted here.  A unit with no rules does not behave this way — it
+      resolves to its baseline ([U4APolicy] Section 2) — so an
+      authorization server that offers this posture by default does so
+      by seeding the rule.
 
    Lineage-wide:  Whoever in the lineage earns this unit, the rest
       inherit it.  Expressed by narrowing the per-agent ask to fire only
@@ -377,13 +380,10 @@ Internet-Draft                Agent Lineage               September 2026
    approved agent could flood the owner's queue with introduced ones,
    each individually well-formed and none counted.
 
-6.  Revocation
 
-   Revoking a connection MUST revoke every connection it introduced, in
-   the same operation.  The authorization server MUST revoke the
-   introducing connection first, so that a negotiation arriving mid-
-   cascade cannot find it active and be admitted behind it, and MUST
-   report the number of connections and grants the cascade ended.
+
+
+
 
 
 
@@ -393,6 +393,14 @@ Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+6.  Revocation
+
+   Revoking a connection MUST revoke every connection it introduced, in
+   the same operation.  The authorization server MUST revoke the
+   introducing connection first, so that a negotiation arriving mid-
+   cascade cannot find it active and be admitted behind it, and MUST
+   report the number of connections and grants the cascade ended.
 
    Because depth is one (Section 3.2 check 3), the cascade need not
    recurse.
@@ -435,20 +443,19 @@ Internet-Draft                Agent Lineage               September 2026
    moment the owner approves it at anything.  The cap has to be
    explicit.
 
-7.4.  Same Operator Means Same Directory
-
-   See Section 3.2 check 5.  Level-2 accountability proves an operator
-   published a key.  Two keys in two directories at two origins prove
-   two operators, or one operator and an impostor.  The check is that
-   one directory holds both.
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+7.4.  Same Operator Means Same Directory
+
+   See Section 3.2 check 5.  Level-2 accountability proves an operator
+   published a key.  Two keys in two directories at two origins prove
+   two operators, or one operator and an impostor.  The check is that
+   one directory holds both.
 
 7.5.  Fan-Out Is a Ceiling, Not a Rule
 
@@ -491,13 +498,6 @@ Internet-Draft                Agent Lineage               September 2026
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
               2015, <https://www.rfc-editor.org/rfc/rfc7638>.
 
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
-
-
-
 
 
 
@@ -505,6 +505,10 @@ Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
    [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
@@ -548,10 +552,6 @@ Internet-Draft                Agent Lineage               September 2026
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
 
-   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
-              implementation", 2026,
-              <https://github.com/nickgamb/uma4agents>.
-
 
 
 
@@ -561,6 +561,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft                Agent Lineage               September 2026
 
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
 
 Appendix A.  Identifiers Used by This Document
 
@@ -605,6 +609,15 @@ Authors' Addresses
    Email: nickgamb@gmail.com
 
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft                Agent Lineage               September 2026
+
+
    Eve Maler
    Venn Factory
 
@@ -613,4 +626,47 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]

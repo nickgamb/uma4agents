@@ -2,7 +2,7 @@
 templateKey: doc
 title: Findings
 seoTitle: "UMA 2.0 for AI agents: findings and recommendations to the working group"
-description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-five recommendations, and what was parked.
+description: What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-eight recommendations, and what was parked.
 next:
   - title: Deviations from UMA 2.0
     to: /docs/reference/deviations/
@@ -64,7 +64,7 @@ permissions, and it has nowhere to live in UMA 2.0, in OAuth, or in a policy
 engine. It becomes expressible only because the owner's authority already
 knows which agents she activated.
 
-## The twenty-six recommendations
+## The twenty-eight recommendations
 
 **1. A core grant specification, transport-agnostic.** Carry forward the party
 model — owner, requesting party, and the client acting for the requesting party
@@ -401,6 +401,41 @@ vertically.
 
 The honest gap is authoring a mandate in the first place, which is exactly
 where "who decides who decides" lives.
+
+**27. Say what an operation leaves behind — and let the resource say it.**
+UMA 2.0 has scopes, which say what an operation *is*, and nothing for what it
+*costs*. An owner who wants "ask me about anything that cannot be undone" has to
+name operations one resource server at a time, about software she has never
+seen.
+
+The recommendation is a declaration on the resource's published metadata, in
+Nat Sakimura's vocabulary for agentic systems — `reversible`, `compensatable`,
+`forward_recoverable`, `irreversible` — ordered by how much remedy remains
+rather than by how bad the outcome would be. **The resource declares it**,
+because the party that would have to undo the act is the only one in a position
+to say whether it can be. **Reading it may only tighten.** And **absent is
+unknown**, neither benign nor grave, with a separate condition the owner can use
+for "nobody has said". Running it added two more: the grant carries the class it
+was issued against, so a resource re-declaring an operation worse does not
+inherit her answer to a different question, and the class rides in the
+challenge, so an agent learns it before it negotiates.
+
+**28. Some authorizations are not the owner's to give — and a fact that may be
+adverse to the requesting party cannot travel as its claim.**
+Whether the desk behind a trade holds a current licence is a fact about the
+world, established by somebody else, and the owner's terms cannot settle it.
+Asking the requesting party for it is a compliance check performed by the party
+it is about. This is recommendation 26's rule from the other direction: **a
+claim works when the requesting party is the only one who holds the fact, and
+fails when the fact may be adverse to it.**
+
+The recommendation: let a policy require facts a named third party attests,
+fetched by the authorization server over its own credential, verified against
+that party's published keys, and bound to a subject, an audience and a short
+expiry. Refuse before terms are dictated, so no agreement records a bargain
+that could never be acted on. Carry a digest in the grant, not the facts. And
+where a layer above the owner requires one too, the two combine by
+intersection — the same one-directional rule as recommendation 25's ceiling.
 
 ## Parking lot
 

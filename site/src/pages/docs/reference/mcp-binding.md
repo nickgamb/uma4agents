@@ -26,7 +26,7 @@ three channels are generated from the same tool registry.
 
 | Channel | Nature | Notes |
 |---|---|---|
-| RFC 9728 Protected Resource Metadata | fetched | Mandatory for MCP servers since 2026-07-28 |
+| RFC 9728 Protected Resource Metadata | fetched | Mandatory for MCP servers since 2025-06-18 |
 | AAuth resource metadata | fetched | The same structural facts under a content-addressed R3 vocabulary |
 | `capabilities.extensions` | negotiated | Arrives in the handshake the client was already doing |
 

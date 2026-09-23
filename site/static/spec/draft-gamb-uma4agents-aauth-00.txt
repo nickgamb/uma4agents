@@ -91,6 +91,11 @@ Table of Contents
 
 1.  Introduction
 
+   This binding is written against revision 02 of
+   [I-D.hardt-aauth-protocol], since replaced by draft-hardt-oauth-
+   aauth-protocol.  Where this document describes AAuth, it describes
+   that revision.
+
    [I-D.hardt-aauth-protocol] defines agent identity bound to a session
    key, a signature convention over HTTP requests, and four access
    modes, of which the fourth — federated, where an authorization server
@@ -98,14 +103,9 @@ Table of Contents
    AAuth leaves to the authorization server is how it knows the owner's
    policy.  That is what the profile supplies.
 
-
-
-
-
-
-
-
-
+   The two compose without either bending.  AAuth's resource token and
+   UMA's permission ticket are the same object minted on opposite sides
+   — both produced at a refused access, both naming what was attempted,
 
 
 
@@ -114,9 +114,6 @@ Gamb & Maler              Expires 19 March 2027                 [Page 2]
 Internet-Draft            AAuth Binding for UMA           September 2026
 
 
-   The two compose without either bending.  AAuth's resource token and
-   UMA's permission ticket are the same object minted on opposite sides
-   — both produced at a refused access, both naming what was attempted,
    both a pointer to the authority that could grant it.  The difference
    is where the state sits: AAuth's is minted by the resource, UMA's by
    the owner's authorization server when the resource registers the
@@ -162,6 +159,9 @@ Internet-Draft            AAuth Binding for UMA           September 2026
    [U4ACore] Section 5.1 specifies, and MUST NOT be derived from the
    key.  AAuth binds a fresh key per session; the subject is what
    persists.
+
+
+
 
 
 

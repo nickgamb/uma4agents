@@ -1532,11 +1532,11 @@ conjoined; the rules of one unit are disjoined; and an implementation <span clas
 offer negation, nesting, or expressions. This is a small, legible document, not
 a policy language: the owner reads it, and a policy she cannot read is a policy
 she did not write.<a href="#section-2-3" class="pilcrow">¶</a></p>
-<span id="name-rules-on-one-policy-unit"></span><figure id="figure-1">
+<span id="name-a-unit-that-asks-except-for"></span><figure id="figure-1">
         <div class="lang-json sourcecode" id="section-2-4.1">
 <pre>
 {
-  "ask_me": false,
+  "ask_me": true,
   "rules": [
     {"when": ["assurance.accountability_below:1"], "then": "ask"},
     {"when": ["standing.age_above:90d", "standing.never_revoked"],
@@ -1546,7 +1546,7 @@ she did not write.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </pre>
 </div>
 <figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
-<a href="#name-rules-on-one-policy-unit" class="selfRef">Rules on one policy unit.</a>
+<a href="#name-a-unit-that-asks-except-for" class="selfRef">A unit that asks, except for an agent of ninety days' unbroken standing, unless nobody stands behind it.</a>
         </figcaption></figure>
 <p id="section-2-5">The effects are <code>auto</code>, <code>ask</code> and <code>refuse</code>, in increasing order of strictness.
 <code>ask_me</code> is the unit's baseline: <code>ask</code> where true, <code>auto</code> where false.<a href="#section-2-5" class="pilcrow">¶</a></p>
@@ -1717,18 +1717,22 @@ the ceiling of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</
 every rule whose effect is <code>auto</code>, then every rule whose effect is stricter than
 the running result. A restriction that matches <span class="bcp14">MUST</span> win over a relaxation that
 also matched, whatever order the rules were written in.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">A rule that cannot be evaluated — because a fact or condition it names is
+<p id="section-3.5-2">The running result starts at the unit's baseline. A matching <code>auto</code> rule in the
+first pass sets it to <code>auto</code>, which is how an owner lets some requests through a
+unit that otherwise asks; on a unit whose baseline is already <code>auto</code>, an <code>auto</code>
+rule changes nothing.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<p id="section-3.5-3">A rule that cannot be evaluated — because a fact or condition it names is
 absent, unknown or malformed — <span class="bcp14">MUST</span> be treated as matching if its effect is
-<code>ask</code> or <code>refuse</code> and as not matching if its effect is <code>auto</code>. Both land on more friction. The
-alternative treats a broken restriction as a working one and a broken
+<code>ask</code> or <code>refuse</code> and as not matching if its effect is <code>auto</code>. Both land on more
+friction. The alternative treats a broken restriction as a working one and a broken
 relaxation as a refusal, and the first of those is the one an owner would not
-choose.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
-<p id="section-3.5-3">Until a client holds a standing connection with the owner, a matching rule
+choose.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+<p id="section-3.5-4">Until a client holds a standing connection with the owner, a matching rule
 whose effect is <code>refuse</code> is the only outcome of evaluation an authorization
 server may act on. It <span class="bcp14">MUST</span> otherwise put the first contact to the owner,
 whatever the rules would decide, and <span class="bcp14">MUST</span> record a refusal made in its place
 as <a href="#record" class="auto internal xref">Section 8</a> describes. A rule may turn away a client the owner has not met;
-no rule may admit one.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+no rule may admit one.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="vocabulary">
@@ -1862,7 +1866,10 @@ how many questions the owner can be made to hold, not how fast they arrive.<a hr
 <p id="section-6.1-2">An authorization server <span class="bcp14">MUST</span> bound the number of pending requests from agents
 that hold no standing connection. Past the bound it <span class="bcp14">MUST</span> refuse with <code>429</code> and
 <code>error</code> of <code>request_denied</code>, and <span class="bcp14">MUST NOT</span> queue. An agent that holds an active
-connection <span class="bcp14">MUST NOT</span> be counted against the bound and <span class="bcp14">MUST NOT</span> be refused for it.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+connection <span class="bcp14">MUST NOT</span> be counted against the bound and <span class="bcp14">MUST NOT</span> be refused for it,
+unless it holds that connection by introduction (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span> Section 5): an
+introduced agent skipped the owner's first question, not her queue, and is
+counted as a first contact would be.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 <p id="section-6.1-3"><span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.6 answers <code>request_denied</code> with <code>403</code>. The bound uses
 <code>429</code> because the refusal reports the state of the owner's queue rather than a
 decision about the request, and a client should not read it as one.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
