@@ -25,6 +25,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 ORG_AUTHORITY = os.environ.get("ORG_AUTHORITY_INTERNAL", "http://org-authority:9040")
 AUTH_MODE = os.environ.get("CONSOLE_AUTH", "oidc")
+# `none` is for a stack with no identity provider. Any other value is a
+# mistake, and a mistake here must not open the console to whoever asks.
+if AUTH_MODE not in ("oidc", "none"):
+    raise SystemExit(f"CONSOLE_AUTH must be 'oidc' or 'none', not {AUTH_MODE!r}")
 OIDC_ISSUER = os.environ.get(
     "OIDC_ISSUER", "https://keycloak.uma.lab/realms/northwind")
 OIDC_METADATA_URL = os.environ.get(
@@ -33,7 +37,7 @@ OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "meridian-org-console")
 CONSOLE_PUBLIC_URL = os.environ.get("CONSOLE_PUBLIC_URL", "").rstrip("/")
 SESSION_SECRET = os.environ.get("CONSOLE_SESSION_SECRET", "dev-session-secret")
 # Only for a stack with no identity provider — the acceptance containers, and
-# a laptop run with PORTAL_AUTH=none. Never set where OIDC is configured.
+# a laptop run with CONSOLE_AUTH=none. Never set where OIDC is configured.
 STATIC_ADMIN_TOKEN = os.environ.get("ORG_ADMIN_TOKEN", "")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
@@ -54,7 +58,11 @@ TOKENS: dict[str, dict] = {}
 
 
 def _store_tokens(request: Request, token: dict) -> None:
-    sid = request.session.get("sid") or pysecrets.token_urlsafe(16)
+    # A new id at every login. An id planted in the browser before sign-in
+    # must not become a login once there is one.
+    TOKENS.pop(request.session.get("sid", ""), None)
+    request.session.clear()
+    sid = pysecrets.token_urlsafe(16)
     request.session["sid"] = sid
     TOKENS[sid] = {
         "access_token": token["access_token"],
@@ -65,7 +73,7 @@ def _store_tokens(request: Request, token: dict) -> None:
 
 
 async def admin_token(request: Request) -> str | None:
-    if AUTH_MODE != "oidc":
+    if AUTH_MODE == "none":
         return STATIC_ADMIN_TOKEN or None
     tok = TOKENS.get(request.session.get("sid", ""))
     if tok is None:
@@ -95,7 +103,7 @@ async def admin_headers(request: Request) -> dict:
 
 
 def current_admin(request: Request) -> str | None:
-    if AUTH_MODE != "oidc":
+    if AUTH_MODE == "none":
         return "console"
     if request.session.get("sid") not in TOKENS:
         return None
@@ -121,10 +129,10 @@ async def login(request: Request):
 async def auth_callback(request: Request):
     token = await oauth.keycloak.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
+    _store_tokens(request, token)
     request.session["user"] = (userinfo.get("name")
                                or userinfo.get("preferred_username")
                                or "Administrator")
-    _store_tokens(request, token)
     return RedirectResponse(url="/")
 
 

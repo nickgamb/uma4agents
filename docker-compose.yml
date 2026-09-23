@@ -676,7 +676,7 @@ services:
     build: ./services/org-console
     environment:
       ORG_AUTHORITY_INTERNAL: http://org-authority:9040
-      CONSOLE_AUTH: ${PORTAL_AUTH:-oidc}
+      CONSOLE_AUTH: ${CONSOLE_AUTH:-oidc}
       OIDC_ISSUER: https://keycloak.uma.lab/realms/northwind
       OIDC_CLIENT_ID: meridian-org-console
       CONSOLE_PUBLIC_URL: https://org-console.uma.lab

@@ -96,7 +96,7 @@ authorization path.
 |---|---|---|
 | `UMA_AS_INTERNAL` | `http://uma-as:9000` | Where to reach the owner API |
 | `VAULT_MCP_URL` | `http://alice-vault-mcp:9020/mcp` | The resource, for her own reads |
-| `PORTAL_AUTH` | `oidc` | Authentication mode |
+| `PORTAL_AUTH` | `oidc` | `oidc`, or `none` for a stack with no identity provider. The portal refuses to start on any other value |
 | `OIDC_ISSUER` | `https://keycloak.uma.lab/realms/alice` | The issuer her tokens must claim |
 | `OIDC_METADATA_URL` | derived from the issuer | Where to fetch that provider's metadata |
 | `PORTAL_PUBLIC_URL` | — | The address her browser reaches the portal at |
@@ -136,6 +136,7 @@ of it set, every line of that layer is inert.
 | `ORG_ADMIN_ISSUER` | `…/realms/northwind` | The realm administrators sign in to. Deliberately not a member's realm — an identity provider that minted both would collapse the two layers |
 | `ORG_ADMIN_CLIENTS` | `meridian-org-console` | Which client's tokens the admin API accepts |
 | `ORG_ADMIN_TOKEN` | unset | A static credential for acceptance jobs with no browser. Never set where an identity provider is configured |
+| `CONSOLE_AUTH` | `oidc` | The administrators' console: `oidc`, or `none` for a stack with no identity provider. It refuses to start on any other value |
 | `ORG_RS_TOKEN` | `org-rs-dev-token` | What an enforcement point presents to read membership and check the grants this service signs |
 | `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. Invitations carry their own, addressed to one person |
 | `ORG_BREAK_GLASS_AUDIENCE` | `https://gateway.uma.lab` | Who an override is issued *for*. Configuration rather than a field on the request: an audience the caller chooses is one it can aim at another resource server that also trusts this organization |

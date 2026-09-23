@@ -24,11 +24,15 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse
 
-from mcp_client import VaultClient
+from mcp_client import VaultClient, VaultError
 
 UMA_AS = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
 VAULT_MCP = os.environ.get("VAULT_MCP_URL", "http://alice-vault-mcp:9020/mcp")
 AUTH_MODE = os.environ.get("PORTAL_AUTH", "oidc")
+# `none` is for a stack with no identity provider. Any other value is a
+# mistake, and a mistake here must not serve her vault to whoever asks.
+if AUTH_MODE not in ("oidc", "none"):
+    raise SystemExit(f"PORTAL_AUTH must be 'oidc' or 'none', not {AUTH_MODE!r}")
 OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "https://keycloak.uma.lab/realms/alice")
 # Where *this process* reads the discovery document, as distinct from the
 # issuer the browser is sent to and the `iss` an ID token must carry.
@@ -81,7 +85,11 @@ TOKENS: dict[str, dict] = {}
 
 
 def _store_tokens(request: Request, token: dict) -> None:
-    sid = request.session.get("sid") or pysecrets.token_urlsafe(16)
+    # A new id at every login. An id planted in her browser before she signed
+    # in must not become a login once she has.
+    TOKENS.pop(request.session.get("sid", ""), None)
+    request.session.clear()
+    sid = pysecrets.token_urlsafe(16)
     request.session["sid"] = sid
     TOKENS[sid] = {
         "access_token": token["access_token"],
@@ -130,7 +138,7 @@ async def owner_headers(request: Request) -> dict:
 
 
 def current_user(request: Request) -> str | None:
-    if AUTH_MODE != "oidc":
+    if AUTH_MODE == "none":
         return OWNER
     # A signed cookie can outlive the server-side token store (portal
     # restart): a session without live tokens is not a login.
@@ -175,12 +183,12 @@ async def auth_callback(request: Request):
     if userinfo.get("preferred_username") != OWNER:
         return HTMLResponse("This portal belongs to another account.",
                             status_code=403)
+    _store_tokens(request, token)
     # Whoever signed in, never a name this process assumed. One image serves
     # any owner; the only thing that says which is the token that came back.
     request.session["user"] = (userinfo.get("name")
                                or userinfo.get("preferred_username")
                                or OWNER)
-    _store_tokens(request, token)
     return RedirectResponse(url="/")
 
 
@@ -206,6 +214,11 @@ async def me(request: Request):
 
 
 # --- Brokerage data (this owner's own vault, direct) -------------------------
+
+
+@app.exception_handler(VaultError)
+async def vault_error(request: Request, exc: VaultError):
+    return JSONResponse({"error": "vault", "detail": str(exc)}, status_code=exc.status)
 
 
 def _enrich(positions: list[dict]) -> dict:
@@ -255,12 +268,15 @@ async def trade(request: Request):
     if AUTH_MODE == "oidc" and await owner_token(request) is None:
         # A session whose token cannot be refreshed has ended at the provider.
         return JSONResponse({"error": "auth"}, status_code=401)
-    body = await request.json()
-    result = await vault.call_tool(
-        "execute_trade",
-        {"symbol": body["symbol"], "side": body["side"], "quantity": int(body["quantity"])},
-    )
-    return result
+    try:
+        body = await request.json()
+        order = {"symbol": str(body["symbol"]), "side": str(body["side"]),
+                 "quantity": int(body["quantity"])}
+    except (ValueError, KeyError, TypeError):
+        return JSONResponse(
+            {"detail": "A trade needs a symbol, a side and a whole-number quantity."},
+            status_code=400)
+    return await vault.call_tool("execute_trade", order)
 
 
 # --- Agent authorization (proxied owner API; token stays server-side) --------
