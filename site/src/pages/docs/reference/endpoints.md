@@ -101,7 +101,7 @@ either way. See [put the authority on her device](/docs/guides/personal-authorit
 | `POST /owner/resource-servers/decision` | Approve one that introduced itself, or withdraw one. Takes the `client_id` in the body, because a self-registered resource server is identified by an https URL |
 | `POST /owner/resource-servers/{id}/revoke` | The same withdrawal by path, for relationships whose ids are plain names |
 | `GET /owner/connections` | Standing agent relationships |
-| `POST /owner/connections/{handle}/revoke` | Revoke a connection and its live RPTs |
+| `POST /owner/connections/revoke` | Revoke a connection and its live RPTs. The handle travels in the body: an identified agent's carries its issuer, path and all |
 | `GET /owner/operators` | The operators behind those connections, and whether any are blocked |
 | `POST /owner/operators/block` | Shut out every agent one operator runs, revoking what is connected in the same step |
 | `POST /owner/operators/unblock` | Restores the right to negotiate, not the access that was withdrawn |

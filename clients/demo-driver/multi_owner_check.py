@@ -285,11 +285,16 @@ def main() -> int:
         tiers = {o: c.get(f"{OWNERS[o]['as']}/owner/policies",
                           headers=hdrs(c, o), timeout=15.0).json()
                  for o in names}
-        res = {o: {r for t in tiers[o].values() for r in t["resources"]}
+        # Only the owners' own vaults. A member also administers what her
+        # organization shares with her, and a holder what she holds jointly;
+        # those appear in more than one owner's tiers by design, and whether
+        # they are present depends on which checks ran before this one.
+        vault = {o: f"{o}-vault/" for o in names}
+        res = {o: {r for t in tiers[o].values() for r in t["resources"]
+                   if any(r.startswith(v) for v in vault.values())}
                for o in names}
         check("every owner's tiers name her own resources",
-              all(all(r.startswith(f"{o}-vault/") for r in res[o])
-                  for o in names),
+              all(all(r.startswith(vault[o]) for r in res[o]) for o in names),
               f"{ {o: sorted(res[o]) for o in names} }")
         check("and no resource is claimed by two owners",
               len(set().union(*res.values())) == sum(len(res[o]) for o in names))

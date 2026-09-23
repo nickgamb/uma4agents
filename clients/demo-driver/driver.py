@@ -497,9 +497,8 @@ def main() -> int:
             if handle is None:
                 print(f"FAIL: this agent has no active connection to revoke ({mine})")
                 return 1
-            revoked = client.post(
-                f"{args.as_internal}/owner/connections/{handle}/revoke",
-                headers=headers).json()
+            revoked = client.post(f"{args.as_internal}/owner/connections/revoke",
+                                  json={"handle": handle}, headers=headers).json()
             say(f"[alice] revoked {handle[:24]}… — "
                 f"{revoked['rpts_deactivated']} live grant(s) deactivated")
 

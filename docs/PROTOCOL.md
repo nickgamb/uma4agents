@@ -110,7 +110,7 @@ POST /owner/resource-servers/{id}/revoke   the same withdrawal, by path. Kept fo
                                            the seeded relationships, whose ids
                                            are plain names
 GET  /owner/connections                    standing agent relationships
-POST /owner/connections/{handle}/revoke    revoke a connection + its live RPTs
+POST /owner/connections/revoke            {handle}: revoke a connection + its live RPTs
 GET  /owner/operators                      operators behind those connections
 POST /owner/operators/block                shut out every agent one operator
                                            runs, revoking what is connected in
@@ -142,8 +142,8 @@ GET  /org/admin/{owner}/connections        charter's claims before it is answere
 GET  /org/admin/{owner}/operators
 GET  /org/admin/{owner}/ledger
 POST /org/admin/{owner}/pending/{f}/decision
-POST /org/admin/{owner}/connections/{h}/revoke   out of the organization's
-POST /org/admin/{owner}/connections/{h}/restore  resources, not out of hers
+POST /org/admin/{owner}/connections/revoke   {handle}: out of the organization's
+POST /org/admin/{owner}/connections/restore  resources, not out of hers
 POST /org/admin/{owner}/operators/{block|unblock}
 ```
 
@@ -558,7 +558,7 @@ first-seen/last-access timestamps, and status.
 - While no active connection exists, first contact pends regardless of tier.
 - Once active, non-ask-me tiers auto-grant for that agent; ask-me tiers still
   pend per operation.
-- `POST /owner/connections/{handle}/revoke` sets the connection inactive and
+- `POST /owner/connections/revoke` with `{"handle": …}` sets the connection inactive and
   marks every live RPT bound to that handle consumed, so introspection fails
   immediately.
 

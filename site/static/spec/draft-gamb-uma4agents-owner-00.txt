@@ -252,12 +252,14 @@ Internet-Draft              Owner API for UMA             September 2026
    approved it at, the units it has been granted at, its revocation
    count, and where another agent introduced it, that agent's handle.
 
-   POST /connections/{handle}/revoke ends one.  The response carries
-   rpts_deactivated — how many live grants the revocation invalidated in
-   the same step — and connections_revoked, how many connections the
-   revoked one had introduced and which ended with it.  Both numbers are
-   the owner's evidence that the revocation reached everything it should
-   have.
+   POST /connections/revoke with a body {"handle": …} ends one.  The
+   handle travels in the body for the reason client_id does below: an
+   identified agent's handle carries its issuer, path included.  The
+   response carries rpts_deactivated — how many live grants the
+   revocation invalidated in the same step — and connections_revoked,
+   how many connections the revoked one had introduced and which ended
+   with it.  Both numbers are the owner's evidence that the revocation
+   reached everything it should have.
 
 4.2.  Operators
 
@@ -271,8 +273,6 @@ Internet-Draft              Owner API for UMA             September 2026
    POST /operators/block and POST /operators/unblock, with a body
    {"origin": "https://…"}, are the operations of [U4APolicy] Section 7.
    The block response carries connections_revoked and rpts_deactivated.
-
-
 
 
 

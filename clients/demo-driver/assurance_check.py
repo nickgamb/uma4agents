@@ -106,9 +106,8 @@ def forget_agents(client: httpx.Client) -> int:
     for conn in client.get(f"{AS_PUBLIC}/owner/connections", headers=hdrs,
                            timeout=15.0).json():
         if conn.get("status") == "active":
-            client.post(
-                f"{AS_PUBLIC}/owner/connections/{conn['handle']}/revoke",
-                headers=hdrs, timeout=15.0)
+            client.post(f"{AS_PUBLIC}/owner/connections/revoke",
+                        json={"handle": conn["handle"]}, headers=hdrs, timeout=15.0)
             n += 1
     return n
 

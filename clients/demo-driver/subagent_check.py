@@ -374,9 +374,9 @@ def main() -> int:
         live_kids = [h for h, c in before.items()
                      if c.get("parent_handle") == parent_handle
                      and c.get("status") == "active"]
-        res = client.post(
-            f"{AS_PUBLIC}/owner/connections/{parent_handle}/revoke",
-            headers=hdrs(client), timeout=15.0).json()
+        res = client.post(f"{AS_PUBLIC}/owner/connections/revoke",
+                          json={"handle": parent_handle}, headers=hdrs(client),
+                          timeout=15.0).json()
         check("one action revokes the sub-agents with it",
               res.get("connections_revoked", 0) == len(live_kids),
               f"revoked {res.get('connections_revoked')} of {len(live_kids)}")

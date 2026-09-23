@@ -2137,8 +2137,8 @@ async def org_admin_connections(owner: str, request: Request) -> list:
     return await org_related_connections(owner)
 
 
-@app.post("/org/admin/{owner}/connections/{handle}/revoke")
-async def org_admin_revoke(owner: str, handle: str, request: Request) -> dict:
+@app.post("/org/admin/{owner}/connections/revoke")
+async def org_admin_revoke(owner: str, request: Request) -> dict:
     """Shut an agent out of the organization's resources.
 
     Not a revocation of the connection. Her relationship with this agent is
@@ -2149,6 +2149,7 @@ async def org_admin_revoke(owner: str, handle: str, request: Request) -> dict:
     else about its standing with her is untouched.
     """
     actor = await require_org_admin(request, owner)
+    handle = await handle_in(request)
     if not any(c["handle"] == handle for c in await org_related_connections(owner)):
         raise HTTPException(
             status_code=404,
@@ -2166,9 +2167,10 @@ async def org_admin_revoke(owner: str, handle: str, request: Request) -> dict:
     return {"handle": handle, "status": "blocked-for-organization"}
 
 
-@app.post("/org/admin/{owner}/connections/{handle}/restore")
-async def org_admin_restore(owner: str, handle: str, request: Request) -> dict:
+@app.post("/org/admin/{owner}/connections/restore")
+async def org_admin_restore(owner: str, request: Request) -> dict:
     actor = await require_org_admin(request, owner)
+    handle = await handle_in(request)
     await org_block(owner, handle=handle, remove=True)
     await ledger_add(owner, "org_acted", "-", {
         "what": "let an agent reach the organization's resources again",
@@ -5008,6 +5010,11 @@ async def owner_create_policy(request: Request) -> dict:
     owner = await require_owner(request)
     spec = await request.json()
     tier_id = (spec.get("id") or "").strip()
+    # The registry is per replica, and refreshed when something here triggers
+    # a pull. A resource this replica has not seen yet may be one another has,
+    # so a miss re-reads the listings before refusing — as /perm does.
+    if set(spec.get("resources") or []) - set(resources_for(owner)):
+        await pull_registrations_now(owner)
     try:
         tier = policy.new_tier(tier_id, spec, await st(owner).tiers(),
                                set(resources_for(owner)), await jointly_held(owner),
@@ -5483,10 +5490,26 @@ async def owner_connections(request: Request) -> list:
     return await st(owner).connections()
 
 
-@app.post("/owner/connections/{handle}/revoke")
-async def owner_revoke_connection(handle: str, request: Request) -> dict:
+async def handle_in(request: Request) -> str:
+    """The connection a request is about, from its body.
+
+    Not a path segment: an identified agent's handle carries its issuer, and
+    an issuer's path survives neither a path segment nor a proxy that decodes
+    `%2F` — the reason `client_id` travels in a body too.
+    """
+    try:
+        handle = (await request.json()).get("handle")
+    except ValueError:
+        handle = None
+    if not isinstance(handle, str) or not handle:
+        raise HTTPException(status_code=400, detail="name the connection as {\"handle\": …}")
+    return handle
+
+
+@app.post("/owner/connections/revoke")
+async def owner_revoke_connection(request: Request) -> dict:
     owner = await require_owner(request)
-    return await revoke_connection_for(owner, handle, actor=None)
+    return await revoke_connection_for(owner, await handle_in(request), actor=None)
 
 
 async def revoke_connection_for(owner: str, handle: str,

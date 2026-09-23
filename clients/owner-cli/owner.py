@@ -189,7 +189,7 @@ COMMANDS = {
     "policy": lambda a: show(call("GET", "/owner/policies")),
     "resources": lambda a: show(call("GET", "/owner/resources")),
     "connections": lambda a: show(call("GET", "/owner/connections")),
-    "revoke": lambda a: show(call("POST", f"/owner/connections/{a[0]}/revoke")),
+    "revoke": lambda a: show(call("POST", "/owner/connections/revoke", {"handle": a[0]})),
     "ledger": lambda a: show(call("GET", "/owner/ledger")),
     "watch": lambda a: cmd_watch(),
 }

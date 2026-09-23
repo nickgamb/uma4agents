@@ -185,6 +185,11 @@ k8s-wait:
 # nothing needs host DNS, a trusted certificate, or sudo, and the checks
 # reach Alice's resources the only way Bob's side can.
 define run_job
+	@# Her personal AI answers pending requests for her, instantly. A check
+	@# whose simulated owner is racing it measures the race, so it does not run.
+	@if [ "$$(kubectl -n alice get deploy paios -o jsonpath='{.spec.replicas}' 2>/dev/null)" = "1" ]; then \
+		echo "pAI-OS is answering for Alice and would race this check. Run 'make k8s-paios-down' first."; \
+		exit 1; fi
 	@$(K8S)/scripts/job-configmaps.sh
 	@kubectl -n $(NS_AGENT) delete job $(1) --ignore-not-found >/dev/null 2>&1
 	@$(2) | kubectl apply -f - >/dev/null
@@ -211,6 +216,11 @@ endef
 # waiting in silence, because with nobody answering for the owner the pause is
 # the thing being demonstrated, and it has to be visible while it happens.
 define run_live_job
+	@# Her personal AI answers pending requests for her, instantly. A check
+	@# whose simulated owner is racing it measures the race, so it does not run.
+	@if [ "$$(kubectl -n alice get deploy paios -o jsonpath='{.spec.replicas}' 2>/dev/null)" = "1" ]; then \
+		echo "pAI-OS is answering for Alice and would race this check. Run 'make k8s-paios-down' first."; \
+		exit 1; fi
 	@$(K8S)/scripts/job-configmaps.sh
 	@kubectl -n $(NS_AGENT) delete job $(1) --ignore-not-found >/dev/null 2>&1
 	@$(2) | kubectl apply -f - >/dev/null
@@ -480,6 +490,7 @@ k8s-xaa-check:
 ## docs/KWAAI-BINDING.md.
 .PHONY: k8s-kwaai-check
 k8s-kwaai-check: k8s-paios
+	@# Runs inside pAI-OS, and hands her decisions back to her portal after.
 	@kubectl -n alice exec deploy/paios -- env \
 		UMA4A_OWNER_KEY=/owner/owner-ed25519.pem \
 		UMA4A_CACERT=/certs/rootCA.pem \
@@ -487,7 +498,8 @@ k8s-kwaai-check: k8s-paios
 		UMA4A_OIDC=https://keycloak.uma.lab \
 		UMA4A_GATEWAY=https://gateway.uma.lab/mcp \
 		PYTHONPATH=/opt/u4a/lib \
-		python /opt/u4a/check.py
+		python /opt/u4a/check.py; \
+		status=$$?; kubectl -n alice scale deployment/paios --replicas=0 >/dev/null; exit $$status
 
 ## kagent: an agent framework nobody modified, governed by Alice's policy.
 ##
@@ -595,7 +607,10 @@ k8s-paios-down:
 
 ## k8s-paios-check: the same check the compose path runs, in the cluster.
 k8s-paios-check: k8s-paios
-	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py
+	@# Handed back to her portal afterwards, pass or fail: left running, it
+	@# answers every later check's pending requests before their owner can.
+	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py; \
+		status=$$?; kubectl -n alice scale deployment/paios --replicas=0 >/dev/null; exit $$status
 
 ## k8s-reset: rewind the story without rebuilding the cluster
 .PHONY: k8s-reset
@@ -646,15 +661,3 @@ k8s-status:
 .PHONY: codespaces-web
 codespaces-web:
 	@bash .devcontainer/expose-web.sh
-
-## k8s-many-agents: N distinct agents, N connections, one policy (AGENTS=12)
-##
-## Not part of any suite yet — written, never run. The assertions are the
-## interesting ones (distinct keys become distinct connections, revoking one
-## leaves the rest, her policy still names no agent), but nothing has proved
-## the script itself is right, so treat a failure as suspect until it has
-## passed once.
-.PHONY: k8s-many-agents
-k8s-many-agents: AGENTS ?= 12
-k8s-many-agents:
-	$(call run_job,many-agents,sed 's|"12"|"$(AGENTS)"|' $(K8S)/base/jobs/many-agents.yaml,600s)

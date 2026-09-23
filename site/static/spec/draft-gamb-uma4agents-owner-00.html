@@ -1606,7 +1606,9 @@ each carrying its <code>handle</code>, <code>identity</code>, <code>label</code>
 <code>last_access</code>, the policy units the owner personally approved it at, the units
 it has been granted at, its revocation count, and where another agent
 introduced it, that agent's handle.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
-<p id="section-4.1-2"><code>POST /connections/{handle}/revoke</code> ends one. The response carries
+<p id="section-4.1-2"><code>POST /connections/revoke</code> with a body <code>{"handle": …}</code> ends one. The handle
+travels in the body for the reason <code>client_id</code> does below: an identified agent's
+handle carries its issuer, path included. The response carries
 <code>rpts_deactivated</code> — how many live grants the revocation invalidated in the
 same step — and <code>connections_revoked</code>, how many connections the revoked one
 had introduced and which ended with it. Both numbers are the owner's evidence

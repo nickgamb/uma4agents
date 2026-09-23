@@ -201,9 +201,13 @@ held like one. Full detail in [KAGENT.md](KAGENT.md).
 
 ```bash
 make k8s-paios                  # Kwaai's pAI-OS, holding her key
-make k8s-paios-check            # expect PASS
+make k8s-paios-check            # expect PASS; stops it again afterwards
 make k8s-paios-down             # hand the decisions back to her portal
 ```
+
+While it runs, the other checks refuse to start. It answers her pending
+requests the moment they arrive, and a check whose simulated owner races it
+measures the race.
 
 A second surface onto her decisions, not a replacement for her portal — both
 demos are worth showing, and [DEMOS.md](DEMOS.md) puts them side by side. It

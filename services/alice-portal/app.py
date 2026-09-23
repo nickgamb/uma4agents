@@ -531,13 +531,13 @@ async def agent_connections(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
-@app.post("/api/agent/connections/{jkt}/revoke")
-async def agent_revoke(jkt: str, request: Request):
+@app.post("/api/agent/connections/revoke")
+async def agent_revoke(request: Request):
     if require_login(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     async with httpx.AsyncClient() as c:
-        r = await c.post(f"{UMA_AS}/owner/connections/{jkt}/revoke",
-                         headers=await owner_headers(request))
+        r = await c.post(f"{UMA_AS}/owner/connections/revoke",
+                         json=await request.json(), headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 

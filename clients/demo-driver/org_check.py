@@ -41,7 +41,6 @@ import os
 import sys
 import time
 import uuid
-from urllib.parse import quote
 
 import httpx
 
@@ -467,8 +466,8 @@ def main() -> int:                                            # noqa: C901
 
         # --- 7. shutting an agent out of the book, and only out of it -----
         book_handle = next(x["handle"] for x in conns if x.get("org_tiers"))
-        r = c.post(f"{ORG}/admin/members/alice/connections/"
-                   f"{quote(book_handle, safe='')}/revoke", headers=ADMIN, timeout=15.0)
+        r = c.post(f"{ORG}/admin/members/alice/connections/revoke",
+                   json={"handle": book_handle}, headers=ADMIN, timeout=15.0)
         check("an administrator can shut an agent out of the firm's book",
               r.status_code == 200, f"{r.status_code} {r.text[:160]}")
         rpt, why = negotiate(c, "alice", hers, "shared")
@@ -488,8 +487,8 @@ def main() -> int:                                            # noqa: C901
         rpt_still, why_still = negotiate(c, "alice", hers, "own")
         check("and that agent's access to her own accounts is untouched",
               rpt_still is not None, f"{why_still}")
-        c.post(f"{ORG}/admin/members/alice/connections/"
-               f"{quote(book_handle, safe='')}/restore", headers=ADMIN, timeout=15.0)
+        c.post(f"{ORG}/admin/members/alice/connections/restore",
+               json={"handle": book_handle}, headers=ADMIN, timeout=15.0)
 
         # --- 7b. an administrator's approval is his, not hers -------------
         #

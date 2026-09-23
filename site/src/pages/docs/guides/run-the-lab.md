@@ -182,9 +182,12 @@ lab also runs **Kwaai's pAI-OS**, with a U4A ability installed, holding her key.
 
 ```bash
 make k8s-paios          # or `make paios` on the compose path
-make k8s-paios-check
+make k8s-paios-check    # stops it again afterwards
 make k8s-paios-down     # hand the decisions back to her portal
 ```
+
+While it runs, the other checks refuse to start: it answers her pending
+requests the moment they arrive, before a check's simulated owner can.
 
 It answers the tiers she gave standing consent to, and Bob's agent gets its
 grant without her being disturbed. What it will **not** do is answer a trade:

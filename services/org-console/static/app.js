@@ -549,10 +549,10 @@ function wireMember(view, owner) {
          { decision: b.dataset.as },
          b.dataset.as === "approved" ? "Approved" : "Denied"));
   view.querySelectorAll("[data-revoke]").forEach(b => b.onclick = () =>
-    call(`connections/${encodeURIComponent(b.dataset.revoke)}/revoke`, {},
+    call("connections/revoke", { handle: b.dataset.revoke },
          "Agent shut out of this organization's resources"));
   view.querySelectorAll("[data-restore]").forEach(b => b.onclick = () =>
-    call(`connections/${encodeURIComponent(b.dataset.restore)}/restore`, {},
+    call("connections/restore", { handle: b.dataset.restore },
          "Agent allowed again"));
   view.querySelectorAll("[data-op]").forEach(b => b.onclick = () =>
     call(`operators/${b.dataset.op}`, { origin: b.dataset.origin },

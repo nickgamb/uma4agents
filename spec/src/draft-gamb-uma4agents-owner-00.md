@@ -245,7 +245,9 @@ each carrying its `handle`, `identity`, `label`, `status`, `first_seen`,
 it has been granted at, its revocation count, and where another agent
 introduced it, that agent's handle.
 
-`POST /connections/{handle}/revoke` ends one. The response carries
+`POST /connections/revoke` with a body `{"handle": …}` ends one. The handle
+travels in the body for the reason `client_id` does below: an identified agent's
+handle carries its issuer, path included. The response carries
 `rpts_deactivated` — how many live grants the revocation invalidated in the
 same step — and `connections_revoked`, how many connections the revoked one
 had introduced and which ended with it. Both numbers are the owner's evidence

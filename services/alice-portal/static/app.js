@@ -453,7 +453,9 @@ window.operatorAction = async (action, origin) => {
 };
 
 window.revoke = async (handle) => {
-  const res = await api(`/api/agent/connections/${encodeURIComponent(handle)}/revoke`, { method: "POST" });
+  const res = await api("/api/agent/connections/revoke", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ handle }) });
   // An agent that introduced others takes them with it. Reported the way an
   // operator block reports its cascade: she pressed one button, and she
   // should be told everything that button did.
