@@ -363,6 +363,19 @@ check("an unevaluable restriction still asks",
                                    "then": "ask"}]),
                       {"assurance": {}, "standing": {}, "request": {},
                        "tier": "tier1"})[0] == policy.ASK)
+check("a restriction naming a condition this server no longer knows still fires",
+      policy.evaluate(tier(rules=[{"when": ["standing.renamed_since"], "then": "refuse"}]),
+                      facts(active=True, accountability=1))[0] == policy.REFUSE)
+check("a relaxation naming one does not",
+      policy.evaluate(tier(ask_me=True,
+                           rules=[{"when": ["standing.renamed_since"], "then": "auto"}]),
+                      facts(active=True, accountability=1))[0] == policy.ASK)
+check("a restriction whose conditions cannot be read still fires",
+      policy.evaluate(tier(rules=[{"then": "refuse"}]),
+                      facts(active=True, accountability=1))[0] == policy.REFUSE)
+check("a rule whose effect nobody defined is put to her",
+      policy.evaluate(tier(rules=[{"when": ["standing.first_at_tier"], "then": "maybe"}]),
+                      facts(active=True, accountability=1))[0] == policy.ASK)
 
 
 d = policy.defaults()

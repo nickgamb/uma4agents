@@ -110,7 +110,7 @@ are stable; the `details` of each are what the emitting code puts there.
 
 **`services/org-authority`:** `admin.static_credential_enabled`, `break_glass.granted`, `break_glass.opened`, `break_glass.replay_refused`, `break_glass.spent`, `break_glass.used`, `break_glass.voided`, `charter.published`, `engine.loaded`, `engine.unreachable`, `engine.waiting`, `invitation.declined`, `invitation.sent`, `invitation.withdrawn`, `invoker_directory.unresolved`, `join_code.rotated`, `member.administered`, `member.compliance`, `member.joined`, `member.left`, `member.notified`, `member.removed`, `member.role_set`, `notice.failed`, `role.default_set`, `role.removed`, `role.saved`
 
-**`services/uma-as`:** `client_metadata.resolved`, `client_metadata.unresolved`, `identity.asserted`, `identity.rejected`, `joint.fold_rejected`, `joint.joined`, `joint.left`, `joint.pending`, `joint.quoted`, `joint.verdict`, `need_info.identity_required`, `operator.claimed`, `operator.disclaimed`, `org.agent_blocked`, `org.charter_changed`, `org.clamped`, `org.client_stale`, `org.invitation_declined`, `org.invitation_unreadable`, `org.joined`, `org.membership_ended`, `org.notice`, `org.operator_blocked`, `org.record_unusable`, `org.unreachable`, `pat.issued`, `permission.rejected`, `resources.pull_failed`, `resources.pull_retry`, `resources.pulled`, `resources.unshared`, `resources.unshared_skipped`, `rpt.consume_refused`
+**`services/uma-as`:** `client_metadata.resolved`, `client_metadata.unresolved`, `identity.asserted`, `identity.rejected`, `joint.fold_rejected`, `joint.joined`, `joint.left`, `joint.mandate_moved`, `joint.pending`, `joint.quoted`, `joint.verdict`, `need_info.identity_required`, `operator.claimed`, `operator.disclaimed`, `org.agent_blocked`, `org.charter_changed`, `org.clamped`, `org.client_stale`, `org.invitation_declined`, `org.invitation_unreadable`, `org.joined`, `org.membership_ended`, `org.notice`, `org.operator_blocked`, `org.record_unusable`, `org.unreachable`, `pat.issued`, `permission.rejected`, `resources.pull_failed`, `resources.pull_retry`, `resources.pulled`, `resources.unshared`, `resources.unshared_skipped`, `rpt.consume_refused`
 
 **`services/uma-pep`:** `mandate.unreachable`, `owner_resources.denied`, `owner_resources.served`, `registration.declarative`, `upstream.unreachable`
 
@@ -200,6 +200,7 @@ Twenty-three kinds are written. Grouped by what they are about:
 | Kind | Written when | `entry` carries |
 |---|---|---|
 | `joint_joined` / `joint_left` | She joins or leaves a jointly held account | the account |
+| `joint_moved` | The tally publishes a mandate that differs from the one she agreed to. Her authority signs nothing for the account until she agrees again | the account, and what changed in her words |
 | `joint_allowed` / `joint_refused` | Her half of a joint decision | the account, the resource, and the reasons for a refusal |
 
 The kinds that are refusals are worth naming as a set: `refused`,

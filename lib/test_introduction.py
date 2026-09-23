@@ -80,6 +80,13 @@ expired = jwt.encode(
 check("an expired introduction is refused",
       refused(introduction.verify_claim, expired, child.thumbprint(), AS) != "")
 
+endless = jwt.encode(
+    {"sub": child.thumbprint(), "aud": AS, "iat": int(time.time()), "jti": "int_x"},
+    parent.key, algorithm="EdDSA",
+    headers={"typ": introduction.TYP, "jwk": parent.public_jwk()})
+check("an introduction with no expiry is refused, not accepted forever",
+      "exp" in refused(introduction.verify_claim, endless, child.thumbprint(), AS))
+
 wrong_typ = jwt.encode(
     {"sub": child.thumbprint(), "aud": AS, "exp": int(time.time()) + 300},
     parent.key, algorithm="EdDSA",

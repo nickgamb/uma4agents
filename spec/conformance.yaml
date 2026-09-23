@@ -627,8 +627,8 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a mandate at or above the floor stands"]
   - text: "A holder's authorization server MUST store the mandate she agreed to, MUST re-ask her when the published mandate differs"
     verified: check
-    targets: [joint-check]
-    asserts: ["joining without agreeing is refused", "a holder who has written no terms cannot be counted"]
+    targets: [joint-check, as-test]
+    asserts: ["joining without agreeing is refused", "a holder who has written no terms cannot be counted", "a holder does not sign under a mandate she has not agreed to", "and her authority keeps what changed, for her to agree to again"]
   - text: "the tally MUST obtain each holder's terms over it from her authorization server and MUST fold them into one terms document"
     verified: check
     targets: [joint-check, joint-test]
@@ -785,11 +785,11 @@ draft-gamb-uma4agents-policy-00:
   - text: "MUST be treated as matching if its effect is ask or refuse and as not matching if its effect is auto"
     verified: check
     targets: [rules-test]
-    asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching"]
-  - text: "An authorization server MUST NOT evaluate any rule until it has established that the client holds a standing connection"
+    asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching", "a restriction naming a condition this server no longer knows still fires", "a relaxation naming one does not"]
+  - text: "It MUST otherwise put the first contact to the owner, whatever the rules would decide, and MUST record a refusal made in its place"
     verified: check
     targets: [first-party-check, assurance-check]
-    asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate"]
+    asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate", "a nameless stranger is turned away without reaching her", "and her record says her rule did it"]
   - text: "An authorization server MUST publish the conditions its rules may name, and for each MUST state whether it may relax."
     verified: check
     targets: [intent-check]

@@ -352,6 +352,17 @@ draft-gamb-uma4agents-fedauthz-00:
     verified: check
     targets: [subagent-check]
     asserts: ["and a revoked sub-agent's next call does not go through"]
+  - text: "An authorization server MUST answer unknown_token for a token issued against another owner's resources, whatever that token's state."
+    verified: check
+    targets: [as-test]
+    asserts: ["another owner's resource server is not told it was revoked", "nor told so when it tries to spend it"]
+  - text: "An extension MAY define further values, and MUST say whether each is terminal."
+    verified: binding
+    because: "a requirement on extension documents; draft-gamb-uma4agents-multiparty-00 defines organization_revoked and says it is terminal"
+  - text: "An enforcement point receiving a value it does not recognise MUST treat it as terminal."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a reason this side does not recognise is refused without a challenge"]
   - text: "Introspection MUST NOT consume a single-use token."
     verified: check
     targets: [embedded-check]
@@ -364,6 +375,10 @@ draft-gamb-uma4agents-fedauthz-00:
     verified: check
     targets: [store-test, embedded-check]
     asserts: ["rpt: a later burn still loses", "and spent, it cannot be spent again"]
+  - text: "false means it was not spent by this caller, and MUST be accompanied by an error member saying why"
+    verified: check
+    targets: [as-test, pep-test]
+    asserts: ["nor told so when it tries to spend it", "a spend someone else won is refused as already spent", "a grant revoked between the check and the spend is refused as revoked"]
   - text: "An enforcement point MUST NOT be told, and MUST NOT report, the identity handle of the client."
     verified: check
     targets: [store-test, intent-check]
@@ -770,11 +785,11 @@ draft-gamb-uma4agents-policy-00:
   - text: "MUST be treated as matching if its effect is ask or refuse and as not matching if its effect is auto"
     verified: check
     targets: [rules-test]
-    asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching"]
-  - text: "An authorization server MUST NOT evaluate any rule until it has established that the client holds a standing connection"
+    asserts: ["an unusable restriction is treated as matching", "an unusable relaxation is treated as not matching", "a restriction naming a condition this server no longer knows still fires", "a relaxation naming one does not"]
+  - text: "It MUST otherwise put the first contact to the owner, whatever the rules would decide, and MUST record a refusal made in its place"
     verified: check
     targets: [first-party-check, assurance-check]
-    asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate"]
+    asserts: ["first contact still pends, and she connects it", "the nameless agent was admitted too — assurance is not a gate", "a nameless stranger is turned away without reaching her", "and her record says her rule did it"]
   - text: "An authorization server MUST publish the conditions its rules may name, and for each MUST state whether it may relax."
     verified: check
     targets: [intent-check]

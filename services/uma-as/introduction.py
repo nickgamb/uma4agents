@@ -75,11 +75,13 @@ def verify_claim(intro: str, child_jkt: str, issuer: str) -> dict:
     # filed as one of the owner's active connections.
     #
     # `aud` pins it to one authorization server, so an introduction obtained
-    # for one owner's authority is not replayable at another's. Expiry is
-    # enforced by decode.
+    # for one owner's authority is not replayable at another's. The claims
+    # the draft makes REQUIRED are required here, so an introduction with no
+    # `exp` is refused rather than accepted forever.
     try:
         key = OKPAlgorithm.from_jwk(json.dumps(parent_jwk))
-        claims = jwt.decode(intro, key, algorithms=["EdDSA"], audience=issuer)
+        claims = jwt.decode(intro, key, algorithms=["EdDSA"], audience=issuer,
+                            options={"require": ["exp", "iat", "jti", "sub", "aud"]})
     except Exception as exc:
         raise Refused(f"introduction does not verify: {exc}")
 

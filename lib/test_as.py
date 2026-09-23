@@ -105,6 +105,17 @@ async def agreements_and_grants() -> None:
     _, endless = agreement(expires_in=0)
     refuses("an agreement with no lifetime is refused",
             lambda: app.verify_contract(endless, negotiating()), "positive number")
+    _, unscoped = agreement(scope=None)
+    refuses("an agreement with no scope array is refused",
+            lambda: app.verify_contract(unscoped, negotiating()), "array of strings")
+    per_op = negotiating()
+    per_op["template"]["per_operation"] = True
+    _, toolless = agreement(operation={"params": {"qty": 1}})
+    refuses("a per-operation agreement naming no tool is refused before she is asked",
+            lambda: app.verify_contract(toolless, per_op), "naming a tool")
+    refuses("a reason past the ceiling is refused wherever an agreement is accepted",
+            lambda: app.requester_claims({"reason": "x" * (app.MAX_REASON + 1)}),
+            "permitted length")
 
     raw, short = agreement(expires_in=60)
     rec = negotiating()
@@ -198,10 +209,11 @@ async def a_holders_verdict() -> None:
         "template": {"enforced": {}}})
     await store.decide("fam_joint", "approved", {"kind": "owner", "owner": "alice"})
 
-    async def asked_about(digest: str) -> dict:
+    async def asked_about(digest: str, published: dict = MANDATE) -> dict:
         request = ("alice", record, {"negotiation": "fam_joint",
                                      "resource_id": "joint/read", "contract": digest})
-        with patch.object(app, "tally_request", AsyncMock(return_value=request)):
+        with patch.object(app, "tally_request", AsyncMock(return_value=request)), \
+                patch.object(app, "fetch_mandate", AsyncMock(return_value=published)):
             return unverified((await app.joint_verdict(None))["verdict"])
 
     swapped = await asked_about("s256:a-different-agreement")
@@ -225,6 +237,17 @@ async def a_holders_verdict() -> None:
                                          dict(MANDATE["holders"][1], weight=3)]}
     check("so is a holder's weight", bool(holder_joint.moved(record, reweighted)))
     check("and an unchanged mandate is not", holder_joint.moved(record, dict(MANDATE)) == [])
+    await store.set_mandate("joint", record)
+    with patch.object(app, "owner_notify", AsyncMock()) as told:
+        moved = await asked_about("s256:the-one-she-saw", published=reweighted)
+        await asked_about("s256:the-one-she-saw", published=reweighted)
+    check("a holder does not sign under a mandate she has not agreed to",
+          moved["effect"] == "refuse", str(moved))
+    kept = await store.mandate("joint")
+    check("and her authority keeps what changed, for her to agree to again",
+          bool(kept.get("moved")), str(kept.get("moved")))
+    check("she is told once, not at every verdict", told.await_count == 1,
+          f"told {told.await_count} times")
 
     print("\n== a folded agreement, against her own terms ==")
     hers = {"resources": ["joint/*"],

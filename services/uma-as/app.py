@@ -3333,49 +3333,18 @@ def contract_identity(claim_token_b64: str,
     return contract, signer_jwk, identity
 
 
-def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
-    """Verify the contract *and* its echo of the terms this server dictated.
+def requester_claims(contract: dict) -> None:
+    """Bound and normalise, in place, the claims the requesting side authors.
 
-    Returns (contract_claims, signer_jwk). Everything below the split is
-    about one negotiation this server is running: the nonce it issued, the
-    template it proffered, and that nothing in the document came back
-    weakened.
+    Applied wherever an agreement is accepted, the grant path and the joint
+    one alike: both store these claims and show them to her.
     """
-    contract, signer_jwk, identity = contract_identity(claim_token_b64, ISSUER)
-
-    template = rec["template"]
-    if contract.get("nonce") != template["nonce"]:
-        raise ValueError("nonce mismatch")
-    if contract.get("family") != rec["family"]:
-        raise ValueError("negotiation family mismatch")
-    if contract.get("template_id") != template["template_id"]:
-        raise ValueError("template version mismatch")
-    if contract.get("terms_uri") != template["terms_uri"]:
-        raise ValueError("agreement must name the proffered terms document")
-    if contract.get("purpose") != template["purpose"]:
-        raise ValueError("purpose was altered")
-    if not set(template["prohibited"]).issubset(set(contract.get("prohibited", []))):
-        raise ValueError("prohibited-actions list was weakened")
-    agreed_for = contract.get("expires_in")
-    if not isinstance(agreed_for, int) or isinstance(agreed_for, bool) or agreed_for <= 0:
-        raise ValueError("expires_in must be a positive number of seconds")
-    if agreed_for > template["expires_in"]:
-        raise ValueError("expiry was extended beyond dictated terms")
-    # The agent may agree to less than was offered and never to more. A scope
-    # it added is not one she offered; recording it in the agreement would
-    # make the signed record say something the grant does not.
-    if not set(contract.get("scope") or []) <= set(template.get("scope") or []):
-        raise ValueError("scope was widened beyond the proffered terms")
-    if template.get("per_operation") and not contract.get("operation"):
-        raise ValueError("per-operation tier requires a proposed operation in the contract")
-
-    # The one claim the requesting side authors. It is bounded and nothing
-    # else: not compared to her purpose, not parsed, not scored. Reading it
-    # would put a judgement about natural language inside the grant, which
-    # would make the same request answerable two ways and end the property
-    # `make flow-check` asserts. It is checked for size because it is stored
-    # and shown to her, and because a field with no ceiling is a place to put
-    # a megabyte.
+    # `reason` is bounded and nothing else: not compared to her purpose, not
+    # parsed, not scored. Reading it would put a judgement about natural
+    # language inside the grant, which would make the same request answerable
+    # two ways and end the property `make flow-check` asserts. It is checked
+    # for size because it is stored and shown to her, and because a field
+    # with no ceiling is a place to put a megabyte.
     if (reason := contract.get("reason")) is not None:
         if not isinstance(reason, str):
             raise ValueError("reason must be a string")
@@ -3400,6 +3369,55 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
         # Normalised down to the two fields AAuth's own header carries, so a
         # citation with extra baggage cannot use her ledger as storage.
         contract["mission"] = {"approver": approver, "s256": digest}
+
+
+def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
+    """Verify the contract *and* its echo of the terms this server dictated.
+
+    Returns (contract_claims, signer_jwk). Everything below the split is
+    about one negotiation this server is running: the nonce it issued, the
+    template it proffered, and that nothing in the document came back
+    weakened.
+    """
+    contract, signer_jwk, identity = contract_identity(claim_token_b64, ISSUER)
+
+    template = rec["template"]
+    if contract.get("nonce") != template["nonce"]:
+        raise ValueError("nonce mismatch")
+    if contract.get("family") != rec["family"]:
+        raise ValueError("negotiation family mismatch")
+    if contract.get("template_id") != template["template_id"]:
+        raise ValueError("template version mismatch")
+    if contract.get("terms_uri") != template["terms_uri"]:
+        raise ValueError("agreement must name the proffered terms document")
+    if contract.get("purpose") != template["purpose"]:
+        raise ValueError("purpose was altered")
+    for member in ("scope", "prohibited"):
+        value = contract.get(member)
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise ValueError(f"{member} must be an array of strings")
+    if not set(template["prohibited"]).issubset(set(contract["prohibited"])):
+        raise ValueError("prohibited-actions list was weakened")
+    agreed_for = contract.get("expires_in")
+    if not isinstance(agreed_for, int) or isinstance(agreed_for, bool) or agreed_for <= 0:
+        raise ValueError("expires_in must be a positive number of seconds")
+    if agreed_for > template["expires_in"]:
+        raise ValueError("expiry was extended beyond dictated terms")
+    # The agent may agree to less than was offered and never to more. A scope
+    # it added is not one she offered; recording it in the agreement would
+    # make the signed record say something the grant does not.
+    if not set(contract["scope"]) <= set(template.get("scope") or []):
+        raise ValueError("scope was widened beyond the proffered terms")
+    # Checked in full here, before she is asked, because issuance relies on
+    # it after she has answered.
+    if template.get("per_operation"):
+        op = contract.get("operation")
+        if not (isinstance(op, dict) and isinstance(op.get("tool"), str) and op["tool"]
+                and isinstance(op.get("params"), dict)):
+            raise ValueError("per-operation tier requires an operation naming a tool "
+                             "and an object of params")
+
+    requester_claims(contract)
 
     # A sibling agent's introduction of this one, verified as far as the
     # document itself goes. Whether the introducing key means anything to this
@@ -3628,6 +3646,27 @@ async def tally_request(request: Request) -> tuple[str, dict, dict]:
     return owner, record, claims
 
 
+async def mandate_moved(owner: str, record: dict) -> list[str]:
+    """How the published mandate differs from the one she agreed to, in her
+    words. The first time a given change is seen it goes to her ledger and her
+    portal; agreeing again, at `POST /owner/joint`, is what clears it."""
+    try:
+        fresh = await fetch_mandate(record["tally"], record["account"])
+    except HTTPException:
+        return ["the tally's published mandate could not be read"]
+    changes = joint.moved(record, fresh)
+    stored = await st(owner).mandate(record["account"]) or record
+    if changes and stored.get("moved") != changes:
+        await st(owner).set_mandate(record["account"], {**stored, "moved": changes})
+        event("joint.mandate_moved", owner=owner, account=record["account"],
+              changes=changes)
+        await ledger_add(owner, "joint_moved", "-",
+                         {"account": record["account"], "changes": changes})
+        await owner_notify(owner, {"type": "joint", "state": "moved",
+                                   "account": record["account"]})
+    return changes
+
+
 async def joint_tier(owner: str, resource_id: str) -> tuple[str | None, dict]:
     return policy.tier_for_resource(await st(owner).tiers(), resource_id)
 
@@ -3676,6 +3715,11 @@ async def joint_verdict(request: Request) -> dict:
 
     if not joint.claims_match(resource_id, mandate.get("resources") or []):
         return refuse("that resource is not part of this mandate")
+    # She agreed to one electorate. A tally now publishing another — a holder
+    # added, a threshold lowered — has not been agreed to, so nothing is
+    # signed under it until she has been asked again.
+    if changes := await mandate_moved(owner, record):
+        return refuse("the mandate changed after this holder agreed to it", *changes)
 
     # She may already have answered. Read before anything is re-evaluated:
     # the tally polls, and a question she has decided must not be re-asked or
@@ -3723,6 +3767,7 @@ async def joint_verdict(request: Request) -> dict:
     try:
         contract, signer_jwk, identity = contract_identity(
             agreement, record["tally"])
+        requester_claims(contract)
     except Exception as exc:                                    # noqa: BLE001
         return refuse(f"the agreement did not verify: {exc}")
     if s256(base64.urlsafe_b64decode(
@@ -5408,6 +5453,7 @@ async def owner_joint_list(request: Request) -> list:
                         for h in mandate.get("holders") or []],
             "rule": mandate.get("rule") or {},
             "summary": uma4a_joint.describe(mandate),
+            "moved": record.get("moved") or [],
         })
     return out
 

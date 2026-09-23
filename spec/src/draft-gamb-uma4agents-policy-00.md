@@ -325,17 +325,19 @@ every rule whose effect is `auto`, then every rule whose effect is stricter than
 the running result. A restriction that matches MUST win over a relaxation that
 also matched, whatever order the rules were written in.
 
-A rule that cannot be evaluated — because a fact it names is absent or
-malformed — MUST be treated as matching if its effect is `ask` or `refuse` and
-as not matching if its effect is `auto`. Both land on more friction. The
+A rule that cannot be evaluated — because a fact or condition it names is
+absent, unknown or malformed — MUST be treated as matching if its effect is
+`ask` or `refuse` and as not matching if its effect is `auto`. Both land on more friction. The
 alternative treats a broken restriction as a working one and a broken
 relaxation as a refusal, and the first of those is the one an owner would not
 choose.
 
-An authorization server MUST NOT evaluate any rule until it has established that
-the client holds a standing connection with the owner, and MUST put a
-first contact to the owner regardless of what the rules would decide. No rule
-skips the first question.
+Until a client holds a standing connection with the owner, a matching rule
+whose effect is `refuse` is the only outcome of evaluation an authorization
+server may act on. It MUST otherwise put the first contact to the owner,
+whatever the rules would decide, and MUST record a refusal made in its place
+as {{record}} describes. A rule may turn away a client the owner has not met;
+no rule may admit one.
 
 ## Publication {#vocabulary}
 

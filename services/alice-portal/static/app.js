@@ -890,6 +890,13 @@ function jointCard(m) {
     <div>${(m.holders || []).map(h => `<span class="chip${h.weight > 1 ? "" : ""}">${esc(h.owner)}${
       h.weight > 1 ? ` ×${h.weight}` : ""}</span>`).join(" ")}</div>
     <div class="note" style="margin-top:12px">${esc(rule || "")}</div>
+    ${(m.moved || []).length ? `<div class="note warn" style="margin-top:12px">
+      <b>The tally now publishes a different mandate from the one you agreed to.</b>
+      Your authority is not answering for this account until you agree to it again.
+      ${m.moved.map(c => `<div style="margin-top:6px">${esc(c)}</div>`).join("")}
+      <button class="btn primary sm" style="margin-top:10px"
+        onclick="joinMandate('${esc(m.tally)}','${esc(m.account)}')">Agree to the new mandate</button>
+    </div>` : ""}
     <div class="lbl" style="margin-top:18px">Covers</div>
     <div>${(m.resources || []).map(r => `<span class="chip mono">${esc(r)}</span>`).join(" ")}</div>
     <div class="muted" style="font-size:12.5px;margin-top:14px;max-width:70ch">Write your terms over

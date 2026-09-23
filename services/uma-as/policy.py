@@ -610,23 +610,34 @@ def _matches(condition: str, facts: dict) -> bool:
     if name == "request.consequence_unknown":
         return uma4a_consequence.normalise(
             facts["request"].get("consequence")) is None
-    return False
+    # A name this server does not know — renamed since the rule was stored,
+    # or never valid. Not "does not match": a restriction that silently stops
+    # firing is a relaxation nobody chose.
+    raise ValueError(f"unknown condition {name!r}")
 
 
-def _rule_matches(rule: dict, when: list, facts: dict) -> bool:
-    """Whether every condition in a rule holds.
+def _effect(rule: dict) -> str:
+    """A rule's effect. One this server does not recognise is put to her."""
+    then = rule.get("then") if isinstance(rule, dict) else None
+    return then if then in RANK else ASK
+
+
+def _rule_matches(rule: dict, facts: dict) -> tuple[bool, list[str]]:
+    """Whether every condition in a rule holds, and which conditions those are.
 
     `validate_rules` makes a malformed rule unstorable, so this should never
     see one. It can still happen — a policy stored before validation existed, a
-    store edited directly — and the answer must not be a 500 inside the grant
-    loop. So a rule that cannot be evaluated **fails towards the owner**: an
-    unusable restriction is treated as matching, an unusable relaxation as not
-    matching. Both directions land on more friction rather than less.
+    store edited directly, a condition renamed since — and the answer must not
+    be a 500 inside the grant loop. So a rule that cannot be evaluated **fails
+    towards the owner**: an unusable restriction is treated as matching, an
+    unusable relaxation as not matching. Both directions land on more friction
+    rather than less.
     """
     try:
-        return all(_matches(c, facts) for c in when)
-    except (TypeError, ValueError, KeyError):
-        return rule["then"] != AUTO
+        when = rule["when"] if isinstance(rule["when"], list) else [rule["when"]]
+        return all(_matches(c, facts) for c in when), [str(c) for c in when]
+    except Exception:                                   # noqa: BLE001
+        return _effect(rule) != AUTO, ["a rule that could not be evaluated"]
 
 
 def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
@@ -641,19 +652,20 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
 
     relaxed, reasons = baseline, []
     for rule in rules:                       # relaxations first
-        when = rule["when"] if isinstance(rule["when"], list) else [rule["when"]]
-        if rule["then"] != AUTO or RANK[AUTO] >= RANK[relaxed]:
+        if _effect(rule) != AUTO or RANK[AUTO] >= RANK[relaxed]:
             continue
-        if _rule_matches(rule, when, facts):
-            relaxed, reasons = AUTO, list(when)
+        matched, when = _rule_matches(rule, facts)
+        if matched:
+            relaxed, reasons = AUTO, when
 
     result = relaxed
     for rule in rules:                       # restrictions last, and they win
-        when = rule["when"] if isinstance(rule["when"], list) else [rule["when"]]
-        if RANK[rule["then"]] <= RANK[result]:
+        then = _effect(rule)
+        if RANK[then] <= RANK[result]:
             continue
-        if _rule_matches(rule, when, facts):
-            result, reasons = rule["then"], list(when)
+        matched, when = _rule_matches(rule, facts)
+        if matched:
+            result, reasons = then, when
     return result, reasons
 
 

@@ -615,11 +615,11 @@ The activity ledger is a projection of that stream: **promised** =
 **revoked** = `connection.revoked`.
 
 Those five are what her portal shows. The table itself is append-only and holds
-twenty-three kinds — the five above plus `relaxed`, `refused`,
+twenty-four kinds — the five above plus `relaxed`, `refused`,
 `identity_refused`, `claimed`, `disclaimed`, the organization set (`org_joined`,
 `org_left`, `org_declined`, `org_role`, `org_clamped`, `org_acted`,
 `org_refused`, `break_glass`) and the joint set (`joint_joined`, `joint_left`,
-`joint_allowed`, `joint_refused`). A row is
+`joint_moved`, `joint_allowed`, `joint_refused`). A row is
 `seq, owner, kind, family, ts, handle, entry`, where `handle` is a column rather
 than a field inside `entry` so one agent's whole trajectory is an index lookup,
 and is null for entries with no agent. Every kind and the fields its `entry`
