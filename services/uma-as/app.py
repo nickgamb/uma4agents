@@ -1247,11 +1247,12 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
 async def introspect(request: Request, token: str = Form(...), consume: str = Form(None)) -> dict:
     pat_owner = await require_pat(request)
     claims, rec, err = await _decode_rpt(token)
-    if not err and (claims.get("owner") or DEFAULT_OWNER) != pat_owner:
+    if claims is not None and (claims.get("owner") or DEFAULT_OWNER) != pat_owner:
         # The PAT says whose resources this resource server is asking about.
         # A grant against somebody else's is not one it may learn anything
-        # about — not whether it is live, not whose it is — so the answer is
-        # the one an unknown token gets. `/consume` draws the same line.
+        # about — not whether it is live, spent or revoked, not whose it is —
+        # so it gets the answer an unknown token gets, before any other.
+        # `/consume` draws the same line.
         event("rpt.introspected", corr=None, result="owner_mismatch")
         return {"active": False, "error": "unknown_token"}
     if err:
@@ -1322,16 +1323,16 @@ async def consume_rpt(request: Request, token: str = Form(...)) -> dict:
     """
     pat_owner = await require_pat(request)
     claims, rec, err = await _decode_rpt(token)
+    owner = (claims or {}).get("owner") or DEFAULT_OWNER
+    if claims is not None and owner != pat_owner:
+        # The enforcement point holds one PAT per owner it serves. A grant of
+        # Alice's under Carol's PAT gets what introspection would say of it.
+        event("rpt.consume_refused", corr=None, reason="owner_mismatch")
+        return {"consumed": False, "error": "unknown_token"}
     if err:
         return {"consumed": False, "error": err}
     if not claims.get("single_use"):
         return {"consumed": False, "error": "not_single_use"}
-    owner = claims.get("owner") or DEFAULT_OWNER
-    if owner != pat_owner:
-        # The enforcement point holds one PAT per owner it serves. Presenting
-        # a grant of Alice's under Carol's PAT is not a mix-up to tolerate.
-        event("rpt.consume_refused", corr=None, reason="owner_mismatch")
-        return {"consumed": False, "error": "owner_mismatch"}
     family = await st(owner).consume_rpt(claims.get("jti", ""))
     if family is None:
         return {"consumed": False, "error": "already_consumed"}

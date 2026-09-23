@@ -311,7 +311,7 @@ an agent's reach to claimed resources. When it does:
   only, held in the membership record so that it ends when the membership does,
   and its standing with the member over her own resources is untouched;
 - an introspection response for a grant so affected carries `error` of
-  `organization_revoked` ({{U4AFedAuthz}} Section 5).
+  `organization_revoked`, which is terminal ({{U4AFedAuthz}} Section 5).
 
 The organization conveys each such action to the member's authorization server
 as a short-lived JWT with `typ` of `u4a-org-admin+jwt`, signed by the

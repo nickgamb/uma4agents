@@ -10,6 +10,13 @@ SRC=/spec/src
 OUT=${OUT:-/out}
 mkdir -p "$OUT" /spec/.refcache
 
+# The committed cache is the reference, so an entry is never renewed. By
+# default kramdown-rfc refetches anything older than a day or a week, judged
+# by file mtime: a render then depends on the network and on when the files
+# were last touched. A reference not yet in the cache is still fetched once.
+export KRAMDOWN_REFCACHETTL=3153600000 KRAMDOWN_REFCACHETTL_RFC=3153600000 \
+       KRAMDOWN_REFCACHETTL_DOI_IANA=3153600000
+
 status=0
 for md in "$SRC"/*.md; do
     name=$(basename "$md" .md)
@@ -31,7 +38,11 @@ for md in "$SRC"/*.md; do
                  --path "$OUT" "$OUT/$name.xml" >/tmp/x2r.out 2>&1; then
         echo "FAIL (xml2rfc)"; cat /tmp/x2r.out; status=1; continue
     fi
-    if grep -qiE '^[^ ]*\(([0-9]+)\): (Warning|Error)' /tmp/x2r.out; then
+    # The document date is pinned in each draft's front matter so a render is
+    # reproducible, which makes xml2rfc's "more than 3 days away from today"
+    # a statement about the calendar rather than the document.
+    if grep -v 'days away from today' /tmp/x2r.out \
+            | grep -qiE '^[^ ]*\(([0-9]+)\): (Warning|Error)'; then
         echo "FAIL (xml2rfc warnings)"; cat /tmp/x2r.out; status=1; continue
     fi
 

@@ -147,7 +147,7 @@ def granting(info: dict, **over) -> Enforcer:
     reaches the network."""
     e = Enforcer(**{**CONFIG, **over})
     e.introspect = AsyncMock(return_value=info)
-    e.consume = AsyncMock(return_value=True)
+    e.consume = AsyncMock(return_value={"consumed": True})
     e.report_access = AsyncMock()
     e.challenge = AsyncMock(return_value=CHALLENGE)
     return e
@@ -256,6 +256,37 @@ e = granting(grant(single_use=True, operation=once))
 d = present(e, args={"account": "someone-else"})
 check("and refused for a different call to that tool",
       d.outcome == "deny" and d.error == "operation_mismatch", d.error)
+
+print("\n== why a grant is not live, and what the agent is told ==")
+for reason in ("expired", "unknown_token", "revoked"):
+    d = present(granting({"active": False, "error": reason}))
+    check(f"{reason}: the agent is sent to negotiate again", d.outcome == "challenge", d.error)
+for reason in ("connection_revoked", "organization_revoked"):
+    d = present(granting({"active": False, "error": reason}))
+    check(f"{reason}: refused without a challenge",
+          d.outcome == "deny" and d.error == "access_revoked", d.error)
+d = present(granting({"active": False, "error": "a_reason_from_a_later_draft"}))
+check("a reason this side does not recognise is refused without a challenge",
+      d.outcome == "deny" and d.error == "access_revoked", d.error)
+d = present(granting({"active": False, "error": "introspection_unavailable"}))
+check("an authority that could not be asked is not a verdict on the grant",
+      d.outcome == "deny" and d.status == 503, d.error)
+
+e = granting(grant(single_use=True, operation=once))
+e.consume = AsyncMock(return_value=None)
+d = present(e)
+check("a spend that could not be attempted is not reported as a lost race",
+      d.outcome == "deny" and d.status == 503 and d.error != "already_consumed", d.error)
+e = granting(grant(single_use=True, operation=once))
+e.consume = AsyncMock(return_value={"consumed": False, "error": "already_consumed"})
+d = present(e)
+check("a spend someone else won is refused as already spent",
+      d.outcome == "deny" and d.error == "already_consumed", d.error)
+e = granting(grant(single_use=True, operation=once))
+e.consume = AsyncMock(return_value={"consumed": False, "error": "connection_revoked"})
+d = present(e)
+check("a grant revoked between the check and the spend is refused as revoked",
+      d.outcome == "deny" and d.error == "access_revoked", d.error)
 
 print("\n== a body the signature covers ==")
 d = present(granting(grant()), body=b'{"arguments":{}}')

@@ -49,11 +49,14 @@ POST   /perm            register attempted permissions -> ticket
 POST   /introspect      RPT introspection (permissions array). Never consumes by
                         default; an inactive answer carries an `error` reason
                         (invalid_signature | unknown_token | connection_revoked |
-                        already_consumed | revoked | expired) so the PEP can tell a
-                        re-negotiable failure from a settled one
+                        organization_revoked | already_consumed | revoked |
+                        expired) so the PEP can tell a re-negotiable failure from
+                        a settled one. A grant over another owner's resources is
+                        unknown_token, whatever its state
 POST   /consume         burn a single-use RPT — the atomic last step of
                         enforcement, called only after PoP and operation binding
-                        have passed
+                        have passed. {consumed: false} carries `error`:
+                        already_consumed | not_single_use | an introspection reason
 POST   /audit/access    the PEP reports an allowed call (grounds the ledger's "touched")
 
 # Token endpoint (agent-facing UMA 2.0 Grant shape, plus RS-facing PAT issuance)

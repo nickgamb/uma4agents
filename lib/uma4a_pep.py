@@ -182,6 +182,23 @@ class Decision:
 ALLOW = Decision(outcome="allow")
 
 
+# --- Why a grant is not live -------------------------------------------------
+
+# The reasons an authorization server gives for an inactive grant, and what
+# each allows. A renegotiable reason is answered with a fresh challenge; a
+# terminal one is a decision the owner or her organization already made, and
+# renegotiating would only reach it again. A reason not listed here is treated
+# as terminal: refusing is recoverable, and sending an agent round a loop of
+# negotiations that cannot succeed is not.
+RENEGOTIABLE = frozenset({"expired", "invalid_signature", "unknown_token",
+                          "already_consumed", "revoked"})
+TERMINAL = frozenset({"connection_revoked", "organization_revoked"})
+# Not reasons about the grant. The authority could not be asked; or it was,
+# and has not yet authorized this resource server to ask on the owner's behalf.
+UNAVAILABLE = "introspection_unavailable"
+PENDING = "authorization_pending"
+
+
 # --- The enforcer ------------------------------------------------------------
 
 
@@ -452,18 +469,19 @@ class Enforcer:
                 r.raise_for_status()
                 return r.json()
         except Pending:
-            return {"active": False}
+            return {"active": False, "error": PENDING}
         except (httpx.HTTPError, ValueError):
             # Not an answer about the token. Told apart from an inactive one,
             # so the caller neither errors out nor sends the agent to
             # negotiate a grant it may already hold.
-            return {"active": False, "error": "introspection_unavailable"}
+            return {"active": False, "error": UNAVAILABLE}
 
-    async def consume(self, token: str) -> bool | None:
+    async def consume(self, token: str) -> dict | None:
         """Burn a single-use RPT, once everything else has verified.
 
-        True when this call spent it, False when it was already spent, None
-        when the authorization server could not be asked."""
+        The authorization server's answer — `consumed`, and when false the
+        reason — or None when it could not be asked. Only an answer says the
+        grant was spent; a timeout says nothing about it either way."""
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.post(
@@ -472,12 +490,19 @@ class Enforcer:
                     headers=await self.pat_headers(client),
                     timeout=5.0,
                 )
+                if r.status_code == 401:
+                    # As at beat 1: the PAT lapsed or the authority re-keyed.
+                    await self.pat(client, force=True)
+                    r = await client.post(
+                        f"{self.as_internal}/consume",
+                        data={"token": token},
+                        headers=await self.pat_headers(client),
+                        timeout=5.0,
+                    )
                 r.raise_for_status()
-                return bool(r.json().get("consumed"))
-        except (httpx.HTTPError, ValueError):
+                return r.json()
+        except (httpx.HTTPError, ValueError, Pending):
             return None
-        except Pending:
-            return False
 
     async def report_access(self, family: str, tool: str, summary: str) -> None:
         """Ground the ledger's "touched" column in enforcement, not claims."""
@@ -542,10 +567,11 @@ class Enforcer:
                     timeout=5.0)
                 r.raise_for_status()
                 return r.json()
-        except httpx.HTTPError:
-            return {"active": False, "error": "organization_unreachable"}
+        except (httpx.HTTPError, ValueError):
+            return {"active": False, "error": UNAVAILABLE}
 
-    async def org_consume(self, token: str) -> bool:
+    async def org_consume(self, token: str) -> dict | None:
+        """As `consume`, against the organization that signed an override."""
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.post(
@@ -553,9 +579,9 @@ class Enforcer:
                     headers={"Authorization": f"Bearer {self.org_token}"},
                     timeout=5.0)
                 r.raise_for_status()
-                return bool(r.json().get("consumed"))
-        except httpx.HTTPError:
-            return False
+                return r.json()
+        except (httpx.HTTPError, ValueError):
+            return None
 
     async def org_report(self, family: str, tool: str, summary: str) -> None:
         """Report a call allowed under an override.
@@ -800,6 +826,24 @@ class Enforcer:
 
     # --- The verdict ----------------------------------------------------
 
+    async def not_live(self, reason: str, tool: str, rid: str,
+                       scopes: list[str]) -> "Decision":
+        """What to tell the agent when its grant is not live, by reason."""
+        if reason == UNAVAILABLE:
+            return Decision(outcome="deny", status=503, error="temporarily_unavailable",
+                            description="the authorization server could not be "
+                                        "asked about this grant")
+        if reason in RENEGOTIABLE or reason == PENDING:
+            # A pending resource server's challenge says it is waiting on her.
+            return await self.challenge(tool, rid, scopes)
+        if reason == "organization_revoked":
+            return Decision(outcome="deny", status=403, error="access_revoked",
+                            description="the owner's organization revoked this agent")
+        # connection_revoked, and anything this enforcement point does not
+        # recognise.
+        return Decision(outcome="deny", status=403, error="access_revoked",
+                        description="the resource owner revoked this agent")
+
     async def authorize(self, f: AuthzFacts) -> Decision:
         """Decide one request. The ordering below is normative — see PROTOCOL.md."""
         # MCP 2026-07-28 makes Origin validation a MUST.
@@ -866,18 +910,9 @@ class Enforcer:
         #    Non-consuming: nothing is spent before every check has passed.
         info = await (self.org_introspect(rpt) if override else self.introspect(rpt))
         if not info.get("active"):
-            reason = info.get("error", "inactive")
+            reason = info.get("error", "")
             self.event("access.denied", reason=f"inactive-rpt: {reason}", tool=f.tool)
-            # A revoked connection is a decision the owner already made.
-            # Re-challenging invites a negotiation whose outcome is settled.
-            if reason == "connection_revoked":
-                return Decision(outcome="deny", status=403, error="access_revoked",
-                                description="the resource owner revoked this agent")
-            if reason == "introspection_unavailable":
-                return Decision(outcome="deny", status=503, error="temporarily_unavailable",
-                                description="the authorization server could not be "
-                                            "asked about this grant")
-            return await self.challenge(f.tool, rid, scopes)
+            return await self.not_live(reason, f.tool, rid, scopes)
 
         # 2. Does the grant cover this resource, with the scopes this tool
         #    needs, at this moment? A permission is the unit of authority, so
@@ -1017,10 +1052,15 @@ class Enforcer:
                 return Decision(outcome="deny", status=503, error="temporarily_unavailable",
                                 description="the grant could not be spent because the "
                                             "authorization server could not be reached")
-            if not spent:
-                self.event("access.denied", reason="consume-lost-race", tool=f.tool)
-                return Decision(outcome="deny", status=403, error="already_consumed",
-                                description="this single-use grant was already spent")
+            if not spent.get("consumed"):
+                reason = spent.get("error", "")
+                if reason == "already_consumed":
+                    self.event("access.denied", reason="consume-lost-race", tool=f.tool)
+                    return Decision(outcome="deny", status=403, error="already_consumed",
+                                    description="this single-use grant was already spent")
+                # Live a moment ago and not now: revoked or expired in between.
+                self.event("access.denied", reason=f"consume-refused: {reason}", tool=f.tool)
+                return await self.not_live(reason, f.tool, rid, scopes)
 
         family = info.get("family", "?")
         self.event("access.allowed", corr=family, tool=f.tool,

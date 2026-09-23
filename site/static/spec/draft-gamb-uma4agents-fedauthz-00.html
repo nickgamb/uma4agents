@@ -1767,7 +1767,9 @@ defined:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <dt id="section-5-2.5">
 <code>unknown_token</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.6">
-          <p id="section-5-2.6.1">The token was not issued by this authorization server, or its record is gone.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.6.1">The token was not issued by this authorization server, its record is gone, or
+it was issued against the resources of an owner other than the one the
+protection API access token represents.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.7">
@@ -1793,12 +1795,17 @@ afresh.<a href="#section-5-2.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-3">Of these, <code>connection_revoked</code> is terminal: an enforcement point receiving it
+<p id="section-5-3">An authorization server <span class="bcp14">MUST</span> answer <code>unknown_token</code> for a token issued against
+another owner's resources, whatever that token's state. A resource server
+learns nothing about grants over resources it does not protect for this owner,
+including whether they are live.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Of these, <code>connection_revoked</code> is terminal: an enforcement point receiving it
 <span class="bcp14">MUST</span> refuse without issuing a fresh challenge, because renegotiation cannot
 change an outcome the owner has settled. The others <span class="bcp14">MAY</span> be answered with a
-fresh challenge.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">An extension <span class="bcp14">MAY</span> define further values. <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> defines
-<code>organization_revoked</code>.<a href="#section-5-4" class="pilcrow">¶</a></p>
+fresh challenge.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">An extension <span class="bcp14">MAY</span> define further values, and <span class="bcp14">MUST</span> say whether each is terminal.
+<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> defines <code>organization_revoked</code>, which is. An enforcement point
+receiving a value it does not recognise <span class="bcp14">MUST</span> treat it as terminal.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <div id="non-consuming">
 <section id="section-5.1">
         <h3 id="name-non-consuming-by-default">
@@ -1812,8 +1819,10 @@ protection API access token on it as on introspection, and it <span class="bcp14
 its caller whether that caller was the one that consumed the token.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <p id="section-5.1-2">The request carries the token as introspection does; the response is a JSON
 object with a <code>consumed</code> member. <code>true</code> means this caller spent the token;
-<code>false</code> means it was already spent, or was not a single-use token, and <span class="bcp14">MUST</span> be
-accompanied by an <code>error</code> member saying which.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<code>false</code> means it was not spent by this caller, and <span class="bcp14">MUST</span> be accompanied by an
+<code>error</code> member saying why: <code>already_consumed</code> when it had already been spent,
+<code>not_single_use</code> when it is not a single-use token, and otherwise the reason
+introspection would give for it now.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

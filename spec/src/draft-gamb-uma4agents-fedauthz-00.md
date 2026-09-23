@@ -351,7 +351,9 @@ defined:
 : The token did not verify.
 
 `unknown_token`:
-: The token was not issued by this authorization server, or its record is gone.
+: The token was not issued by this authorization server, its record is gone, or
+  it was issued against the resources of an owner other than the one the
+  protection API access token represents.
 
 `already_consumed`:
 : A single-use token has been spent.
@@ -366,13 +368,19 @@ defined:
   The token stays inactive; a grant under the new relationship is negotiated
   afresh.
 
+An authorization server MUST answer `unknown_token` for a token issued against
+another owner's resources, whatever that token's state. A resource server
+learns nothing about grants over resources it does not protect for this owner,
+including whether they are live.
+
 Of these, `connection_revoked` is terminal: an enforcement point receiving it
 MUST refuse without issuing a fresh challenge, because renegotiation cannot
 change an outcome the owner has settled. The others MAY be answered with a
 fresh challenge.
 
-An extension MAY define further values. {{U4AMultiParty}} defines
-`organization_revoked`.
+An extension MAY define further values, and MUST say whether each is terminal.
+{{U4AMultiParty}} defines `organization_revoked`, which is. An enforcement point
+receiving a value it does not recognise MUST treat it as terminal.
 
 ## Non-Consuming by Default {#non-consuming}
 
@@ -385,8 +393,10 @@ its caller whether that caller was the one that consumed the token.
 
 The request carries the token as introspection does; the response is a JSON
 object with a `consumed` member. `true` means this caller spent the token;
-`false` means it was already spent, or was not a single-use token, and MUST be
-accompanied by an `error` member saying which.
+`false` means it was not spent by this caller, and MUST be accompanied by an
+`error` member saying why: `already_consumed` when it had already been spent,
+`not_single_use` when it is not a single-use token, and otherwise the reason
+introspection would give for it now.
 
 # Reporting Allowed Access {#audit}
 

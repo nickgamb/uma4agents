@@ -673,24 +673,31 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
 # --- What the enforcement point asks -----------------------------------------
 
 
-def read_own(token: str) -> dict | None:
+def read_own(token: str) -> tuple[dict | None, str]:
+    """A grant this tally issued and still holds, or the reason from the
+    introspection vocabulary the enforcement point already speaks."""
     try:
-        return jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwks()["keys"][0])),
-                          algorithms=["EdDSA"], options={"verify_aud": False})
+        claims = jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwks()["keys"][0])),
+                            algorithms=["EdDSA"], options={"verify_aud": False})
+    except jwt.ExpiredSignatureError:
+        return None, "expired"
     except jwt.InvalidTokenError:
-        return None
+        return None, "invalid_signature"
+    if (claims.get("jti") or "") not in RPTS:
+        return None, "unknown_token"
+    return claims, ""
 
 
 @app.post("/introspect")
 async def introspect(request: Request, token: str = Form(...),
                      consume: str = Form("false")) -> dict:
     rs_auth(request)
-    claims = read_own(token)
-    if claims is None:
-        return {"active": False}
-    entry = RPTS.get(claims.get("jti") or "")
-    if entry is None or entry["spent"] or claims.get("exp", 0) < now():
-        return {"active": False}
+    claims, err = read_own(token)
+    if err:
+        return {"active": False, "error": err}
+    entry = RPTS[claims["jti"]]
+    if entry["spent"]:
+        return {"active": False, "error": "already_consumed"}
     if consume == "true" and claims.get("single_use"):
         entry["spent"] = True
     return {"active": True, **claims}
@@ -699,12 +706,14 @@ async def introspect(request: Request, token: str = Form(...),
 @app.post("/consume")
 async def consume(request: Request, token: str = Form(...)) -> dict:
     rs_auth(request)
-    claims = read_own(token)
-    if claims is None:
-        return {"consumed": False}
-    entry = RPTS.get(claims.get("jti") or "")
-    if entry is None or entry["spent"]:
-        return {"consumed": False}
+    claims, err = read_own(token)
+    if err:
+        return {"consumed": False, "error": err}
+    entry = RPTS[claims["jti"]]
+    if entry["spent"]:
+        return {"consumed": False, "error": "already_consumed"}
+    if not claims.get("single_use"):
+        return {"consumed": False, "error": "not_single_use"}
     entry["spent"] = True
     event("rpt.consumed", jti=claims.get("jti"))
     return {"consumed": True}

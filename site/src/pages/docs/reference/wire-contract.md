@@ -249,11 +249,19 @@ distinguishable from a settled one:
 | Reason | Enforcement point's response |
 |---|---|
 | `connection_revoked` | `403 access_revoked` — terminal, do not re-challenge |
+| `organization_revoked` | `403 access_revoked` — terminal: her organization ended the agent's reach to resources it claims |
 | `already_consumed` | Fresh challenge |
 | `revoked` | Fresh challenge — the grant ended with a connection she revoked, and the agent has since been admitted again |
 | `expired` | Fresh challenge |
-| `unknown_token` | Fresh challenge |
+| `unknown_token` | Fresh challenge. Also the answer for a grant over another owner's resources, whatever its state |
 | `invalid_signature` | Fresh challenge |
+| anything else | `403 access_revoked` — a reason the enforcement point does not recognise is treated as terminal |
+
+`/consume` answers `{"consumed": true}` to the caller that spent the grant.
+Otherwise `consumed` is false and `error` says why: `already_consumed`,
+`not_single_use`, or the reason introspection would give now. A caller that
+could not reach `/consume` has learned nothing about the grant, and answers
+`503`, not `already_consumed`.
 
 ## Ticket lifecycle
 

@@ -85,18 +85,18 @@ Table of Contents
      4.4.  Withdrawal  . . . . . . . . . . . . . . . . . . . . . . .   8
    5.  Introspection Reasons . . . . . . . . . . . . . . . . . . . .   8
      5.1.  Non-Consuming by Default  . . . . . . . . . . . . . . . .   9
-   6.  Reporting Allowed Access  . . . . . . . . . . . . . . . . . .   9
+   6.  Reporting Allowed Access  . . . . . . . . . . . . . . . . . .  10
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .  10
      7.1.  An Endpoint That Dereferences Will Dereference What It Is
            Told  . . . . . . . . . . . . . . . . . . . . . . . . . .  10
      7.2.  The Owner's Policy Is Not on the Protection API . . . . .  10
      7.3.  Revocation Reads the Store  . . . . . . . . . . . . . . .  10
-   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  10
+   8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  11
    9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
    10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
      10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
      10.2.  Informative References . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  13
    Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
@@ -453,7 +453,9 @@ Internet-Draft             FedAuthz for Agents            September 2026
    invalid_signature:  The token did not verify.
 
    unknown_token:  The token was not issued by this authorization
-      server, or its record is gone.
+      server, its record is gone, or it was issued against the resources
+      of an owner other than the one the protection API access token
+      represents.
 
    already_consumed:  A single-use token has been spent.
 
@@ -465,13 +467,20 @@ Internet-Draft             FedAuthz for Agents            September 2026
       agent has since been re-established.  The token stays inactive; a
       grant under the new relationship is negotiated afresh.
 
+   An authorization server MUST answer unknown_token for a token issued
+   against another owner's resources, whatever that token's state.  A
+   resource server learns nothing about grants over resources it does
+   not protect for this owner, including whether they are live.
+
    Of these, connection_revoked is terminal: an enforcement point
    receiving it MUST refuse without issuing a fresh challenge, because
    renegotiation cannot change an outcome the owner has settled.  The
    others MAY be answered with a fresh challenge.
 
-   An extension MAY define further values.  [U4AMultiParty] defines
-   organization_revoked.
+   An extension MAY define further values, and MUST say whether each is
+   terminal.  [U4AMultiParty] defines organization_revoked, which is.
+   An enforcement point receiving a value it does not recognise MUST
+   treat it as terminal.
 
 5.1.  Non-Consuming by Default
 
@@ -485,19 +494,10 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
    The request carries the token as introspection does; the response is
    a JSON object with a consumed member. true means this caller spent
-   the token; false means it was already spent, or was not a single-use
-   token, and MUST be accompanied by an error member saying which.
-
-6.  Reporting Allowed Access
-
-   An enforcement point SHOULD report each call it allows to the
-   authorization server, naming the negotiation it was made under and
-   what was reached, so that the owner's record holds what was done
-   alongside what was promised.
-
-
-
-
+   the token; false means it was not spent by this caller, and MUST be
+   accompanied by an error member saying why: already_consumed when it
+   had already been spent, not_single_use when it is not a single-use
+   token, and otherwise the reason introspection would give for it now.
 
 
 
@@ -505,6 +505,13 @@ Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+6.  Reporting Allowed Access
+
+   An enforcement point SHOULD report each call it allows to the
+   authorization server, naming the negotiation it was made under and
+   what was reached, so that the owner's record holds what was done
+   alongside what was promised.
 
    An enforcement point MUST NOT be told, and MUST NOT report, the
    identity handle of the client.  The authorization server resolves it
@@ -548,19 +555,16 @@ Internet-Draft             FedAuthz for Agents            September 2026
    that reached only the replica that served the request would leave the
    others honouring a credential the owner had just withdrawn.
 
-8.  Privacy Considerations
-
-   The considerations of [UMAFedAuthz] Section 8 apply.
-
-
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+8.  Privacy Considerations
+
+   The considerations of [UMAFedAuthz] Section 8 apply.
 
    The split in Section 2 exists because the alternative is a
    disclosure.  A public document listing the resources a named person
@@ -605,10 +609,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-   [RFC9530]  Polli, R. and L. Pardue, "Digest Fields", RFC 9530,
-              DOI 10.17487/RFC9530, February 2024,
-              <https://www.rfc-editor.org/rfc/rfc9530>.
-
 
 
 
@@ -617,6 +617,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+   [RFC9530]  Polli, R. and L. Pardue, "Digest Fields", RFC 9530,
+              DOI 10.17487/RFC9530, February 2024,
+              <https://www.rfc-editor.org/rfc/rfc9530>.
 
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
@@ -659,10 +663,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
 
-Appendix A.  Identifiers Used by This Document
-
-   This appendix lists the identifiers this document defines.  It is
-   informative and requests no registration.
 
 
 
@@ -673,6 +673,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
 
    +==========================+===============+==============+=========+
    | Name                     | Kind          | Meaning      | Defined |
@@ -717,11 +722,6 @@ Appendix B.  Implementation Status
    The reference implementation [U4ALAB] implements this document in
    full.  Both registration methods — declarative pull and the classic
    push endpoint of [UMAFedAuthz] — were built against an otherwise
-   identical stack and measured before push was retired to a preserved
-   branch.  The deadlock of Section 3.2 and the fail-open reading that
-   Section 4.1 warns against were both found by running it.
-
-
 
 
 
@@ -729,6 +729,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+   identical stack and measured before push was retired to a preserved
+   branch.  The deadlock of Section 3.2 and the fail-open reading that
+   Section 4.1 warns against were both found by running it.
 
 Acknowledgments
 
@@ -747,10 +751,6 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
-
-
-
-
 
 
 

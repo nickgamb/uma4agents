@@ -140,6 +140,13 @@ async def agreements_and_grants() -> None:
     _, _, error = await app._decode_rpt(token)
     check("admitting the same agent again does not revive what revocation ended",
           error == "revoked", f"error was {error!r}")
+    with patch.object(app, "require_pat", AsyncMock(return_value="carol")):
+        theirs = await app.introspect(None, token=token, consume=None)
+        spend = await app.consume_rpt(None, token=token)
+    check("another owner's resource server is not told it was revoked",
+          theirs == {"active": False, "error": "unknown_token"}, str(theirs))
+    check("nor told so when it tries to spend it",
+          spend == {"consumed": False, "error": "unknown_token"}, str(spend))
 
 
 async def whose_approval() -> None:

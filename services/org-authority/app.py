@@ -1282,27 +1282,38 @@ async def membership(owner: str, request: Request) -> dict:
     return {"member": True, "since": member["joined"], **_envelope_doc(owner)}
 
 
+def _read_grant(token: str) -> tuple[dict | None, str]:
+    """An override this service signed and still holds, or the reason from
+    the introspection vocabulary the enforcement point already speaks."""
+    try:
+        claims = jwt.decode(token, SIGNING_KEY.public_key(),
+                            algorithms=["EdDSA"], issuer=ISSUER,
+                            options={"verify_aud": False})
+    except jwt.ExpiredSignatureError:
+        return None, "expired"
+    except jwt.InvalidTokenError:
+        return None, "invalid_signature"
+    if (claims.get("jti") or "") not in GLASS:
+        return None, "unknown_token"
+    return claims, ""
+
+
 @app.post("/introspect")
 async def introspect(request: Request, token: str = Form(...)) -> dict:
     """RFC 7662 over a grant this service signed. Shaped exactly like the
     member authority's answer, so the enforcement point's code path is the
     same one — only the issuer it asked differs."""
     require_rs(request)
-    try:
-        claims = jwt.decode(token, SIGNING_KEY.public_key(),
-                            algorithms=["EdDSA"], issuer=ISSUER,
-                            options={"verify_aud": False})
-    except jwt.InvalidTokenError as exc:
-        return {"active": False, "error": str(exc)}
-    rec = GLASS.get(claims.get("jti") or "")
-    if rec is None:
-        return {"active": False, "error": "unknown_grant"}
-    if rec["spent"]:
+    claims, err = _read_grant(token)
+    if err:
+        return {"active": False, "error": err}
+    if GLASS[claims["jti"]]["spent"]:
         return {"active": False, "error": "already_consumed"}
     if claims["owner"] not in MEMBERS:
         # She left. An override rests entirely on membership, so it stops the
-        # moment membership does — including for a token already issued.
-        return {"active": False, "error": "not_a_member"}
+        # moment membership does — including for a token already issued. The
+        # relationship it was issued under has ended: `revoked`.
+        return {"active": False, "error": "revoked"}
     return {
         "active": True,
         "family": claims["jti"],
@@ -1321,14 +1332,11 @@ async def introspect(request: Request, token: str = Form(...)) -> dict:
 @app.post("/consume")
 async def consume(request: Request, token: str = Form(...)) -> dict:
     require_rs(request)
-    try:
-        claims = jwt.decode(token, SIGNING_KEY.public_key(),
-                            algorithms=["EdDSA"], issuer=ISSUER,
-                            options={"verify_aud": False})
-    except jwt.InvalidTokenError as exc:
-        return {"consumed": False, "error": str(exc)}
-    rec = GLASS.get(claims.get("jti") or "")
-    if rec is None or rec["spent"]:
+    claims, err = _read_grant(token)
+    if err:
+        return {"consumed": False, "error": err}
+    rec = GLASS[claims["jti"]]
+    if rec["spent"]:
         return {"consumed": False, "error": "already_consumed"}
     rec["spent"] = True
     note("break_glass.spent", member=rec["member"], jti=claims["jti"],
