@@ -20,6 +20,8 @@ about its own ceiling, not a fact about her policy.**
 """
 
 import copy
+import json
+import os
 import sys
 from pathlib import Path
 
@@ -98,9 +100,9 @@ def own(**over):
 # --- The pattern language ----------------------------------------------------
 #
 # Four evaluators have to agree on it: this one, the organization's, the
-# enforcement point's, and `glob.match` in org.rego. Only the first three can
-# be tested from here; the fourth is exercised by `make org-check`, which is
-# the reason that check asserts on an always-ask resource.
+# enforcement point's, and `glob.match` in org.rego. The first three are this
+# function; the fourth runs the shared vectors below in `make rego-test`, and
+# `make org-check` asserts it end to end on an always-ask resource.
 
 check("a charter pattern covers the organization's own resources",
       uma4a_org.claims_match(f"{BOOK}/get_positions", [f"{BOOK}/*"]))
@@ -111,6 +113,19 @@ check("a wildcard stops at the separator",
       not uma4a_org.claims_match(f"{BOOK}/sub/get_positions", [f"{BOOK}/*"]))
 check("an unrelated resource matches nothing",
       not uma4a_org.claims_match("alice-vault/get_statements", [f"{BOOK}/*"]))
+
+# The same vectors `make rego-test` runs through glob.match, so the Python
+# evaluator and the Rego one are held to one answer for each.
+_vectors = json.load(open(os.path.join(os.path.dirname(__file__), "pattern_vectors.json")))["vectors"]
+_wrong = [v for v in _vectors
+          if uma4a_org.claims_match(v["resource"], [v["pattern"]]) != v["match"]]
+check("every shared pattern vector matches as the vectors say", not _wrong, f"{_wrong}")
+for bad in ("north{wind,east}-vault/*", "northwind-vault/**", "[n]orthwind-vault/*",
+            "northwind-vault/get_?"):
+    check(f"{bad!r} is outside the pattern language",
+          uma4a_org.pattern_problem(bad) is not None)
+check("literal text and * are inside it",
+      uma4a_org.pattern_problem("north*-vault/get_*") is None)
 check("and the organization's copy of the matcher is the same object",
       charter.claims_match is uma4a_org.claims_match
       and org.claims_match is uma4a_org.claims_match)

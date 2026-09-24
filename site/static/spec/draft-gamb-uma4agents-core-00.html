@@ -1353,10 +1353,13 @@ a negotiation is specified as a set of parameters rather than as an HTTP header.
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-the-http-binding" class="internal xref">The HTTP Binding</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
-                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-structured-remediation" class="internal xref">Structured Remediation</a></p>
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-refusals-that-are-not-chall" class="internal xref">Refusals That Are Not Challenges</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
-                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-corroborating-the-authoriza" class="internal xref">Corroborating the Authorization Server</a></p>
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-structured-remediation" class="internal xref">Structured Remediation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-corroborating-the-authoriza" class="internal xref">Corroborating the Authorization Server</a></p>
 </li>
             </ul>
 </li>
@@ -1739,7 +1742,7 @@ access, as <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span> Secti
           <dd class="break"></dd>
 <dt id="section-3.1-3.13">authorization_remediation:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-3.14">
-            <p id="section-3.1-3.14.1"><span class="bcp14">REQUIRED</span>. See <a href="#remediation" class="auto internal xref">Section 3.3</a>.<a href="#section-3.1-3.14.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-3.14.1"><span class="bcp14">REQUIRED</span>. See <a href="#remediation" class="auto internal xref">Section 3.4</a>.<a href="#section-3.1-3.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1782,41 +1785,117 @@ WWW-Authenticate: UMA realm="alice-vault",
           </figcaption></figure>
 </section>
 </div>
-<div id="remediation">
+<div id="refusals">
 <section id="section-3.3">
-        <h3 id="name-structured-remediation">
-<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-structured-remediation" class="section-name selfRef">Structured Remediation</a>
+        <h3 id="name-refusals-that-are-not-chall">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-refusals-that-are-not-chall" class="section-name selfRef">Refusals That Are Not Challenges</a>
         </h3>
-<p id="section-3.3-1"><code>authorization_remediation</code> is the parameter of
-<span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span>, carrying the same base64url-encoded
-JSON object that draft defines, with two additional members. The object has:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-1">Some refusals cannot be resolved by negotiating: the owner has ended the
+relationship, the request was malformed, or the grant was spent. A challenge
+there would send the client round a negotiation whose outcome is settled. An
+enforcement point refusing for such a reason <span class="bcp14">MUST NOT</span> include a challenge, and
+over HTTP <span class="bcp14">MUST</span> answer with the status below and a JSON object whose <code>error</code>
+member is the value below and which <span class="bcp14">MAY</span> carry <code>error_description</code>:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.3-2">
-          <dt id="section-3.3-2.1">authorization_details:</dt>
+          <dt id="section-3.3-2.1">access_revoked:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.2">
-            <p id="section-3.3-2.2.1"><span class="bcp14">REQUIRED</span>. An array of authorization detail objects <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> describing what
-was attempted.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.2.1">
+<li id="section-3.3-2.2.1.1">
+                <p id="section-3.3-2.2.1.1.1">Introspection gave a terminal reason (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5); the
+owner, or a layer above her, has settled it, and renegotiating cannot change
+it.<a href="#section-3.3-2.2.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.3">authorization_reference:</dt>
+<dt id="section-3.3-2.3">already_consumed:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.4">
-            <p id="section-3.3-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over <code>authorization_details</code>, serialized as
-<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.4.1">
+<li id="section-3.3-2.4.1.1">
+                <p id="section-3.3-2.4.1.1.1">A single-use grant was spent by another request (<a href="#indivisibility" class="auto internal xref">Section 8.3</a>).<a href="#section-3.3-2.4.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.5">authorization_server:</dt>
+<dt id="section-3.3-2.5">operation_required, operation_mismatch:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.6">
-            <p id="section-3.3-2.6.1"><span class="bcp14">REQUIRED</span> by this profile. The issuer identifier of the authorization server
-that decides. Same value as the <code>as_uri</code> parameter.<a href="#section-3.3-2.6.1" class="pilcrow">¶</a></p>
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.6.1">
+<li id="section-3.3-2.6.1.1">
+                <p id="section-3.3-2.6.1.1.1">The grant is bound to no operation, or to a different one
+(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-3.3-2.6.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.7">ticket:</dt>
+<dt id="section-3.3-2.7">invalid_origin:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.8">
-            <p id="section-3.3-2.8.1"><span class="bcp14">REQUIRED</span> by this profile. Same value as the <code>ticket</code> parameter.<a href="#section-3.3-2.8.1" class="pilcrow">¶</a></p>
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.8.1">
+<li id="section-3.3-2.8.1.1">
+                <p id="section-3.3-2.8.1.1.1">The request came from an origin the enforcement point does not serve.<a href="#section-3.3-2.8.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.9">request_body_too_large:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.10">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.10.1">
+<li id="section-3.3-2.10.1.1">
+                <p id="section-3.3-2.10.1.1.1">The body was, or may have been, cut short before the enforcement point
+read it.<a href="#section-3.3-2.10.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.11">temporarily_unavailable:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.12">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.12.1">
+<li id="section-3.3-2.12.1.1">
+                <p id="section-3.3-2.12.1.1.1">The authorization server could not be asked; the client <span class="bcp14">MAY</span> retry the
+same request.<a href="#section-3.3-2.12.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-3.3-3">A binding defines how these travel where there is no status line, and <span class="bcp14">MAY</span> add
+values for refusals of its own.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="remediation">
+<section id="section-3.4">
+        <h3 id="name-structured-remediation">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-structured-remediation" class="section-name selfRef">Structured Remediation</a>
+        </h3>
+<p id="section-3.4-1"><code>authorization_remediation</code> is the parameter of
+<span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span>, carrying the same base64url-encoded
+JSON object that draft defines, with two additional members. The object has:<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.4-2">
+          <dt id="section-3.4-2.1">authorization_details:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.2">
+            <p id="section-3.4-2.2.1"><span class="bcp14">REQUIRED</span>. An array of authorization detail objects <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> describing what
+was attempted.<a href="#section-3.4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.3">authorization_reference:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.4">
+            <p id="section-3.4-2.4.1"><span class="bcp14">REQUIRED</span>. <code>s256</code> over <code>authorization_details</code>, serialized as
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-3.4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.5">authorization_server:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.6">
+            <p id="section-3.4-2.6.1"><span class="bcp14">REQUIRED</span> by this profile. The issuer identifier of the authorization server
+that decides. Same value as the <code>as_uri</code> parameter.<a href="#section-3.4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.7">ticket:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.8">
+            <p id="section-3.4-2.8.1"><span class="bcp14">REQUIRED</span> by this profile. Same value as the <code>ticket</code> parameter.<a href="#section-3.4-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <span id="name-a-decoded-authorization_rem"></span><figure id="figure-2">
-          <div class="lang-json sourcecode" id="section-3.3-3.1">
+          <div class="lang-json sourcecode" id="section-3.4-3.1">
 <pre>
 {
   "authorization_details": [{
@@ -1836,36 +1915,36 @@ that decides. Same value as the <code>as_uri</code> parameter.<a href="#section-
 <figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
 <a href="#name-a-decoded-authorization_rem" class="selfRef">A decoded authorization_remediation object.</a>
           </figcaption></figure>
-<p id="section-3.3-4">Those two additional members are what make a decision by a third party possible.
+<p id="section-3.4-4">Those two additional members are what make a decision by a third party possible.
 <span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span> hands the client a template to submit
 to <em>its own</em> authorization server, which cannot work when the resource belongs to
 someone else and the client's authorization server has no standing to grant.
 Naming the owner's authorization server, and handing back a ticket rather than a
 template, is the whole of the difference: the client authors nothing and cannot
-widen what it was given.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
-<p id="section-3.3-5">Emitting the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> vocabulary costs an enforcement point nothing, since it
+widen what it was given.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<p id="section-3.4-5">Emitting the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> vocabulary costs an enforcement point nothing, since it
 already knows the resource identifier and the scopes, and buys three things. A
 client that implements <span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span> can read most
 of the challenge without knowing UMA. A downstream policy engine receives typed
 fields rather than only a digest. And <code>authorization_reference</code> lets a client
 holding many grants decide whether it already has one for this shape without
-parsing the details.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
+parsing the details.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="corroboration">
-<section id="section-3.4">
+<section id="section-3.5">
         <h3 id="name-corroborating-the-authoriza">
-<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-corroborating-the-authoriza" class="section-name selfRef">Corroborating the Authorization Server</a>
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-corroborating-the-authoriza" class="section-name selfRef">Corroborating the Authorization Server</a>
         </h3>
-<p id="section-3.4-1">A client <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
+<p id="section-3.5-1">A client <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
 verify that its <code>resource</code> member identifies the resource being accessed as
 required by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code>
-does not appear in that document's <code>authorization_servers</code> array.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
-<p id="section-3.4-2">Without this, the only statement of which authorization server decides is an
+does not appear in that document's <code>authorization_servers</code> array.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">Without this, the only statement of which authorization server decides is an
 unauthenticated header on a refused request. With it, the challenge gains a
 second witness anchored in the resource's own TLS-protected origin. The challenge
 remains authoritative for the ticket, which is the one value the metadata
-document cannot carry.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+document cannot carry.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2572,7 +2651,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">extension</td>
             <td class="text-left" rowspan="1" colspan="1">Metadata documents predate this; the challenge carries <code>as_uri</code> on faith</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <a href="#corroboration" class="auto internal xref">Section 3.4</a>, <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>
+              <a href="#corroboration" class="auto internal xref">Section 3.5</a>, <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span>
 </td>
           </tr>
           <tr>
@@ -2628,7 +2707,7 @@ intended to be stock UMA 2.0.<a href="#section-12-2" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">The challenge carries <code>as_uri</code> and <code>ticket</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">
-              <a href="#remediation" class="auto internal xref">Section 3.3</a>
+              <a href="#remediation" class="auto internal xref">Section 3.4</a>
 </td>
           </tr>
           <tr>
@@ -3239,6 +3318,24 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
                 <a href="#operation-binding" class="auto internal xref">Section 7.3</a>
 </td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>consequence</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The declared class of the operation the grant was issued against</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>clearance</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">A digest of facts a party other than the requesting one attested</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rpt" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
           </tbody>
         </table>
 </section>
@@ -3267,7 +3364,7 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
 </td>
               <td class="text-left" rowspan="1" colspan="1">An attempted invocation of one named operation on a protected resource</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+                <a href="#remediation" class="auto internal xref">Section 3.4</a>
 </td>
             </tr>
           </tbody>
@@ -3312,12 +3409,21 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>access_revoked</code>, <code>already_consumed</code>, <code>operation_required</code>, <code>operation_mismatch</code>, <code>invalid_origin</code>, <code>request_body_too_large</code>, <code>temporarily_unavailable</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Error values of a refusal</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#refusals" class="auto internal xref">Section 3.3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>authorization_server</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+                <a href="#remediation" class="auto internal xref">Section 3.4</a>
 </td>
             </tr>
             <tr>
@@ -3327,7 +3433,7 @@ identifying URI. The identifying URIs of this set are:<a href="#appendix-A.1-1" 
               <td class="text-left" rowspan="1" colspan="1">Member of <code>authorization_remediation</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#remediation" class="auto internal xref">Section 3.3</a>
+                <a href="#remediation" class="auto internal xref">Section 3.4</a>
 </td>
             </tr>
           </tbody>
@@ -3419,7 +3525,7 @@ mechanics this profile composes with, and the observation that its resource
 token and UMA's permission ticket are the same object minted on opposite sides.
 <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> supplied the operator key directory.
 <span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span> supplied the remediation payload that
-<a href="#remediation" class="auto internal xref">Section 3.3</a> extends by two members.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+<a href="#remediation" class="auto internal xref">Section 3.4</a> extends by two members.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">

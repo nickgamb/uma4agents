@@ -250,6 +250,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [store-test]
     asserts: ["revoke: the connection is deactivated", "revoke: a grant issued under it can no longer be spent"]
+  - text: "An enforcement point refusing for such a reason MUST NOT include a challenge, and over HTTP MUST answer with the status below"
+    verified: check
+    targets: [pep-test, smoke-test]
+    asserts: ["a reason this side does not recognise is refused without a challenge", "a spend someone else won is refused as already spent", "truncated body: OK"]
   - text: "it MUST refuse with a reason naming the truncation"
     verified: check
     targets: [smoke-test]
@@ -621,10 +625,14 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["the member is told before any data moves"]
-  - text: "The tally MUST publish, for each jointly held resource, a mandate carrying:"
+  - text: "The tally MUST publish, for each jointly held resource, a mandate, at the URI its authorization server metadata names as u4a_mandate_endpoint"
     verified: check
     targets: [joint-check, k8s-policy-test]
-    asserts: ["the tally publishes who is entitled to be counted", "who is entitled to be counted is published"]
+    asserts: ["the tally names where each mandate is published, and publishes it there", "the tally publishes who is entitled to be counted", "who is entitled to be counted is published"]
+  - text: "An organization MUST publish a metadata document at the path"
+    verified: check
+    targets: [org-check, xaa-check]
+    asserts: ["the organization publishes where to enrol, read the ceiling, ask it and check what it signed", "both are members — one by code, one by invitation"]
   - text: "An owner MUST NOT appear twice."
     verified: check
     targets: [joint-test]

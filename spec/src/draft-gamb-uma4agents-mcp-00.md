@@ -151,7 +151,7 @@ tool call, that it must negotiate a grant and where.
 
 Whichever channel a client learns from, it MUST corroborate the authorization
 server named in any later challenge against the metadata document as
-{{U4ACore}} Section 3.4.
+{{U4ACore}} Section 3.5.
 
 # The Challenge {#challenge}
 
@@ -229,7 +229,10 @@ envelopes byte for byte is what shows the remediation payload of
 is binding-specific.
 
 A refusal for any other reason MUST use code `-32002`, with `data` carrying
-`error` and `status` as the HTTP binding would have.
+the `error` value and the HTTP `status` {{U4ACore}} Section 3.3 gives it. This
+binding adds two values of its own, both with status 400: `missing_routing_headers`,
+where a request omits the routing headers of {{routing-headers}}, and
+`header_body_mismatch`, where they disagree with the body.
 
 ## A Client Reads Both {#client}
 
@@ -328,7 +331,9 @@ to anyone who fetches it. No additional disclosure is made.
 This document makes no request of IANA. The JSON-RPC error codes `-32001` and
 `-32002` are in the range {{JSONRPC}} reserves for implementation-defined
 server errors, and the extension identifier `dev.uma4agents/uma-enforcement`
-follows {{MCP}}'s convention for vendor-prefixed extension identifiers.
+follows {{MCP}}'s convention for vendor-prefixed extension identifiers. The
+refusal values `missing_routing_headers` and `header_body_mismatch` are this
+binding's, carried in `data` beside those of {{U4ACore}} Section 3.3.
 
 --- back
 

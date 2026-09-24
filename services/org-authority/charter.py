@@ -38,6 +38,7 @@ import uma4a_clearance as clearance
 import re
 
 from uma4a_org import claims_match as _claims_match
+from uma4a_org import pattern_problem
 
 # One month. Not a policy — a bound on what any policy may say, so a typo in
 # a units field cannot mint a year-long grant across every member at once.
@@ -440,6 +441,16 @@ def validate(charter: dict) -> dict:
             "sits above the member's policy and can only ever make a request "
             "harder. What she permits is hers to decide.")
     out["rego"] = rego
+
+    # Every pattern the charter carries, in the one language all four
+    # evaluators read the same way.
+    patterns = list(out.get("claims") or [])
+    patterns += [g for r in (out.get("roles") or {}).values() for g in r.get("grants") or []]
+    patterns += list((out.get("break_glass") or {}).get("resources") or [])
+    patterns += list((out.get("envelope") or {}).get("always_ask") or [])
+    for pattern in patterns:
+        if problem := pattern_problem(pattern):
+            raise ValueError(problem)
     return out
 
 

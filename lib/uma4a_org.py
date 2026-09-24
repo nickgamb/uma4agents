@@ -61,6 +61,24 @@ def claims_match(resource_id: str, patterns) -> bool:
     return False
 
 
+def pattern_problem(pattern) -> str | None:
+    """Why a charter pattern is outside the language, or None.
+
+    The language is literal text and `*`, matched one segment at a time. Four
+    evaluators have to agree on what a pattern matches, and two of them are
+    in different languages: this one, and `glob.match` in the organization's
+    Rego, which would also read `{a,b}` as alternation and `**` as crossing a
+    separator. Nothing a charter may say is read differently by the two.
+    """
+    if not isinstance(pattern, str) or not pattern:
+        return "a pattern must be a non-empty string"
+    if extra := "".join(sorted(set(pattern) & set("?[]{}!\\"))):
+        return f"{pattern!r} uses {extra}; a pattern is literal text and * alone"
+    if "**" in pattern:
+        return f"{pattern!r} uses **; a * matches within one segment only"
+    return None
+
+
 def envelope_breach(permission: dict, envelope: dict, remaining_s: float) -> str | None:
     """Whether a grant sits outside the organization's ceiling, and how.
 

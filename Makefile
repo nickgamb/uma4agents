@@ -115,7 +115,8 @@ logs:
 	docker compose logs -f
 
 ## fixture: the grant with nothing standing behind it — no identity provider,
-## no database, no gateway, no certificate, no host state. A test harness for
+## no database, no gateway, no host state, and one certificate it makes for
+## itself on first run. A test harness for
 ## the protocol on its own, not a deployment. See docs/FIXTURE.md.
 .PHONY: fixture fixture-down owner flow-check first-party-check subagent-check assurance-check kwaai-check kwaai-host
 fixture:
@@ -519,6 +520,18 @@ client-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		sh -c "pip install -q 'pyjwt[crypto]' httpx && python lib/test_client.py"
 
+## rego-test: the organization's Rego reads a charter pattern as Python does.
+## The same vectors org-test runs, through glob.match exactly as org.rego calls
+## it, on the OPA the cluster runs. Needs nothing else.
+.PHONY: rego-test
+rego-test:
+	@docker run --rm --platform linux/amd64 -v "$(PWD)/lib:/v:ro" openpolicyagent/opa:1.4.2 eval --fail-defined \
+		-d /v/pattern_vectors.json \
+		'some v in data.vectors; glob.match(v.pattern, ["/"], v.resource) != v.match' \
+		>/dev/null \
+		&& echo "rego: every shared pattern vector matches as the vectors say" \
+		|| { echo "rego: a shared pattern vector does not match as the vectors say"; exit 1; }
+
 ## store-test: prove single-use really is single-use, on both storage backends
 # The authorization server's state has two implementations — in-process for
 # this stack, Postgres for the replicated one — and they must be the same
@@ -616,7 +629,7 @@ include Makefile.k8s
 ## stack. The register names these as what proves the drafts; a check that
 ## nobody runs is a claim, and this is how they all get run.
 .PHONY: check-all check-unit check-live
-check-unit: rules-test sig-test pep-test introduction-test org-test joint-test as-test client-test store-test
+check-unit: rules-test sig-test pep-test introduction-test org-test rego-test joint-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
 	establishment-check assurance-check intent-check consequence-check \
 	clearance-check \

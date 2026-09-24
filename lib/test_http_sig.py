@@ -210,6 +210,37 @@ for _ in range(50):
     asyncio.run(_keys.get(refresh=True))         # a flood of bad signatures
 ok("and a flood of bad signatures forces no more than that one", lambda: _fetched(2))
 
+# An operator's key directory. A hit may come from cache; a miss is always
+# looked at again, so a key the operator has just published is recognised at
+# once rather than after the cache expires.
+from uma4a_http_sig import KeyDirectories, jwk_thumbprint      # noqa: E402
+
+_published = [pub_jwk_a := {"kty": "OKP", "crv": "Ed25519", "x": "A" * 43}]
+
+
+def _dir_get(url, timeout=None, follow_redirects=None, verify=None):
+    _FETCHES.append(url)
+    return types.SimpleNamespace(raise_for_status=lambda: None,
+                                 json=lambda: {"keys": list(_published)})
+
+
+sys.modules["httpx"] = types.SimpleNamespace(get=_dir_get)
+_FETCHES.clear()
+_dirs = KeyDirectories()
+_where = "https://operator.example/.well-known/http-message-signatures-directory"
+_new = {"kty": "OKP", "crv": "Ed25519", "x": "B" * 43}
+_dirs.publishes(_where, jwk_thumbprint(pub_jwk_a))
+_dirs.publishes(_where, jwk_thumbprint(pub_jwk_a))
+ok("a key the directory holds is answered from cache the second time",
+   lambda: _fetched(1))
+_published.append(_new)
+ok("and a key it has just published is recognised at once, not after the TTL",
+   lambda: _dirs.publishes(_where, jwk_thumbprint(_new))[0]
+   or (_ for _ in ()).throw(VerifyError("not recognised")))
+ok("a directory that is not https is not consulted",
+   lambda: not _dirs.publishes("http://operator.example/d", jwk_thumbprint(_new))[0]
+   or (_ for _ in ()).throw(VerifyError("consulted")))
+
 if FAILED:
     print(f"\nhttp-sig: {PASSED} passed, {FAILED} failed")
     sys.exit(1)

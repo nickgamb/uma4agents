@@ -63,7 +63,7 @@ from jwt.algorithms import OKPAlgorithm
 
 import charter as charter_mod
 import uma4a_clearance as clearance_mod
-from uma4a_http_sig import VerifyError, verify
+from uma4a_http_sig import DIRECTORY_PATH, KeyDirectories, VerifyError, verify
 
 ISSUER = os.environ.get("ORG_ISSUER", "https://northwind-org.uma.lab")
 ORG_AUTHORITY = ISSUER.split("://", 1)[-1].rstrip("/")
@@ -250,9 +250,9 @@ async def announce_charter(entry: dict) -> None:
     # The charter is in force from the moment it was published. Telling its
     # members is follow-up, sent together and not awaited: one unreachable
     # member must not make the administrator's publish look as if it failed.
-    task = asyncio.create_task(asyncio.gather(
+    task = asyncio.gather(
         *(notify_member(owner, notice) for owner in list(MEMBERS)),
-        return_exceptions=True))
+        return_exceptions=True)
     _NOTICES.add(task)
     task.add_done_callback(_NOTICES.discard)
 
@@ -572,7 +572,7 @@ async def boot() -> None:
 # raise a floor.
 
 
-_DIRECTORY_CACHE: dict[str, tuple[float, str, list]] = {}
+_IDP_DIRECTORY_CACHE: dict[str, tuple[float, str, list]] = {}
 
 
 def _directory_of(idp: dict) -> tuple[str, list]:
@@ -591,7 +591,7 @@ def _directory_of(idp: dict) -> tuple[str, list]:
     A customer's employee directory belongs to the customer.
     """
     issuer = idp["issuer"].rstrip("/")
-    cached = _DIRECTORY_CACHE.get(issuer)
+    cached = _IDP_DIRECTORY_CACHE.get(issuer)
     if cached and cached[0] > now():
         return cached[1], cached[2]
     with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
@@ -606,7 +606,7 @@ def _directory_of(idp: dict) -> tuple[str, list]:
         jwks = c.get(conf.json()["jwks_uri"])
         jwks.raise_for_status()
     keys = jwks.json()["keys"]
-    _DIRECTORY_CACHE[issuer] = (now() + 300, directory, keys)
+    _IDP_DIRECTORY_CACHE[issuer] = (now() + 300, directory, keys)
     return directory, keys
 
 
@@ -1007,7 +1007,8 @@ async def decision(request: Request) -> dict:
 # charter lists. Nothing else.
 
 VOUCHERS: dict[str, dict] = {}
-_DIRECTORY_CACHE: dict[str, tuple[float, list]] = {}
+# Operators' key directories, checked the way a member's authority checks them.
+DIRECTORIES = KeyDirectories(verify=CA_BUNDLE or True)
 # Signatures already spent, for as long as one could still be replayed.
 #
 # An RFC 9421 signature is valid for a window — sixty seconds here — and a
@@ -1028,26 +1029,12 @@ def invoker_published_key(origin: str, jwk_thumb: str) -> bool:
     proves nothing, and only the operator can put a key in the directory it
     serves.
     """
-    directory = f"{origin.rstrip('/')}/.well-known/http-message-signatures-directory"
-    cached = _DIRECTORY_CACHE.get(directory)
-    if cached and cached[0] > now():
-        keys = cached[1]
-    else:
-        try:
-            r = httpx.get(directory, timeout=5.0, follow_redirects=False,
-                          verify=CA_BUNDLE or True)
-            r.raise_for_status()
-            keys = r.json().get("keys") or []
-            _DIRECTORY_CACHE[directory] = (now() + 300, keys)
-        except Exception as exc:                                # noqa: BLE001
-            event("invoker_directory.unresolved", origin=origin, error=str(exc))
-            return False
-    for key in keys:
-        if key.get("kty") != "OKP":
-            continue
-        if _thumbprint(key) == jwk_thumb:
-            return True
-    return False
+    try:
+        found, _ = DIRECTORIES.publishes(f"{origin.rstrip('/')}{DIRECTORY_PATH}", jwk_thumb)
+    except Exception as exc:                                    # noqa: BLE001
+        event("invoker_directory.unresolved", origin=origin, error=str(exc))
+        return False
+    return found
 
 
 def _thumbprint(jwk: dict) -> str:

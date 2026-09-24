@@ -19,8 +19,10 @@ four beats unchanged across both](reference-vs-fixture.svg)
 make fixture
 ```
 
-Two containers. No `make init`, no certificate, no DNS zone, no sudo, no host
-state at all. Cold start under ten seconds once the images are built, and about
+Two containers. No `make init`, no DNS zone, no sudo, no host state at all,
+and one certificate the fixture makes for its resource on first run: her
+authority reads a resource's metadata and keys only over https, which is how a
+resource server nobody provisioned proves who it is. Cold start under ten seconds once the images are built, and about
 90 MB resident. And the same four
 beats, the same terms, the same proof-of-possession token, the same refusals.
 
@@ -31,7 +33,7 @@ beats, the same terms, the same proof-of-possession token, the same refusals.
 | Keycloak | a key Alice holds | she enrols one public key instead of running an IdP |
 | Postgres ×3 | the in-memory store | state does not survive a restart, and single-use is only indivisible within one process |
 | agentgateway + uma-pep | the resource enforcing in-process | the resource has authorization code in it |
-| mkcert CA, DNS zone, edge | plain http on the container network | no transport confidentiality — a lab-only trade |
+| mkcert CA, DNS zone, edge | a throwaway CA and one certificate, for the resource; plain http elsewhere on the container network | no transport confidentiality between the other two — a lab-only trade |
 | push registration | the pull that was already the default | none; this was already true |
 
 The middle two are the ones to argue about. The rest are the point.

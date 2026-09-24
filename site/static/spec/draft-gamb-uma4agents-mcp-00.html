@@ -1500,7 +1500,7 @@ trip and no well-known URI. A client that receives it knows, before its first
 tool call, that it must negotiate a grant and where.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <p id="section-2-5">Whichever channel a client learns from, it <span class="bcp14">MUST</span> corroborate the authorization
 server named in any later challenge against the metadata document as
-<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 3.4.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 3.5.<a href="#section-2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="challenge">
@@ -1588,7 +1588,10 @@ envelopes byte for byte is what shows the remediation payload of
 <span>[<a href="#I-D.ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.ietf-oauth-rar-metadata-remediation</a>]</span> is portable, and only the envelope
 is binding-specific.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <p id="section-3.2-4">A refusal for any other reason <span class="bcp14">MUST</span> use code <code>-32002</code>, with <code>data</code> carrying
-<code>error</code> and <code>status</code> as the HTTP binding would have.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+the <code>error</code> value and the HTTP <code>status</code> <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 3.3 gives it. This
+binding adds two values of its own, both with status 400: <code>missing_routing_headers</code>,
+where a request omits the routing headers of <a href="#routing-headers" class="auto internal xref">Section 6</a>, and
+<code>header_body_mismatch</code>, where they disagree with the body.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="client">
@@ -1733,7 +1736,9 @@ to anyone who fetches it. No additional disclosure is made.<a href="#section-10-
 <p id="section-11-1">This document makes no request of IANA. The JSON-RPC error codes <code>-32001</code> and
 <code>-32002</code> are in the range <span>[<a href="#JSONRPC" class="cite xref">JSONRPC</a>]</span> reserves for implementation-defined
 server errors, and the extension identifier <code>dev.uma4agents/uma-enforcement</code>
-follows <span>[<a href="#MCP" class="cite xref">MCP</a>]</span>'s convention for vendor-prefixed extension identifiers.<a href="#section-11-1" class="pilcrow">¶</a></p>
+follows <span>[<a href="#MCP" class="cite xref">MCP</a>]</span>'s convention for vendor-prefixed extension identifiers. The
+refusal values <code>missing_routing_headers</code> and <code>header_body_mismatch</code> are this
+binding's, carried in <code>data</code> beside those of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 3.3.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">

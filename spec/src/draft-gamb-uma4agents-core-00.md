@@ -379,6 +379,41 @@ WWW-Authenticate: UMA realm="alice-vault",
 ~~~
 {: title="A challenge over HTTP. Line breaks are for display only."}
 
+## Refusals That Are Not Challenges {#refusals}
+
+Some refusals cannot be resolved by negotiating: the owner has ended the
+relationship, the request was malformed, or the grant was spent. A challenge
+there would send the client round a negotiation whose outcome is settled. An
+enforcement point refusing for such a reason MUST NOT include a challenge, and
+over HTTP MUST answer with the status below and a JSON object whose `error`
+member is the value below and which MAY carry `error_description`:
+
+access_revoked:
+: 403. Introspection gave a terminal reason ({{U4AFedAuthz}} Section 5); the
+  owner, or a layer above her, has settled it, and renegotiating cannot change
+  it.
+
+already_consumed:
+: 403. A single-use grant was spent by another request ({{indivisibility}}).
+
+operation_required, operation_mismatch:
+: 403. The grant is bound to no operation, or to a different one
+  ({{operation-binding}}).
+
+invalid_origin:
+: 403. The request came from an origin the enforcement point does not serve.
+
+request_body_too_large:
+: 413. The body was, or may have been, cut short before the enforcement point
+  read it.
+
+temporarily_unavailable:
+: 503. The authorization server could not be asked; the client MAY retry the
+  same request.
+
+A binding defines how these travel where there is no status line, and MAY add
+values for refusals of its own.
+
 ## Structured Remediation {#remediation}
 
 `authorization_remediation` is the parameter of
@@ -1129,6 +1164,8 @@ identifying URI. The identifying URIs of this set are:
 | `contract` | Digest of the agreement a grant was issued on | {{rpt}} |
 | `single_use` | Whether a token may be spent once | {{operation-binding}} |
 | `operation` | The single operation, and the digest of its parameters, a token is bound to | {{operation-binding}} |
+| `consequence` | The declared class of the operation the grant was issued against | {{rpt}} |
+| `clearance` | A digest of facts a party other than the requesting one attested | {{rpt}} |
 {: title="JWT claims used by this document."}
 
 ## Authorization Details Type
@@ -1144,6 +1181,7 @@ identifying URI. The identifying URIs of this set are:
 |---|---|---|
 | `insufficient_authorization` | Error value of the challenge | {{challenge-parameters}} |
 | `PoP` | Token type | {{rpt}} |
+| `access_revoked`, `already_consumed`, `operation_required`, `operation_mismatch`, `invalid_origin`, `request_body_too_large`, `temporarily_unavailable` | Error values of a refusal | {{refusals}} |
 | `authorization_server` | Member of `authorization_remediation` | {{remediation}} |
 | `ticket` | Member of `authorization_remediation` | {{remediation}} |
 {: title="Other values used by this document."}

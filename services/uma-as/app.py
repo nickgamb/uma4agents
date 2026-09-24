@@ -40,6 +40,7 @@ import uma4a_clearance
 import uma4a_consequence
 import uma4a_joint
 import uma4a_profiles
+from uma4a_http_sig import KeyDirectories
 import policy
 import store
 
@@ -2925,9 +2926,9 @@ async def trajectory_facts(owner: str, handle: str) -> dict:
 # how it stops vouching for an agent, and a cache with no expiry would keep
 # attesting one it had disowned. Bounded as well as timed: the URL is named by
 # the requesting side, so an unbounded map is something an agent can grow.
-_DIRECTORY_TTL = float(os.environ.get("UMA_AS_DIRECTORY_TTL", "300"))
-_DIRECTORY_MAX = 256
-_DIRECTORY_CACHE: dict[str, tuple[float, list]] = {}
+DIRECTORIES = KeyDirectories(
+    ttl_s=float(os.environ.get("UMA_AS_DIRECTORY_TTL", "300")),
+    verify=AGENT_ISSUER_CA or True)
 
 
 def operator_origin(identity: dict) -> str | None:
@@ -2974,53 +2975,19 @@ def operator_published_key(client_id: str, directory: str,
       the agent, and treating it as such makes any operator's outage look
       like an attack.
     """
-    import httpx
-
     if not same_origin(client_id, directory):
         event("operator_directory.rejected", client_id=client_id,
               directory=directory, reason="not same origin as client_id")
         return False
-    def fetch() -> list:
-        r = httpx.get(directory, timeout=5.0, follow_redirects=False,
-                      verify=AGENT_ISSUER_CA or True)
-        r.raise_for_status()
-        keys = r.json().get("keys") or []
-        if len(_DIRECTORY_CACHE) >= _DIRECTORY_MAX:
-            _DIRECTORY_CACHE.pop(next(iter(_DIRECTORY_CACHE)), None)
-        _DIRECTORY_CACHE[directory] = (now(), keys)
-        return keys
-
     try:
-        wanted = jwk_thumbprint(signer_jwk)
-
-        def holds(keys: list) -> bool:
-            for k in keys:
-                try:                   # a directory may hold key types we do
-                    if jwk_thumbprint(k) == wanted:   # not profile; skip them
-                        return True
-                except (KeyError, TypeError):
-                    continue
-            return False
-
-        # Only a *hit* may be served from cache. A miss is re-fetched, because
-        # the two errors are not the same size: a stale hit keeps attesting a
-        # key the operator has disowned, while a stale miss merely fails to
-        # recognise one it has just published — which is the common case, since
-        # an agent enrols and then immediately negotiates. So the TTL bounds
-        # how long a withdrawal takes to land, and a newly published key is
-        # picked up on the next request rather than in five minutes.
-        cached = _DIRECTORY_CACHE.get(directory)
-        fresh = cached is not None and now() - cached[0] < _DIRECTORY_TTL
-        found = fresh and holds(cached[1])
-        if not found:
-            found = holds(fetch())
-        event("operator_directory.checked", directory=directory,
-              published=found, from_cache=bool(fresh and found))
-        return found
+        found, cached = DIRECTORIES.publishes(directory, jwk_thumbprint(signer_jwk))
     except Exception as exc:                                       # noqa: BLE001
         event("operator_directory.unresolved", directory=directory,
               reason=str(exc)[:120])
         return False
+    event("operator_directory.checked", directory=directory,
+          published=found, from_cache=cached)
+    return found
 
 
 

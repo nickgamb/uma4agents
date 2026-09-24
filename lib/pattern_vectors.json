@@ -1,0 +1,19 @@
+{
+  "about": "What a charter pattern matches, for every evaluator of the language: lib/uma4a_org.py (make org-test) and glob.match in the organization's Rego (make rego-test). A pattern is literal text and *, and a * matches within one segment.",
+  "vectors": [
+    {"pattern": "northwind-vault/*", "resource": "northwind-vault/get_positions", "match": true},
+    {"pattern": "northwind-vault/*", "resource": "northwind-vault/sub/get_positions", "match": false},
+    {"pattern": "northwind-vault/*", "resource": "northwind-vault", "match": false},
+    {"pattern": "northwind-vault/*", "resource": "alice-vault/get_positions", "match": false},
+    {"pattern": "*/get_positions", "resource": "alice-vault/get_positions", "match": true},
+    {"pattern": "*/get_positions", "resource": "alice-vault/nested/get_positions", "match": false},
+    {"pattern": "northwind-vault/get_*", "resource": "northwind-vault/get_transactions", "match": true},
+    {"pattern": "northwind-vault/get_*", "resource": "northwind-vault/execute_trade", "match": false},
+    {"pattern": "northwind-vault/execute_trade", "resource": "northwind-vault/execute_trade", "match": true},
+    {"pattern": "northwind-vault/execute_trade", "resource": "northwind-vault/execute_trades", "match": false},
+    {"pattern": "*/*", "resource": "a/b", "match": true},
+    {"pattern": "*/*", "resource": "a/b/c", "match": false},
+    {"pattern": "north*-vault/*", "resource": "northwind-vault/get_positions", "match": true},
+    {"pattern": "north*-vault/*", "resource": "north/x-vault/get_positions", "match": false}
+  ]
+}

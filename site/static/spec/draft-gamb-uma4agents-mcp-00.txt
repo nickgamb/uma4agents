@@ -84,14 +84,14 @@ Table of Contents
    8.  Truncated Bodies  . . . . . . . . . . . . . . . . . . . . . .   7
    9.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
      9.1.  Two Parsers, One Message  . . . . . . . . . . . . . . . .   7
-     9.2.  The Challenge Is an Error . . . . . . . . . . . . . . . .   7
+     9.2.  The Challenge Is an Error . . . . . . . . . . . . . . . .   8
      9.3.  Deny by Default Is Not Optional . . . . . . . . . . . . .   8
    10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .   8
    11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .   8
    12. References  . . . . . . . . . . . . . . . . . . . . . . . . .   8
      12.1.  Normative References . . . . . . . . . . . . . . . . . .   8
      12.2.  Informative References . . . . . . . . . . . . . . . . .   9
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .   9
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  10
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  10
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  10
 
@@ -190,7 +190,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
    Whichever channel a client learns from, it MUST corroborate the
    authorization server named in any later challenge against the
-   metadata document as [U4ACore] Section 3.4.
+   metadata document as [U4ACore] Section 3.5.
 
 3.  The Challenge
 
@@ -290,7 +290,11 @@ Internet-Draft             MCP Binding for UMA            September 2026
    portable, and only the envelope is binding-specific.
 
    A refusal for any other reason MUST use code -32002, with data
-   carrying error and status as the HTTP binding would have.
+   carrying the error value and the HTTP status [U4ACore] Section 3.3
+   gives it.  This binding adds two values of its own, both with status
+   400: missing_routing_headers, where a request omits the routing
+   headers of Section 6, and header_body_mismatch, where they disagree
+   with the body.
 
 3.3.  A Client Reads Both
 
@@ -326,10 +330,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    own user.  [MCP]'s input-required result addresses the client's own
    model, filesystem or human, and has no member for a principal who is
    not on this connection.  Until it does, an implementation MUST convey
-   in the human-readable content of the request that the party being
-   waited on is the resource owner and is not reachable by the client,
-   and MUST limit what it asks its own user to the one question that is
-   genuinely theirs: keep waiting, or stop.
 
 
 
@@ -337,6 +337,11 @@ Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
+
+   in the human-readable content of the request that the party being
+   waited on is the resource owner and is not reachable by the client,
+   and MUST limit what it asks its own user to the one question that is
+   genuinely theirs: keep waiting, or stop.
 
 6.  Routing Headers
 
@@ -379,13 +384,8 @@ Internet-Draft             MCP Binding for UMA            September 2026
    the body is a header that lets an attacker tell the intermediary one
    thing and the resource another.
 
-9.2.  The Challenge Is an Error
 
-   See Section 3.1.  A gateway-hosted enforcement point cannot return a
-   result the client will see, so a design that expresses a pending
-   grant as a result from that position cannot be implemented.  Both
-   encodings use an error so that a client need not care which host it
-   reached.
+
 
 
 
@@ -393,6 +393,14 @@ Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
+
+9.2.  The Challenge Is an Error
+
+   See Section 3.1.  A gateway-hosted enforcement point cannot return a
+   result the client will see, so a design that expresses a pending
+   grant as a result from that position cannot be implemented.  Both
+   encodings use an error so that a client need not care which host it
+   reached.
 
 9.3.  Deny by Default Is Not Optional
 
@@ -414,7 +422,9 @@ Internet-Draft             MCP Binding for UMA            September 2026
    -32001 and -32002 are in the range [JSONRPC] reserves for
    implementation-defined server errors, and the extension identifier
    dev.uma4agents/uma-enforcement follows [MCP]'s convention for vendor-
-   prefixed extension identifiers.
+   prefixed extension identifiers.  The refusal values
+   missing_routing_headers and header_body_mismatch are this binding's,
+   carried in data beside those of [U4ACore] Section 3.3.
 
 12.  References
 
@@ -430,16 +440,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [JSONRPC]  JSON-RPC Working Group, "JSON-RPC 2.0 Specification", 4
               January 2013, <https://www.jsonrpc.org/specification>.
 
-   [MCP]      Model Context Protocol project, "Model Context Protocol
-              Specification, revision 2026-07-28", 28 July 2026,
-              <https://modelcontextprotocol.io/
-              specification/2026-07-28>.
-
-   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119,
-              DOI 10.17487/RFC2119, March 1997,
-              <https://www.rfc-editor.org/rfc/rfc2119>.
-
 
 
 
@@ -449,6 +449,16 @@ Gamb & Maler              Expires 19 March 2027                 [Page 8]
 
 Internet-Draft             MCP Binding for UMA            September 2026
 
+
+   [MCP]      Model Context Protocol project, "Model Context Protocol
+              Specification, revision 2026-07-28", 28 July 2026,
+              <https://modelcontextprotocol.io/
+              specification/2026-07-28>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
 
    [RFC6454]  Barth, A., "The Web Origin Concept", RFC 6454,
               DOI 10.17487/RFC6454, December 2011,
@@ -488,6 +498,14 @@ Internet-Draft             MCP Binding for UMA            September 2026
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
+
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
@@ -496,15 +514,6 @@ Appendix A.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
 
    The reference implementation [U4ALAB] runs both hosting shapes of
    Section 3 against one authorization server — an external
@@ -534,15 +543,6 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
-
-
-
-
-
-
-
-
-
 
 
 

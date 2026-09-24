@@ -18,6 +18,7 @@ AAuth Go verifier is binding-document work.
 
 import base64
 import hashlib
+import json
 import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -228,3 +229,67 @@ def verify(method: str, authority: str, path: str, authorization: str,
     except Exception as exc:
         raise VerifyError("signature verification failed") from exc
     return keyid
+
+
+# --- Operators' key directories ----------------------------------------------
+
+DIRECTORY_PATH = "/.well-known/http-message-signatures-directory"
+
+
+def jwk_thumbprint(jwk: dict) -> str:
+    """RFC 7638 thumbprint of an Ed25519 key, in the `jkt:` form used here."""
+    canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
+                           separators=(",", ":"), sort_keys=True)
+    return "jkt:" + base64.urlsafe_b64encode(
+        hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
+
+
+class KeyDirectories:
+    """Operators' published signing keys, as a party checks an agent's key
+    against the directory its operator serves (Web Bot Auth).
+
+    One implementation for every party that makes this check, because the
+    copies had drifted apart. Only a *hit* is answered from cache. A miss is
+    fetched again, because the two errors are not the same size: a stale hit
+    keeps attesting a key the operator has disowned, while a stale miss fails
+    to recognise one it has just published — the common case, since an agent
+    is issued a key and then uses it at once. The TTL bounds how long a
+    withdrawal takes to land. The cache is bounded, a directory has to be
+    https, and a key this cannot thumbprint is not it.
+    """
+
+    def __init__(self, ttl_s: float = 300, max_entries: int = 256, verify=True):
+        self.ttl_s, self.max_entries, self.verify = ttl_s, max_entries, verify
+        self._cache: dict[str, tuple[float, list]] = {}
+
+    def _fetch(self, directory: str) -> list:
+        import httpx
+
+        r = httpx.get(directory, timeout=5.0, follow_redirects=False, verify=self.verify)
+        r.raise_for_status()
+        keys = r.json().get("keys") or []
+        if len(self._cache) >= self.max_entries:
+            self._cache.pop(next(iter(self._cache)), None)
+        self._cache[directory] = (time.time(), keys)
+        return keys
+
+    @staticmethod
+    def _holds(keys: list, thumbprint: str) -> bool:
+        for key in keys:
+            try:
+                if jwk_thumbprint(key) == thumbprint:
+                    return True
+            except (KeyError, TypeError):
+                continue
+        return False
+
+    def publishes(self, directory: str, thumbprint: str) -> tuple[bool, bool]:
+        """Whether `directory` publishes the key with this thumbprint, and
+        whether that was answered from cache. Raises when it cannot be read;
+        what an unreadable directory means is the caller's to decide."""
+        if not directory.startswith("https://"):
+            return False, False
+        cached = self._cache.get(directory)
+        if cached and time.time() - cached[0] < self.ttl_s and self._holds(cached[1], thumbprint):
+            return True, True
+        return self._holds(self._fetch(directory), thumbprint), False

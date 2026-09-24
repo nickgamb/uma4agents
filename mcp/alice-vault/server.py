@@ -121,6 +121,11 @@ if __name__ == "__main__":
 
         app = uma_extension.origin_guard(mcp.streamable_http_app(host="0.0.0.0"),
                                          extensions[0].enforcer)
-        uvicorn.run(app, host="0.0.0.0", port=9020)
+        # https where it is given a certificate: a resource that protects
+        # itself is also the origin its metadata and keys are fetched from.
+        tls = {"ssl_certfile": os.environ["UMA_VAULT_TLS_CERT"],
+               "ssl_keyfile": os.environ["UMA_VAULT_TLS_KEY"]} \
+            if os.environ.get("UMA_VAULT_TLS_CERT") else {}
+        uvicorn.run(app, host="0.0.0.0", port=9020, **tls)
     else:
         mcp.run(transport="streamable-http", host="0.0.0.0", port=9020)

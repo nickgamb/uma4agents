@@ -70,7 +70,7 @@ rather than holding a call open across it.
 | `UMA_PEP_SIGNING_KEY` | `/keys/uma-pep-ed25519.pem`, and `/keys/vault-ed25519.pem` in the resource that enforces for itself | Key for `signed_metadata` and signed queries, and the one an authority fetches to decide whether this resource server is who it says it is. Two defaults because two hosts run this code: a deployment that shares one key between them has to name it in both |
 | `UMA_EXPECTED_AUTHORITY` | `gateway.uma.lab` | The authority used to rebuild the RFC 9421 signature base |
 | `UMA_ALLOWED_ORIGINS` | derived from the authority | Origins accepted on MCP requests |
-| `UMA_PEP_SCHEME` | `https` | The scheme of the URLs it publishes. `http` for a deployment with no certificate authority |
+| `UMA_PEP_SCHEME` | `https` | The scheme of the URLs it publishes. An authority reads a resource's metadata and keys only over https, so `http` suits nothing that registers with one |
 
 `UMA_EXPECTED_AUTHORITY` is the setting to get right. The signature base needs
 an authority, and taking it from the `Host` header gives the caller control of
@@ -85,6 +85,7 @@ configuration change fixes it after the fact.
 | `ENFORCEMENT_MODE` | `gateway` | `gateway` or `embedded` |
 | `UMA_EXPECTED_AUTHORITY` | `gateway.uma.lab` | As above, when enforcing in-process |
 | `UMA_AS_INTERNAL`, `UMA_AS_PUBLIC` | as above | Read by the embedded enforcement core |
+| `UMA_VAULT_TLS_CERT`, `UMA_VAULT_TLS_KEY` | unset | Under `embedded`, serve https with this certificate. For a resource with nothing in front of it to terminate TLS |
 
 Under `gateway` the resource holds no authorization code. Under `embedded` it
 runs the same enforcement core in-process and there is no gateway in the

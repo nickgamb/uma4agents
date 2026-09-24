@@ -304,7 +304,13 @@ def live(wait_s: int) -> int:
 
 
 def _live_body(c: httpx.Client, wait_s: int) -> int:
-    doc = c.get(f"{TALLY}/mandate/{BOTH}", timeout=15.0).json()
+    # Read from where the tally says it publishes mandates, as a holder's
+    # authority and an enforcement point would.
+    meta = c.get(f"{TALLY}/.well-known/uma2-configuration", timeout=15.0).json()
+    where = (meta.get("u4a_mandate_endpoint") or "").replace("{account}", BOTH)
+    doc = c.get(where, timeout=15.0).json() if where else {}
+    check("the tally names where each mandate is published, and publishes it there",
+          len(doc.get("holders") or []) >= 2, f"{where} -> {sorted(doc)}")
     holders = [h["owner"] for h in doc["holders"]]
     rule = doc["rule"]
 

@@ -323,6 +323,14 @@ def main() -> int:                                            # noqa: C901
 
         alice, carol = OWNERS["alice"], OWNERS["carol"]
 
+        # --- 0. where a member's authority finds the organization -------
+        meta = c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()
+        check("the organization publishes where to enrol, read the ceiling, ask it and check what it signed",
+              meta.get("issuer") == ORG and all(meta.get(k) for k in (
+                  "jwks_uri", "enrolment_endpoint", "envelope_endpoint",
+                  "decision_endpoint", "introspection_endpoint")) and "claims" in meta,
+              f"{sorted(meta)}")
+
         # --- 1. what she is offered, before she agrees to anything ---------
         preview = c.post(f"{alice['as']}/owner/organization/preview",
                          json={"code": JOIN_CODE}, headers=hdrs(c, "alice"),

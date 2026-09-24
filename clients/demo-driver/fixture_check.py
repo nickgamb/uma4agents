@@ -8,8 +8,9 @@ that has been stripped of everything that is not the protocol:
                            login and no token to issue
     no database            the authorization server keeps state in memory
     no gateway             the resource enforces in-process
-    no certificate         everything is plain http on localhost, so there is
-                           no CA to create and no name to trust
+    one certificate        the resource's, made on first run, because her
+                           authority reads a resource's metadata only over
+                           https; nothing else has one
     no registration        the resource publishes its metadata and the
                            authority reads it; neither was told about the
                            other beyond one URL
@@ -99,7 +100,7 @@ def approve_in_background(client: httpx.Client) -> None:
 
 
 def main() -> int:
-    with httpx.Client() as client:
+    with httpx.Client(verify=os.environ.get("UMA4A_CACERT") or True) as client:
         print("\n== The owner authenticates to her own authority ==")
         r = owner_call(client, "GET", "/owner/policies")
         if r.status_code >= 400:
@@ -176,7 +177,7 @@ def main() -> int:
             return 1
         say("owner request signed by a key she did not enrol: 401")
 
-    print("\nPASS: no IdP, no database, no gateway, no certificate — and the")
+    print("\nPASS: no IdP, no database, no gateway, one certificate it made itself — and the")
     print("      owner's policy was still the thing that decided.")
     return 0
 

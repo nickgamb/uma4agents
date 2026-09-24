@@ -176,6 +176,42 @@ The organization and the member's user agent have no relationship, and this
 document does not invent one. Every message from the organization is addressed
 to the member's authorization server.
 
+## Discovery {#org-discovery}
+
+An organization MUST publish a metadata document at the path
+`/.well-known/u4a-organization` under its issuer identifier. It is public:
+an authorization server whose owner is not a member has to be able to learn
+that a resource is claimed, and nothing in it is a member's. It carries:
+
+issuer:
+: REQUIRED. The organization's issuer identifier, an `https` URL.
+
+jwks_uri:
+: REQUIRED. The keys it signs membership credentials, notices, clearances and
+  break-glass grants with.
+
+enrolment_endpoint:
+: REQUIRED. Where a member's authorization server enrols her
+  ({{enrolment}}).
+
+envelope_endpoint:
+: REQUIRED. Where a member's authorization server reads the envelope in force
+  ({{envelope}}).
+
+decision_endpoint:
+: REQUIRED. Where a member's authorization server asks about a request
+  ({{decision}}).
+
+introspection_endpoint:
+: REQUIRED where the charter enables break-glass. Where an enforcement point
+  introspects a grant the organization signed ({{break-glass}}).
+
+claims:
+: REQUIRED. The charter's claims.
+
+charter_version:
+: REQUIRED. The version of the charter in force.
+
 ## The Charter {#charter}
 
 An organization MUST publish a charter, versioned, carrying:
@@ -274,9 +310,13 @@ of the request, and MUST fold the answer into its own. The facts are a JSON
 object carrying `resource_id`, the `scopes` attempted, the policy unit as
 `tier`, the `expires_in`, `purpose`, `reason`, `mission` and `operation` of the
 agreement, and the `assurance` and `standing` facts of {{U4APolicy}}; the
-member's authorization server presents its membership credential with them.
+member's authorization server presents its membership credential with them,
+as a `POST` to the organization's `decision_endpoint`.
 
-The organization answers `allow`, `ask` or `refuse`, with reasons. `allow` means
+The organization answers with a JSON object whose `effect` is `allow`, `ask` or
+`refuse`, whose `because` is an array of its reasons in sentences, and which
+carries `governed` (whether the charter claims the resource) and the
+`charter_version` it decided under. `allow` means
 the organization has no objection, not that the request is granted. The
 composition rule is one sentence: **both layers must allow, and either may
 refuse.** An organization's `ask` raises the member's `auto` to `ask`, and the
@@ -362,6 +402,16 @@ resource the charter both claims and names for this purpose. The enforcement
 point MUST recognise it by issuer and MUST introspect it with the organization
 rather than with the member's authorization server.
 
+The grant is a JWT {{RFC7519}} with `typ` of `aa-auth+jwt`, signed with a key
+at the organization's `jwks_uri`. It carries `iss` (the organization's issuer
+identifier), `owner`, `aud`, `jti`, `exp`, `cnf`, `permissions`, `single_use`
+of `true`, `operation` where one was named, and `break_glass`: an object
+naming the `org`, the stated `reason`, what `authorised_by` it — a voucher an
+administrator opened, or an operator the charter lists — and the
+`charter_version` it was issued under. The enforcement point introspects it at
+the organization's `introspection_endpoint`, whose answers are those of
+{{U4AFedAuthz}} Section 5.
+
 The member MUST be notified at the moment the window opens, before any data
 moves. Break-glass cannot be a flag on an ordinary grant: it has to be a grant
 the organization signs, checked with the organization, bounded by a clause the
@@ -387,7 +437,9 @@ II is what makes it unable to lie rather than trusted.
 
 ## The Mandate {#mandate}
 
-The tally MUST publish, for each jointly held resource, a mandate carrying:
+The tally MUST publish, for each jointly held resource, a mandate, at the URI
+its authorization server metadata names as `u4a_mandate_endpoint` — a template
+in which `{account}` names the jointly held account. The mandate carries:
 
 resources:
 : REQUIRED. At least one resource identifier or pattern.
@@ -724,6 +776,9 @@ requests no registration.
 | `joint` | JWT claim {{RFC7519}} | {{joint-grant}} |
 | `family` | JWT claim {{RFC7519}} | {{joint-grant}} |
 | `break_glass` | JWT claim {{RFC7519}} | {{break-glass}} |
+| `/.well-known/u4a-organization` | Well-known URI | {{org-discovery}} |
+| `enrolment_endpoint`, `envelope_endpoint`, `decision_endpoint` | Organization metadata member | {{org-discovery}} |
+| `u4a_mandate_endpoint` | Authorization server metadata member | {{mandate}} |
 | `org` | JWT claim {{RFC7519}} | {{enrolment}}, {{org-acting}} |
 | `kind` | JWT claim {{RFC7519}} | {{enrolment}} |
 | `admin` | JWT claim {{RFC7519}} | {{org-acting}} |

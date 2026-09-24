@@ -13,8 +13,14 @@
 #   alice-vault-mcp    enforces in-process; no gateway is in the path
 #   owner-keygen       makes her keypair on first run, so there is no setup
 #
-# Three containers, plain http, no host state, no `make init`. Everything the
-# grant needs and nothing else. Run it with `make fixture`.
+# Three containers, no host state, no `make init`. Everything the grant needs
+# and nothing else. Run it with `make fixture`.
+#
+# One certificate, made on first run for the resource's own name. The
+# authority reads a resource's metadata and keys only over https — that is the
+# authentication of a resource server nobody provisioned — so the resource
+# serves https, and the authority and the check trust the throwaway CA that
+# signed it. Nothing else here needs one.
 #
 # What this is not: a recommendation. A deployment holding other people's
 # assets should have all the things this file removes. The claim is narrower —
@@ -55,8 +61,40 @@ services:
             encoding=s.Encoding.PEM, format=s.PublicFormat.SubjectPublicKeyInfo))
         print("made the owner's key; enrolled the public half with her authority")
         PY
+        python - <<'PY'
+        import datetime, os
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization as s
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+        if os.path.exists("/tls/vault.pem"):
+            print("resource certificate already present"); raise SystemExit(0)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        def name(cn): return x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, cn)])
+        ca_key = ec.generate_private_key(ec.SECP256R1())
+        ca = (x509.CertificateBuilder().subject_name(name("u4a fixture CA"))
+              .issuer_name(name("u4a fixture CA")).public_key(ca_key.public_key())
+              .serial_number(x509.random_serial_number())
+              .not_valid_before(now).not_valid_after(now + datetime.timedelta(days=365))
+              .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+              .sign(ca_key, hashes.SHA256()))
+        key = ec.generate_private_key(ec.SECP256R1())
+        cert = (x509.CertificateBuilder().subject_name(name("alice-vault.local"))
+                .issuer_name(ca.subject).public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(now).not_valid_after(now + datetime.timedelta(days=365))
+                .add_extension(x509.SubjectAlternativeName(
+                    [x509.DNSName("alice-vault.local")]), critical=False)
+                .sign(ca_key, hashes.SHA256()))
+        open("/tls/ca.pem", "wb").write(ca.public_bytes(s.Encoding.PEM))
+        open("/tls/vault-key.pem", "wb").write(key.private_bytes(
+            s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()))
+        open("/tls/vault.pem", "wb").write(cert.public_bytes(s.Encoding.PEM))
+        print("made a certificate for the resource, and the CA that signed it")
+        PY
     volumes:
       - fixture-keys:/keys
+      - fixture-tls:/tls
 
   uma-as:
     init: true
@@ -67,7 +105,9 @@ services:
       # Container-network names, published as-is. The authority an agent is
       # told to negotiate with is the authority it can reach.
       UMA_AS_ISSUER: http://uma-as:9000
-      UMA_AS_RS_RESOURCE_URI: http://alice-vault.local:9020/mcp
+      UMA_AS_RS_RESOURCE_URI: https://alice-vault.local:9020/mcp
+      # The CA that signed the resource's certificate, and nothing else.
+      UMA4A_CA_BUNDLE: /tls/ca.pem
       UMA_AS_RS_CLIENT_ID: local-resource
       UMA_AS_RS_CLIENT_SECRET: fixture-dev-secret
       UMA_AS_STORE: memory
@@ -78,6 +118,7 @@ services:
       UMA_AS_OWNER: alice
     volumes:
       - fixture-keys:/keys
+      - fixture-tls:/tls:ro
     depends_on:
       owner-keygen:
         condition: service_completed_successfully
@@ -104,13 +145,13 @@ services:
       UMA_AS_RS_CLIENT_ID: local-resource
       UMA_AS_RS_CLIENT_SECRET: fixture-dev-secret
       UMA_REALM: alice-vault
-      # Published over plain http, because there is no certificate authority
-      # in this deployment and the pull has to be able to fetch what it reads.
-      UMA_PEP_SCHEME: http
       UMA_EXPECTED_AUTHORITY: alice-vault.local:9020
       UMA_PEP_SIGNING_KEY: /keys/vault-ed25519.pem
+      UMA_VAULT_TLS_CERT: /tls/vault.pem
+      UMA_VAULT_TLS_KEY: /tls/vault-key.pem
     volumes:
       - fixture-vault-keys:/keys
+      - fixture-tls:/tls:ro
     depends_on:
       uma-as:
         condition: service_healthy
@@ -129,7 +170,8 @@ services:
     environment:
       PYTHONPATH: /driver/lib
       PYTHONUNBUFFERED: "1"
-      VAULT_URL: http://alice-vault.local:9020/mcp
+      VAULT_URL: https://alice-vault.local:9020/mcp
+      UMA4A_CACERT: /tls/ca.pem
       AS_URL: http://uma-as:9000
       UMA_EXPECTED_AUTHORITY: alice-vault.local:9020
       UMA_AS_OWNER_AUTHORITY: alice-as.local
@@ -139,6 +181,7 @@ services:
       - ./lib:/driver/lib:ro
       - fixture-keys:/keys:ro
       - fixture-driver-keys:/driver/keys
+      - fixture-tls:/tls:ro
     working_dir: /driver
     depends_on:
       alice-vault-mcp:
@@ -147,5 +190,6 @@ services:
 
 volumes:
   fixture-keys:
+  fixture-tls:
   fixture-vault-keys:
   fixture-driver-keys:
