@@ -303,7 +303,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "MUST be able to learn what a resource server protects by fetching, and MUST NOT require the resource server to push resource descriptions"
     verified: check
     targets: [k8s-smoke-test, fixture]
-    asserts: ["the authorization server pulled what the resource publishes", "no IdP, no database, no gateway, no certificate"]
+    asserts: ["the authorization server pulled what the resource publishes", "no IdP, no database, no gateway, one certificate it made itself"]
   - text: "it MUST attempt a fresh pull before answering invalid_resource_id"
     verified: check
     targets: [establishment-check]
@@ -551,8 +551,8 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["but not one written as a wildcard, which would reach anybody's", "a role that hands out somebody's personal account is refused"]
   - text: "The pattern language MUST be segment-wise, with a wildcard matching one segment and never crossing a separator"
     verified: check
-    targets: [org-test]
-    asserts: ["a wildcard stops at the separator", "and the organization's copy of the matcher is the same object"]
+    targets: [org-test, rego-test]
+    asserts: ["a wildcard stops at the separator", "and the organization's copy of the matcher is the same object", "every shared pattern vector matches as the vectors say", "rego: every shared pattern vector matches as the vectors say"]
   - text: "Each role MUST carry a delegation value, one of:"
     verified: check
     targets: [org-test]

@@ -276,7 +276,7 @@ JSON it defines; `scope` is RFC 6750 §3. Decoded:
 ```json
 {
   "authorization_details": [{
-    "type": "urn:uma4agents:authorization-details:tool-call",
+    "type": "https://u4a.ai/spec/core/1.0#tool-call",
     "locations": ["https://gateway.uma.lab"],
     "identifier": "alice-vault/execute_trade",
     "actions": ["execute_trade"],
@@ -337,8 +337,8 @@ reciprocal agreement.
   "error": "need_info",
   "ticket": "<rotated>",
   "required_claims": [{
-    "claim_type": "urn:uma4agents:claim:myterms-agreement",
-    "claim_token_format": ["urn:uma4agents:format:myterms-agreement-v1+jws"],
+    "claim_type": "https://u4a.ai/spec/terms/1.0#myterms-agreement",
+    "claim_token_format": ["https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"],
     "friendly_name": "Alice's terms: Holdings summary",
     "terms_template": {
       "template_id": "alice/advisor-tier1/v2",
@@ -369,7 +369,7 @@ POST /token
 grant_type         = urn:ietf:params:oauth:grant-type:uma-ticket
 ticket             = <rotated>
 claim_token        = <base64url(myterms-agreement JWS)>
-claim_token_format = urn:uma4agents:format:myterms-agreement-v1+jws
+claim_token_format = https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws
 ```
 
 The **agreement** is the terms template echoed and signed by the agent's key.

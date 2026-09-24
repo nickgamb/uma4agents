@@ -1096,7 +1096,7 @@ class Enforcer:
         downstream policy engine typed fields instead of only a digest.
         """
         detail = {
-            "type": "urn:uma4agents:authorization-details:tool-call",
+            "type": "https://u4a.ai/spec/core/1.0#tool-call",
             "locations": [self.resource_metadata_url.rsplit("/.well-known/", 1)[0]],
             "identifier": rid,
             "actions": [tool],

@@ -204,7 +204,7 @@ for want of authorization with a JSON-RPC error {{JSONRPC}} whose `code` is
       "scope": "trades:execute",
       "authorization_remediation": {
         "authorization_details": [{
-          "type": "urn:uma4agents:authorization-details:tool-call",
+          "type": "https://u4a.ai/spec/core/1.0#tool-call",
           "locations": ["https://rs.example"],
           "identifier": "alice-vault/execute_trade",
           "actions": ["execute_trade"],

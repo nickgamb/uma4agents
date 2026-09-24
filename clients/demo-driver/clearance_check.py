@@ -409,7 +409,7 @@ def main() -> int:                                             # noqa: C901
                 "grant_type": "urn:ietf:params:oauth:grant-type:uma-ticket",
                 "ticket": ticket.ticket,
                 "claim_token": "eyJhbGciOiJub25lIn0.e30.",
-                "claim_token_format": "urn:uma4agents:format:clearance+jwt"},
+                "claim_token_format": "https://u4a.ai/spec/policy/1.0#clearance+jwt"},
                 timeout=15.0)
             check("a clearance the agent offers is not a claim this authority takes",
                   offered.status_code == 400

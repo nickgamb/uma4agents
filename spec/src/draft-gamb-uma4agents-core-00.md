@@ -438,7 +438,7 @@ ticket:
 ~~~ json
 {
   "authorization_details": [{
-    "type": "urn:uma4agents:authorization-details:tool-call",
+    "type": "https://u4a.ai/spec/core/1.0#tool-call",
     "locations": ["https://rs.example"],
     "identifier": "alice-vault/execute_trade",
     "actions": ["execute_trade"],
@@ -1172,7 +1172,7 @@ identifying URI. The identifying URIs of this set are:
 
 | Type | Meaning | Defined in |
 |---|---|---|
-| `urn:uma4agents:authorization-details:tool-call` | An attempted invocation of one named operation on a protected resource | {{remediation}} |
+| `https://u4a.ai/spec/core/1.0#tool-call` | An attempted invocation of one named operation on a protected resource | {{remediation}} |
 {: title="Authorization details type used by this document."}
 
 ## Other Values

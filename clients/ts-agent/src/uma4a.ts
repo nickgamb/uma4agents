@@ -9,7 +9,7 @@ import { createHash, createPrivateKey, generateKeyPairSync, sign, type KeyObject
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
 export const GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket";
-export const AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws";
+export const AGREEMENT_FORMAT = "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws";
 export const MCP_PROTOCOL_VERSION = "2026-07-28";
 
 export const b64url = (b: Buffer | string): string =>

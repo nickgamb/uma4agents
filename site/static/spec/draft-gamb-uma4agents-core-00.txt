@@ -461,7 +461,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    {
      "authorization_details": [{
-       "type": "urn:uma4agents:authorization-details:tool-call",
+       "type": "https://u4a.ai/spec/core/1.0#tool-call",
        "locations": ["https://rs.example"],
        "identifier": "alice-vault/execute_trade",
        "actions": ["execute_trade"],
@@ -1826,22 +1826,22 @@ A.2.  JSON Web Token Claims
 
 A.3.  Authorization Details Type
 
-   +==============================================+============+=======+
-   |Type                                          | Meaning    |Defined|
-   |                                              |            |in     |
-   +==============================================+============+=======+
-   |urn:uma4agents:authorization-details:tool-call| An         |Section|
-   |                                              | attempted  |3.4    |
-   |                                              | invocation |       |
-   |                                              | of one     |       |
-   |                                              | named      |       |
-   |                                              | operation  |       |
-   |                                              | on a       |       |
-   |                                              | protected  |       |
-   |                                              | resource   |       |
-   +----------------------------------------------+------------+-------+
+       +======================+=========================+=========+
+       | Type                 | Meaning                 | Defined |
+       |                      |                         | in      |
+       +======================+=========================+=========+
+       | https://u4a.ai/spec/ | An attempted invocation | Section |
+       | core/1.0#tool-call   | of one named operation  | 3.4     |
+       |                      | on a protected resource |         |
+       +----------------------+-------------------------+---------+
 
-         Table 4: Authorization details type used by this document.
+        Table 4: Authorization details type used by this document.
+
+
+
+
+
+
 
 
 

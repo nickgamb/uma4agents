@@ -1574,8 +1574,8 @@ the machine-readable one the same terms rather than two documents that may drift
 <p id="section-3-1">Where the authorization server requires agreement to terms before it will decide,
 it responds to a ticket presentation with <code>need_info</code> as <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section
 3.3.6, carrying a required claim whose <code>claim_type</code> is
-<code>urn:uma4agents:claim:myterms-agreement</code> and whose <code>claim_token_format</code> array
-includes <code>urn:uma4agents:format:myterms-agreement-v1+jws</code>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<code>https://u4a.ai/spec/terms/1.0#myterms-agreement</code> and whose <code>claim_token_format</code> array
+includes <code>https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws</code>.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The required claim <span class="bcp14">MUST</span> additionally carry a <code>terms_template</code> member: the terms
 document of <a href="#terms-document" class="auto internal xref">Section 2</a>, plus<a href="#section-3-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-3">
@@ -1608,9 +1608,9 @@ echoed in the agreement.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
   "error": "need_info",
   "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
   "required_claims": [{
-    "claim_type": "urn:uma4agents:claim:myterms-agreement",
+    "claim_type": "https://u4a.ai/spec/terms/1.0#myterms-agreement",
     "claim_token_format": [
-      "urn:uma4agents:format:myterms-agreement-v1+jws"
+      "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
     ],
     "friendly_name": "Alice's terms: Holdings summary",
     "terms_template": {
@@ -1661,7 +1661,7 @@ document <span class="bcp14">MUST</span> include it.<a href="#section-3.1-2.2.1"
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-agreement" class="section-name selfRef">The Agreement</a>
       </h2>
 <p id="section-4-1">The requesting side agrees by presenting a claim token whose
-<code>claim_token_format</code> is <code>urn:uma4agents:format:myterms-agreement-v1+jws</code> and
+<code>claim_token_format</code> is <code>https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws</code> and
 whose value is the base64url encoding of a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> in compact
 serialization with a <code>typ</code> of <code>myterms-agreement-v1+jws</code>. The compact
 serialization is encoded as a whole, so decoding the claim token yields the JWS.<a href="#section-4-1" class="pilcrow">¶</a></p>
@@ -2104,18 +2104,18 @@ requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>urn:uma4agents:claim:myterms-agreement</code>
+              <code>https://u4a.ai/spec/terms/1.0#myterms-agreement</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">URN</td>
+            <td class="text-left" rowspan="1" colspan="1">URI</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#proffering" class="auto internal xref">Section 3</a>
 </td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>urn:uma4agents:format:myterms-agreement-v1+jws</code>
+              <code>https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">URN</td>
+            <td class="text-left" rowspan="1" colspan="1">URI</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#agreement" class="auto internal xref">Section 4</a>
 </td>

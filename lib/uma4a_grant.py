@@ -28,7 +28,7 @@ from jwt.algorithms import OKPAlgorithm
 from uma4a_http_sig import sign
 
 # MyTerms-shaped agreement: the owner proffers the terms; this side signs them.
-AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
+AGREEMENT_FORMAT = "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
 GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket"
 # The enterprise half, asked for by an authorization server whose owner is a
 # member of an organization that federates identity. See `Enterprise`.

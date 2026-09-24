@@ -82,8 +82,8 @@ FLOOR = int(os.environ.get("TALLY_THRESHOLD_FLOOR", "0"))
 # The same two constants every other authority in this lab uses. A tally
 # that invented its own would be a party an unmodified agent could not
 # negotiate with, which is the one thing this is not allowed to be.
-AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
-AGREEMENT_CLAIM = "urn:uma4agents:claim:myterms-agreement"
+AGREEMENT_FORMAT = "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
+AGREEMENT_CLAIM = "https://u4a.ai/spec/terms/1.0#myterms-agreement"
 
 KEY_PATH = os.environ.get("TALLY_SIGNING_KEY", "/keys/tally-ed25519.pem")
 KID = os.environ.get("TALLY_KID", "tally-1")

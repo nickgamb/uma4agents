@@ -178,7 +178,7 @@ RPT_AUDIENCE = os.environ.get("UMA_AS_RPT_AUDIENCE", "https://gateway.uma.lab")
 # roster; the counterparty agrees; both sides keep a record. The URN is ours —
 # a MyTerms-shaped profile for agentic access terms, not a claim of
 # conformance to the IEEE document's schema.
-AGREEMENT_FORMAT = "urn:uma4agents:format:myterms-agreement-v1+jws"
+AGREEMENT_FORMAT = "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
 
 # The enterprise half, when a member's organization federates identity.
 #
@@ -200,7 +200,7 @@ RS_RESOURCE_URI = os.environ.get("UMA_AS_RS_RESOURCE_URI",
 # negotiation and one authorization server; replaying one is not a thing a
 # well-behaved client does.
 _ID_JAG_SPENT: dict[str, float] = {}
-AGREEMENT_CLAIM = "urn:uma4agents:claim:myterms-agreement"
+AGREEMENT_CLAIM = "https://u4a.ai/spec/terms/1.0#myterms-agreement"
 TICKET_TTL = 300
 # How long a held "ask-me" ticket stays valid. The demo's own premise is that
 # Alice may be asleep, so ten minutes was never right — and it is only safe to

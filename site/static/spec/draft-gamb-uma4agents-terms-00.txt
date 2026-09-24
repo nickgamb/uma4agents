@@ -96,7 +96,7 @@ Table of Contents
      10.2.  Informative References . . . . . . . . . . . . . . . . .  13
    Appendix A.  Identifiers Used by This Document  . . . . . . . . .  13
    Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  14
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  15
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
 
 1.  Introduction
@@ -244,9 +244,9 @@ Internet-Draft            Owner-Proffered Terms           September 2026
    Where the authorization server requires agreement to terms before it
    will decide, it responds to a ticket presentation with need_info as
    [UMAGrant] Section 3.3.6, carrying a required claim whose claim_type
-   is urn:uma4agents:claim:myterms-agreement and whose
-   claim_token_format array includes urn:uma4agents:format:myterms-
-   agreement-v1+jws.
+   is https://u4a.ai/spec/terms/1.0#myterms-agreement and whose
+   claim_token_format array includes https://u4a.ai/spec/
+   terms/1.0#myterms-agreement-v1+jws.
 
    The required claim MUST additionally carry a terms_template member:
    the terms document of Section 2, plus
@@ -286,9 +286,9 @@ Internet-Draft            Owner-Proffered Terms           September 2026
      "error": "need_info",
      "ticket": "MWRlNzE4ZjgtMGY0OS00NDg2",
      "required_claims": [{
-       "claim_type": "urn:uma4agents:claim:myterms-agreement",
+       "claim_type": "https://u4a.ai/spec/terms/1.0#myterms-agreement",
        "claim_token_format": [
-         "urn:uma4agents:format:myterms-agreement-v1+jws"
+         "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
        ],
        "friendly_name": "Alice's terms: Holdings summary",
        "terms_template": {
@@ -325,11 +325,11 @@ Internet-Draft            Owner-Proffered Terms           September 2026
 4.  The Agreement
 
    The requesting side agrees by presenting a claim token whose
-   claim_token_format is urn:uma4agents:format:myterms-agreement-v1+jws
-   and whose value is the base64url encoding of a JWS [RFC7515] in
-   compact serialization with a typ of myterms-agreement-v1+jws.  The
-   compact serialization is encoded as a whole, so decoding the claim
-   token yields the JWS.
+   claim_token_format is https://u4a.ai/spec/terms/1.0#myterms-
+   agreement-v1+jws and whose value is the base64url encoding of a JWS
+   [RFC7515] in compact serialization with a typ of myterms-agreement-
+   v1+jws.  The compact serialization is encoded as a whole, so decoding
+   the claim token yields the JWS.
 
 
 
@@ -730,32 +730,33 @@ Gamb & Maler              Expires 19 March 2027                [Page 13]
 Internet-Draft            Owner-Proffered Terms           September 2026
 
 
-    +================================+===================+============+
-    | Identifier                     | Kind              | Defined in |
-    +================================+===================+============+
-    | terms_endpoint                 | Authorization     | Section    |
-    |                                | server metadata   | 3.1        |
-    +--------------------------------+-------------------+------------+
-    | decline                        | Token endpoint    | Section 6  |
-    |                                | request parameter |            |
-    +--------------------------------+-------------------+------------+
-    | receipt                        | Token endpoint    | Section 5  |
-    |                                | response member   |            |
-    +--------------------------------+-------------------+------------+
-    | application/myterms-agreement- | Media type        | Section 4  |
-    | v1+jws                         |                   |            |
-    +--------------------------------+-------------------+------------+
-    | application/myterms-           | Media type        | Section 5  |
-    | receipt+jws                    |                   |            |
-    +--------------------------------+-------------------+------------+
-    | urn:uma4agents:claim:myterms-  | URN               | Section 3  |
-    | agreement                      |                   |            |
-    +--------------------------------+-------------------+------------+
-    | urn:uma4agents:format:myterms- | URN               | Section 4  |
-    | agreement-v1+jws               |                   |            |
-    +--------------------------------+-------------------+------------+
+   +====================================+===================+=========+
+   | Identifier                         | Kind              | Defined |
+   |                                    |                   | in      |
+   +====================================+===================+=========+
+   | terms_endpoint                     | Authorization     | Section |
+   |                                    | server metadata   | 3.1     |
+   +------------------------------------+-------------------+---------+
+   | decline                            | Token endpoint    | Section |
+   |                                    | request parameter | 6       |
+   +------------------------------------+-------------------+---------+
+   | receipt                            | Token endpoint    | Section |
+   |                                    | response member   | 5       |
+   +------------------------------------+-------------------+---------+
+   | application/myterms-agreement-     | Media type        | Section |
+   | v1+jws                             |                   | 4       |
+   +------------------------------------+-------------------+---------+
+   | application/myterms-receipt+jws    | Media type        | Section |
+   |                                    |                   | 5       |
+   +------------------------------------+-------------------+---------+
+   | https://u4a.ai/spec/               | URI               | Section |
+   | terms/1.0#myterms-agreement        |                   | 3       |
+   +------------------------------------+-------------------+---------+
+   | https://u4a.ai/spec/               | URI               | Section |
+   | terms/1.0#myterms-agreement-v1+jws |                   | 4       |
+   +------------------------------------+-------------------+---------+
 
-                Table 1: Identifiers used by this document.
+               Table 1: Identifiers used by this document.
 
 Appendix B.  Implementation Status
 
@@ -770,6 +771,21 @@ Appendix B.  Implementation Status
    [IEEE7012]; the divergences found are the ones stated in this
    document rather than a longer list kept elsewhere.
 
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]
+
+Internet-Draft            Owner-Proffered Terms           September 2026
+
+
 Acknowledgments
 
    The direction this extension reverses — an authorization server that
@@ -778,13 +794,6 @@ Acknowledgments
    supplied the pattern, the three representations, the single-choice
    rule and the dual-record requirement, and the divergences in
    Section 8 are stated in its terms rather than around them.
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 14]
-
-Internet-Draft            Owner-Proffered Terms           September 2026
-
 
 Authors' Addresses
 
@@ -795,15 +804,6 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
-
-
-
-
-
-
-
-
-
 
 
 

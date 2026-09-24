@@ -44,8 +44,8 @@ const BEATS = [
   "error": "need_info",
   "ticket": "<rotated>",
   "required_claims": [{
-    "claim_type": "urn:uma4agents:claim:myterms-agreement",
-    "claim_token_format": ["urn:uma4agents:format:myterms-agreement-v1+jws"],
+    "claim_type": "https://u4a.ai/spec/terms/1.0#myterms-agreement",
+    "claim_token_format": ["https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"],
     "terms_template": {
       "template_id": "alice/advisor-tier1/v2",
       "terms_uri": "https://alice-as.uma.lab/terms/alice/advisor-tier1/v2",

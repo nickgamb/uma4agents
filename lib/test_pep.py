@@ -89,7 +89,7 @@ check("an unknown tool is refused", d.outcome == "deny" and d.error == "unknown_
 
 
 print("\n== the challenge, in both encodings ==")
-details = [{"type": "urn:uma4agents:authorization-details:tool-call",
+details = [{"type": "https://u4a.ai/spec/core/1.0#tool-call",
             "locations": ["https://rs.example"],
             "identifier": "alice-vault/execute_trade",
             "actions": ["execute_trade"], "datatypes": ["trades:execute"]}]
