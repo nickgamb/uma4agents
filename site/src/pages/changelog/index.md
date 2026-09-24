@@ -38,6 +38,10 @@ release within that month. One entry per release.
 - **Specification:** the AAuth draft specifies only accepting an AAuth agent token as an identified agent's credential, in either shape; nothing else of AAuth is used. Core, lineage, fedauthz, MCP and multiparty follow.
 - **Client:** an agreement's `iss` is `agent:<keyid>`, as the terms draft shows, not an `aauth:` URI.
 
+#### Bug fixes
+
+- **Organization:** a policy engine that restarted on its own came back without the organization's modules, and every decision was refused until the organization authority restarted too; the first decision that finds the engine empty now reloads them and asks again.
+
 #### Feature deprecations
 
 - **Enforcement point, embedded vault:** `/.well-known/aauth-resource.json` is no longer published; RFC 9728 metadata is the resource's only discovery document.

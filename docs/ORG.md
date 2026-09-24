@@ -181,6 +181,12 @@ a judgement about that request, and it is made at the organization's own
 decision point against policy the member's authority never sees. That decision
 point is [OPA](https://www.openpolicyagent.org), evaluating `org.rego`.
 
+The organization authority pushes its modules into OPA when it starts and on
+every charter change. OPA holds them in memory only, so an OPA that restarts on
+its own comes back empty. The first decision that finds it empty puts the
+modules back and asks again (`engine.reloaded`); an engine that still has no
+answer, or cannot be reached, is a refusal, never an allow.
+
 ### What a charter may claim
 
 A claim has to name a concrete namespace. `northwind-vault/*` is a claim;

@@ -495,12 +495,13 @@ aauth-test:
 		sh -c "pip install -q 'pyjwt[crypto]' 'aauth==0.3.2' && python lib/test_aauth.py"
 
 ## org-test: the organization's ceiling — what it may do to a member's terms,
-## and what it may never touch. Unit tests over the algebra and the charter
-## validator; needs nothing running.
+## and what it may never touch — and its policy engine losing the policy it
+## was given. Unit tests over the algebra, the charter validator and the
+## decision path; needs nothing running.
 .PHONY: org-test
 org-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
-		python lib/test_org.py
+		sh -c "pip install -q fastapi 'pyjwt[crypto]' httpx python-multipart && python lib/test_org.py && python lib/test_org_engine.py"
 
 ## joint-test: the mandate validator, the fold and the count, with nothing
 ## running and nothing installed.

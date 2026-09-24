@@ -311,6 +311,29 @@ def _compile_error(detail: dict) -> str:
     return "; ".join(lines)
 
 
+_RELOAD_LOCK = asyncio.Lock()
+
+
+async def reload_engine() -> None:
+    """Put this service's modules back into an engine that has lost them.
+
+    They are pushed at this service's start and on every charter change, and
+    held nowhere else. An engine that restarts on its own — or a push that
+    landed on an instance on its way out — leaves nothing to evaluate, and
+    every decision after would be refused until this service restarted too.
+    """
+    async with _RELOAD_LOCK:
+        await load_shipped_rego()
+        await load_custom_rego(current()["charter"].get("rego") or "")
+    event("engine.reloaded", charter_version=current()["version"])
+
+
+async def _ask_engine(payload: dict) -> dict:
+    r = await opa("POST", "/v1/data/u4a/org/decision", json=payload)
+    r.raise_for_status()
+    return r.json()
+
+
 async def org_decision(member: str, request_facts: dict,
                        role: dict | None = None) -> dict:
     """One request, judged by the organization's engine.
@@ -331,14 +354,17 @@ async def org_decision(member: str, request_facts: dict,
                          "role": role or {}, "request": request_facts}}
     key = json.dumps(payload, sort_keys=True)
     try:
-        r = await opa("POST", "/v1/data/u4a/org/decision", json=payload)
-        r.raise_for_status()
-        body = r.json()
+        body = await _ask_engine(payload)
         if not isinstance(body.get("result"), dict):
             # A 200 with no result is the engine answering a query for a
             # policy it does not hold — what OPA says after a restart that
-            # lost the pushed modules. That is the engine failing, not the
-            # organization allowing, so it takes the same path as unreachable.
+            # lost the pushed modules. The modules are this service's to put
+            # back, so it does, and asks once more.
+            await reload_engine()
+            body = await _ask_engine(payload)
+        if not isinstance(body.get("result"), dict):
+            # Still nothing. That is the engine failing, not the organization
+            # allowing, so it takes the same path as unreachable.
             raise RuntimeError("the policy engine returned no decision; "
                                "its policy is not loaded")
         decision = body["result"]
