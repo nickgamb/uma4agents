@@ -61,8 +61,6 @@ spec:
             - { name: XAA_IDP_ISSUER, value: "https://northwind-idp.uma.lab/realms/employees" }
             - { name: XAA_ADMINS, value: "dana" }
             - { name: XAA_IDP_ADMIN_CLIENT, value: "northwind-idp-admin" }
-            - name: XAA_ADMIN_TOKEN
-              valueFrom: { secretKeyRef: { name: xaa-config, key: admin-token } }
             - name: XAA_CLIENTS
               valueFrom: { secretKeyRef: { name: xaa-config, key: clients } }
             # The edges Dana approved. Two, because Northwind's book is
@@ -113,5 +111,4 @@ metadata:
   name: xaa-config
   namespace: northwind
 stringData:
-  admin-token: xaa-admin-dev-token
   clients: '{"northwind-research-agent": "northwind-agent-secret"}'

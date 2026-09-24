@@ -42,7 +42,6 @@ spec:
             - { name: PYTHONPATH, value: /driver/lib }
             - { name: PYTHONUNBUFFERED, value: "1" }
             - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
-            - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
             - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
             - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
             - { name: UMA4A_ALICE_OPERATOR, value: "https://alice-agent.uma.lab" }

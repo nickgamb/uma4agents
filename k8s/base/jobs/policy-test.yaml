@@ -63,11 +63,25 @@ data:
                 return True, ""
             return False, f"transport error, not a refusal: {reason!r}"
 
+    def refused_without_her(url):
+        """True when her authorization server itself refused a caller holding
+        none of her credentials. The mesh does not decide this one."""
+        try:
+            urllib.request.urlopen(url, timeout=8, context=ctx)
+            return False, "the call succeeded — this should have been refused"
+        except urllib.error.HTTPError as exc:
+            return exc.code == 401, f"HTTP {exc.code} (expected 401)"
+
     print("\n== the requesting party is shut out of the owner's side ==")
     check("cannot reach Alice's authorization server directly",
           lambda: denied("http://uma-as.alice.svc.cluster.local:9000/health"))
     check("cannot read Alice's policy",
           lambda: denied("http://uma-as.alice.svc.cluster.local:9000/owner/policies"))
+    # Her owner API is also reachable through the edge, because that is where
+    # she arrives from with a browser or her own AI. On that path it is her
+    # credential that refuses anyone else, and this is the path that says so.
+    check("and through her public hostname, her credential is what refuses it",
+          lambda: refused_without_her("https://alice-as.uma.lab/owner/policies"))
     check("cannot reach the identity provider directly",
           lambda: denied("http://keycloak.idp.svc.cluster.local:8080/realms/alice"))
     check("cannot reach her portal directly",

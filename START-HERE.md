@@ -125,11 +125,11 @@ her policy can do is require her to look when there is no reason at all.
 
 ```bash
 make k8s-smoke-test     # expect 15 passed, 0 failed
-make k8s-policy-test    # expect 22 passed, 0 failed
+make k8s-policy-test    # expect 23 passed, 0 failed
 make k8s-intent-check   # whose intent the grant carries
 ```
 
-Nineteen of those twenty-two are **refusals**. A policy suite that only proves the
+Twenty of those twenty-three are **refusals**. A policy suite that only proves the
 allows would pass on a cluster with no policy at all.
 
 The intent check is the same shape. It tampers with her terms four ways and
@@ -138,6 +138,10 @@ stretched expiry — and one acceptance, because binding itself to *more* than
 she asked costs her nothing. Then it proves the record can answer a question
 about an agent rather than only about a request, and that a rule reading that
 record can tighten but never relax.
+
+`make k8s-check-all` runs every suite the requirements register cites against
+the cluster, one after another: the unit tests, the register itself, and the
+cluster twin of every check. It is the run that proves the drafts.
 
 It also shows the part that is easy to miss: **drift is read from her side.**
 Nothing asks Bob whether his agent is behaving — she cannot see his

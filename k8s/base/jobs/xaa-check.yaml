@@ -56,7 +56,6 @@ spec:
             # with. Plain here for the same reason org-check's are: these are
             # lab credentials, and inventing a Secret the cluster does not
             # provision would fail the job before it ran a line.
-            - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
             - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
             - { name: XAA_AGENT_SECRET, value: northwind-agent-secret }
             # Read from the same values the enforcement point is configured

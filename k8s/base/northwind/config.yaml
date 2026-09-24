@@ -22,8 +22,5 @@ stringData:
   # provisioned secret is the honest shape — unlike a member's authority,
   # which nobody was in a position to configure both ends of.
   rs-token: org-rs-dev-token
-  # For the acceptance job, which has no browser to log in with. An
-  # administrator uses the realm.
-  admin-token: org-admin-dev-token
   join-code: NW-7K2F-QX
   session-secret: dev-session-secret

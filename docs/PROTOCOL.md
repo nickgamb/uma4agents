@@ -718,10 +718,11 @@ catches but misreports. The enforcement point checks
 
 **The resource server must not be able to read the owner's policy.** This is
 the cross-principal property the whole profile exists for, and it is
-structural, not advisory: the Protection API is PAT-scoped, and in the
-Kubernetes reference the mesh denies the path outright. The paired assertion —
-the enforcement point is refused Alice's policy (403) and allowed her published
-keys (200) on the same port and workload — is the shortest statement of it.
+enforced twice. The owner API takes only her credential, which the resource
+server never holds, so a call reaching it through the public hostname is
+refused (401). And in the Kubernetes reference the mesh refuses the direct hop
+to it from any workload but her portal (403), while the same port serves her
+published keys (200). `k8s-policy-test` asserts both paths.
 
 **Agent-token issuers are trusted by dereference.** `verify_agent_token`
 resolves `iss` via AAuth discovery over TLS and believes the published keys.

@@ -6,8 +6,8 @@ in its `uma_profiles_supported` metadata. These are those URIs, one per
 document in the set, dereferenceable to the document an implementer needs.
 
 Kept in `lib/` because more than one party advertises them: the authorization
-server speaks the whole set, the tally speaks the parts a counting party
-needs, and the conformance check reads the list to know what to expect.
+server speaks the whole set, and the tally speaks the parts a counting party
+needs.
 """
 
 CORE = "https://u4a.ai/spec/core/1.0"
@@ -32,16 +32,3 @@ AUTHORIZATION_SERVER = [CORE, TERMS, FEDAUTHZ, POLICY, LINEAGE, MULTIPARTY, OWNE
 # proffers folded terms, and is the counting party of the multi-party
 # extension; it evaluates no owner policy and admits no lineage.
 TALLY = [CORE, TERMS, MULTIPARTY]
-
-# The draft each URI resolves to, for the conformance register.
-DRAFTS = {
-    CORE: "draft-gamb-uma4agents-core-00",
-    TERMS: "draft-gamb-uma4agents-terms-00",
-    FEDAUTHZ: "draft-gamb-uma4agents-fedauthz-00",
-    POLICY: "draft-gamb-uma4agents-policy-00",
-    LINEAGE: "draft-gamb-uma4agents-lineage-00",
-    MULTIPARTY: "draft-gamb-uma4agents-multiparty-00",
-    OWNER: "draft-gamb-uma4agents-owner-00",
-    MCP: "draft-gamb-uma4agents-mcp-00",
-    AAUTH: "draft-gamb-uma4agents-aauth-00",
-}

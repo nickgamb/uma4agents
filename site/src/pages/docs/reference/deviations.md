@@ -471,9 +471,10 @@ than permissions are the policy suite and the store tests.
   rebuilt from configured values, never from `Host` or a forwarded header.
 - **A truncated body must fail closed**, with a named reason rather than a
   misleading unknown-method error.
-- **The resource server must not be able to read the owner's policy.** Structural
-  rather than advisory: PAT-scoped protection API, and in the Kubernetes
-  reference the mesh denies the path outright.
+- **The resource server must not be able to read the owner's policy.** The owner
+  API takes only her credential, which the resource server never holds, so the
+  public path refuses it; in the Kubernetes reference the mesh also refuses the
+  direct hop. `k8s-policy-test` asserts both.
 - **Agent-token issuers are trusted by dereference**, with TLS on the issuer
   origin as the trust root and non-`https` issuers rejected. There is
   deliberately no issuer allow-list here — which issuers may attest agents is

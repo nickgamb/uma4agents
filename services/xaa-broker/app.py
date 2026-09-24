@@ -106,10 +106,13 @@ def now() -> float:
     return time.time()
 
 
-def event(name: str, **fields) -> None:
+def event(name: str, corr: str | None = None, **details) -> None:
+    """One protocol event, in the shape every service here emits: `event` and
+    `corr` at the top, where the log pipeline promotes them to labels, and
+    everything else under `details`."""
     print(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                      "svc": "xaa-broker", "event": name, **fields}),
-          flush=True)
+                      "event": name, "corr": corr, "actor": "xaa-broker",
+                      "details": details}), flush=True)
 
 
 # ── Northwind's directory of approved edges ──────────────────────────────────
@@ -124,9 +127,6 @@ CONNECTIONS: dict[str, dict] = {}
 # Requesting applications registered with Northwind's identity provider, and
 # the secret each authenticates the exchange with.
 CLIENTS: dict[str, str] = {}
-# A dev token so the lab can seed connections without driving a login. The
-# same affordance org-authority ships, and the same caveat: it is a lab.
-ADMIN_TOKEN = os.environ.get("XAA_ADMIN_TOKEN", "xaa-admin-dev-token")
 # The client administration tokens are issued to. A token for Dana from any
 # other client of the realm — the public research agent, say — is not an
 # administrator acting at this console.
@@ -373,15 +373,13 @@ async def discovery() -> dict:
 def require_admin(request: Request) -> str:
     """Dana, at Northwind's identity provider.
 
-    Either a realm token for somebody in the administrator list, or the lab's
-    seed token. Nothing about a connection is readable without one — the list
-    of approved edges is itself a map of what the enterprise integrates."""
+    A realm token for somebody in the administrator list. Nothing about a
+    connection is readable without one — the list of approved edges is itself
+    a map of what the enterprise integrates."""
     raw = request.headers.get("authorization", "")
     presented = raw.split(" ", 1)[1] if raw.lower().startswith("bearer ") else ""
     if not presented:
         raise ValueError("no bearer token")
-    if secrets.compare_digest(presented, ADMIN_TOKEN):
-        return "seed"
     claims = realm_claims(presented)
     if claims.get("azp") != ADMIN_CLIENT:
         raise ValueError("that token was not issued to the administration client")

@@ -69,6 +69,10 @@ POLL_INTERVAL = int(os.environ.get("TALLY_POLL_INTERVAL", "2"))
 TICKET_TTL_S = float(os.environ.get("TALLY_TICKET_TTL_S", "300"))
 # How long a question this service signs to a holder stays answerable.
 REQUEST_TTL_S = int(os.environ.get("TALLY_REQUEST_TTL_S", "120"))
+# Negotiations not yet agreed to, per account. Each costs a record here and,
+# at beat 2, a quote from every holder's authority, and any caller the
+# enforcement point challenges can start one.
+MAX_OPEN = int(os.environ.get("TALLY_MAX_OPEN_NEGOTIATIONS", "200"))
 # A minimum the holders may not vote themselves below. Configuration here
 # stands in for whatever supplies it in the world — an account agreement, or
 # a regulator — and its presence is the point: a quorum a group sets for
@@ -122,8 +126,13 @@ def now() -> float:
     return time.time()
 
 
-def event(kind: str, **fields) -> None:
-    print(json.dumps({"svc": "joint-tally", "kind": kind, **fields}), flush=True)
+def event(name: str, corr: str | None = None, **details) -> None:
+    """One protocol event, in the shape every service here emits: `event` and
+    `corr` at the top, where the log pipeline promotes them to labels, and
+    everything else under `details`."""
+    print(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                      "event": name, "corr": corr, "actor": "joint-tally",
+                      "details": details}), flush=True)
 
 
 def s256(data: bytes) -> str:
@@ -396,7 +405,32 @@ def take_ticket(ticket: str) -> dict | None:
     entry = TICKETS.pop(ticket or "", None)
     if entry is None or entry[1] < now():
         return None
-    return NEGOTIATIONS.get(entry[0])
+    rec = NEGOTIATIONS.get(entry[0])
+    if rec is not None:
+        rec["touched"] = now()
+    return rec
+
+
+def sweep() -> None:
+    """Forget what nobody is coming back for.
+
+    A ticket is dropped once it has expired; a negotiation once no live ticket
+    names it and nothing has touched it for a ticket's lifetime, so one that a
+    request is working on is never swept from under it; and a terms document
+    once its negotiation is gone, unless an agent signed it — a signed one is
+    the record an agreement cites, and stays.
+    """
+    t = now()
+    for ticket, (_, expires) in list(TICKETS.items()):
+        if expires < t:
+            TICKETS.pop(ticket, None)
+    live = {family for family, _ in TICKETS.values()}
+    for family, rec in list(NEGOTIATIONS.items()):
+        if family not in live and rec.get("touched", 0) < t - TICKET_TTL_S:
+            NEGOTIATIONS.pop(family, None)
+    for template_id, doc in list(TERMS.items()):
+        if not doc.get("signed") and doc.get("family") not in NEGOTIATIONS:
+            TERMS.pop(template_id, None)
 
 
 def account_for(resource_id: str) -> tuple[str | None, dict]:
@@ -422,9 +456,15 @@ async def perm(request: Request) -> dict:
     account, _ = account_for(resource_id)
     if account is None:
         raise HTTPException(status_code=400, detail="no mandate covers that resource")
+    sweep()
+    if sum(1 for r in NEGOTIATIONS.values()
+           if r["account"] == account and r["state"] in ("new", "need_info")) >= MAX_OPEN:
+        event("ticket.refused", account=account, open=MAX_OPEN)
+        raise HTTPException(status_code=503,
+                            detail="too many negotiations are open over this account")
     family = f"jnt_{uuid.uuid4().hex[:12]}"
     NEGOTIATIONS[family] = {
-        "family": family, "account": account, "state": "new",
+        "family": family, "account": account, "state": "new", "touched": now(),
         "resource_id": resource_id,
         "resource_scopes": body.get("resource_scopes") or [],
         "verdicts": {}, "because": {}, "signed": {},
@@ -437,7 +477,7 @@ def fold_terms(rec: dict, quotes: list[tuple[str, dict]], doc: dict) -> dict:
     """The one document the agent is asked to sign."""
     folded, changes = J.fold(quotes, doc.get("resources") or [])
     terms = folded.get("terms") or {}
-    template_id = f"{rec['account']}/joint/v{len(TERMS) + 1}"
+    template_id = f"{rec['account']}/joint/{rec['family']}"
     asked_for = rec.get("resource_scopes") or terms.get("scope") or []
     template = {
         "template_id": template_id,
@@ -465,7 +505,7 @@ def fold_terms(rec: dict, quotes: list[tuple[str, dict]], doc: dict) -> dict:
         },
         "enforced": {"ask_me": bool(folded.get("ask_me"))},
     }
-    TERMS[template_id] = {**template, "changes": changes}
+    TERMS[template_id] = {**template, "changes": changes, "family": rec["family"]}
     return template
 
 
@@ -474,7 +514,7 @@ async def terms(template_id: str) -> dict:
     doc = TERMS.get(template_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="no such terms document")
-    return doc
+    return {k: v for k, v in doc.items() if k not in ("family", "signed")}
 
 
 def bind_key(agreement_b64: str) -> tuple[dict, dict]:
@@ -581,6 +621,7 @@ async def token(request: Request) -> JSONResponse:
     rec["contract"] = contract
     rec["signer"] = signer
     rec["state"] = "awaiting-holders"
+    TERMS[template["template_id"]]["signed"] = True
     event("contract.committed", corr=rec["family"], contract=rec["contract_hash"])
     return await poll(rec, doc)
 

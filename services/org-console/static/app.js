@@ -390,10 +390,11 @@ async function sendInvite() {
   const owner = $("#inv-owner").value.trim();
   if (!owner) { toast("Who?", "Give the identifier they sign in with", "warn"); return; }
   try {
-    await api("/api/org/invites", { method: "POST",
+    const r = await api("/api/org/invites", { method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ owner, note: $("#inv-note").value.trim() }) });
-    toast("Invitation sent", `${owner} will see it in their own portal. Nothing of theirs has changed.`);
+    toast("Invitation created", `Give ${owner} this code: ${r.code}. It is shown once. ` +
+      `They will see the invitation in their own portal and need the code to answer it.`);
   } catch (e) { toast("Not sent", e.message, "warn"); }
   render();
 }

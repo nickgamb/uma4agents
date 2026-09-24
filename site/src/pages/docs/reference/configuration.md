@@ -135,10 +135,10 @@ of it set, every line of that layer is inert.
 | `OPA_URL` | `http://opa:8181` | The policy engine. The charter's declarative conditions and the administrator's own Rego are both evaluated there |
 | `ORG_ADMIN_ISSUER` | `…/realms/northwind` | The realm administrators sign in to. Deliberately not a member's realm — an identity provider that minted both would collapse the two layers |
 | `ORG_ADMIN_CLIENTS` | `meridian-org-console` | Which client's tokens the admin API accepts |
-| `ORG_ADMIN_TOKEN` | unset | A static credential for acceptance jobs with no browser. Never set where an identity provider is configured |
+| `ORG_ADMIN_TOKEN` | unset | A static administrator credential, for a stack with no identity provider. The service refuses to start with it and `ORG_ADMIN_ISSUER` both set; the lab's checks sign in as the administrator instead |
 | `CONSOLE_AUTH` | `oidc` | The administrators' console: `oidc`, or `none` for a stack with no identity provider. It refuses to start on any other value |
 | `ORG_RS_TOKEN` | `org-rs-dev-token` | What an enforcement point presents to read membership and check the grants this service signs |
-| `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. Invitations carry their own, addressed to one person |
+| `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. An invitation has its own, addressed to one person and shown once, to the administrator who creates it |
 | `ORG_BREAK_GLASS_AUDIENCE` | `https://gateway.uma.lab` | Who an override is issued *for*. Configuration rather than a field on the request: an audience the caller chooses is one it can aim at another resource server that also trusts this organization |
 | `ORG_OPA_GRACE_S` | `60` | How long a decision may be answered from cache when the engine cannot be reached. Past it the answer is a refusal — a charter is the organization's protection of its own data, and a request that slipped through while the engine was down is exactly what it exists to prevent |
 
@@ -185,6 +185,7 @@ none of it set, no account is jointly held and the whole layer is inert.
 | `TALLY_THRESHOLD_FLOOR` | `0` | A minimum the holders may not vote themselves below. A mandate under it is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
 | `TALLY_RS_SECRET` | `tally-rs-dev-secret` | What an enforcement point presents to mint tickets and introspect. It buys nothing that matters: the verdicts inside a grant are checked against the holders' published keys, not against this |
 | `TALLY_SIGNING_KEY` | `/keys/tally-ed25519.pem` | Persisted, not generated per process — both holders' authorities cache what this service publishes, and a key that changed on restart reads as a broken mandate |
+| `TALLY_MAX_OPEN_NEGOTIATIONS` | `200` | Negotiations not yet agreed to, per account. Any caller the enforcement point challenges starts one, and each costs a quote from every holder's authority; past the cap a new one is refused with `503`. Abandoned ones are swept once their ticket has lapsed |
 
 And on the enforcement point:
 

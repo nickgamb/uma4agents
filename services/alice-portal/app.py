@@ -460,7 +460,7 @@ async def agent_decline_invitation(request: Request):
         return JSONResponse({"error": "auth"}, status_code=401)
     async with httpx.AsyncClient() as c:
         r = await c.post(f"{UMA_AS}/owner/organization/decline",
-                         headers=await owner_headers(request))
+                         json=await request.json(), headers=await owner_headers(request))
     return JSONResponse(r.json(), status_code=r.status_code)
 
 

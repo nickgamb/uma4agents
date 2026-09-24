@@ -36,7 +36,6 @@ ID_JAG_FORMAT = "urn:ietf:params:oauth:token-type:id-jag"
 ID_JAG_CLAIM = "urn:ietf:params:oauth:token-type:id-jag"
 TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
 ID_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token"
-REFRESH_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:refresh_token"
 
 
 @dataclass

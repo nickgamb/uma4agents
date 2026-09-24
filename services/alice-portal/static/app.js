@@ -1089,13 +1089,16 @@ function invitationBanner(org) {
 window.reviewInvitation = async () => {
   agentTab = "organization";
   await agentAuthView($("#settingsBody") || document.body);
-  const box = $("#orgCode");
-  if (box && ORG && ORG.invitation) { box.value = ORG.invitation.code; previewOrganization(); }
+  $("#orgCode")?.focus();
 };
 
 window.declineInvitation = async () => {
+  const code = ($("#orgCode")?.value || "").trim();
+  if (!code) { toast("Which invitation?", "Enter the code you were given to decline it.", "warn"); return; }
   try {
-    const r = await api("/api/agent/organization/decline", { method: "POST" });
+    const r = await api("/api/agent/organization/decline", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code }) });
     toast("Declined", `${r.declined} was told. Nothing of yours changed.`);
   } catch (e) { toast("Not declined", e.message, "warn"); return; }
   ORG = null;
@@ -1108,8 +1111,10 @@ function renderJoinOrganization(target, org) {
       <div class="card pad-lg">
         <div class="section-head"><h2>${esc(org.invitation.name)} has invited you</h2></div>
         <div class="muted" style="font-size:12.5px;max-width:70ch">Their invitation is addressed to
-          you and is good once. Reviewing it changes nothing.</div>
-        <input type="hidden" id="orgCode" value="${esc(org.invitation.code)}">
+          you and is good once. The code came from ${esc(org.invitation.by || "whoever invited you")};
+          it is not shown here, because anyone could ask for this page. Reviewing it changes nothing.</div>
+        <label class="fld" style="max-width:320px;margin-top:12px"><div class="lbl">Invitation code</div>
+          <input type="text" id="orgCode" placeholder="inv_…" autocomplete="off"></label>
         <div style="display:flex;gap:10px;margin-top:14px">
           <button class="btn sm" onclick="previewOrganization()">See what it would mean</button>
           <button class="btn ghost sm" onclick="declineInvitation()">Decline</button></div>

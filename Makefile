@@ -624,7 +624,8 @@ check-live: smoke-test flow-check first-party-check multi-owner-check \
 	joint-check xaa-check adapter-check shim-test embedded-check kwaai-check \
 	rotation-check ts-agent-check fixture
 check-all: check-unit spec-check check-live
-	@echo "check-all: every suite the register cites has run"
+	@echo "check-all: every suite the register cites has run on the compose stack;"
+	@echo "rows proved only in the cluster need 'make k8s-check-all'"
 
 ## spec: render the Internet-Draft set from spec/src into site/static/spec.
 ## kramdown-rfc turns the Markdown into xml2rfc v3 XML, xml2rfc turns that into

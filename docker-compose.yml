@@ -608,7 +608,6 @@ services:
       ORG_ADMIN_CLIENTS: meridian-org-console
       # The static credential is for the acceptance container, which has no
       # browser to log in with. An administrator uses the realm above.
-      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       ORG_RS_TOKEN: ${ORG_RS_TOKEN:-org-rs-dev-token}
       ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
@@ -640,7 +639,6 @@ services:
       XAA_IDP_ISSUER: https://northwind-idp.uma.lab/realms/employees
       XAA_ADMINS: dana
       XAA_IDP_ADMIN_CLIENT: northwind-idp-admin
-      XAA_ADMIN_TOKEN: ${XAA_ADMIN_TOKEN:-xaa-admin-dev-token}
       XAA_CLIENTS: '{"northwind-research-agent": "${XAA_AGENT_SECRET:-northwind-agent-secret}"}'
       # The edges Dana approved. Two, because Northwind's book is administered
       # by two members and each runs her own authority — the assertion has to
@@ -681,7 +679,6 @@ services:
       OIDC_CLIENT_ID: meridian-org-console
       CONSOLE_PUBLIC_URL: https://org-console.uma.lab
       CONSOLE_SESSION_SECRET: ${PORTAL_SESSION_SECRET:-dev-session-secret}
-      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       SSL_CERT_FILE: /certs/rootCA.pem
     volumes:
       - ./certs/rootCA.pem:/certs/rootCA.pem:ro
@@ -865,7 +862,6 @@ services:
       PYTHONPATH: /driver/lib
       UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
       PYTHONUNBUFFERED: "1"
-      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
       XAA_AGENT_SECRET: ${XAA_AGENT_SECRET:-northwind-agent-secret}
       UMA_PEP_ORG_DISCOVERY_TTL_S: ${UMA_PEP_ORG_DISCOVERY_TTL_S:-15}
@@ -924,7 +920,6 @@ services:
       PYTHONPATH: /driver/lib
       UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
       PYTHONUNBUFFERED: "1"
-      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
       UMA4A_ALICE_OPERATOR: https://alice-agent.uma.lab
@@ -950,7 +945,6 @@ services:
       PYTHONPATH: /driver/lib
       UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
       PYTHONUNBUFFERED: "1"
-      ORG_ADMIN_TOKEN: ${ORG_ADMIN_TOKEN:-org-admin-dev-token}
       ORG_JOIN_CODE: ${ORG_JOIN_CODE:-NW-7K2F-QX}
       UMA4A_AGENT_OPERATOR: https://agent.uma.lab
       UMA_AS_ORG_TTL_S: ${UMA_AS_ORG_TTL_S:-30}

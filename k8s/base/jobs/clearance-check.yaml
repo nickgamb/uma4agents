@@ -38,7 +38,6 @@ spec:
             # The same plain value org-check is given: this is a lab
             # credential, and inventing a Secret here that the cluster does
             # not provision would fail the job before it ran a line.
-            - { name: ORG_ADMIN_TOKEN, value: org-admin-dev-token }
             - { name: UMA4A_ORG, value: https://northwind-org.uma.lab }
             - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
             - name: UMA4A_OPERATOR_REGISTER_TOKEN

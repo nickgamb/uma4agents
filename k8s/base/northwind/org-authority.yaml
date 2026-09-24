@@ -77,8 +77,6 @@ spec:
             # exists to keep apart.
             - { name: ORG_ADMIN_ISSUER, value: "https://keycloak.uma.lab/realms/northwind" }
             - { name: ORG_ADMIN_CLIENTS, value: "meridian-org-console" }
-            - name: ORG_ADMIN_TOKEN
-              valueFrom: { secretKeyRef: { name: org-config, key: admin-token } }
             - name: ORG_RS_TOKEN
               valueFrom: { secretKeyRef: { name: org-config, key: rs-token } }
             - name: ORG_JOIN_CODE

@@ -29,7 +29,7 @@ disk):
 | Memory in use once up | 6.3 GB of 15 |
 | Disk in use once up | 13 GB of 32 |
 | `make k8s-smoke-test` | 15 passed, 0 failed |
-| `make k8s-policy-test` | 22 passed, 0 failed |
+| `make k8s-policy-test` | 23 passed, 0 failed |
 
 That machine is a 2× tier, so it spends the monthly Codespaces allowance at
 twice the rate of the smallest one — about 60 hours a month on a free
@@ -129,7 +129,7 @@ action she personally approved. **Click** Revoke on the agent — then re-run
 ### 5. The part that needs a cluster
 
 ```bash
-make k8s-policy-test            # expect 22 passed, 0 failed
+make k8s-policy-test            # expect 23 passed, 0 failed
 ```
 
 **Notice** how many of them are refusals. A policy suite that only proves the

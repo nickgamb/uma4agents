@@ -3060,7 +3060,7 @@ _RS_META_CACHE: dict[str, tuple[float, dict]] = {}
 # remembered "no" costs nothing and is the only thing bounding the amplifier.
 _RS_MISS_TTL = float(os.environ.get("UMA_AS_RS_MISS_TTL", "30"))
 _RS_MAX_BYTES = int(os.environ.get("UMA_AS_RS_MAX_BYTES", "65536"))
-_RS_MISS_CACHE: dict[str, float] = {}
+_RS_MISS_CACHE: dict[str, tuple[float, str]] = {}
 
 
 def _fetch_json(url: str, what: str) -> dict | None:
@@ -3086,7 +3086,7 @@ def _fetch_json(url: str, what: str) -> dict | None:
         return None
 
 
-def resource_server_metadata(resource_uri: str) -> dict:
+def resource_server_metadata(resource_uri: str) -> tuple[dict, str]:
     """The RFC 9728 document the named resource publishes about itself.
 
     Three things have to hold, and each closes a way of registering as
@@ -3103,31 +3103,33 @@ def resource_server_metadata(resource_uri: str) -> dict:
     refusal rather than a shrug. That check attests a claim already made by
     other means; this one *is* the authentication, and a credential that
     cannot be fetched has not been presented.
+
+    Returns the document, or an empty one and the reason it was refused.
     """
     from urllib.parse import urlparse
 
     cached = _RS_META_CACHE.get(resource_uri)
     if cached and now() - cached[0] < _RS_META_TTL:
-        return cached[1]
+        return cached[1], ""
     missed = _RS_MISS_CACHE.get(resource_uri)
-    if missed is not None and now() - missed < _RS_MISS_TTL:
-        return {}
+    if missed is not None and now() - missed[0] < _RS_MISS_TTL:
+        return {}, missed[1]
 
-    def refuse() -> dict:
+    def refuse(why: str) -> tuple[dict, str]:
         if len(_RS_MISS_CACHE) >= 1024:
             _RS_MISS_CACHE.pop(next(iter(_RS_MISS_CACHE)), None)
-        _RS_MISS_CACHE[resource_uri] = now()
-        return {}
+        _RS_MISS_CACHE[resource_uri] = (now(), why)
+        return {}, why
 
     p = urlparse(resource_uri)
     if p.scheme != "https" or not p.netloc:
-        return refuse()
+        return refuse("the resource is not an https URL")
     origin = f"{p.scheme}://{p.netloc}"
     url = (f"{origin}/.well-known/oauth-protected-resource"
            f"{p.path.rstrip('/')}")
     doc = _fetch_json(url, "metadata_unreachable")
     if not isinstance(doc, dict):
-        return refuse()
+        return refuse("that origin publishes no resource metadata for it")
 
     reasons = []
     if doc.get("resource") != resource_uri:
@@ -3140,30 +3142,31 @@ def resource_server_metadata(resource_uri: str) -> dict:
     if reasons:
         event("resource_server.metadata_rejected", resource_uri=resource_uri,
               reasons=reasons)
-        return refuse()
+        return refuse("its metadata " + "; ".join(reasons))
 
     if len(_RS_META_CACHE) >= 256:
         _RS_META_CACHE.pop(next(iter(_RS_META_CACHE)), None)
     _RS_META_CACHE[resource_uri] = (now(), doc)
-    return doc
+    return doc, ""
 
 
-def resource_server_keys(resource_uri: str) -> list:
-    """The public keys the named resource publishes, as JWKs. Empty on any
-    failure, which the callers all read as "not authenticated"."""
-    doc = resource_server_metadata(resource_uri)
+def resource_server_keys(resource_uri: str) -> tuple[list, str]:
+    """The public keys the named resource publishes, as JWKs, or none and the
+    reason, which the callers read as "not authenticated"."""
+    doc, why = resource_server_metadata(resource_uri)
     if not doc:
-        return []
+        return [], why
     keys = _fetch_json(doc["jwks_uri"], "jwks_unreachable")
-    if not isinstance(keys, dict):
-        return []
-    found = keys.get("keys")
-    return found if isinstance(found, list) else []
+    if not isinstance(keys, dict) or not isinstance(keys.get("keys"), list):
+        return [], "its jwks_uri could not be read"
+    return keys["keys"], ""
 
 
 async def verify_resource_server_signature(request: Request, body: bytes,
-                                           resource_uri: str) -> bool:
-    """Did the origin behind `resource_uri` sign this request?
+                                           resource_uri: str) -> str:
+    """Did the origin behind `resource_uri` sign this request? Empty when it
+    did; otherwise why not, which a registrant may be told — every input to
+    it is public.
 
     Off the event loop, because deciding it means dereferencing a host named
     by the caller. This runs on the PAT path, which every resource server
@@ -3182,11 +3185,14 @@ async def verify_resource_server_signature(request: Request, body: bytes,
     sig_input = request.headers.get("signature-input")
     sig = request.headers.get("signature")
     if not sig_input or not sig:
-        return False
+        return "the request is not signed"
     path = request.url.path
     if request.url.query:
         path = f"{path}?{request.url.query}"
-    keys = await asyncio.to_thread(resource_server_keys, resource_uri)
+    keys, why = await asyncio.to_thread(resource_server_keys, resource_uri)
+    if why:
+        return why
+    last = "that origin publishes no key this could be checked against"
     for jwk in keys:
         try:
             key = OKPAlgorithm.from_jwk(json.dumps(jwk))
@@ -3205,10 +3211,11 @@ async def verify_resource_server_signature(request: Request, body: bytes,
                 require_digest=bool(body),
                 digest_header=request.headers.get("content-digest"),
             )
-            return True
-        except VerifyError:
-            continue
-    return False
+            return ""
+        except VerifyError as exc:
+            last = ("no key that origin publishes verifies the signature"
+                    if str(exc) == "signature verification failed" else str(exc))
+    return last
 
 
 _CIMD_CACHE: dict[str, dict] = {}
@@ -3914,7 +3921,7 @@ async def token(request: Request) -> JSONResponse:
         if rs.get("secret"):
             if not secrets.compare_digest(client_secret or "", rs["secret"]):
                 return JSONResponse({"error": "invalid_client"}, status_code=401)
-        elif not await verify_resource_server_signature(
+        elif await verify_resource_server_signature(
                 request, body, rs.get("resource_uri") or ""):
             return JSONResponse({"error": "invalid_client"}, status_code=401)
         if rs["status"] == "pending":
@@ -4642,15 +4649,14 @@ async def rs_register(request: Request) -> JSONResponse:
             status_code=403)
 
     resource_uri = (req.get("resource_uri") or "").strip()
-    if not await verify_resource_server_signature(request, body, resource_uri):
+    if why := await verify_resource_server_signature(request, body, resource_uri):
         event("resource_server.registration_refused", owner=owner,
-              resource_uri=resource_uri,
-              reason="no signature from a key published at that origin")
+              resource_uri=resource_uri, reason=why)
         return JSONResponse(
             {"error": "invalid_client",
              "error_description":
-                 "register by signing with a key published at the origin of "
-                 "the resource you claim to serve"},
+                 f"register by signing with a key published at the origin of "
+                 f"the resource you claim to serve: {why}"},
             status_code=401)
 
     client_id = _origin_of(resource_uri)
@@ -5199,7 +5205,17 @@ async def owner_decline_invitation(request: Request) -> dict:
     found = await pending_invitation(owner)
     if found is None:
         raise HTTPException(status_code=404, detail="nothing is waiting on you")
-    await org.decline(ORG_ISSUER, owner, found["code"])
+    # The code she was given. The organization does not serve it to anyone,
+    # her authority included, so a decline carries it the way a join does.
+    try:
+        code = ((await request.json()) or {}).get("code") or ""
+    except ValueError:
+        code = ""
+    try:
+        await org.decline(ORG_ISSUER, owner, code)
+    except Exception as exc:                                    # noqa: BLE001
+        raise HTTPException(status_code=403,
+                            detail="that is not the code the invitation came with") from exc
     event("org.invitation_declined", owner=owner, org=found.get("org"))
     await ledger_add(owner, "org_declined", "-", {
         "organization": found.get("name"), "by": found.get("by")})

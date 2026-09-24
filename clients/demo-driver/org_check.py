@@ -36,6 +36,7 @@ Run with `make org-check`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 import os
 import sys
@@ -55,7 +56,40 @@ GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
 ORG = os.environ.get("UMA4A_ORG", "https://northwind-org.uma.lab")
 ORG_AUTHORITY = ORG.split("://", 1)[-1]
-ADMIN = {"Authorization": f"Bearer {os.environ.get('ORG_ADMIN_TOKEN', 'org-admin-dev-token')}"}
+class _OrgAdmin(Mapping):
+    """Dana, signed in at Northwind's administration realm, as request headers.
+
+    The credential the console holds, not a static token beside it. Fetched
+    on first use and again a minute before it lapses, so a long run never
+    sends an expired one."""
+
+    def __init__(self) -> None:
+        self._token, self._expires = "", 0.0
+
+    def _headers(self) -> dict:
+        if time.time() > self._expires - 60:
+            r = httpx.post(
+                f"{KEYCLOAK}/realms/northwind/protocol/openid-connect/token",
+                data={"grant_type": "password", "client_id": "meridian-org-console",
+                      "username": os.environ.get("ORG_ADMIN_USER", "dana"),
+                      "password": os.environ.get("ORG_ADMIN_PASSWORD", "dana-demo")},
+                verify=CA, timeout=15.0)
+            r.raise_for_status()
+            self._token = r.json()["access_token"]
+            self._expires = time.time() + r.json().get("expires_in", 300)
+        return {"Authorization": f"Bearer {self._token}"}
+
+    def __getitem__(self, key: str) -> str:
+        return self._headers()[key]
+
+    def __iter__(self):
+        return iter(self._headers())
+
+    def __len__(self) -> int:
+        return 1
+
+
+ADMIN = _OrgAdmin()
 JOIN_CODE = os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 # Agents whose operator published their key. The charter this lab ships wants
@@ -332,6 +366,12 @@ def main() -> int:                                            # noqa: C901
                    headers=ADMIN, timeout=15.0)
         check("an administrator can invite someone by name", r.status_code == 200,
               f"{r.status_code} {r.text[:140]}")
+        # Handed to her by the administrator, and by nobody else.
+        carol_code = r.json().get("code")
+        public = c.get(f"{ORG}/member/invitation", params={"owner": "carol"},
+                       timeout=15.0).json()
+        check("the invitation is public; the code that answers it is not",
+              public.get("invited") and "code" not in public, f"{public}")
         state = c.get(f"{carol['as']}/owner/organization", headers=hdrs(c, "carol"),
                       timeout=15.0).json()
         invite = state.get("invitation") or {}
@@ -341,7 +381,7 @@ def main() -> int:                                            # noqa: C901
               state.get("enrolled") is False
               and "carol" not in {m["owner"] for m in c.get(
                   f"{ORG}/admin/members", headers=ADMIN, timeout=15.0).json()})
-        joined["carol"] = join(c, "carol", invite.get("code")).json()
+        joined["carol"] = join(c, "carol", carol_code).json()
         check("both are members — one by code, one by invitation",
               all(j.get("joined") == "northwind" for j in joined.values()),
               f"{joined}")
@@ -709,8 +749,8 @@ def main() -> int:                                            # noqa: C901
                            "agent_jwk": bg.public_jwk()}).encode()
         sig = sign("POST", ORG_AUTHORITY, "/break-glass", "", bg.key, bg.keyid,
                    body=body)
-        r = c.post(f"{ORG}/break-glass", content=body, timeout=15.0,
-                   headers={"content-type": "application/json", **sig})
+        unnamed = c.post(f"{ORG}/break-glass", content=body, timeout=15.0,
+                         headers={"content-type": "application/json", **sig})
         opened2 = c.post(f"{ORG}/admin/break-glass",
                          json={"owner": "alice", "window_s": 60, "reason": "scope probe"},
                          headers=ADMIN, timeout=15.0).json()
@@ -724,9 +764,19 @@ def main() -> int:                                            # noqa: C901
                                    bg.key, bg.keyid, body=wide)})
         check("an override cannot ask for a scope the charter never allows",
               r.status_code == 403, f"{r.status_code} {r.text[:140]}")
+        narrow = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/get_positions",
+                             "scopes": ["positions:read"], "reason": "scope probe",
+                             "voucher": opened2.get("voucher"),
+                             "agent_jwk": bg.public_jwk()}).encode()
+        r = c.post(f"{ORG}/break-glass", content=narrow, timeout=15.0,
+                   headers={"content-type": "application/json",
+                            **sign("POST", ORG_AUTHORITY, "/break-glass", "",
+                                   bg.key, bg.keyid, body=narrow)})
+        check("and the refusal did not use up the administrator's voucher",
+              r.status_code == 200, f"{r.status_code} {r.text[:140]}")
 
         check("break-glass cannot reach a resource the charter did not name for it",
-              r.status_code == 403, f"{r.status_code} {r.text[:140]}")
+              unnamed.status_code == 403, f"{unnamed.status_code} {unnamed.text[:140]}")
         r = c.post(f"{ORG}/break-glass",
                    content=body.replace(b'"more"', b'"else"'), timeout=15.0,
                    headers={"content-type": "application/json", **sig})
@@ -804,9 +854,13 @@ def main() -> int:                                            # noqa: C901
                     timeout=15.0).json().get("enrolled") is True)
 
         # --- 13. an invitation she does not want -------------------------
-        c.post(f"{ORG}/admin/invites", json={"owner": "alice", "note": "come back"},
-               headers=ADMIN, timeout=15.0)
-        r = c.post(f"{alice['as']}/owner/organization/decline",
+        again = c.post(f"{ORG}/admin/invites", json={"owner": "alice", "note": "come back"},
+                       headers=ADMIN, timeout=15.0).json()
+        r = c.post(f"{alice['as']}/owner/organization/decline", json={"code": "inv_guessed"},
+                   headers=hdrs(c, "alice"), timeout=15.0)
+        check("nobody declines for her without the code she was given",
+              r.status_code == 403, f"{r.status_code} {r.text[:140]}")
+        r = c.post(f"{alice['as']}/owner/organization/decline", json={"code": again.get("code")},
                    headers=hdrs(c, "alice"), timeout=15.0)
         check("she can decline an invitation", r.status_code == 200, f"{r.text[:140]}")
         invites = {i["owner"]: i for i in c.get(f"{ORG}/admin/invites",

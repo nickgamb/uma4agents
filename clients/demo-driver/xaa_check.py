@@ -37,6 +37,7 @@ Run with `make xaa-check`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 import os
 import sys
@@ -62,7 +63,40 @@ ORG = os.environ.get("UMA4A_ORG", "https://northwind-org.uma.lab")
 XAA = os.environ.get("UMA4A_XAA", "https://northwind-xaa.uma.lab")
 AS = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 CAROL_AS = os.environ.get("UMA4A_CAROL_AS", "https://carol-as.uma.lab")
-ADMIN = {"Authorization": f"Bearer {os.environ.get('ORG_ADMIN_TOKEN', 'org-admin-dev-token')}"}
+class _OrgAdmin(Mapping):
+    """Dana, signed in at Northwind's administration realm, as request headers.
+
+    The credential the console holds, not a static token beside it. Fetched
+    on first use and again a minute before it lapses, so a long run never
+    sends an expired one."""
+
+    def __init__(self) -> None:
+        self._token, self._expires = "", 0.0
+
+    def _headers(self) -> dict:
+        if time.time() > self._expires - 60:
+            r = httpx.post(
+                f"{KEYCLOAK}/realms/northwind/protocol/openid-connect/token",
+                data={"grant_type": "password", "client_id": "meridian-org-console",
+                      "username": os.environ.get("ORG_ADMIN_USER", "dana"),
+                      "password": os.environ.get("ORG_ADMIN_PASSWORD", "dana-demo")},
+                verify=CA, timeout=15.0)
+            r.raise_for_status()
+            self._token = r.json()["access_token"]
+            self._expires = time.time() + r.json().get("expires_in", 300)
+        return {"Authorization": f"Bearer {self._token}"}
+
+    def __getitem__(self, key: str) -> str:
+        return self._headers()[key]
+
+    def __iter__(self):
+        return iter(self._headers())
+
+    def __len__(self) -> int:
+        return 1
+
+
+ADMIN = _OrgAdmin()
 JOIN_CODE = os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 AGENT_CLIENT = "northwind-research-agent"

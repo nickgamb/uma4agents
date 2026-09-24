@@ -173,7 +173,7 @@ k8s-wait:
 			python3 -c "import urllib.request;urllib.request.urlopen('http://localhost:9000/health/registry')" \
 			>/dev/null 2>&1; then echo " ok"; exit 0; fi; \
 		printf "."; sleep 3; \
-	done; echo; echo "  the registry pull has not landed — see 'kubectl -n alice logs -l app=uma-as'"
+	done; echo; echo "  the registry pull has not landed — see 'kubectl -n alice logs -l app=uma-as'"; exit 1
 
 # ---------------------------------------------------------------------------
 # Verification
@@ -295,9 +295,17 @@ k8s-spawn-keys:
 		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@kubectl apply -f $(K8S)/base/sterling-vance/keys.yaml >/dev/null
-	@until kubectl -n $(NS_AGENT) get job agent-keygen \
-		-o jsonpath='{.status.conditions[*].type}' 2>/dev/null \
-		| grep -qE "Complete|Failed"; do sleep 2; done
+	@# Bounded, and it has to have succeeded: a check run on keys that were
+	@# not rotated fails for a reason that has nothing to do with lineage.
+	@for i in $$(seq 1 90); do \
+		state=$$(kubectl -n $(NS_AGENT) get job agent-keygen \
+			-o jsonpath='{.status.conditions[*].type}' 2>/dev/null); \
+		case "$$state" in *Complete*) break ;; \
+			*Failed*) kubectl -n $(NS_AGENT) logs job/agent-keygen --tail=20; \
+				echo "agent key generation failed"; exit 1 ;; esac; \
+		[ $$i = 90 ] && { echo "agent key generation did not finish in 180s"; exit 1; }; \
+		sleep 2; \
+	done
 	@kubectl -n $(NS_AGENT) logs job/agent-keygen --tail=2 2>/dev/null || true
 	@kubectl -n $(NS_AGENT) rollout restart deploy/agent-operator >/dev/null
 	@kubectl -n $(NS_AGENT) rollout status deploy/agent-operator --timeout=180s >/dev/null
@@ -611,6 +619,20 @@ k8s-paios-check: k8s-paios
 	@# answers every later check's pending requests before their owner can.
 	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py; \
 		status=$$?; kubectl -n alice scale deployment/paios --replicas=0 >/dev/null; exit $$status
+
+## k8s-check-all: every suite the requirements register cites, against the
+## cluster — the unit half, the register itself, and the cluster twin of every
+## live check, including the rows (the trust boundary, the published metadata)
+## that only the cluster proves. The order is the one that leaves the lab in a
+## state each next check expects.
+.PHONY: k8s-check-all
+k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
+	k8s-flow-check k8s-first-party-check k8s-multi-owner-check \
+	k8s-establishment-check k8s-assurance-check k8s-intent-check \
+	k8s-consequence-check k8s-clearance-check k8s-subagent-check k8s-org-check \
+	k8s-joint-check k8s-xaa-check k8s-adapter-check k8s-shim-test \
+	k8s-embedded-check k8s-kwaai-check k8s-rotation-check k8s-ts-agent-check fixture
+	@echo "k8s-check-all: every suite the register cites has run against the cluster"
 
 ## k8s-reset: rewind the story without rebuilding the cluster
 .PHONY: k8s-reset

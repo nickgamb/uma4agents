@@ -8,11 +8,13 @@
 # Two namespaces get one, and in both cases the rule it enables is a real
 # security property rather than decoration:
 #
-#   alice     — /owner/* must be reachable only by Alice's portal, while
-#               /token, /perm, /introspect and /consume must be reachable by
-#               the edge and by Meridian's enforcement point. Expressed at
-#               L4 this is one port, and permitting the resource server to
-#               reach the port permits it to rewrite Alice's policy.
+#   alice     — /owner/* must be reachable by Alice's portal and the edge and
+#               by nothing else in the mesh, while /token, /perm, /introspect
+#               and /consume must be reachable by the edge and by Meridian's
+#               enforcement point. Expressed at L4 this is one port, and
+#               permitting the resource server to reach the port permits it
+#               to reach her policy with nothing but her credential in the
+#               way. Through the edge, her credential is what refuses it.
 #
 #   meridian  — /check* belongs to the gateway alone, and /owner-resources
 #               is served only to Alice's authorization server. Same shape,

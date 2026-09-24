@@ -33,8 +33,21 @@ psql_q() {
     psql -U postgres -d u4a -tAc "$1" 2>/dev/null | tr -d '[:space:]'
 }
 
+# A count read from the current primary, retried through a failover. Empty
+# when no read succeeded: a table nobody could read is not a request that
+# survived, and must not be counted as one.
 pending_count() {
-  psql_q "SELECT count(*) FROM negotiations WHERE state = 'awaiting-owner' AND decision IS NULL;"
+  local n
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    n=$(psql_q "SELECT count(*) FROM negotiations WHERE state = 'awaiting-owner' AND decision IS NULL;")
+    case "$n" in ''|*[!0-9]*) sleep 3 ;; *) echo "$n"; return 0 ;; esac
+  done
+}
+
+still_pending() {
+  local n
+  n=$(pending_count)
+  [ -n "$n" ] && [ "$n" -gt 0 ]
 }
 
 step "Start from a clean slate"
@@ -74,7 +87,7 @@ kubectl -n alice delete pod "$victim" --wait=false >/dev/null
 echo "  deleted $victim"
 kubectl -n alice rollout status deploy/uma-as --timeout=180s >/dev/null 2>&1
 
-if [ "$(pending_count)" != "0" ]; then
+if still_pending; then
   ok "the pend survived — it was never in that process's memory"
 else
   bad "the pend survived" "the pending negotiation is gone"
@@ -107,7 +120,7 @@ else
 fi
 
 sleep 15
-if [ "$(pending_count)" != "0" ]; then
+if still_pending; then
   ok "Alice's request is still waiting for her, across both failures"
 else
   bad "Alice's request is still waiting" "the pend did not survive the failover"
@@ -119,8 +132,9 @@ step "And she can still answer it"
 # which is not the question. The question is whether the thing that was
 # waiting for her when the machine came apart is still hers to answer.
 #
-# Her portal is the only workload the mesh permits to call the owner API, so
-# the decision is made from there — which is where her tap would come from.
+# Her portal is the one workload in her namespace the mesh permits to call the
+# owner API directly, so the decision is made from there — which is where her
+# tap would come from.
 decided=$(kubectl -n alice exec -i deploy/portal -- python3 - <<'PYEOF' 2>/dev/null | tr -d '[:space:]'
 import json, urllib.parse, urllib.request
 

@@ -4,11 +4,13 @@
 # the *deployment*: N agents negotiating at once through the edge, against
 # three authorization servers behind one Service, sharing one database.
 #
-# The assertion is the one FINDINGS rec 9 is about. A per-operation grant is
-# single-use, and "once" has to mean once across all three replicas — not
-# once per process. If the burn were still a read followed by a write, this
-# is where it would show up: two callers told yes for the same trade, and no
-# error anywhere.
+# The assertion is one half of what FINDINGS rec 9 is about: a permission
+# ticket is single-use, and "once" has to mean once across all three replicas
+# — not once per process. It races sixteen presentations of one ticket at
+# /token behind the Service. A per-operation grant is spent by the same kind of
+# single statement in the shared database, and `make store-test` races that
+# burn directly against the store; this is where a ticket burn that had gone
+# back to a read followed by a write would show up.
 ---
 apiVersion: v1
 kind: ConfigMap

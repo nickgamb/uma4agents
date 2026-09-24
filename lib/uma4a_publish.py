@@ -171,10 +171,12 @@ class AuthorityKeys:
     to a public route would be one request to the authority, sent on the
     caller's behalf. The floor is between forced refetches only: the first
     failure after a rotation always gets a fresh look, however recently the
-    cache was filled on schedule.
+    cache was filled on schedule. It is short because a replicated authority
+    rotates by rolling restart, and a refetch that lands on a replica still
+    publishing only the old key must be able to look again within seconds.
     """
 
-    def __init__(self, jwks_url: str, ttl_s: float = 300, min_refresh_s: float = 30):
+    def __init__(self, jwks_url: str, ttl_s: float = 300, min_refresh_s: float = 5):
         self.jwks_url, self.ttl_s, self.min_refresh_s = jwks_url, ttl_s, min_refresh_s
         self._keys: list = []
         self._expires = self._forced = 0.0

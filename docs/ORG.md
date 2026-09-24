@@ -412,7 +412,10 @@ record that would be believed.
 
 Joining hands another party standing authority over her agents. So:
 
-1. she enters a code, or accepts an invitation addressed to her;
+1. she enters a code — the shared enrolment code, or the one an administrator
+   gave her with an invitation. Her portal shows that she has been invited;
+   it cannot show the code, because the organization serves invitations to
+   anyone who asks and the code is what answers one;
 2. she is shown the whole charter in sentences, what it would share with her,
    what it would let the organization do, what it could never touch, and
    **exactly what it would change about terms she has already written**;
