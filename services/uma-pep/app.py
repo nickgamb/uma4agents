@@ -291,10 +291,6 @@ def route_of(path: str) -> tuple[str, str]:
     return first, "unknown"
 
 
-def owner_for_path(path: str) -> str:
-    return route_of(path)[0]
-
-
 def joint_tools(account: str) -> dict:
     """The tool surface over one jointly held account.
 
@@ -629,20 +625,15 @@ async def announce_registration() -> None:
           note="publishing only; the AS pulls what it needs")
 
 
-@app.api_route("/check{rest:path}", methods=["GET", "POST", "HEAD", "DELETE"])
-async def check(request: Request, rest: str = "") -> Response:
-    """agentgateway's ext_authz callback: HTTP facts in, HTTP verdict out.
+async def bounded_body(request: Request) -> bytes | Response:
+    """The request body, or a refusal if it is larger than this will read.
 
-    Everything that decides the verdict lives in lib/uma4a_pep.py, so the
-    in-process extension reaches the same conclusions from the same code. All
-    this adapter does is read the HTTP request and render a Decision — which
-    for this host means a status line and, on a challenge, the UMA header.
+    Bounded before anything reads it. Unbounded, one request can hold as much
+    memory as it likes before any credential is looked at. Read once: the
+    stream is gone afterwards, so a caller that needs the body again — the
+    sidecar, forwarding it — takes it from here.
     """
-    original_path = rest or "/"
-    h = request.headers
-    # Bounded before anything reads it. Unbounded, one request can hold as
-    # much memory as it likes before any credential is looked at.
-    declared = h.get("content-length")
+    declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
         return deny(413, {"error": "invalid_request",
                           "error_description": "request body too large"})
@@ -653,7 +644,28 @@ async def check(request: Request, rest: str = "") -> Response:
             return deny(413, {"error": "invalid_request",
                               "error_description": "request body too large"})
         chunks.append(chunk)
-    body = b"".join(chunks)
+    return b"".join(chunks)
+
+
+@app.api_route("/check{rest:path}", methods=["GET", "POST", "HEAD", "DELETE"])
+async def check(request: Request, rest: str = "") -> Response:
+    """agentgateway's ext_authz callback: HTTP facts in, HTTP verdict out.
+
+    Everything that decides the verdict lives in lib/uma4a_pep.py, so the
+    in-process extension reaches the same conclusions from the same code. All
+    this adapter does is read the HTTP request and render a Decision — which
+    for this host means a status line and, on a challenge, the UMA header.
+    """
+    body = await bounded_body(request)
+    if isinstance(body, Response):
+        return body
+    return await decide(request, rest, body)
+
+
+async def decide(request: Request, rest: str, body: bytes) -> Response:
+    """The verdict for one request whose body has already been read."""
+    original_path = rest or "/"
+    h = request.headers
 
     # The gateway buffers the body up to a configured ceiling and, past it,
     # forwards a prefix with this header set rather than refusing the call.
@@ -818,7 +830,10 @@ async def sidecar(request: Request, rest: str = "") -> Response:
     if not UPSTREAM:
         return deny(404, {"error": "not_found"})
 
-    verdict = await check(request, "/" + rest.lstrip("/"))
+    body = await bounded_body(request)
+    if isinstance(body, Response):
+        return body
+    verdict = await decide(request, "/" + rest.lstrip("/"), body)
     if verdict.status_code != 200:
         return verdict
 
@@ -851,7 +866,7 @@ async def sidecar(request: Request, rest: str = "") -> Response:
             up = await c.request(
                 request.method,
                 target,
-                content=await request.body(),
+                content=body,
                 headers=headers,
                 params=dict(request.query_params),
             )

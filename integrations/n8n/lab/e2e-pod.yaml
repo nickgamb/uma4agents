@@ -2,15 +2,58 @@
 # Three containers in one pod so the hops are localhost and the shape is
 # obvious: n8n is the resource, the sidecar is the only way to it, and the
 # client is an ordinary agent. See integrations/n8n/README.md.
+#
+# The sidecar is a resource server of its own, and it is introduced to Alice
+# as one: its own service account, a key it generates at start, and its own
+# origin, n8n.uma.lab, where it publishes the metadata and the key her
+# authority checks its registration against. Borrowing the gateway's identity
+# would have her approve "gateway.uma.lab" when the thing asking is this pod.
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: n8n-e2e, namespace: meridian }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: n8n-e2e, namespace: meridian }
+spec:
+  selector: { app: n8n-e2e }
+  ports: [{ name: http, port: 9002, targetPort: 9002 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: { name: n8n-e2e, namespace: meridian }
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["n8n.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: n8n-e2e, port: 9002 }
+---
+# Reached from the edge and nothing else, like every resource here.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: n8n-e2e, namespace: meridian }
+spec:
+  selector:
+    matchLabels: { app: n8n-e2e }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/uma-edge/sa/edge"]
+      to:
+        - operation: { ports: ["9002"] }
+---
 apiVersion: v1
 kind: Pod
 metadata: { name: n8n-e2e, namespace: meridian, labels: { app: n8n-e2e } }
 spec:
   restartPolicy: Never
-  serviceAccountName: uma-pep
+  serviceAccountName: n8n-e2e
   containers:
     - name: n8n
-      image: n8nio/n8n:latest
+      image: n8nio/n8n:2.38.6
       command: ["/bin/sh","-ec"]
       args:
         - |
@@ -36,13 +79,19 @@ spec:
         - { name: UMA_PEP_UPSTREAM_AUTH, value: "only-the-sidecar-knows" }
         - { name: UMA_PEP_TOOLS, value: "/fixtures/tools.json" }
         - { name: UMA_AS_PUBLIC, value: "https://alice-as.uma.lab" }
-        - { name: UMA_AS_INTERNAL, value: "http://uma-as.alice.svc.cluster.local:9000" }
-        - { name: UMA_AS_RS_CLIENT_ID, value: "meridian-gateway" }
+        # Her authority's public surface, the way any resource server that
+        # nobody provisioned reaches it. The mesh admits the edge there.
+        - { name: UMA_AS_INTERNAL, value: "https://alice-as.uma.lab" }
+        # No secret, so it introduces itself by signature, as its origin.
         - { name: UMA_AS_RS_CLIENT_SECRET, value: "" }
         - { name: UMA_OWNER, value: "alice" }
         - { name: UMA_REALM, value: "alice-vault" }
-        - { name: UMA_EXPECTED_AUTHORITY, value: "gateway.uma.lab" }
+        - { name: UMA_EXPECTED_AUTHORITY, value: "n8n.uma.lab" }
+        - { name: UMA_PEP_RS_NAME, value: "n8n workflow (lab)" }
         - { name: UMA4A_CA_BUNDLE, value: "/certs/rootCA.pem" }
+        # Her authority is reached over https here, so the lab's CA has to be
+        # the one the sidecar's TLS trusts.
+        - { name: SSL_CERT_FILE, value: "/certs/rootCA.pem" }
       volumeMounts:
         - { name: certs, mountPath: /certs }
         - { name: keys, mountPath: /keys }
@@ -58,5 +107,6 @@ spec:
     - { name: fixtures, configMap: { name: n8n-fixtures } }
     - { name: lib, configMap: { name: demo-lib } }
     - { name: certs, configMap: { name: uma-lab-ca-bundle } }
-    - { name: keys, secret: { secretName: uma-pep-signing-key } }
+    # Its own key, generated when the sidecar starts. Gone with the pod.
+    - { name: keys, emptyDir: {} }
     - { name: tools, configMap: { name: sidecar-tools } }

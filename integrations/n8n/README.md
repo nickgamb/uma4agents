@@ -119,7 +119,9 @@ kubectl create cm demo-lib -n meridian   --from-file=lib/uma4a_grant.py --from-f
 ```
 
 **3 · Start it.** n8n imports the workflow, publishes it, and comes up; the
-sidecar registers itself with Alice's authority.
+sidecar registers itself with Alice's authority as `https://n8n.uma.lab`,
+under its own service account and a key it generated at start. It is a
+resource server she has never seen, and she is asked about it as one.
 
 ```bash
 kubectl apply -f integrations/n8n/lab/e2e-pod.yaml
@@ -129,7 +131,8 @@ kubectl -n meridian logs -f n8n-e2e -c n8n | grep -m1 "published workflows"
 **4 · Alice authorizes the resource server.** Until she does, every call
 through the sidecar answers `authorization_pending`. In her portal at
 `https://portal.uma.lab` (**alice** / **alice-demo**) it is under
-**Settings → Security → Agent Authorization → Resource servers**.
+**Settings → Security → Agent Authorization → Resource servers**, as
+**n8n workflow (lab)** at `https://n8n.uma.lab`.
 
 **5 · Run the agent**, and answer its first contact in her portal when the
 badge appears.
@@ -158,10 +161,12 @@ kubectl -n meridian exec n8n-e2e -c client -- python3 -c   "import httpx; print(
 `403`. The sidecar holds a header credential n8n requires and nothing else
 has it.
 
-**Tear it down.**
+**Tear it down.** Revoke `https://n8n.uma.lab` under **Resource servers** in
+her portal first: deleting the pod removes the resource server, and only she
+can remove her authority's approval of it.
 
 ```bash
-kubectl -n meridian delete pod n8n-e2e
+kubectl delete -f integrations/n8n/lab/e2e-pod.yaml
 kubectl -n meridian delete cm n8n-fixtures sidecar-tools demo-lib
 ```
 

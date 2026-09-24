@@ -31,7 +31,7 @@ with httpx.Client(verify=CA, timeout=60.0) as c:
 
     body = json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
                        "params": {"name": "get_positions", "arguments": {}}}).encode()
-    h = signed_headers("POST", "gateway.uma.lab", "/mcp", rpt, keys)
+    h = signed_headers("POST", "n8n.uma.lab", "/mcp", rpt, keys)
     r = c.post(SIDECAR, content=body, headers={**H, **s, **h})
     print("4 same call with the grant ->", r.status_code)
     print("  n8n answered ->", r.text[:260])
