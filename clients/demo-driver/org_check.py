@@ -398,6 +398,10 @@ def main() -> int:                                            # noqa: C901
               f"{[j.get('role') for j in joined.values()]}")
 
         # --- 3. joining is what makes the firm's book exist for her --------
+        # Each gateway replica may hold the answer it had before they joined,
+        # "not a member", for its membership TTL; the next sections go through
+        # the gateway, so that answer is waited out here.
+        time.sleep(TTL)
         for owner in OWNERS:
             poke(c, owner, "shared")
         time.sleep(1.5)

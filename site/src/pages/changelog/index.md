@@ -20,6 +20,59 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 23 2026
+
+### v2026.09.14
+
+#### New
+
+- **Specification:** core defines refusals that are not challenges — a status and an `error` from a named set, with no challenge — and the MCP binding's `-32002` carries them.
+- **Specification:** multiparty specifies the organization's metadata document at `/.well-known/u4a-organization`, the decision request and answer, the break-glass grant's claims, and the tally's `u4a_mandate_endpoint`.
+- **Specification:** the requesting party token must carry `iss`, `aud`, `jti` and `exp`, and an active introspection answer must carry what enforcement reads from it.
+- **Specification:** extension introspection reasons must say whether they are terminal, `organization_revoked` is, an unrecognised one is treated as terminal, and `/consume` names its `error` values.
+- **Checks:** `make k8s-check-all` runs every suite the requirements register cites against the cluster, and `make rego-test` runs the charter pattern vectors through the organization's Rego.
+- **Checks:** `make spec-check` requires each register row's assertions to come from the targets that row names.
+
+#### Enhancements
+
+- **Specification:** claim types, formats and the authorization-details type are `https://u4a.ai/spec/…#…` URIs instead of an unregistered URN namespace.
+- **Specification:** a refuse rule may turn away an agent the owner has not met, and the refusal is recorded; no rule may admit one.
+- **Enforcement point, embedded vault:** both build discovery documents and the owner-resources gate from `lib/uma4a_publish.py`, and the AAuth resource document follows the AAuth binding draft.
+- **Enforcement point:** one function classifies why a grant is not live, for introspection and consume alike.
+- **Owner API:** connection revoke, and the organization's revoke and restore, take the handle in the body.
+- **Organization:** an invitation's code is shown once, to the administrator; the public read says only that she is invited.
+- **Organization:** the static administrator token is refused beside an identity provider; the checks sign in as the administrator. The XAA broker's seed token is gone.
+- **Organization:** a charter pattern is literal text and `*`.
+- **Tally:** abandoned negotiations, tickets and unsigned terms are swept, and open negotiations per account are capped.
+- **Tally, organization, XAA broker:** protocol events use the shape every other service emits.
+- **n8n integration:** the lab sidecar has its own service account, key and origin, `n8n.uma.lab`, and n8n is pinned.
+- **Fixture:** makes one certificate for its resource, which serves https.
+
+#### Bug fixes
+
+- **Authorization server:** introspect and consume disclosed another owner's grant state before the owner check.
+- **Authorization server:** an agreement with no scope array, or a per-operation agreement naming no tool, was put to the owner and failed at issuance.
+- **Authorization server:** the joint verdict path stored an agent's reason and mission unbounded.
+- **Authorization server:** introductions without `exp` were accepted.
+- **Authorization server:** a rule naming an unknown condition never fired, and a malformed stored rule raised in the grant loop.
+- **Authorization server:** a holder's authority never noticed the tally publishing a different mandate; it now refuses, records it once and asks her again.
+- **Authorization server:** tier creation refused a resource the serving replica had not pulled yet.
+- **Enforcement point:** a consume that could not be made was reported as a lost race.
+- **Enforcement point, embedded vault:** Origin was checked only on requests that reached authorization.
+- **Enforcement point:** a bad signature on `/owner-resources` forced a key fetch every time; an unreachable organization or tally shortened the listing, which reads as withdrawal.
+- **Enforcement point:** sidecar mode failed on any forwarded body.
+- **Signatures:** a non-`ed25519` `alg` and an uncovered `Signature-Agent` were accepted.
+- **Portal, console:** an unknown auth mode served without login; the session id was not rotated at login.
+- **Portal:** vault errors reached the browser as bare 500s.
+- **Organization:** a refused break-glass request burnt the administrator's voucher; charter notices were serial and failed on a departed member; a listed operator's new key was refused for up to five minutes.
+- **XAA broker:** admin tokens were verified without key refetch and with the token's own `alg`.
+- **Kwaai ability:** a refused decision was retried forever and logged as unreachable.
+- **Agent shim:** a resource without discovery was reported as a version mismatch.
+- **Joint vault:** transactions carried no account.
+- **Kubernetes:** pAI-OS was left running after its checks and raced every later one; keygen waits were unbounded; `k8s-wait` passed without the registry pull; `chaos.sh` counted an unreadable table as a surviving request.
+- **Specification build:** the render failed once the pinned draft date was more than three days old.
+- **Docs:** suite counts, the MCP RFC 9728 date, the approval guide's claim checks, recommendations 27 and 28, and what guards the owner API.
+
 ## September 16 2026
 
 ### v2026.09.13

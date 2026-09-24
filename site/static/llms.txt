@@ -78,13 +78,14 @@ UMA 2.0. Listed in reading order.
 - [Reference · Configuration](https://u4a.ai/docs/reference/configuration.md): Every setting each component reads, its default, and the two settings people get wrong.
 - [Reference · The specification set](https://u4a.ai/docs/reference/specification.md): The nine Internet-Drafts that specify UMA 2.0 for agents — what each covers, their identifying URIs, and how to build them.
 - [Reference · Deviations from UMA 2.0](https://u4a.ai/docs/reference/deviations.md): The extension register — every place this profile departs from stock UMA, what the baseline says, and why each departure exists.
-- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-five recommendations, and what was parked.
+- [Reference · Findings](https://u4a.ai/docs/reference/findings.md): What the build produced for the people writing the specifications — verdicts on each UMA 2.0 primitive, twenty-eight recommendations, and what was parked.
 
 ## Changelog
 
 Every release, newest first. One entry per merged change; several land on
 most days.
 
+- [September 23 2026 · v2026.09.14](https://u4a.ai/changelog.md): Specification: core defines refusals that are not challenges — a status and an `error` from a named set, with no challenge — and the MCP binding's `-32002` carries them.
 - [September 16 2026 · v2026.09.13](https://u4a.ai/changelog.md): Kubernetes: `make k8s-embedded-check` runs the four-beat grant against a resource carrying the enforcement obligations in-process, as a second vault at `embedded.uma.lab` standing beside the gateway one and answering to the same authority. Core §8.1 states those obligations as a conformance profile rather than a topology; running it here holds the mesh, the waypoint and the namespace boundaries in place, so the claim is no enforcement *hop* rather than no deployment.
 - [September 16 2026 · v2026.09.12](https://u4a.ai/changelog.md): Enforcement point and authorization server: a resource server may declare what each of its operations leaves behind — `reversible`, `compensatable`, `forward_recoverable` or `irreversible` — as a `consequence` member on the tool surfaces it publishes, inside the metadata it already signs. Her authority pulls it into her registry, her rules may read it as a condition that may only tighten, and the challenge carries it so an agent learns what it is asking for before it negotiates. An operation nobody has described satisfies no rule about remedy; an owner who wants to refuse the undescribed has a condition of her own for that. The grant records the class it was issued against, and the enforcement point refuses a call whose operation has since been re-declared as leaving less remedy. `make consequence-check`.
 - [September 15 2026 · v2026.09.11](https://u4a.ai/changelog.md): Kubernetes: `make k8s-reset` truncated grant state on `uma-as-db-1` by name, which fails once a failover has made that instance a read-only standby. It now runs against the cluster's current primary.
@@ -96,7 +97,6 @@ most days.
 - [September 11 2026 · v2026.09.5](https://u4a.ai/changelog.md): Enforcement point: the tool surface is configurable. `UMA_PEP_TOOLS` names a JSON document mapping each MCP tool to a resource id, its scopes and whether its grant is single-use — which is what the owner's tiers can name, and therefore what she can approve separately. Absent, the lab's own surface is used. A malformed document stops the service rather than silently protecting the wrong tools.
 - [September 10 2026 · v2026.09.4](https://u4a.ai/changelog.md): Authorization server: sub-agent grants. An agent holding a connection may introduce a sibling, which skips first contact and then negotiates its own terms under its own key for its own grant. Nothing is passed down and nothing is inherited.
 - [September 1 2026 · v2026.09.3](https://u4a.ai/changelog.md): Docs: the Lab demonstrations pages carry everything the run cards do — the setup, where to sign in, the Codespace and re-run notes, and how to switch model provider — with every command in a copyable block.
-- [September 1 2026 · v2026.09.2](https://u4a.ai/changelog.md): Docs: `make kagent` was still described as the local no-account path in `KAGENT.md`, `DEMOS.md`, `KUBERNETES.md` and the Run the lab guide after the default became a hosted model, and `kagent.sh` pinned an Anthropic model two releases behind the one the demo cards name.
 - [The full changelog](https://u4a.ai/changelog.md): every release since the first.
 
 ## Posts
