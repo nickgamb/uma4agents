@@ -116,7 +116,41 @@ def build_identified(client: httpx.Client) -> AgentKeys:
     keys.agent_token = enroll(client, ISSUER, keys.stable, keys.key,
                               "Sterling & Vance — flow check",
                               person_token=PS_ADMIN, on_status=lambda s: None)
+    import jwt as pyjwt
+
+    alg = pyjwt.get_unverified_header(keys.agent_token).get("alg")
+    sub = pyjwt.decode(keys.agent_token, options={"verify_signature": False}).get("sub", "")
+    if alg not in ("EdDSA", "Ed25519") or not sub.startswith("aauth:"):
+        raise EnrollmentDenied(f"the person server issued an unexpected token: {alg} {sub}")
+    say(f"its agent token is {alg}-signed, from an implementation that is not this lab's")
     return keys
+
+
+def bob_withdraws(client: httpx.Client) -> str | None:
+    """Bob revokes an agent at his person server, and it gets no fresh token.
+
+    A throwaway enrolment, so the identified regime above keeps its standing.
+    Returns what went wrong, or None.
+    """
+    from urllib.parse import quote
+
+    import jwt as pyjwt
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    stable = Ed25519PrivateKey.generate()
+    token = enroll(client, ISSUER, stable, Ed25519PrivateKey.generate(),
+                   "Sterling & Vance — withdrawn", person_token=PS_ADMIN)
+    agent = pyjwt.decode(token, options={"verify_signature": False})["sub"]
+    r = client.post(f"{ISSUER}/person/bindings/{quote(agent, safe='')}/revoke",
+                    headers={"Authorization": f"Bearer {PS_ADMIN}"})
+    if r.status_code != 200:
+        return f"his person server answered the revoke with {r.status_code}"
+    try:
+        enroll(client, ISSUER, stable, Ed25519PrivateKey.generate(),
+               "Sterling & Vance — withdrawn", max_wait_s=0)
+    except EnrollmentDenied:
+        return None
+    return "a revoked agent was issued a fresh token without Bob"
 
 
 def build_described(client: httpx.Client) -> AgentKeys:
@@ -256,29 +290,37 @@ def main() -> int:
             print(f"   {name:<14} {seen['subject']}")
 
         # Two identity *levels* — the key, or a verified issuer — and that is
-        # the only axis Alice's side has. CIMD and Web Bot Auth are additive
-        # description: they tell her something true about who operates the
-        # agent, and they change nothing about how it is filed or judged.
-        by_subject: dict[str, list[str]] = {}
+        # the only axis Alice's side has. A key-level agent is filed under its
+        # key's thumbprint; an identified one under the subject its issuer
+        # vouched for. CIMD and Web Bot Auth are additive description: they
+        # tell her something true about who operates the agent, and they
+        # change nothing about how it is filed or judged.
+        by_level: dict[str, list[str]] = {}
         for name, _, seen in results:
-            by_subject.setdefault(seen["subject"], []).append(name)
-        if len(by_subject) != 2:
-            print(f"FAIL: expected two identity levels, saw {len(by_subject)}: "
-                  f"{ {k: v for k, v in by_subject.items()} }")
+            level = "key" if seen["subject"].startswith("jkt:") else "issuer"
+            by_level.setdefault(level, []).append(name)
+        if len(by_level) != 2:
+            print(f"FAIL: expected two identity levels, saw {len(by_level)}: {by_level}")
             return 1
 
         described = {"pseudonymous", "described", "published"}
-        for subject, names in by_subject.items():
+        for level, names in by_level.items():
             if set(names) not in (described, {"identified"}):
-                print(f"FAIL: {subject} grouped {names}, which is not a level")
+                print(f"FAIL: the {level} level grouped {names}, which is not a level")
                 return 1
         say("")
         say("Two levels — a key, or a verified issuer. Adding a CIMD document or")
         say("a Web Bot Auth directory told her more about the operator and moved")
-        say("nothing: same handle, same terms, same grant.")
+        say("nothing: the same kind of handle, the same terms, the same grant.")
 
         conns = owner_get(client, "/owner/connections")
         say(f"her connections list: {len(conns)} standing relationships")
+
+        print("\n== Bob withdraws an agent at his person server ==")
+        if problem := bob_withdraws(client):
+            print(f"FAIL: {problem}")
+            return 1
+        say("a revoked agent gets no fresh token; asking again waits for Bob")
 
     print("\nPASS: agent identity stayed on the requesting side.")
     print("      Alice governed all four without knowing what any of them were.")

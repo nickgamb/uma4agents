@@ -1,12 +1,10 @@
 """What a resource server publishes about itself, in one implementation.
 
-Discovery has two audiences and three documents:
+Discovery has two audiences and two documents:
 
   RFC 9728 metadata      public, structural — the tools, the scopes, which
                          authorization servers speak for this resource, and
                          the key its metadata is signed under
-  AAuth resource meta    the same structural facts in the other binding's
-                         encoding
   owner-resources        protected — the owner-bound instances, served only
                          to a querier that proves possession of the owner's
                          authorization server key
@@ -86,8 +84,6 @@ def sign_metadata(doc: dict, key, kid: str,
     """Add `signed_metadata`: the same claims as a JWT under the resource's
     own key, so a relayed or cached copy of the document stays attributable to
     the resource that published it rather than to whoever handed it over.
-    RFC 9728 for the protected-resource document; the AAuth binding's
-    resource document takes the same member with its own `typ`.
     """
     import jwt
 
@@ -97,39 +93,6 @@ def sign_metadata(doc: dict, key, kid: str,
         key, algorithm="EdDSA", headers={"typ": typ, "kid": kid},
     )
     return signed
-
-
-def aauth_document(public_base: str, as_public: str,
-                   tools: dict[str, tuple[str, list[str]]],
-                   consequence: dict[str, str] | None = None) -> dict:
-    """The AAuth binding's encoding of the same structural facts, as that
-    binding's draft defines it. Sign it with `typ="aauth-resource+jwt"`.
-
-    `access_mode` names the topology — four-party, the federated shape where
-    the resource, the owner's authority and the requesting side are all
-    different parties. The vocabulary is content-addressed: the digest is over
-    the operation list, canonicalized as RFC 8785 would for these values, so
-    the operation surface has an identifier no owner's instances appear in —
-    and a resource that re-declares an operation gets a new one, which is the
-    content-addressing working rather than a break.
-    """
-    import base64
-    import hashlib
-
-    ops = [{"tool": _operation(key), "resource_scopes": ss, **_declared(consequence, key)}
-           for key, (rid, ss) in sorted(tools.items())]
-    canonical = json.dumps(ops, sort_keys=True, separators=(",", ":"),
-                           ensure_ascii=False).encode()
-    digest = base64.urlsafe_b64encode(hashlib.sha256(canonical).digest())
-    return {
-        "resource": f"{public_base}/mcp",
-        "access_mode": "four-party",
-        "access_servers": [as_public],
-        "jwks_uri": f"{public_base}/jwks",
-        "r3_vocabularies": [{"format": "mcp", "operations": ops,
-                             "digest": "s256:" + digest.rstrip(b"=").decode()}],
-        "owner_resources_endpoint": f"{public_base}/owner-resources",
-    }
 
 
 def owner_resources_document(public_base: str, owner: str,

@@ -75,23 +75,23 @@ Table of Contents
    2.  Discovery . . . . . . . . . . . . . . . . . . . . . . . . . .   3
    3.  The Challenge . . . . . . . . . . . . . . . . . . . . . . . .   4
      3.1.  At a Gateway  . . . . . . . . . . . . . . . . . . . . . .   4
-     3.2.  In Process  . . . . . . . . . . . . . . . . . . . . . . .   5
+     3.2.  In Process  . . . . . . . . . . . . . . . . . . . . . . .   4
      3.3.  A Client Reads Both . . . . . . . . . . . . . . . . . . .   6
    4.  The Negotiation and the Call  . . . . . . . . . . . . . . . .   6
    5.  Waiting . . . . . . . . . . . . . . . . . . . . . . . . . . .   6
-   6.  Routing Headers . . . . . . . . . . . . . . . . . . . . . . .   7
+   6.  Routing Headers . . . . . . . . . . . . . . . . . . . . . . .   6
    7.  Origin  . . . . . . . . . . . . . . . . . . . . . . . . . . .   7
    8.  Truncated Bodies  . . . . . . . . . . . . . . . . . . . . . .   7
    9.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
      9.1.  Two Parsers, One Message  . . . . . . . . . . . . . . . .   7
-     9.2.  The Challenge Is an Error . . . . . . . . . . . . . . . .   8
-     9.3.  Deny by Default Is Not Optional . . . . . . . . . . . . .   8
+     9.2.  The Challenge Is an Error . . . . . . . . . . . . . . . .   7
+     9.3.  Deny by Default Is Not Optional . . . . . . . . . . . . .   7
    10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .   8
    11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .   8
    12. References  . . . . . . . . . . . . . . . . . . . . . . . . .   8
      12.1.  Normative References . . . . . . . . . . . . . . . . . .   8
      12.2.  Informative References . . . . . . . . . . . . . . . . .   9
-   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  10
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .   9
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  10
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  10
 
@@ -121,10 +121,9 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 1.1.  Relationship to the Set
 
-   This document is one binding of [U4ACore].  Others are possible; a
-   binding to the challenge header of [I-D.hardt-aauth-protocol] is the
-   obvious second, and [U4ACore] Section 1.2 names a third.  Its
-   identifying URI is https://u4a.ai/spec/mcp/1.0.
+   This document is one binding of [U4ACore].  Others are possible, and
+   [U4ACore] Section 1.2 names one.  Its identifying URI is
+   https://u4a.ai/spec/mcp/1.0.
 
 1.2.  Notational Conventions
 
@@ -137,38 +136,19 @@ Internet-Draft             MCP Binding for UMA            September 2026
 2.  Discovery
 
    A client MAY learn that a resource requires a grant under this
-   profile, and from which authorization server, through any of three
-   channels.  A resource MUST offer the first and MAY offer the others,
-   and all MUST be generated from one registry of the resource's tools.
+   profile, and from which authorization server, through either of two
+   channels.  A resource MUST offer the first and MAY offer the second,
+   and both MUST be generated from one registry of the resource's tools.
 
    Protected resource metadata:  As [RFC9728] and [U4AFedAuthz]
       Section 2.1, which [MCP] already requires.  Fetched, not
       negotiated.
-
-   Alternative metadata encodings:  The same structural facts under
-      another convention, such as the resource metadata of
-      [I-D.hardt-aauth-protocol].
 
    Capability advertisement:  A resource enforcing in-process MAY
       advertise this profile in the capabilities.extensions member of
       its handshake response under the identifier dev.uma4agents/uma-
       enforcement, carrying the grant type, the authorization servers,
       and the JSON-RPC error code of Section 3.2.
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 3]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
 
    {
      "extensions": {
@@ -182,11 +162,18 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
                   Figure 1: The capability advertisement.
 
-   The third channel is the only one that is negotiated rather than
-   fetched: it arrives in the handshake the client was already doing,
-   with no extra round trip and no well-known URI.  A client that
-   receives it knows, before its first tool call, that it must negotiate
-   a grant and where.
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 3]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
+
+   The second channel is negotiated rather than fetched: it arrives in
+   the handshake the client was already doing, with no extra round trip
+   and no well-known URI.  A client that receives it knows, before its
+   first tool call, that it must negotiate a grant and where.
 
    Whichever channel a client learns from, it MUST corroborate the
    authorization server named in any later challenge against the
@@ -214,18 +201,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    refused request is not answered; the client never reached the
    resource.
 
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 4]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
-
    An enforcement point hosted as an external authorization service of a
    gateway can answer a refusal with a body and a status, and can answer
    an allow with nothing the client will see.  It therefore MUST NOT
@@ -240,6 +215,16 @@ Internet-Draft             MCP Binding for UMA            September 2026
    call it refuses for want of authorization with a JSON-RPC error
    [JSONRPC] whose code is -32001, and whose data member is an object
    carrying every parameter of [U4ACore] Section 3.1 under its own name:
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 4]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
 
    {
      "jsonrpc": "2.0",
@@ -274,14 +259,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
                 Figure 2: The challenge as a JSON-RPC error.
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 5]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
-
    authorization_remediation is carried as the object itself rather than
    base64url-encoded, since JSON-RPC carries JSON.  Its content MUST be
    identical to what the HTTP binding would have encoded.  That the same
@@ -295,6 +272,15 @@ Internet-Draft             MCP Binding for UMA            September 2026
    400: missing_routing_headers, where a request omits the routing
    headers of Section 6, and header_body_mismatch, where they disagree
    with the body.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
 
 3.3.  A Client Reads Both
 
@@ -330,14 +316,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    own user.  [MCP]'s input-required result addresses the client's own
    model, filesystem or human, and has no member for a principal who is
    not on this connection.  Until it does, an implementation MUST convey
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 6]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
-
    in the human-readable content of the request that the party being
    waited on is the resource owner and is not reachable by the client,
    and MUST limit what it asks its own user to the one question that is
@@ -351,6 +329,14 @@ Internet-Draft             MCP Binding for UMA            September 2026
    method over a body naming a protected one is two parsers disagreeing
    about one message, which is the request-smuggling shape arriving in a
    new protocol.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
 
    An enforcement point that reads these headers MUST reconcile each
    against the body and MUST refuse a request on which they disagree.
@@ -384,16 +370,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    the body is a header that lets an attacker tell the intermediary one
    thing and the resource another.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
-
 9.2.  The Challenge Is an Error
 
    See Section 3.1.  A gateway-hosted enforcement point cannot return a
@@ -407,6 +383,16 @@ Internet-Draft             MCP Binding for UMA            September 2026
    See Section 3.  The method surface of [MCP] grows between revisions,
    and an enforcement point that enumerates what to refuse rather than
    what to allow will be wrong after the next one.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
 
 10.  Privacy Considerations
 
@@ -440,16 +426,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [JSONRPC]  JSON-RPC Working Group, "JSON-RPC 2.0 Specification", 4
               January 2013, <https://www.jsonrpc.org/specification>.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
-
    [MCP]      Model Context Protocol project, "Model Context Protocol
               Specification, revision 2026-07-28", 28 July 2026,
               <https://modelcontextprotocol.io/
@@ -463,6 +439,16 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [RFC6454]  Barth, A., "The Web Origin Concept", RFC 6454,
               DOI 10.17487/RFC6454, December 2011,
               <https://www.rfc-editor.org/rfc/rfc6454>.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
@@ -487,24 +473,10 @@ Internet-Draft             MCP Binding for UMA            September 2026
 
 12.2.  Informative References
 
-   [I-D.hardt-aauth-protocol]
-              Hardt, D., "AAuth Protocol", Work in Progress, Internet-
-              Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
-              <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
-              protocol-02>.
-
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft             MCP Binding for UMA            September 2026
-
 
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
@@ -526,6 +498,14 @@ Appendix A.  Implementation Status
    found by sending a body one byte over a gateway's limit and reading
    the refusal it produced.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft             MCP Binding for UMA            September 2026
+
+
 Acknowledgments
 
    [MCP]'s 2026-07-28 revision arrived, from a different direction, at
@@ -543,6 +523,26 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

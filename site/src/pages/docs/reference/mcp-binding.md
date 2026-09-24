@@ -19,18 +19,17 @@ unchanged. That separation is what lets one grant serve multiple bindings.
 The repository's draft is
 [`docs/MCP-BINDING.md`](https://github.com/nickgamb/uma4agents/blob/main/docs/MCP-BINDING.md).
 
-## Discovery: three channels, one registry
+## Discovery: two channels, one registry
 
-A client can learn that it must negotiate, and where, before its first call. All
-three channels are generated from the same tool registry.
+A client can learn that it must negotiate, and where, before its first call.
+Both channels are generated from the same tool registry.
 
 | Channel | Nature | Notes |
 |---|---|---|
 | RFC 9728 Protected Resource Metadata | fetched | Mandatory for MCP servers since 2025-06-18 |
-| AAuth resource metadata | fetched | The same structural facts under a content-addressed R3 vocabulary |
 | `capabilities.extensions` | negotiated | Arrives in the handshake the client was already doing |
 
-The third is new here. A resource enforcing in-process advertises the extension
+The second is new here. A resource enforcing in-process advertises the extension
 in its `server/discover` response:
 
 ```jsonc
@@ -206,7 +205,7 @@ makes a lost response brick the negotiation.
 | Mechanism | Status |
 |---|---|
 | `server/discover`, stateless transport, `_meta` client identity | implemented |
-| RFC 9728 PRM, AAuth R3 metadata, `capabilities.extensions` | implemented |
+| RFC 9728 PRM, `capabilities.extensions` | implemented |
 | Challenge in both encodings; one client understands both | implemented |
 | Pend hand-back with `request_state` | implemented |
 | `Mcp-Method` / `Mcp-Name` reconciliation, required on protected methods | implemented |

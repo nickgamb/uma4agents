@@ -102,7 +102,7 @@
   <rect x="600" y="580" width="600" height="24" rx="8" fill="#232529"/>
   <rect x="600" y="596" width="600" height="8" fill="#232529"/>
   <circle cx="616" cy="592" r="3.5" fill="#e8836b"/><circle cx="628" cy="592" r="3.5" fill="#f2b955"/><circle cx="640" cy="592" r="3.5" fill="#bcdb2c"/>
-  <text xml:space="preserve" x="656" y="596" fill="#757b83" font-size="10.5" class="mono">the sub-agent's RPT · aa-auth+jwt</text>
+  <text xml:space="preserve" x="656" y="596" fill="#757b83" font-size="10.5" class="mono">the sub-agent's RPT · at+jwt</text>
   <text xml:space="preserve" x="616" y="626" class="mono"><tspan class="p">{</tspan></text>
   <text xml:space="preserve" x="616" y="643" class="mono"><tspan class="p">  </tspan><tspan class="k">"iss"</tspan><tspan class="p">: </tspan><tspan class="s">"https://alice-as.uma.lab"</tspan><tspan class="p">,</tspan></text>
   <text xml:space="preserve" x="616" y="660" class="mono"><tspan class="p">  </tspan><tspan class="k">"cnf"</tspan><tspan class="p">: { </tspan><tspan class="k">"jwk"</tspan><tspan class="p">: {…</tspan><tspan class="s">jkt:8f2c…</tspan><tspan class="p">} },</tspan>  <tspan class="c">// ITS key, not the parent's</tspan></text>

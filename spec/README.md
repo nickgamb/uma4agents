@@ -15,7 +15,7 @@ https://u4a.ai/spec/.
 | `draft-gamb-uma4agents-multiparty-00` | Multi-Party Authorization | Optional |
 | `draft-gamb-uma4agents-owner-00` | The Resource Owner's API | Optional |
 | `draft-gamb-uma4agents-mcp-00` | Model Context Protocol Binding | Binding |
-| `draft-gamb-uma4agents-aauth-00` | AAuth Binding | Binding |
+| `draft-gamb-uma4agents-aauth-00` | AAuth Agent Tokens as Agent Credentials | Credential |
 
 Each has an identifying URI (`https://u4a.ai/spec/<part>/1.0`, listed in
 `lib/uma4a_profiles.py`), and the authorization server advertises the ones it

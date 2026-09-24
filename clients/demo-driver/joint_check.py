@@ -477,7 +477,7 @@ def _main() -> int:                                           # noqa: C901
         tampered = dict(claims)
         tampered["joint"] = {**joint, "verdicts": [joint["verdicts"][0], forged]}
         bad = jwt.encode(tampered, forger, algorithm="EdDSA",
-                         headers={"typ": "aa-auth+jwt"})
+                         headers={"typ": "at+jwt"})
         r = mcp_call(c, f"{GATEWAY}/joint/{BOTH}", "tools/call",
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",
@@ -503,7 +503,7 @@ def _main() -> int:                                           # noqa: C901
                                         "rule": {"kind": "all", "threshold": 1}},
                             "verdicts": [joint["verdicts"][0]]}
         cooked = jwt.encode(lowered, forger, algorithm="EdDSA",
-                            headers={"typ": "aa-auth+jwt"})
+                            headers={"typ": "at+jwt"})
         r = mcp_call(c, f"{GATEWAY}/joint/{BOTH}", "tools/call",
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",

@@ -12,6 +12,7 @@ COPY lib/uma4a_joint.py .
 COPY lib/uma4a_profiles.py .
 COPY lib/uma4a_consequence.py .
 COPY lib/uma4a_clearance.py .
+COPY lib/uma4a_jose.py lib/uma4a_aauth.py ./
 COPY services/uma-as/app.py services/uma-as/policy.py ./
 COPY services/uma-as/org.py services/uma-as/joint.py ./
 COPY services/uma-as/assurance.py services/uma-as/introduction.py ./

@@ -1857,9 +1857,10 @@ Such a grant <span class="bcp14">MUST</span> be single-use, bound to a key, shor
 resource the charter both claims and names for this purpose. The enforcement
 point <span class="bcp14">MUST</span> recognise it by issuer and <span class="bcp14">MUST</span> introspect it with the organization
 rather than with the member's authorization server.<a href="#section-2.10-1" class="pilcrow">¶</a></p>
-<p id="section-2.10-2">The grant is a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> with <code>typ</code> of <code>aa-auth+jwt</code>, signed with a key
-at the organization's <code>jwks_uri</code>. It carries <code>iss</code> (the organization's issuer
-identifier), <code>owner</code>, <code>aud</code>, <code>jti</code>, <code>exp</code>, <code>cnf</code>, <code>permissions</code>, <code>single_use</code>
+<p id="section-2.10-2">The grant is a JWT access token <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> with <code>typ</code> of <code>at+jwt</code>, signed with
+a key at the organization's <code>jwks_uri</code>. It carries <code>iss</code> (the organization's
+issuer identifier), <code>sub</code> and <code>client_id</code> (the thumbprint handle of the key in
+<code>cnf</code>), <code>owner</code>, <code>aud</code>, <code>jti</code>, <code>iat</code>, <code>exp</code>, <code>cnf</code>, <code>permissions</code>, <code>single_use</code>
 of <code>true</code>, <code>operation</code> where one was named, and <code>break_glass</code>: an object
 naming the <code>org</code>, the stated <code>reason</code>, what <code>authorised_by</code> it — a voucher an
 administrator opened, or an operator the charter lists — and the
@@ -2395,6 +2396,10 @@ be held to, and this document prefers the disclosure.<a href="#section-5.2-1" cl
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4ACore">[U4ACore]</dt>
         <dd>

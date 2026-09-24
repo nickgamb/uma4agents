@@ -49,7 +49,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 def refuses(name: str, attempt, because: str) -> None:
     try:
         attempt()
-    except ValueError as exc:
+    except (ValueError, jwt.InvalidTokenError) as exc:
         check(name, because in str(exc), str(exc))
         return
     check(name, False, "it was accepted")
@@ -113,6 +113,21 @@ async def agreements_and_grants() -> None:
     _, toolless = agreement(operation={"params": {"qty": 1}})
     refuses("a per-operation agreement naming no tool is refused before she is asked",
             lambda: app.verify_contract(toolless, per_op), "naming a tool")
+
+    def signed(alg: str, jwk: dict) -> str:
+        raw = jwt.encode({**TEMPLATE, "aud": app.ISSUER}, KEY, algorithm=alg,
+                         headers={"jwk": jwk})
+        return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
+
+    named = {**JWK, "alg": "Ed25519"}
+    check("an agreement is verified with the algorithm its key names",
+          app.verify_contract(signed("Ed25519", named), negotiating())[1] == named)
+    refuses("and not with one its header asks for instead",
+            lambda: app.verify_contract(signed("EdDSA", named), negotiating()),
+            "not allowed")
+    refuses("a bare key names no algorithm, so it is held to the one it always signed",
+            lambda: app.verify_contract(signed("Ed25519", JWK), negotiating()),
+            "not allowed")
     refuses("a reason past the ceiling is refused wherever an agreement is accepted",
             lambda: app.requester_claims({"reason": "x" * (app.MAX_REASON + 1)}),
             "permitted length")
@@ -144,6 +159,10 @@ async def agreements_and_grants() -> None:
           and mine.get("contract") == claims["contract"], str(mine))
     check("the grant carries iss, aud, jti and exp",
           all(claims.get(k) for k in ("iss", "aud", "jti", "exp")), str(sorted(claims)))
+    check("and is an RFC 9068 access token, whose subject and client are her handle",
+          jwt.get_unverified_header(token).get("typ") == "at+jwt"
+          and claims.get("iat") and claims.get("sub") == claims.get("client_id") == handle,
+          f"{jwt.get_unverified_header(token)} {claims.get('sub')} {handle}")
     with patch.object(app, "require_pat", AsyncMock(return_value="carol")):
         theirs = await app.introspect(None, token=token, consume=None)
     check("a resource server holding another owner's PAT is told nothing",

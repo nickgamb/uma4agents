@@ -129,22 +129,22 @@ portal is where it stops being markup.
 
 ## The mandate behind the request
 
-An [AAuth mission](../aauth/upstream/aauth-person-server/MISSIONS.md) is the
-durable record of a requesting party setting their agent a task: approved at
-that party's own person server, named by content hash. An agreement may cite
-one in AAuth's own shape, so nothing here invents a field:
+A mandate is the durable record of a requesting party setting their agent a
+task: approved somewhere of theirs, and named by content hash. An agreement may
+cite one by who approved it and the hash of what was approved:
 
 ```json
 "mission": {"approver": "https://ps.example", "s256": "…"}
 ```
 
-Those are the fields the `AAuth-Mission` request header already carries.
+An [AAuth mission](https://github.com/dickhardt/AAuth) is cited this way: its
+person server is the approver, and its `mission_s256` is the hash.
 
 **It is a request fact, not an assurance axis, and the difference is the
 point.** Assurance means what her authority verified for itself. Verifying a
-citation means dereferencing it at the approver, and AAuth serves
-`GET /missions/{s256}` to administrators only — a relying party in another
-trust domain has nothing to fetch. So from here, an agent that cites a real
+citation means dereferencing it at the approver, and AAuth serves a mission to
+the agent that owns it and to that person server's own principals — a relying
+party in another trust domain has nothing to fetch. So from here, an agent that cites a real
 mission and one that invents a hash are the same agent, and awarding a level
 for the difference would be a comment about the call path rather than a check.
 

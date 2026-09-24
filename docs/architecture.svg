@@ -181,5 +181,5 @@
   <text x="630" y="836" fill="#6c727a" font-size="9.5">↑ to Alice's AS: <tspan font-family="ui-monospace, Menlo, monospace">the very same calls</tspan></text>
 
   <!-- footer -->
-  <text x="600" y="878" text-anchor="middle" fill="#6c727a" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace">UMA 2.0 — uma-ticket grant · request_submitted    |    AAuth — aa-auth+jwt · RFC 9421 PoP    |    MyTerms — IEEE 7012-2025    |    MCP 2026-07-28 — server/discover · MRTR · CIMD</text>
+  <text x="600" y="878" text-anchor="middle" fill="#6c727a" font-size="10.5" font-family="ui-monospace, 'SF Mono', Menlo, monospace">UMA 2.0 — uma-ticket grant · request_submitted    |    RFC 9068 at+jwt · RFC 9421 PoP    |    AAuth agent tokens    |    MyTerms — IEEE 7012-2025    |    MCP 2026-07-28 — server/discover · MRTR · CIMD</text>
 </svg>

@@ -36,9 +36,11 @@ import assurance
 import introduction
 import joint
 import org
+import uma4a_aauth
 import uma4a_clearance
 import uma4a_consequence
 import uma4a_joint
+import uma4a_jose
 import uma4a_profiles
 from uma4a_http_sig import KeyDirectories
 import policy
@@ -773,6 +775,7 @@ async def require_pat(request: Request) -> str:
 
 
 _OWNER_KEYS_CACHE: dict[str, tuple[float, list]] = {}
+JWKS_CACHE_TTL = 300
 
 
 def owner_issuer_keys() -> list:
@@ -2616,62 +2619,28 @@ async def need_info_response(rec: dict, tier_id: str, tier: dict) -> JSONRespons
 
 
 AGENT_ISSUER_CA = os.environ.get("UMA4A_CA_BUNDLE")  # trust bundle for issuer TLS
-_ISSUER_JWKS_CACHE: dict[str, tuple[float, list]] = {}
-JWKS_CACHE_TTL = 300
 
 
-def agent_issuer_keys(iss: str) -> list:
-    """Resolve an agent-token issuer's signing keys via AAuth discovery
-    (GET {iss}/.well-known/aauth-agent.json -> jwks_uri). TLS on the issuer
-    origin is the trust root — AAuth's own precondition — so non-https
-    issuers are rejected outright."""
-    if not iss.startswith("https://"):
-        raise ValueError("agent token issuer must be an https origin")
-    cached = _ISSUER_JWKS_CACHE.get(iss)
-    if cached and cached[0] > now():
-        return cached[1]
+def _fetch_issuer_json(url: str) -> dict:
+    """GET one of an agent provider's documents. TLS on the issuer's origin is
+    the trust root, as AAuth has it: nothing is read over anything else."""
     import httpx
 
+    if not url.startswith("https://"):
+        raise ValueError(f"{url} is not https")
     with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=5.0) as client:
-        meta = client.get(f"{iss}/.well-known/aauth-agent.json")
-        meta.raise_for_status()
-        jwks = client.get(meta.json()["jwks_uri"])
-        jwks.raise_for_status()
-    keys = jwks.json()["keys"]
-    _ISSUER_JWKS_CACHE[iss] = (now() + JWKS_CACHE_TTL, keys)
-    return keys
+        r = client.get(url)
+        r.raise_for_status()
+        return r.json()
+
+
+AGENT_TOKENS = uma4a_aauth.AgentTokens(_fetch_issuer_json)
 
 
 def verify_agent_token(agent_token: str) -> dict:
-    """Validate an aa-agent+jwt against its issuer's published keys.
-    Returns the verified claims; raises on any break in the chain."""
-    header = jwt.get_unverified_header(agent_token)
-    if header.get("typ") != "aa-agent+jwt":
-        raise ValueError(f"agent token typ must be aa-agent+jwt, got {header.get('typ')!r}")
-    unverified = jwt.decode(agent_token, options={"verify_signature": False})
-    iss = unverified.get("iss")
-    if not iss:
-        raise ValueError("agent token has no issuer")
-    try:
-        candidates = agent_issuer_keys(iss)
-    except Exception as exc:
-        raise ValueError(f"agent token issuer discovery failed for {iss}: {exc}")
-    kid = header.get("kid")
-    last_error: Exception | None = None
-    for jwk_dict in candidates:
-        if kid and jwk_dict.get("kid") and jwk_dict["kid"] != kid:
-            continue
-        try:
-            key = OKPAlgorithm.from_jwk(json.dumps(jwk_dict))
-            claims = jwt.decode(agent_token, key, algorithms=["EdDSA"],
-                                options={"verify_aud": False})
-            if "cnf" not in claims or "jwk" not in claims["cnf"]:
-                raise ValueError("agent token carries no cnf.jwk key binding")
-            return claims
-        except jwt.InvalidTokenError as exc:
-            last_error = exc
-    raise ValueError(f"agent token signature did not verify against {iss}'s "
-                     f"published keys: {last_error}")
+    """An AAuth agent token, verified against its issuer's published keys.
+    Returns the claims; raises ValueError naming the check that failed."""
+    return AGENT_TOKENS.verify(agent_token)
 
 
 def connection_handle(identity: dict, signer_jwk: dict) -> str:
@@ -2734,15 +2703,15 @@ async def introduction_ok(owner: str, intro: dict | None, identity: dict,
     whether one operator published both keys.
     """
     # An identified agent's issuer may name the agent that spawned it, in
-    # AAuth's own `act` claim. When it does, that is the introduction: the
-    # issuer has signed the lineage, so there is nothing for a sibling agent
-    # to assert and no second document to carry. Both agents being under one
-    # issuer is what "the same operator published both" means here, and it is
-    # a stronger form of it — the issuer is the operator's signing authority
-    # rather than a directory it publishes.
-    if not intro and (act := identity.get("act")):
+    # AAuth's `parent_agent` claim. When it does, that is the introduction:
+    # the issuer has signed the lineage, so there is nothing for a sibling
+    # agent to assert and no second document to carry. AAuth requires a
+    # sub-agent to share its parent's issuer, which is what "the same operator
+    # published both" means here, and a stronger form of it — the issuer is
+    # the operator's signing authority rather than a directory it publishes.
+    if not intro and (parent := identity.get("parent_agent")):
         parent_handle = connection_handle(
-            {"level": "identified", "iss": identity["iss"], "sub": act["sub"]}, {})
+            {"level": "identified", "iss": identity["iss"], "sub": parent}, {})
         parent_conn = await st(owner).connection(parent_handle)
         try:
             introduction.admit(parent_conn, child_prior, True,
@@ -3259,18 +3228,12 @@ def contract_identity(claim_token_b64: str,
         signer_jwk = agent_claims["cnf"]["jwk"]
         identity = {"level": "identified", "iss": agent_claims["iss"],
                     "sub": agent_claims.get("sub")}
-        # RFC 8693's actor claim, as AAuth uses it: the entity that requested
-        # this. On an agent token it names the agent that spawned this one.
-        #
-        # Read rather than invented. AAuth already nests `act` to record a
-        # delegation chain, and its agent token is explicitly extensible —
-        # "agent servers MAY include additional claims". So an identified
-        # agent's lineage arrives in the credential it already carries,
-        # asserted by the issuer that signs that credential rather than by a
-        # sibling agent. That is a better attestation than anything the
-        # requesting side could construct for itself.
-        if act := introduction.act_of(agent_claims):
-            identity["act"] = act
+        # AAuth's sub-agent marker: the issuer naming the agent that spawned
+        # this one. Read from the credential it already verified, so the
+        # lineage is asserted by the operator's signing authority rather than
+        # by a sibling agent.
+        if parent := agent_claims.get("parent_agent"):
+            identity["parent_agent"] = parent
     else:
         raise ValueError("contract JWS must carry jwk or agent_token in its header")
 
@@ -3299,8 +3262,11 @@ def contract_identity(claim_token_b64: str,
             identity["operator_directory"] = directory
             identity["operator_client_id"] = client_id
 
+    # Verified with the algorithm its key names, never the one its header
+    # asks for: an AAuth-bound key says Ed25519, a bare one names none.
     key = OKPAlgorithm.from_jwk(json.dumps(signer_jwk))
-    contract = jwt.decode(token, key, algorithms=["EdDSA"], audience=audience)
+    contract = jwt.decode(token, key, algorithms=[uma4a_jose.alg_of(signer_jwk)],
+                          audience=audience)
     # The signature verified against a key this server can name and will
     # recognise again. Recorded rather than assumed: `assurance.assess` reads
     # this, so the binding level is an observation and not a comment about the
@@ -3331,9 +3297,10 @@ def requester_claims(contract: dict) -> None:
     # A citation, checked for shape and nothing else. Whether this request is
     # inside the mission it names is the approver's question, not hers — she
     # has no standing to read Bob's mandate and rule on it, and her authority
-    # could not resolve it if it wanted to (AAuth serves missions to admins
-    # only). What it establishes is narrower and still worth having: somebody
-    # on the other side is running a mandate at all.
+    # could not resolve it if it wanted to (AAuth serves a mission to the agent
+    # that owns it, and to nobody in another trust domain). What it establishes
+    # is narrower and still worth having: somebody on the other side is
+    # running a mandate at all.
     if (mission := contract.get("mission")) is not None:
         if not isinstance(mission, dict):
             raise ValueError("mission must be an object")
@@ -3342,8 +3309,8 @@ def requester_claims(contract: dict) -> None:
             raise ValueError("mission.approver must be an https URL")
         if not isinstance(digest, str) or not (16 <= len(digest) <= 128):
             raise ValueError("mission.s256 must be a content hash")
-        # Normalised down to the two fields AAuth's own header carries, so a
-        # citation with extra baggage cannot use her ledger as storage.
+        # Normalised down to its two fields, so a citation with extra baggage
+        # cannot use her ledger as storage.
         contract["mission"] = {"approver": approver, "s256": digest}
 
 
@@ -3443,15 +3410,21 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
             "error_description": "the agreement covers none of the scopes "
                                  "this request needs"})
     jti = f"rpt_{uuid.uuid4().hex[:12]}"
+    handle = connection_handle(rec["contract"]["_identity"], signer_jwk)
+    # An OAuth access token in RFC 9068's form. The agent is both the client
+    # and the party asking, so `sub` and `client_id` are the handle her
+    # connection is filed under.
     claims = {
         "iss": ISSUER,
-        "sub": rec.get("agent_sub", "aauth:pseudonymous-agent"),
+        "sub": handle,
+        "client_id": handle,
         # Whose resources this grant is against. `sub` is the agent, so
         # without this a multi-tenant server has nothing on an introspection
         # request that says which owner's registry to consult.
         "owner": owner,
         "aud": RPT_AUDIENCE,
         "jti": jti,
+        "iat": int(now()),
         "exp": exp,
         "cnf": {"jwk": signer_jwk},
         "permissions": [
@@ -3484,8 +3457,7 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
                                            separators=(",", ":"), ensure_ascii=False).encode()),
         }
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
-                       headers={"typ": "aa-auth+jwt", "kid": KID})
-    handle = connection_handle(rec["contract"]["_identity"], signer_jwk)
+                       headers={"typ": "at+jwt", "kid": KID})
     await st(owner).record_rpt(jti, family, handle, claims.get("operation"),
                                rec["tier"])
     event("rpt.issued", corr=family, jti=jti, single_use=claims.get("single_use", False),
@@ -4067,8 +4039,6 @@ async def token(request: Request) -> JSONResponse:
     rec["contract_hash"] = contract_hash
     rec["agreement_jws"] = raw.decode()
     rec["signer_jwk"] = signer_jwk
-    if contract["_identity"].get("sub"):
-        rec["agent_sub"] = contract["_identity"]["sub"]
     event("contract.committed", corr=family, tier=rec["tier"],
           contract=contract_hash, identity=contract["_identity"]["level"])
 
@@ -4117,11 +4087,11 @@ async def token(request: Request) -> JSONResponse:
     # Two ways to arrive with a lineage, and the second is the one to prefer
     # where it is available. A pseudonymous agent has no issuer to speak for
     # it, so a sibling signs an introduction over its key. An identified agent
-    # already carries a credential its issuer signed, and AAuth's `act` claim
-    # is where that issuer names the agent this one was spawned by — no second
-    # document, no new format, and asserted by the operator's own signing
-    # authority rather than by another agent.
-    if needs_connection and (offered or contract["_identity"].get("act")):
+    # already carries a credential its issuer signed, and AAuth's
+    # `parent_agent` claim is where that issuer names the agent this one was
+    # spawned by — no second document, and asserted by the operator's own
+    # signing authority rather than by another agent.
+    if needs_connection and (offered or contract["_identity"].get("parent_agent")):
         introduced_by, why_not = await introduction_ok(
             rec["owner"], offered, contract["_identity"], conn)
         if introduced_by:

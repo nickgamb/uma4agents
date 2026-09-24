@@ -19,8 +19,8 @@ its own key, for its own grant.
 **The task graph can be as deep as you like. The authority graph is flat.**
 
 ![Bob's domain holds the parent agent, the sub-agent and the operator key
-directory that publishes both their keys, and the AAuth agent server that can
-name the parent in the sub-agent's `act` claim instead. Alice's domain holds her
+directory that publishes both their keys, and the AAuth agent provider that can
+name the parent in the sub-agent's `parent_agent` claim instead. Alice's domain holds her
 authorization
 server and her portal. The sub-agent sends its own contract carrying it; her authority checks it
 against her own records and returns a grant bound to the sub-agent's own key;
@@ -120,21 +120,20 @@ agent's handle as its sponsor. The signing key is in the header, where the
 signature checks it and the authority re-derives a handle to look up.
 
 **Or the agent's issuer names it.** An identified agent already carries an
-`aa-agent+jwt`, and AAuth uses RFC 8693's `act` claim — which it nests to
-record a delegation chain — to name the entity a request was made on behalf of.
-An agent server that sets `act.sub` to the spawning agent's identifier has
-asserted the lineage itself, and AAuth's agent token is explicitly extensible
-for exactly this. Nothing new is defined; the claim is read.
+`aa-agent+jwt`, and AAuth marks a sub-agent's token with `parent_agent`, naming
+the agent that spawned it and required to share its issuer. An agent provider
+that issues one has asserted the lineage itself. Nothing new is defined; the
+claim is read.
 
 The second is the better attestation, and it is worth being clear why: a
 sibling-signed introduction is the requesting side describing its own shape,
-held up by the operator directory check beside it. An `act` claim is the
-operator's own signing authority describing it. The first exists because a
+held up by the operator directory check beside it. A `parent_agent` claim is
+the operator's own signing authority describing it. The first exists because a
 pseudonymous agent has no issuer to speak for it.
 
 AAuth reaches the same conclusion this profile does about what a downstream
 call inherits: its call-chaining rules say the downstream authorization "is not
-required to be a subset of the upstream scopes." A spawned agent is authorized
+required to be a subset of any upstream authorization." A spawned agent is authorized
 on its own terms in both models.
 
 ## What her authority checks
@@ -155,8 +154,8 @@ All of it itself, against her own records.
 5. The claim **names the key that signed the contract**, so a copied
    introduction admits nobody.
 6. **One operator published both keys**, in a directory that operator controls
-   and the agents do not — or, on the `act` path, one issuer signed both
-   credentials.
+   and the agents do not — or, on the `parent_agent` path, one issuer signed
+   both credentials.
 7. Fan-out is under `UMA_AS_SUBAGENT_FANOUT` (default 3).
 
 A document that does not hold up — wrong key, wrong authority, expired — is a

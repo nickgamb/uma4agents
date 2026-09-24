@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jwt.algorithms import OKPAlgorithm
 
+import uma4a_jose
 from uma4a_http_sig import sign
 
 # MyTerms-shaped agreement: the owner proffers the terms; this side signs them.
@@ -172,7 +173,21 @@ class AgentKeys:
                 hashlib.sha256(raw).digest()).rstrip(b"=").decode()[:16]
 
     def public_jwk(self) -> dict:
-        return json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))
+        jwk = json.loads(OKPAlgorithm.to_jwk(self.key.public_key()))
+        if self.jws_alg() == uma4a_jose.ED25519:
+            jwk["alg"] = uma4a_jose.ED25519
+        return jwk
+
+    def jws_alg(self) -> str:
+        """The algorithm this agent's JWS are verified with, which is the one
+        its key names. An agent token's `cnf.jwk` may name `Ed25519`, as AAuth's
+        current text has it; a key that names nothing — an earlier token's, or
+        a bare pseudonymous key — signs `EdDSA`."""
+        if self.agent_token:
+            claims = jwt.decode(self.agent_token, options={"verify_signature": False})
+            if ((claims.get("cnf") or {}).get("jwk") or {}).get("alg") == uma4a_jose.ED25519:
+                return uma4a_jose.ED25519
+        return "EdDSA"
 
     def connection_handle(self) -> str:
         """The handle the owner's authority will file this agent under.
@@ -311,7 +326,7 @@ def sign_introduction(keys: AgentKeys, child_jkt: str, as_uri: str,
     # verifies this signature, and the authority checks the two agree.
     if keys.agent_token:
         headers["agent_token"] = keys.agent_token
-    return jwt.encode(claims, keys.key, algorithm="EdDSA", headers=headers)
+    return jwt.encode(claims, keys.key, algorithm=keys.jws_alg(), headers=headers)
 
 
 def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
@@ -329,7 +344,7 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     compares `reason` to anything — it is carried so a person can read it and
     so the agent has signed it."""
     contract = {
-        "iss": f"aauth:agent:{keys.keyid}",
+        "iss": f"agent:{keys.keyid}",
         "aud": as_uri,
         "iat": int(time.time()),
         "template_id": template["template_id"],
@@ -345,10 +360,9 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
         contract["operation"] = operation
     if reason:
         contract["reason"] = reason
-    # An AAuth mission reference, in AAuth's own shape: the person server that
-    # approved it, and the content hash of what was approved. Carried rather
-    # than invented — `approver` and `s256` are the fields the
-    # `AAuth-Mission` request header already uses.
+    # A mandate the requesting side is acting under: who approved it, and the
+    # content hash of what was approved. An AAuth mission is cited as its
+    # person server and its `mission_s256`.
     if mission:
         contract["mission"] = mission
     # A sibling agent's introduction, signed by that sibling over *this*
@@ -379,7 +393,7 @@ def sign_contract(template: dict, keys: AgentKeys, as_uri: str,
     # resolve simply leaves the claim where it was.
     if keys.signature_agent:
         headers["signature_agent"] = keys.signature_agent
-    jws = jwt.encode(contract, keys.key, algorithm="EdDSA", headers=headers)
+    jws = jwt.encode(contract, keys.key, algorithm=keys.jws_alg(), headers=headers)
     return base64.urlsafe_b64encode(jws.encode()).rstrip(b"=").decode()
 
 

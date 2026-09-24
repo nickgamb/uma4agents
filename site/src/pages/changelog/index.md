@@ -20,6 +20,28 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## September 24 2026
+
+### v2026.09.15
+
+#### New
+
+- **Checks:** `make aauth-test` covers an AAuth agent token in both the current shape and the earlier one, and each refusal, including a token minted by the `aauth` package.
+- **Checks:** `make flow-check` asserts that an agent Bob revokes at his person server is issued no fresh token.
+
+#### Enhancements
+
+- **Authorization server:** agent tokens are accepted as `draft-hardt-oauth-aauth-protocol-10` defines them (`Ed25519`, with `dwk`, `jti`, `iat` and keys that name their algorithm) and as earlier revisions did (`EdDSA`). The algorithm always comes from the key, which must be Ed25519. The issuer's `aauth-agent.json` must name the token's `iss` where it names an issuer, and an `aauth:` subject must be under the issuer's host.
+- **Authorization server:** a sub-agent's lineage is read from AAuth's `parent_agent`, not from an `act` claim.
+- **Authorization server:** an agreement is verified with the algorithm its signing key names, not the one its header asks for.
+- **Authorization server, organization, tally:** the grant is an RFC 9068 `at+jwt` whose `sub` and `client_id` are the connection handle, not an `aa-auth+jwt`.
+- **Specification:** the AAuth draft specifies only accepting an AAuth agent token as an identified agent's credential, in either shape; nothing else of AAuth is used. Core, lineage, fedauthz, MCP and multiparty follow.
+- **Client:** an agreement's `iss` is `agent:<keyid>`, as the terms draft shows, not an `aauth:` URI.
+
+#### Feature deprecations
+
+- **Enforcement point, embedded vault:** `/.well-known/aauth-resource.json` is no longer published; RFC 9728 metadata is the resource's only discovery document.
+
 ## September 23 2026
 
 ### v2026.09.14

@@ -23,7 +23,6 @@ from starlette.responses import JSONResponse
 
 from uma4a_publish import (
     AuthorityKeys,
-    aauth_document,
     owner_resources_document,
     prm_document,
     sign_metadata,
@@ -108,11 +107,6 @@ def attach(mcp, tools: dict[str, tuple[str, list[str]]],
         doc = prm_document(PUBLIC_BASE, AS_PUBLIC, tools, leaf=f"mcp/{who}",
                            consequence=consequence)
         return JSONResponse(sign_metadata(doc, key(), KID))
-
-    @mcp.custom_route("/.well-known/aauth-resource.json", methods=["GET"])
-    async def aauth(request: Request) -> JSONResponse:
-        doc = aauth_document(PUBLIC_BASE, AS_PUBLIC, tools, consequence=consequence)
-        return JSONResponse(sign_metadata(doc, key(), KID, typ="aauth-resource+jwt"))
 
     @mcp.custom_route("/jwks", methods=["GET"])
     async def jwks(request: Request) -> JSONResponse:

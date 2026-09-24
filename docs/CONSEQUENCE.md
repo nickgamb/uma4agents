@@ -97,7 +97,6 @@ severity does not fire on it, and she has a separate condition —
 |---|---|---|
 | The resource states it | one table beside the tool definitions | `mcp/alice-vault/server.py`, `services/uma-pep/app.py` |
 | Published, structurally | `consequence` on each `tool_surfaces` entry, inside `signed_metadata` | `lib/uma4a_publish.py` |
-| Published, the other encoding | the same member on the AAuth R3 vocabulary | same file, `aauth_document` |
 | Pulled into her registry | the protected owner-resources listing | `/owner-resources`, read by her AS |
 | Read by her policy | `facts["request"]["consequence"]` | `services/uma-as/app.py` |
 | Told to the agent | `consequence` in the challenge's `authorization_remediation` | `lib/uma4a_pep.py` |

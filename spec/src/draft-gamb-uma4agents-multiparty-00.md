@@ -23,6 +23,7 @@ author:
 normative:
   RFC7515:
   RFC7519:
+  RFC9068:
   UMAGrant:
     title: "User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"
     author:
@@ -402,9 +403,10 @@ resource the charter both claims and names for this purpose. The enforcement
 point MUST recognise it by issuer and MUST introspect it with the organization
 rather than with the member's authorization server.
 
-The grant is a JWT {{RFC7519}} with `typ` of `aa-auth+jwt`, signed with a key
-at the organization's `jwks_uri`. It carries `iss` (the organization's issuer
-identifier), `owner`, `aud`, `jti`, `exp`, `cnf`, `permissions`, `single_use`
+The grant is a JWT access token {{RFC9068}} with `typ` of `at+jwt`, signed with
+a key at the organization's `jwks_uri`. It carries `iss` (the organization's
+issuer identifier), `sub` and `client_id` (the thumbprint handle of the key in
+`cnf`), `owner`, `aud`, `jti`, `iat`, `exp`, `cnf`, `permissions`, `single_use`
 of `true`, `operation` where one was named, and `break_glass`: an object
 naming the `org`, the stated `reason`, what `authorised_by` it — a voucher an
 administrator opened, or an operator the charter lists — and the

@@ -34,7 +34,7 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import uma4a_consequence
-from uma4a_publish import (AuthorityKeys, aauth_document, owner_resources_document,
+from uma4a_publish import (AuthorityKeys, owner_resources_document,
                            prm_document, sign_metadata, verify_owner_as_query)
 from uma4a_pep import MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp
 
@@ -983,16 +983,6 @@ async def protected_resource_metadata() -> dict:
     one: the authority it names is hers.
     """
     return _prm(OWNER, "mcp")
-
-
-@app.get("/.well-known/aauth-resource.json")
-async def aauth_resource_metadata() -> dict:
-    """The AAuth binding's encoding of the same public structural layer the
-    RFC 9728 document carries, from the same registry. It points at the same
-    owner-resources listing: the protected instance layer does not change
-    with the encoding."""
-    return sign_metadata(aauth_document(PUBLIC_BASE, AS_PUBLIC, TOOLS, CONSEQUENCE),
-                         PEP_KEY, PEP_KID, typ="aauth-resource+jwt")
 
 
 @app.get("/jwks")

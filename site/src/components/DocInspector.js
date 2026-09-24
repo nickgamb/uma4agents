@@ -69,7 +69,7 @@ const BEATS = [
       "The template echoed back and signed, with the key the agent will later use to prove possession. A weakened echo ends the negotiation.",
     label: "POST /token · claim_token",
     body: `{
-  "iss": "aauth:agent:<keyid>",
+  "iss": "agent:<keyid>",
   "aud": "https://alice-as.uma.lab",
   "template_id": "alice/advisor-tier1/v2",
   "terms_uri": "https://alice-as.uma.lab/terms/alice/advisor-tier1/v2",

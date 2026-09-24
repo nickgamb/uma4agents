@@ -3,7 +3,7 @@
 [![Site](https://img.shields.io/badge/site-u4a.ai-bcdb2c)](https://u4a.ai)
 [![License](https://img.shields.io/badge/license-Apache%202.0-8cc2d4)](LICENSE)
 [![Profiles UMA 2.0](https://img.shields.io/badge/profiles-UMA%202.0-8cc2d4)](https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html)
-[![Binds AAuth](https://img.shields.io/badge/binds-AAuth-8cc2d4)](https://github.com/dickhardt/AAuth)
+[![Accepts AAuth agent tokens](https://img.shields.io/badge/accepts-AAuth%20agent%20tokens-8cc2d4)](https://github.com/dickhardt/AAuth)
 [![Speaks MCP](https://img.shields.io/badge/speaks-MCP%202026--07--28-5e8fa3)](docs/MCP-BINDING.md)
 [![Reference architecture](https://img.shields.io/badge/reference%20arch-Kubernetes-326ce5?logo=kubernetes&logoColor=white)](docs/KUBERNETES.md)
 
@@ -17,16 +17,16 @@ cases, and with a tap for the sensitive ones. What it found is written as a
 [specification set](spec/README.md): nine Internet-Drafts profiling and
 extending UMA 2.0, every requirement in them exercised by a check here.
 
-The whole stack runs locally with one command. It binds to
-[AAuth](https://github.com/dickhardt/AAuth) for agent identity and
-proof-of-possession.
+The whole stack runs locally with one command. An agent may identify itself
+with a bare key, a CIMD document, a Web Bot Auth directory, an ID-JAG, or an
+[AAuth](https://github.com/dickhardt/AAuth) agent token; the owner's side
+governs all of them the same way.
 
 > **The question.** Agent-identity protocols answer *"is this my agent doing my
 > task?"* The harder question — *"may your agent touch my stuff?"* — needs an
-> authority on the owner's side and a negotiation to fill it. AAuth's four-party
-> mode puts that authority in the right place; what stays unspecified is how an
-> *offline* owner actually answers. UMA worked that out a decade ago. This binds
-> the two, and shows what it looks like with agent-shaped mechanics.
+> authority on the owner's side, a negotiation to fill it, and an answer when
+> the owner is offline. UMA worked that out a decade ago. This takes UMA apart
+> into its primitives and puts them back together for agents.
 
 The animation above is the short version; **[u4a.ai](https://u4a.ai)** is the
 whole story, with narration and a scrubber.
@@ -156,7 +156,7 @@ The same six are on the site under
 
 ### A Sensitive Operation Pends for Alice — One Approval, One Trade
 ![Trade approval](screenshots/Trade_Approval_Identified.png)
-*An ask-me tier holds the request until Alice taps. The agent is **identified** — its `aauth:…@ps.uma.lab` identity was verified against its issuer's published keys, not claimed — and her approval releases a single-use grant bound to exactly this order.*
+*An ask-me tier holds the request until Alice taps. The agent is **identified** — its `aauth:` identity was verified against its issuer's published keys, not claimed — and her approval releases a single-use grant bound to exactly this order.*
 
 ### Manage Agent Access & Revocation
 ![Agent Access](screenshots/Resource_Approval.png)
@@ -348,9 +348,8 @@ Three things worth reading there before you build on this:
   This project reproduces no specification text, so only the former is in
   play. UMA and User-Managed Access originate with Kantara's UMA Work Group,
   and this project is neither endorsed by nor a product of Kantara.
-- The **AAuth Person Server** and **pAI-OS** are cloned by `make
-  fetch-upstream` rather than vendored, and built into images locally —
-  Apache-2.0 and MIT respectively. Two research-spike repositories listed in
+- **pAI-OS** is cloned by `make fetch-upstream` rather than vendored, and
+  built into an image locally — MIT. Two research-spike repositories listed in
   NOTICE publish no license at all and are not used by any `make` target here.
 - **Grafana and Loki** are AGPL-3.0, used unmodified as container images for
   observability only. The dashboards under `observability/` are original to

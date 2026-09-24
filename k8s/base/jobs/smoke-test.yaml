@@ -104,8 +104,6 @@ data:
             return exc.code == 404, f"status {exc.code}"
     check("and an owner it does not serve gets nothing, not the default one",
           unknown_owner)
-    check("the same layer in AAuth vocabulary",
-          lambda: (get("https://gateway.uma.lab/.well-known/aauth-resource.json").status == 200, ""))
 
     print("\n== beat 1, through the gateway ==")
     def challenge():

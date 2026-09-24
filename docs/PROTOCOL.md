@@ -3,7 +3,7 @@
 The API of `services/uma-as`, which is both the demo's authorization server and
 the reference implementation of the core grant semantics, plus the enforcement
 `services/uma-pep` runs behind the gateway. Grounded in the UMA 2.0 Grant and
-Federated Authorization specifications and the AAuth draft; see
+Federated Authorization specifications; see
 [ARCHITECTURE.md](ARCHITECTURE.md) for the system view. The normative statement
 of what is described here is the [specification set](../spec/README.md); this
 document is the implementation's own account, and where the two differ the
@@ -154,7 +154,7 @@ against the JWKS it publishes:
 u4a-membership+jwt    issued at enrolment; a member's authority presents it
 u4a-org-notice+jwt    a notice to a member's authority
 u4a-org-admin+jwt     one member, one administrator, 120s
-aa-auth+jwt           a break-glass grant. Deliberately the same typ as any
+at+jwt                a break-glass grant. Deliberately the same typ as any
                       other grant: it differs by issuer and by a `break_glass`
                       claim, not by looking like a different kind of thing
 ```
@@ -166,10 +166,6 @@ GET  /.well-known/oauth-protected-resource[/mcp]   RFC 9728 metadata (OAuth+DPoP
                                                    binding): structural, signed,
                                                    jwks_uri + tool_surfaces +
                                                    owner_resources_endpoint
-GET  /.well-known/aauth-resource.json              AAuth-binding encoding of the same
-                                                   public layer: access_mode +
-                                                   r3_vocabularies (content-addressed),
-                                                   same owner_resources_endpoint
 GET  /jwks                                         the resource's signing keys
 GET  /owner-resources                              owner-bound instances; served only
                                                    to an RFC 9421-signed query by the
@@ -194,19 +190,8 @@ omits is whose instances sit behind the resource: publishing which resources
 Alice owns at an unauthenticated URI would be a privacy leak the old push
 registration never had.
 
-The public layer has **two binding encodings of the same structural facts**,
-served side by side from one tool registry:
-
-- **OAuth+DPoP binding** — the RFC 9728 document above (`tool_surfaces`).
-- **AAuth binding** — `GET /.well-known/aauth-resource.json`: an
-  `access_mode` (`four-party`, the federated topology this stack runs) and an
-  R3 vocabulary (`r3_vocabularies`, content-addressed via a `digest` over the
-  operation list), per AAuth's resource-metadata convention. R3 is the better
-  home for the type layer — the content digest gives universal operations +
-  scopes a stable id independent of any owner.
-
-**Protected — instance.** `GET /owner-resources` (advertised by *both* public
-documents, which point at the same endpoint) returns the owner-bound resource
+**Protected — instance.** `GET /owner-resources` (advertised by the public
+document) returns the owner-bound resource
 instances — ids, names, scopes, owner — only to a querier that proves
 possession of the owner's AS signing key: RFC 9421 message signatures over the
 same profile the agent uses for proof-of-possession, verified against the AS's
@@ -307,10 +292,7 @@ already has a token for this shape without parsing it.
 lets the client corroborate `as_uri` instead of taking an unauthenticated
 header's word for it.
 
-The primary challenge is stock UMA 2.0. An `AAuth-Requirement:
-requirement=grant; as_uri=…; ticket=…` form may be emitted alongside it as a
-binding profile, so AAuth-native agents can discover the grant layer through
-their own challenge header; this belongs in the AAuth binding document.
+The challenge is stock UMA 2.0, whichever way the agent identifies itself.
 
 ### Beat 2 — Attempt
 
@@ -356,7 +338,7 @@ reciprocal agreement.
 }
 ```
 
-An AAuth mission reference (`approver` + `s256`) may be offered as an additional
+A mission citation (`approver` + `s256`) may be offered as an additional
 acceptable `claim_token_format` — attestation demanded by the owner's side.
 
 ### Beat 3 — Commit
@@ -374,14 +356,15 @@ claim_token_format = https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws
 
 The **agreement** is the terms template echoed and signed by the agent's key.
 Its JWS protected header carries either `jwk` (the pseudonymous bare key) or an
-`agent_token` (an `aa-agent+jwt` from the agent's server, which the AS
-verifies against the issuer's published keys via AAuth dwk discovery; its
-`cnf.jwk` is the signing key) — so the same key both signs the agreement and,
+`agent_token` (an AAuth `aa-agent+jwt` from the agent's provider, which the AS
+verifies against the issuer's published keys, found through its
+`aauth-agent.json`; its `cnf.jwk` is the signing key, and the agreement is
+verified with the algorithm that key names) — so the same key both signs the agreement and,
 later, proves possession of the RPT.
 
 ```json
 {
-  "iss": "aauth:agent:<keyid>",
+  "iss": "agent:<keyid>",
   "aud": "https://alice-as.uma.lab",
   "iat": 1751900000,
   "template_id": "alice/advisor-tier1/v2",
@@ -394,7 +377,7 @@ later, proves possession of the RPT.
   "nonce": "<nonce>",
 
   "reason": "Suitability review before Thursday's client meeting.",
-  "mission": { "approver": "https://ps.uma.lab", "s256": "<content-hash>" }
+  "mission": { "approver": "https://ps.example", "s256": "<content-hash>" }
 }
 ```
 
@@ -405,7 +388,7 @@ neither able to widen anything:
 | Claim | Bounded by | What the AS does with it |
 |---|---|---|
 | `reason` | `UMA_AS_MAX_REASON` bytes | records it, shows it to her. Never parsed or compared to her purpose |
-| `mission` | https `approver` + a 16–128 char hash | records the citation. Never dereferenced — AAuth serves missions to admins, so there is nothing a relying party may fetch |
+| `mission` | https `approver` + a 16–128 char hash | records the citation. Never dereferenced — a mandate is served to the party that set it, so there is nothing a relying party may fetch |
 
 Policy may read only their absence — `request.reason_absent`,
 `request.mission_absent` — and `validate_rules` refuses either under
@@ -466,7 +449,7 @@ decision.
 
 ```json
 {
-  "access_token": "<RPT: aa-auth+jwt, cnf-bound>",
+  "access_token": "<RPT: RFC 9068 at+jwt, cnf-bound>",
   "token_type": "PoP",
   "expires_in": 3600,
   "receipt": "<myterms-receipt+jws>"
@@ -485,15 +468,19 @@ negotiation with `decline=true` at the token endpoint; the refusal is a
 record too (IEEE 7012 5.2.4) — the owner's ledger gains a `refused` entry
 naming the terms that were declined.
 
-The RPT is an `aa-auth+jwt` (**extension #2**: UMA's introspection
-`permissions` array carried as a claim inside a proof-of-possession token):
+The RPT is an RFC 9068 `at+jwt` (**extension #2**: UMA's introspection
+`permissions` array carried as a claim inside a proof-of-possession token).
+`sub` and `client_id` are both the connection handle — the agent is the client
+and the party asking:
 
 ```json
 {
   "iss": "https://alice-as.uma.lab",
-  "sub": "<agent id or aauth:pseudonymous-agent>",
+  "sub": "<connection handle>",
+  "client_id": "<connection handle>",
   "aud": "https://gateway.uma.lab",
   "jti": "rpt_<id>",
+  "iat": 1751906400,
   "exp": 1751910000,
   "cnf": { "jwk": { "…agent signing key…": "" } },
   "permissions": [
@@ -548,8 +535,8 @@ agent, keyed by a **handle** whose shape follows the agent's identity level:
   (e.g. `aauth:…@ps.uma.lab`). AAuth session keys rotate per run, so a
   thumbprint-keyed connection would forget an identified agent every session;
   continuity lives in the token's issuer+subject. (The AS validates the
-  agent token against its issuer's published keys — AAuth dwk discovery over
-  https — before believing any of it.)
+  agent token against its issuer's published keys, over https, before
+  believing any of it.)
 
 A connection is created when Alice approves a `kind=connection` request
 (first contact), and it holds the identity level, a label,
@@ -638,11 +625,11 @@ list with the baseline and the reasoning for each.
 | # | Extension | UMA 2.0 baseline | Specified in |
 |---|---|---|---|
 | 1 | `terms_template` inside `required_claims`; the AS proffers claim *content*, dereferenceable at a persistent `terms_uri`, with a counter-signed receipt | AS names acceptable claim formats | Terms |
-| 2 | RPT = `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | Core §7.1 |
+| 2 | RPT = RFC 9068 `at+jwt`, `cnf`-bound, `token_type: PoP`, `permissions` claim | Bearer RPT; permissions visible only via introspection | Core §7.1 |
 | 3 | `operation` + `single_use` RPT claims | Per-permission scopes/expiry only | Core §7.2 |
 | 4 | Owner intervention on `request_submitted`, in two kinds (connection / operation) | RO intervention out of scope | Core §4.2, §9 |
 | 5 | Standing connection keyed by an identity handle; `contract` on the RPT | The PCT is the ancestor | Core §9 |
-| 6 | Public structural discovery in two binding encodings from one registry; `resource_metadata` on the challenge; `as_uri` corroborated against `authorization_servers` | Both encodings predate this; the challenge carries `as_uri` on faith | Core §3.4, FedAuthz §2.1 |
+| 6 | Public structural discovery from one registry; `resource_metadata` on the challenge; `as_uri` corroborated against `authorization_servers` | RFC 9728 predates this; the challenge carries `as_uri` on faith | Core §3.4, FedAuthz §2.1 |
 | 7 | `owner_resources_endpoint` + the protected owner-resources listing (RFC 9421-signed query by the owner's AS) | FedAuthz: RS pushes owner-bound registrations under the PAT | FedAuthz §2.2, §3 |
 | 8 | Challenge specified as *parameters* with per-host encodings: `401 + WWW-Authenticate: UMA` where there is a status line, JSON-RPC `-32001` where there is not | `WWW-Authenticate` mandated | Core §3.1, MCP §3 |
 | 9 | Enforcement obligations as a conformance profile any resource-side component may satisfy (`ENFORCEMENT_MODE=gateway\|embedded` here) | FedAuthz names the obligations, not their host | Core §8.1 |
@@ -654,7 +641,7 @@ list with the baseline and the reasoning for each.
 | 15 | A depth limit on the owner's pending queue, in two lanes split on operator attestation; past it, `429 request_denied` | No opinion on how many pends an owner may be made to hold | Policy §6 |
 | 16 | Owner-side refusal at operator granularity: `POST /owner/operators/block` ends every connection an operator holds in one step | No notion of the party operating a client | Policy §7 |
 | 17 | Assurance may only tighten; only the owner's own decisions may relax — enforced where policy is stored | No vocabulary for either | Policy §3–5 |
-| 18 | An agent holding a connection may introduce a sibling (`u4a-introduction-v1+jws`, or RFC 8693 `act`), which skips first contact and then negotiates its own grant under its own key; revocation cascades | No object between "a stranger" and "the same client" | Lineage |
+| 18 | An agent holding a connection may introduce a sibling (`u4a-introduction-v1+jws`, or its issuer's AAuth `parent_agent`), which skips first contact and then negotiates its own grant under its own key; revocation cascades | No object between "a stranger" and "the same client" | Lineage |
 | 19 | A layer above the owner: charter, envelope clamped on write, `delegation` per role, one resource administered by several members each under her own authority, break-glass signed by the organization | The *resource rights administrator* is named and given no wire surface | MultiParty Part I |
 | 20 | Several owners of equal standing: mandate, signed verdicts bound to one negotiation and one agreement, a tally that carries them in the grant, re-verified at the enforcement point against the published mandate | Exactly one AS per protected resource | MultiParty Part II |
 | 21 | The owner's own credential to her authorization server: a designated identity provider, an enrolled device key, or both, each independently sufficient (`UMA_AS_OWNER_AUTH`) | Silent on how the owner authenticates | Core §10 |
@@ -662,7 +649,8 @@ list with the baseline and the reasoning for each.
 | 23 | `consequence` on a published tool surface — what an operation leaves behind, declared by the resource that performs it, read by her policy, carried on the grant and re-checked at the call | No vocabulary for what an act costs | FedAuthz §2.1; Core §7.2; Policy §3.3 |
 | 24 | Clearance: facts a party other than the requester must attest — a licence, a jurisdiction — fetched authority-to-authority, required by her tier or the charter above it, and refused before terms are dictated | Claims come from the requesting party | Policy §3.4; MultiParty §2.4 |
 
-Everything not listed here is intended to be stock UMA 2.0 / stock AAuth. An
+Everything not listed here is intended to be stock UMA 2.0, and an AAuth agent
+token is verified as AAuth specifies. An
 enterprise identity assertion presented as a `claim_token` (docs/XAA.md) is not
 on the list: it is stock claims-gathering with one claim per beat, and the
 departure it makes is from the Cross App Access draft's `jwt-bearer` exchange,

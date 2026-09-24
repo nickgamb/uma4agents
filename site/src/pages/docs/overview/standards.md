@@ -34,6 +34,7 @@ This page is the full list, so you can see what you would be adopting.
 | Specification | Supplies | Where it appears |
 |---|---|---|
 | [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html) — Protected Resource Metadata | The public half of discovery, and the array that lets a resource name its authorization servers | [Beat 0](/docs/overview/discovery/) |
+| [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html) — JWT Access Tokens | The shape of the grant: `at+jwt`, its `sub` and `client_id` the agent's connection handle | [Beat 3](/docs/overview/four-beats/) |
 | [RFC 9421](https://www.rfc-editor.org/rfc/rfc9421.html) — HTTP Message Signatures | Proof-of-possession on every request, in both directions | [Beat 4](/docs/overview/proof-of-possession/), and the protected discovery endpoint |
 | [RFC 7638](https://www.rfc-editor.org/rfc/rfc7638.html) — JWK Thumbprint | The stable name for a pseudonymous agent, which becomes its connection handle | [Parties](/docs/overview/parties/) |
 | [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396.html) — Rich Authorization Requests | The structure the challenge uses to say what is being asked for | [Beat 1](/docs/overview/four-beats/) |
@@ -52,7 +53,7 @@ service offering conditions.
 
 | Specification | Supplies | Where it appears |
 |---|---|---|
-| [AAuth](https://github.com/dickhardt/AAuth) | Verifiable agent identity, bound to a session key | The identified path |
+| [AAuth](https://github.com/dickhardt/AAuth) | An agent token: a verifiable agent identity, bound to a session key | One way to take the identified path |
 | [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-webbotauth-registry/) | A directory where an operator publishes its agents' keys | Display and discovery only |
 | [Client ID Metadata Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | A client described by URL rather than pre-registration | Display only |
 

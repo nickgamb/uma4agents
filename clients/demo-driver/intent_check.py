@@ -347,16 +347,16 @@ def main() -> int:
         # deliberately does not do is read the mandate and rule on whether
         # this request is inside it — that is the approver's question.
         mandated = AgentKeys.load_or_create(f"{KEYS}/intent-mandate-{RUN}.pem")
-        mission = {"approver": "https://ps.uma.lab", "s256": "a" * 43}
+        mission = {"approver": "https://ps.example", "s256": "a" * 43}
 
         err = commit_raw(client, mandated, "get_positions",
                          lambda t: None, mission=mission)
         check("a well-formed citation is accepted", err is None, err or "")
 
-        for bad, why in ((({"approver": "http://ps.uma.lab", "s256": "a" * 43}),
+        for bad, why in ((({"approver": "http://ps.example", "s256": "a" * 43}),
                           "an approver that is not https"),
                          (({"s256": "a" * 43}), "a citation with no approver"),
-                         (({"approver": "https://ps.uma.lab", "s256": "x"}),
+                         (({"approver": "https://ps.example", "s256": "x"}),
                           "a hash too short to be one"),
                          ("just-a-string", "a citation that is not an object")):
             err = commit_raw(client, mandated, "get_positions",

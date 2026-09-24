@@ -1546,19 +1546,19 @@ an introduction it will parse; the reference implementation refuses one over
 4096 octets.<a href="#section-2.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="act-claim">
+<div id="issuer-claim">
 <section id="section-2.2">
         <h3 id="name-by-issuer-attestation">
 <a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-by-issuer-attestation" class="section-name selfRef">By Issuer Attestation</a>
         </h3>
 <p id="section-2.2-1">Where the introduced agent is an identified agent, its issuer <span class="bcp14">MAY</span> assert the
-lineage instead, by placing the introducing agent's subject identifier in an
-<code>act</code> claim <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> of the introduced agent's credential. No second document
-is needed; the authorization server reads the claim it already verified.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
-<p id="section-2.2-2"><span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> uses <code>act</code> on its auth token to record a delegation
-chain, not in its agent credential. Its agent token permits additional claims,
-and this document uses the same claim there.
-Nothing new is defined here; the claim is read.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+lineage instead, by naming the introducing agent in the introduced agent's
+credential. No second document is needed; the authorization server reads the
+claim it already verified. An AAuth agent token
+<span>[<a href="#I-D.hardt-oauth-aauth-protocol" class="cite xref">I-D.hardt-oauth-aauth-protocol</a>]</span> does this with its <code>parent_agent</code> claim,
+which names the parent agent and which AAuth requires to share the sub-agent's
+issuer; how an authorization server reads it is specified in <span>[<a href="#U4AAAuth" class="cite xref">U4AAAuth</a>]</span>.
+Nothing new is defined here; the claim is read.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1593,8 +1593,8 @@ the strongest reason:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-3.2-2">
 <li id="section-3.2-2.1">
             <p id="section-3.2-2.1.1">The introducing agent holds an active standing connection with this owner,
-looked up by the handle derived from the header key (or, under <a href="#act-claim" class="auto internal xref">Section 2.2</a>,
-from the issuer and the <code>act</code> subject).<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+looked up by the handle derived from the header key (or, under
+<a href="#issuer-claim" class="auto internal xref">Section 2.2</a>, from the issuer and the parent the credential names).<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.2">
             <p id="section-3.2-2.2.1">The owner has personally approved the introducing agent at at least one
@@ -1615,7 +1615,7 @@ active. A revoked agent goes back through first contact; an introduction
             <p id="section-3.2-2.5.1">Under <a href="#introduction-document" class="auto internal xref">Section 2.1</a>, one operator has published both keys: the
 introduced agent is at accountability level 2 (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 4.2),
 and the <em>same</em> directory at the <em>same</em> origin also holds the introducing
-key. Under <a href="#act-claim" class="auto internal xref">Section 2.2</a>, the issuer's attestation satisfies this check.<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
+key. Under <a href="#issuer-claim" class="auto internal xref">Section 2.2</a>, the issuer's attestation satisfies this check.<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.6">
             <p id="section-3.2-2.6.1">The introducing agent has fewer live introduced agents than a deployment
@@ -1875,10 +1875,6 @@ depth at which she is asked to trust it.<a href="#section-8-1" class="pilcrow">�
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC8693">[RFC8693]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="U4ACore">[U4ACore]</dt>
         <dd>
 <span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-core-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html</a>&gt;</span>. </dd>
@@ -1900,9 +1896,9 @@ depth at which she is asked to trust it.<a href="#section-8-1" class="pilcrow">�
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.hardt-aauth-protocol">[I-D.hardt-aauth-protocol]</dt>
+<dt id="I-D.hardt-oauth-aauth-protocol">[I-D.hardt-oauth-aauth-protocol]</dt>
         <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-protocol-02</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02</a>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-10</span>, <time datetime="2026-08-06" class="refDate">6 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-10">https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-10</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.niyikiza-oauth-attenuating-agent-tokens">[I-D.niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>
@@ -1911,6 +1907,10 @@ depth at which she is asked to trust it.<a href="#section-8-1" class="pilcrow">�
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="U4AAAuth">[U4AAAuth]</dt>
+        <dd>
+<span class="refAuthor">Gamb, N.</span> and <span class="refAuthor">E. Maler</span>, <span class="refTitle">"AAuth Agent Tokens as Agent Credentials for User-Managed Access (UMA) 2.0 for Autonomous Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gamb-uma4agents-aauth-00</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html">https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4ALAB">[U4ALAB]</dt>
       <dd>
@@ -1984,8 +1984,8 @@ agent that introduced it, and the cascade of <a href="#revocation" class="auto i
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-C-1"><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> supplied the <code>act</code> claim and <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> the use of
-it in an agent credential that <a href="#act-claim" class="auto internal xref">Section 2.2</a> reads.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-1"><span>[<a href="#I-D.hardt-oauth-aauth-protocol" class="cite xref">I-D.hardt-oauth-aauth-protocol</a>]</span> supplied the <code>parent_agent</code> claim that
+<a href="#issuer-claim" class="auto internal xref">Section 2.2</a> reads.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">

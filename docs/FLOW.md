@@ -52,13 +52,14 @@ her policy: unchanged
 
 ## Two levels, not four
 
-Four regimes do not produce four handles. The run says so:
+Each regime is filed under its own handle, and the handles come in two forms.
+The run says so:
 
 ```
-pseudonymous   aauth:pseudonymous-agent
-identified     aauth:6db1c44a-…@ps.uma.lab
-described      aauth:pseudonymous-agent
-published      aauth:pseudonymous-agent
+pseudonymous   jkt:…
+identified     aauth:…@ps.uma.lab
+described      jkt:…
+published      jkt:…
 ```
 
 There are **two identity levels**, not four. Either the key is the identity,

@@ -200,15 +200,6 @@ def main() -> int:
           {s["tool"]: s.get("consequence")
            for s in payload.get("tool_surfaces") or []} == declared)
 
-    # One registry, two encodings. A client that reads either learns the same
-    # thing about the same operation.
-    aauth = client.get(
-        f"https://{GATEWAY_AUTHORITY}/.well-known/aauth-resource.json").json()
-    ops = (aauth.get("r3_vocabularies") or [{}])[0].get("operations") or []
-    check("the AAuth encoding of the same registry agrees, operation for operation",
-          {(o.get("tool") or o.get("operation")): o.get("consequence")
-           for o in ops} == declared, json.dumps(ops))
-
     print("\n== 2 · her authority holds what the resource published ==")
     resources = {r["_id"]: r for r in client.get(
         f"{AS_PUBLIC}/owner/resources", headers=owner_hdrs(client),

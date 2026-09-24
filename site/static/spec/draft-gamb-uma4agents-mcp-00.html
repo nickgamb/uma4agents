@@ -1427,9 +1427,8 @@ reading them must handle.<a href="#section-1-2" class="pilcrow">¶</a></p>
         <h3 id="name-relationship-to-the-set">
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-relationship-to-the-set" class="section-name selfRef">Relationship to the Set</a>
         </h3>
-<p id="section-1.1-1">This document is one binding of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>. Others are possible; a binding to
-the challenge header of <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span> is the obvious second, and
-<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 1.2 names a third. Its identifying URI is
+<p id="section-1.1-1">This document is one binding of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>. Others are possible, and
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 1.2 names one. Its identifying URI is
 <code>https://u4a.ai/spec/mcp/1.0</code>.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1452,8 +1451,8 @@ appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">�
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-discovery" class="section-name selfRef">Discovery</a>
       </h2>
 <p id="section-2-1">A client <span class="bcp14">MAY</span> learn that a resource requires a grant under this profile, and from
-which authorization server, through any of three channels. A resource <span class="bcp14">MUST</span> offer
-the first and <span class="bcp14">MAY</span> offer the others, and all <span class="bcp14">MUST</span> be generated from one registry
+which authorization server, through either of two channels. A resource <span class="bcp14">MUST</span> offer
+the first and <span class="bcp14">MAY</span> offer the second, and both <span class="bcp14">MUST</span> be generated from one registry
 of the resource's tools.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-2">
         <dt id="section-2-2.1">Protected resource metadata:</dt>
@@ -1462,18 +1461,12 @@ of the resource's tools.<a href="#section-2-1" class="pilcrow">¶</a></p>
 requires. Fetched, not negotiated.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-2.3">Alternative metadata encodings:</dt>
+<dt id="section-2-2.3">Capability advertisement:</dt>
         <dd style="margin-left: 1.5em" id="section-2-2.4">
-          <p id="section-2-2.4.1">The same structural facts under another convention, such as the resource
-metadata of <span>[<a href="#I-D.hardt-aauth-protocol" class="cite xref">I-D.hardt-aauth-protocol</a>]</span>.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-2-2.5">Capability advertisement:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-2.6">
-          <p id="section-2-2.6.1">A resource enforcing in-process <span class="bcp14">MAY</span> advertise this profile in the
+          <p id="section-2-2.4.1">A resource enforcing in-process <span class="bcp14">MAY</span> advertise this profile in the
 <code>capabilities.extensions</code> member of its handshake response under the
 identifier <code>dev.uma4agents/uma-enforcement</code>, carrying the grant type, the
-authorization servers, and the JSON-RPC error code of <a href="#challenge-jsonrpc" class="auto internal xref">Section 3.2</a>.<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+authorization servers, and the JSON-RPC error code of <a href="#challenge-jsonrpc" class="auto internal xref">Section 3.2</a>.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1494,7 +1487,7 @@ authorization servers, and the JSON-RPC error code of <a href="#challenge-jsonrp
 <figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
 <a href="#name-the-capability-advertisemen" class="selfRef">The capability advertisement.</a>
         </figcaption></figure>
-<p id="section-2-4">The third channel is the only one that is negotiated rather than fetched: it
+<p id="section-2-4">The second channel is negotiated rather than fetched: it
 arrives in the handshake the client was already doing, with no extra round
 trip and no well-known URI. A client that receives it knows, before its first
 tool call, that it must negotiate a grant and where.<a href="#section-2-4" class="pilcrow">¶</a></p>
@@ -1797,10 +1790,6 @@ binding's, carried in <code>data</code> beside those of <span>[<a href="#U4ACore
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.hardt-aauth-protocol">[I-D.hardt-aauth-protocol]</dt>
-        <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-protocol-02</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-protocol-02</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>

@@ -174,7 +174,7 @@ three postures her terms can take here.
 claim's word for it. The signing key has to resolve to an agent she approved in
 person, and both keys have to be published by one operator in a directory the
 agents cannot write to. An agent with a verified identity has a better route
-still: its own issuer names the parent, in AAuth's `act` claim.
+still: its own issuer names the parent, in AAuth's `parent_agent` claim.
 
 **What happens to sub-agents when the parent is revoked?** They are revoked in
 the same action, and their live grants stop working on the next call rather than

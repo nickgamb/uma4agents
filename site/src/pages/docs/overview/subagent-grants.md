@@ -34,8 +34,8 @@ The task graph can be as deep as you like. The authority graph is flat.
 directory that publishes both their keys where neither agent can write to it.
 Alice's domain holds her authorization server and her portal. The parent signs
 an introduction naming the sub-agent's key, which confers no tier or scope — or
-the operator's AAuth agent server names the parent in the sub-agent's `act`
-claim instead; the
+the operator's AAuth agent provider names the parent in the sub-agent's
+`parent_agent` claim instead; the
 sub-agent sends its own contract carrying it; her authority checks it against
 her own records and returns a grant bound to the sub-agent's own key; revoking
 the parent takes its sub-agents with it in the same action.](/img/docs/subagent-grants.svg)
@@ -122,20 +122,19 @@ agent's handle as its sponsor, so the signing key travels in the header where
 the signature checks it.
 
 **Or the agent's issuer names it.** An identified agent already carries an
-`aa-agent+jwt`. AAuth puts RFC 8693's `act` claim on its auth token, where it
-nests to record a delegation chain; its agent token is explicitly extensible, and
-an agent server that sets `act.sub` in the agent token to the spawning agent has
-asserted the lineage itself.
-Nothing new is defined; the claim is read.
+`aa-agent+jwt`, and AAuth marks a sub-agent's token with `parent_agent`, naming
+the agent that spawned it and required to share its issuer. An agent provider
+that issues one has asserted the lineage itself. Nothing new is defined; the
+claim is read.
 
 The second is the better attestation. A sibling-signed introduction is the
-requesting side describing its own shape; an `act` claim is the operator's own
-signing authority describing it. The first exists because a pseudonymous agent
+requesting side describing its own shape; a `parent_agent` claim is the
+operator's own signing authority describing it. The first exists because a pseudonymous agent
 has no issuer to speak for it.
 
 AAuth reaches the same conclusion this profile does about what a downstream
 call inherits: its call-chaining rules say the downstream authorization "is not
-required to be a subset of the upstream scopes." A spawned agent is authorized
+required to be a subset of any upstream authorization." A spawned agent is authorized
 on its own terms in both models.
 
 ## What her authority checks

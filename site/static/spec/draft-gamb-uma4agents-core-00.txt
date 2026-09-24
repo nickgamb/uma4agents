@@ -211,8 +211,8 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    [U4APolicy], [U4ALineage], [U4AMultiParty] and [U4AOwner] are
    OPTIONAL extensions of this document.  [U4AMCP] binds this profile to
-   a transport and [U4AAAuth] to an agent identity and signature layer;
-   other bindings are possible.
+   a transport; other bindings are possible.  [U4AAAuth] specifies one
+   credential an agent may identify itself with; others serve.
 
 
 
@@ -629,16 +629,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    Identified:  The client presents a credential from an issuer
       asserting its identity and binding it to a key — for example an
-      aa-agent+jwt as defined by [I-D.hardt-aauth-protocol], whose
-      cnf.jwk is the signing key.  The authorization server MUST verify
-      that credential against keys published by its issuer, MUST require
-      that the issuer identifier use the https scheme, and MUST derive
-      the connection handle from the issuer and subject rather than from
-      the key.  The issuer MUST qualify the handle whole, including any
-      path.  The handle MUST be the subject, followed by @ and the
-      issuer identifier with its scheme and any trailing / removed,
-      unless the subject already ends with that suffix, in which case
-      the handle is the subject.
+      aa-agent+jwt as defined by [I-D.hardt-oauth-aauth-protocol], whose
+      cnf.jwk is the signing key, and accepted as [U4AAAuth] specifies.
+      The authorization server MUST verify that credential against keys
+      published by its issuer, MUST require that the issuer identifier
+      use the https scheme, and MUST derive the connection handle from
+      the issuer and subject rather than from the key.  The issuer MUST
+      qualify the handle whole, including any path.  The handle MUST be
+      the subject, followed by @ and the issuer identifier with its
+      scheme and any trailing / removed, unless the subject already ends
+      with that suffix, in which case the handle is the subject.
 
    The handle for an identified agent MUST NOT be derived from its key.
    Issuers that attest agents commonly bind a fresh key per session; a
@@ -792,7 +792,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    Section 3.3.5, with token_type of PoP:
 
    {
-     "access_token": "eyJ0eXAiOiJhYS1hdXRoK2p3dCIsImFsZyI6...",
+     "access_token": "eyJ0eXAiOiJhdCtqd3QiLCJhbGciOiJFZERTQSIs...",
      "token_type": "PoP",
      "expires_in": 3600
    }
@@ -803,12 +803,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    the HTTP Authentication Scheme Registry, and a binding that carries
    the token elsewhere says where.
 
-   The requesting party token MUST be a JWT [RFC7519] signed by the
-   authorization server, and MUST carry:
+   The requesting party token MUST be a JWT access token as [RFC9068]
+   specifies, with typ of at+jwt, signed by the authorization server,
+   and MUST carry:
 
-   iss, aud, jti, exp:  REQUIRED, as [RFC7519]. aud names the resource
-      server the token is for; jti is what consumption is recorded
-      against.
+   iss, aud, jti, exp, iat:  REQUIRED, as [RFC9068]. aud names the
+      resource server the token is for; jti is what consumption is
+      recorded against.
+
+   sub, client_id:  REQUIRED.  Both are the connection handle of
+      Section 5.1.  The client is both the software acting and the party
+      asking, and the handle is the name the owner's authorization
+      server knows it by.
 
    cnf:  REQUIRED.  A confirmation claim whose jwk member is the public
       key the client must prove possession of.  This is the key that
@@ -828,12 +834,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       the same value the receipt of [U4ATerms] carries as agreement.
 
    consequence:  REQUIRED where the resource server declared one for the
-      operation ([U4AFedAuthz]) at the time the grant was issued.  The
-      class the owner's authority answered against.
-
-   clearance:  REQUIRED where the owner's policy required an attestation
-
-
 
 
 
@@ -842,6 +842,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 15]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
+      operation ([U4AFedAuthz]) at the time the grant was issued.  The
+      class the owner's authority answered against.
+
+   clearance:  REQUIRED where the owner's policy required an attestation
       from a party other than the requesting one ([U4APolicy]).  It MUST
       be a digest over the attested facts and MUST NOT carry the facts
       themselves: that a clearance was checked is the enforcement
@@ -883,13 +887,9 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       parameters approved, serialized as [RFC8785]: the params member of
       the agreement's operation [U4ATerms].
 
-   {
-     "single_use": true,
-     "operation": {
-       "tool": "execute_trade",
-       "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
-     }
-   }
+
+
+
 
 
 
@@ -897,6 +897,14 @@ Gamb & Maler              Expires 19 March 2027                [Page 16]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   {
+     "single_use": true,
+     "operation": {
+       "tool": "execute_trade",
+       "params_s256": "s256:ogtS-uV8x6mcllHxtXOVD9IRgj46zju5wnPAZDDyTNM"
+     }
+   }
 
    Classic OAuth and UMA scopes authorize classes of action.  "She
    approved this trade" and "she authorized trading" are different
@@ -937,6 +945,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
        permission's own exp and nbf, where present, admit the present
        time.
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    3.  Verify proof of possession against the key named by cnf in the
        introspection response.
 
@@ -946,13 +963,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
        received parameters equals operation.params_s256.
 
    5.  Consume the token.
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 17]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    An enforcement point MUST NOT consume a single-use token before step
    5.
@@ -993,22 +1003,17 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    be tested for in a single-process deployment — which is where the
    specification has to carry it, because the implementation will not.
 
-   [UMAGrant] Section 5.5 says a permission ticket is single-use and
-   does not say where in enforcement it is spent, nor what "single-use"
-   means when the authorization server has more than one replica.  Both
-   are stated here.
-
-
-
-
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 18]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   [UMAGrant] Section 5.5 says a permission ticket is single-use and
+   does not say where in enforcement it is spent, nor what "single-use"
+   means when the authorization server has more than one replica.  Both
+   are stated here.
 
 8.4.  Introspection Responses
 
@@ -1054,17 +1059,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    *  record the connection when the owner approves, retaining at least
       the handle, the identity level, and the time of first contact;
 
-   *  offer the owner an operation that ends a connection, and on that
-      operation invalidate every live requesting party token issued
-      under it in the same indivisible step that ends the connection;
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 19]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   *  offer the owner an operation that ends a connection, and on that
+      operation invalidate every live requesting party token issued
+      under it in the same indivisible step that ends the connection;
 
    *  retain the fact that a connection was previously ended, across any
       later re-establishment of a connection with the same handle;
@@ -1108,10 +1112,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    independently revocable, and MUST NOT be a fallback for another.  An
    authorization server MUST NOT hold a static owner credential of its
    own.
-
-
-
-
 
 
 
@@ -1570,10 +1570,6 @@ Gamb & Maler              Expires 19 March 2027                [Page 28]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
-              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
-              <https://www.rfc-editor.org/rfc/rfc7519>.
-
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
               2015, <https://www.rfc-editor.org/rfc/rfc7638>.
@@ -1595,6 +1591,10 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Canonicalization Scheme (JCS)", RFC 8785,
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
 
    [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
               Rich Authorization Requests", RFC 9396,
@@ -1653,11 +1653,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 16.2.  Informative References
 
-   [I-D.hardt-aauth-protocol]
+   [I-D.hardt-oauth-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
-              Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
-              <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
-              protocol-02>.
+              Draft, draft-hardt-oauth-aauth-protocol-10, 6 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-hardt-oauth-
+              aauth-protocol-10>.
 
    [I-D.ietf-webbotauth-httpsig-protocol]
               Meunier, T. and S. Major, "HTTP Message Signatures for
@@ -1692,9 +1692,10 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               DOI 10.17487/RFC9635, October 2024,
               <https://www.rfc-editor.org/rfc/rfc9635>.
 
-   [U4AAAuth] Gamb, N. and E. Maler, "AAuth Binding for User-Managed
-              Access (UMA) 2.0 for Autonomous Agents", Work in Progress,
-              Internet-Draft, draft-gamb-uma4agents-aauth-00, 2026,
+   [U4AAAuth] Gamb, N. and E. Maler, "AAuth Agent Tokens as Agent
+              Credentials for User-Managed Access (UMA) 2.0 for
+              Autonomous Agents", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-aauth-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html>.
 
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
@@ -1724,7 +1725,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
               Managed Access (UMA) 2.0", Work in Progress, Internet-
               Draft, draft-gamb-uma4agents-owner-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html>.
-
 
 
 
@@ -1935,13 +1935,11 @@ Acknowledgments
    in UMA's own 2010 work on access authorization claims
    [UMAClaims2010].
 
-   [I-D.hardt-aauth-protocol] supplied the agent identity and key-
-   binding mechanics this profile composes with, and the observation
-   that its resource token and UMA's permission ticket are the same
-   object minted on opposite sides.  [I-D.meunier-webbotauth-registry]
-   supplied the operator key directory.
-   [I-D.ietf-oauth-rar-metadata-remediation] supplied the remediation
-   payload that Section 3.4 extends by two members.
+   [I-D.hardt-oauth-aauth-protocol] supplied an agent credential this
+   profile accepts.  [I-D.meunier-webbotauth-registry] supplied the
+   operator key directory.  [I-D.ietf-oauth-rar-metadata-remediation]
+   supplied the remediation payload that Section 3.4 extends by two
+   members.
 
 Authors' Addresses
 
@@ -1952,6 +1950,8 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
+
+
 
 
 

@@ -460,9 +460,10 @@ Internet-Draft          Multi-Party Authorization         September 2026
    issuer and MUST introspect it with the organization rather than with
    the member's authorization server.
 
-   The grant is a JWT [RFC7519] with typ of aa-auth+jwt, signed with a
-   key at the organization's jwks_uri.  It carries iss (the
-   organization's issuer identifier), owner, aud, jti, exp, cnf,
+   The grant is a JWT access token [RFC9068] with typ of at+jwt, signed
+   with a key at the organization's jwks_uri.  It carries iss (the
+   organization's issuer identifier), sub and client_id (the thumbprint
+   handle of the key in cnf), owner, aud, jti, iat, exp, cnf,
    permissions, single_use of true, operation where one was named, and
    break_glass: an object naming the org, the stated reason, what
    authorised_by it — a voucher an administrator opened, or an operator
@@ -495,7 +496,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    without privileging the place it is put.  The tally is that place,
    and the rest of Part II is what makes it unable to lie rather than
    trusted.
-
 
 
 
@@ -924,6 +924,10 @@ Internet-Draft          Multi-Party Authorization         September 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
@@ -942,10 +946,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
               Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
               2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
               00.html>.
-
-
-
-
 
 
 

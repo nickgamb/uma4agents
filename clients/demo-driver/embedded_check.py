@@ -163,18 +163,17 @@ def main() -> int:
         say(f"capabilities.extensions names the AS: {mine['authorization_servers']}")
         say(f"protocol negotiated: {d['result']['supportedVersions']}")
 
-        # The same registry in the AAuth binding's encoding, served by the
-        # resource itself. Built by the code the gateway uses, so the two
-        # enforcement modes publish the same document.
+        # Its RFC 9728 document, served by the resource itself. Built by the
+        # code the gateway uses, so the two enforcement modes publish the
+        # same document.
         base = VAULT.rsplit("/mcp", 1)[0]
-        aauth = client.get(f"{base}/.well-known/aauth-resource.json", timeout=15.0).json()
-        vocab = (aauth.get("r3_vocabularies") or [{}])[0]
-        if not (aauth.get("access_servers") and vocab.get("format") == "mcp"
-                and str(vocab.get("digest", "")).startswith("s256:")
-                and aauth.get("signed_metadata")):
-            print(f"FAIL: the AAuth resource document is not the binding's shape: {aauth}")
+        prm = client.get(f"{base}/.well-known/oauth-protected-resource/mcp",
+                         timeout=15.0).json()
+        if not (prm.get("authorization_servers") and prm.get("tool_surfaces")
+                and prm.get("signed_metadata")):
+            print(f"FAIL: the resource's own metadata is incomplete: {prm}")
             return 1
-        say("its AAuth resource document is the binding's shape, and signed")
+        say("it publishes its own RFC 9728 document, with its tools, and signed")
 
         print("\n== Beat 0.5: Alice admits a resource server she has never seen ==")
         # Before beat 1, because until she has admitted it there is no ticket

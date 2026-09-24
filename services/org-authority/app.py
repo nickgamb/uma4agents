@@ -1200,12 +1200,15 @@ async def break_glass(request: Request) -> JSONResponse:
     _SPENT_SIGNATURES[signature] = now()
     jti = f"bg_{uuid.uuid4().hex[:12]}"
     exp = int(now()) + ttl
+    handle = _thumbprint(signer)
     claims = {
         "iss": ISSUER,
-        "sub": req.get("agent_sub") or "aauth:pseudonymous-agent",
+        "sub": handle,
+        "client_id": handle,
         "owner": owner,
         "aud": GLASS_AUDIENCE,
         "jti": jti,
+        "iat": int(now()),
         "exp": exp,
         "cnf": {"jwk": signer},
         "permissions": [{"resource_id": resource_id, "resource_scopes": scopes,
@@ -1225,7 +1228,7 @@ async def break_glass(request: Request) -> JSONResponse:
     if req.get("operation"):
         claims["operation"] = req["operation"]
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
-                       headers={"typ": "aa-auth+jwt", "kid": KID})
+                       headers={"typ": "at+jwt", "kid": KID})
     GLASS[jti] = {"claims": claims, "spent": False, "issued": utcstamp(),
                   "member": owner, "resource_id": resource_id,
                   "reason": reason, "authorised_by": authorised_by}

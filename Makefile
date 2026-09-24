@@ -398,9 +398,6 @@ smoke-test:
 	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/carol \
 		| grep -q '"authorization_servers":\["https://carol-as.uma.lab"\]' \
 		&& echo "  resource metadata (carol): OK" || { echo "  resource metadata (carol): FAIL"; exit 1; }
-	@echo "==> AAuth resource metadata (R3 vocabulary, same public layer)..."
-	@$(CURL) https://gateway.uma.lab/.well-known/aauth-resource.json | grep -q r3_vocabularies \
-		&& echo "  aauth-resource: OK" || { echo "  aauth-resource: FAIL"; exit 1; }
 	@echo "==> Gateway challenges an unauthorized tool call (expect 401 + UMA ticket)..."
 	@RESP=$$($(CURL) -i https://gateway.uma.lab/mcp -X POST \
 		-H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
@@ -487,6 +484,15 @@ rules-test:
 introduction-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		sh -c "pip install -q 'pyjwt[crypto]' httpx && python lib/test_introduction.py"
+
+## aauth-test: an AAuth agent token accepted as an agent's identity, in the
+## current shape and the earlier one, and every reason one is refused. Includes
+## a token minted by the aauth package Posta's person server uses; needs
+## nothing running.
+.PHONY: aauth-test
+aauth-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q 'pyjwt[crypto]' 'aauth==0.3.2' && python lib/test_aauth.py"
 
 ## org-test: the organization's ceiling — what it may do to a member's terms,
 ## and what it may never touch. Unit tests over the algebra and the charter
@@ -629,7 +635,7 @@ include Makefile.k8s
 ## stack. The register names these as what proves the drafts; a check that
 ## nobody runs is a claim, and this is how they all get run.
 .PHONY: check-all check-unit check-live
-check-unit: rules-test sig-test pep-test introduction-test org-test rego-test joint-test as-test client-test store-test
+check-unit: rules-test sig-test pep-test introduction-test aauth-test org-test rego-test joint-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
 	establishment-check assurance-check intent-check consequence-check \
 	clearance-check \

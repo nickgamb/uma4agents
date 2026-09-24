@@ -29,7 +29,7 @@ normative:
   RFC6750:
   RFC7515:
   RFC7517:
-  RFC7519:
+  RFC9068:
   RFC7638:
   RFC7662:
   RFC8414:
@@ -89,7 +89,7 @@ informative:
   RFC9635:
   RFC9449:
   I-D.ietf-webbotauth-httpsig-protocol:
-  I-D.hardt-aauth-protocol:
+  I-D.hardt-oauth-aauth-protocol:
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
     author:
@@ -135,7 +135,7 @@ informative:
       Internet-Draft: draft-gamb-uma4agents-owner-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html
   U4AAAuth:
-    title: "AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents"
+    title: "AAuth Agent Tokens as Agent Credentials for User-Managed Access (UMA) 2.0 for Autonomous Agents"
     author:
       - ins: N. Gamb
         name: Nick Gamb
@@ -243,9 +243,9 @@ to implement alongside it; this document together with those two constitutes the
 UMA 2.0 profile for autonomous agents.
 
 {{U4APolicy}}, {{U4ALineage}}, {{U4AMultiParty}} and {{U4AOwner}} are OPTIONAL
-extensions of this document. {{U4AMCP}} binds this profile to a transport and
-{{U4AAAuth}} to an agent identity and signature layer; other bindings are
-possible.
+extensions of this document. {{U4AMCP}} binds this profile to a transport;
+other bindings are possible. {{U4AAAuth}} specifies one credential an agent may
+identify itself with; others serve.
 
 ## Roles
 
@@ -567,7 +567,8 @@ Pseudonymous:
 Identified:
 : The client presents a credential from an issuer asserting its identity and
   binding it to a key — for example an `aa-agent+jwt` as defined by
-  {{I-D.hardt-aauth-protocol}}, whose `cnf.jwk` is the signing key. The
+  {{I-D.hardt-oauth-aauth-protocol}}, whose `cnf.jwk` is the signing key, and
+  accepted as {{U4AAAuth}} specifies. The
   authorization server MUST verify that credential against keys published by its
   issuer, MUST require that the issuer identifier use the `https` scheme, and
   MUST derive the connection handle from the issuer and subject rather than from
@@ -689,7 +690,7 @@ On success the authorization server responds as {{UMAGrant}} Section 3.3.5, with
 
 ~~~ json
 {
-  "access_token": "eyJ0eXAiOiJhYS1hdXRoK2p3dCIsImFsZyI6...",
+  "access_token": "eyJ0eXAiOiJhdCtqd3QiLCJhbGciOiJFZERTQSIs...",
   "token_type": "PoP",
   "expires_in": 3600
 }
@@ -701,12 +702,17 @@ The `PoP` scheme is this profile's; it is not registered in the HTTP
 Authentication Scheme Registry, and a binding that carries the token elsewhere
 says where.
 
-The requesting party token MUST be a JWT {{RFC7519}} signed by the authorization
-server, and MUST carry:
+The requesting party token MUST be a JWT access token as {{RFC9068}} specifies,
+with `typ` of `at+jwt`, signed by the authorization server, and MUST carry:
 
-iss, aud, jti, exp:
-: REQUIRED, as {{RFC7519}}. `aud` names the resource server the token is for;
+iss, aud, jti, exp, iat:
+: REQUIRED, as {{RFC9068}}. `aud` names the resource server the token is for;
   `jti` is what consumption is recorded against.
+
+sub, client_id:
+: REQUIRED. Both are the connection handle of {{identity-levels}}. The client is
+  both the software acting and the party asking, and the handle is the name the
+  owner's authorization server knows it by.
 
 cnf:
 : REQUIRED. A confirmation claim whose `jwk` member is the public key the
@@ -1238,9 +1244,8 @@ Kantara UMA Work Group discussion behind them. The idea that a resource owner
 might proffer terms rather than receive them appears in UMA's own 2010 work on
 access authorization claims {{UMAClaims2010}}.
 
-{{I-D.hardt-aauth-protocol}} supplied the agent identity and key-binding
-mechanics this profile composes with, and the observation that its resource
-token and UMA's permission ticket are the same object minted on opposite sides.
+{{I-D.hardt-oauth-aauth-protocol}} supplied an agent credential this profile
+accepts.
 {{I-D.meunier-webbotauth-registry}} supplied the operator key directory.
 {{I-D.ietf-oauth-rar-metadata-remediation}} supplied the remediation payload that
 {{remediation}} extends by two members.

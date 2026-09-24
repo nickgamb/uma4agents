@@ -201,12 +201,10 @@ spec:
     - name: meridian
   rules:
     - matches:
-        # RFC 9728 protected resource metadata, its AAuth-vocabulary twin,
-        # the resource's signing keys, and the owner-bound listing that only
+        # RFC 9728 protected resource metadata, the resource's signing keys, and the owner-bound listing that only
         # Alice's authorization server may read (the PEP checks its
         # signature; see uma-pep's /owner-resources).
         - path: { type: PathPrefix, value: /.well-known/oauth-protected-resource }
-        - path: { type: PathPrefix, value: /.well-known/aauth-resource.json }
         - path: { type: PathPrefix, value: /jwks }
         - path: { type: PathPrefix, value: /owner-resources }
       backendRefs:

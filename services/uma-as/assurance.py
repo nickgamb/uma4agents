@@ -62,8 +62,9 @@ task. It is not one, and the reason is the rule above rather than a judgement
 about missions.
 
 A citation is `approver` plus a content hash. Verifying it means dereferencing
-it at the approver, and AAuth serves `GET /missions/{s256}` to administrators
-only -- a relying party in another trust domain has nothing to fetch. So an
+it at the approver, and AAuth serves a mission to the agent that owns it and,
+through a control plane it has not yet specified, to that person server's own
+principals -- a relying party in another trust domain has nothing to fetch. So an
 agent that cites a mission and an agent that invents one are, from here,
 identical. Awarding a level for that would be exactly the "comment about the
 call path" this module refuses to make.

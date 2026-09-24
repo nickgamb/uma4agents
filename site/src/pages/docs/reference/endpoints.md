@@ -138,12 +138,11 @@ hostname, which routes back to it. Gating readiness on the pull deadlocks.
 | Endpoint | Auth | Answers |
 |---|---|---|
 | `GET /.well-known/oauth-protected-resource[/mcp]` | none | RFC 9728 metadata, OAuth+DPoP binding |
-| `GET /.well-known/aauth-resource.json` | none | The same structural facts, AAuth binding |
 | `GET /jwks` | none | The resource's signing keys |
 | `GET /owner-resources` | RFC 9421-signed query by the owner's authority | Owner-bound resource instances |
 | `/check{path}` | the gateway | The external authorization decision |
 
-The public documents are structural only. Which instances sit behind the
+The public document is structural only. Which instances sit behind the
 resource — whose positions, whose vault — is served only to a querier that
 proves possession of the owner's authority's signing key. Publishing that at an
 unauthenticated URI would be a privacy leak.
@@ -154,17 +153,10 @@ Standard: `resource`, `authorization_servers`, `scopes_supported`, `jwks_uri`,
 `signed_metadata`.
 
 Extension members: `tool_surfaces` (tool names and scopes, structural only) and
-`owner_resources_endpoint` (the protected instance layer, advertised by both
-public documents).
+`owner_resources_endpoint` (the protected instance layer).
 
 `signed_metadata` carries the same claims as a JWT under the resource's key, so
 a relayed copy stays attributable.
-
-### AAuth binding document
-
-`access_mode` (`four-party` for this topology) and `r3_vocabularies`, an
-operation list content-addressed by a digest. Both public documents point at the
-same `owner_resources_endpoint`; only the encoding differs.
 
 ## The organization's authority
 

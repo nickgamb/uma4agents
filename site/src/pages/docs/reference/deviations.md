@@ -16,7 +16,8 @@ fits — `WWW-Authenticate: UMA`, the `uma-ticket` grant, `need_info`,
 `request_submitted`, introspection `permissions` — and mark every departure as an
 explicit extension.
 
-Everything not listed here is intended to be stock UMA 2.0 or stock AAuth.
+Everything not listed here is intended to be stock UMA 2.0, and an AAuth agent
+token is verified as AAuth specifies.
 
 Each entry names where the [specification set](/docs/reference/specification/)
 states it normatively. The numbering is the one Core §12 uses; entries 1–22 are that table.
@@ -39,8 +40,9 @@ Party Policy claim. Both sides end up holding identical dually-signed records.
 
 **Baseline.** A bearer RPT; permissions visible only through introspection.
 
-**Here.** The RPT is an `aa-auth+jwt`, `cnf`-bound, `token_type: PoP`, carrying
-the `permissions` array as a claim.
+**Here.** The RPT is an RFC 9068 `at+jwt`, `cnf`-bound, `token_type: PoP`,
+carrying the `permissions` array as a claim. Its `sub` and `client_id` are the
+connection handle.
 
 **Why.** A bearer token for an agent is a credential that works for whoever
 picks it up. Carrying `permissions` inline lets an enforcement point see scope
@@ -86,18 +88,17 @@ agent every session. That bit the build.
 
 **Specified in.** [Core §9](/spec/draft-gamb-uma4agents-core-00.html#connections)
 
-## 6. Public structural discovery in two binding encodings
+## 6. Public structural discovery from one registry
 
-**Baseline.** RFC 9728 and AAuth resource metadata both predate this. UMA's
-challenge carries `as_uri` on faith.
+**Baseline.** RFC 9728 predates this. UMA's challenge carries `as_uri` on faith.
 
-**Here.** One registry serving both encodings, `resource_metadata` on the
+**Here.** One registry behind the published metadata, `resource_metadata` on the
 challenge, and clients corroborating `as_uri` against published
 `authorization_servers`.
 
-**Why.** The encodings are stock. Composing them with the UMA challenge — so it
-gains a TLS-anchored second witness — and sharing one protected instance layer
-beneath both is the extension.
+**Why.** The metadata is stock. Composing it with the UMA challenge — so the
+challenge gains a TLS-anchored second witness — and putting a protected
+instance layer beneath it is the extension.
 
 **Specified in.** [Core §3.4, and Federated Authorization for Agents §2.1](/spec/draft-gamb-uma4agents-core-00.html#corroboration)
 
@@ -296,8 +297,8 @@ it would let one automatic grant justify the next.
 client", and no notion of one requesting party standing for another.
 
 **Here.** An agent holding a connection signs a short introduction naming the
-newcomer's key (`u4a-introduction-v1+jws`), or its issuer names the lineage in
-an RFC 8693 `act` claim. The newcomer skips first contact and then negotiates
+newcomer's key (`u4a-introduction-v1+jws`), or its issuer names the parent in
+the `parent_agent` claim of an AAuth agent token. The newcomer skips first contact and then negotiates
 its own terms under its own key for its own grant. Her authority verifies the
 introducer against her own active connections, requires a tier she approved in
 person, refuses an agent that was itself introduced, and requires one operator

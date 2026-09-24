@@ -59,7 +59,6 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
 informative:
-  I-D.hardt-aauth-protocol:
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
     author:
@@ -101,9 +100,8 @@ reading them must handle.
 
 ## Relationship to the Set
 
-This document is one binding of {{U4ACore}}. Others are possible; a binding to
-the challenge header of {{I-D.hardt-aauth-protocol}} is the obvious second, and
-{{U4ACore}} Section 1.2 names a third. Its identifying URI is
+This document is one binding of {{U4ACore}}. Others are possible, and
+{{U4ACore}} Section 1.2 names one. Its identifying URI is
 `https://u4a.ai/spec/mcp/1.0`.
 
 ## Notational Conventions
@@ -113,17 +111,13 @@ the challenge header of {{I-D.hardt-aauth-protocol}} is the obvious second, and
 # Discovery {#discovery}
 
 A client MAY learn that a resource requires a grant under this profile, and from
-which authorization server, through any of three channels. A resource MUST offer
-the first and MAY offer the others, and all MUST be generated from one registry
+which authorization server, through either of two channels. A resource MUST offer
+the first and MAY offer the second, and both MUST be generated from one registry
 of the resource's tools.
 
 Protected resource metadata:
 : As {{RFC9728}} and {{U4AFedAuthz}} Section 2.1, which {{MCP}} already
   requires. Fetched, not negotiated.
-
-Alternative metadata encodings:
-: The same structural facts under another convention, such as the resource
-  metadata of {{I-D.hardt-aauth-protocol}}.
 
 Capability advertisement:
 : A resource enforcing in-process MAY advertise this profile in the
@@ -144,7 +138,7 @@ Capability advertisement:
 ~~~
 {: title="The capability advertisement."}
 
-The third channel is the only one that is negotiated rather than fetched: it
+The second channel is negotiated rather than fetched: it
 arrives in the handshake the client was already doing, with no extra round
 trip and no well-known URI. A client that receives it knows, before its first
 tool call, that it must negotiate a grant and where.
