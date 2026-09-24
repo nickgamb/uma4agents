@@ -101,7 +101,7 @@ draft-gamb-uma4agents-core-00:
     asserts: ["metadata that does not resolve buys nothing", "and is still worth nothing on the second try"]
   - text: "A client MUST prove possession of the confirmed key on every request to the protected resource, and an enforcement point MUST verify it."
     verified: check
-    targets: [sig-test, smoke-test, k8s-policy-test]
+    targets: [sig-test, smoke-test, k8s-smoke-test, k8s-policy-test]
     asserts: ["baseline round trip", "gateway challenge: OK", "the requesting party cannot reach the vault directly"]
   - text: "A signature MUST cover at least the components"
     verified: check
@@ -264,7 +264,7 @@ draft-gamb-uma4agents-core-00:
     asserts: ["and his approval is NOT recorded as one of hers"]
   - text: "It MUST NOT parse it, compare it to the purpose in the owner's terms, or let it affect the decision other than by its absence."
     verified: check
-    targets: [intent-check]
+    targets: [intent-check, rules-test]
     asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
 
 draft-gamb-uma4agents-fedauthz-00:
@@ -311,7 +311,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "The request MUST carry a Content-Digest [RFC9530] covered by the signature."
     verified: check
     targets: [establishment-check]
-    asserts: ["signed by a key that origin does not publish: refused", "the gateway did register itself, by signature and not secret"]
+    asserts: ["signed without covering the body it carries: refused", "the gateway did register itself, by signature and not secret"]
   - text: "The authorization server MUST verify the signature by:"
     verified: check
     targets: [establishment-check]
@@ -489,7 +489,7 @@ draft-gamb-uma4agents-mcp-00:
     asserts: ["challenged in-band"]
   - text: "Its content MUST be identical to what the HTTP binding would have encoded."
     verified: check
-    targets: [embedded-check]
+    targets: [embedded-check, pep-test]
     asserts: ["the remediation object is identical in both encodings", "the remediation object names the authorization server and the ticket"]
   - text: "A refusal for any other reason MUST use code -32002"
     verified: check
@@ -616,11 +616,11 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "The enforcement point MUST recognise it by issuer and MUST introspect it with the organization rather than with the member's authorization server."
     verified: check
     targets: [org-check]
-    asserts: ["including break-glass, when the charter has it"]
+    asserts: ["the override is honoured at the enforcement point", "and it is spent — an exception is for one act"]
   - text: "The member MUST be notified at the moment the window opens, before any data moves."
     verified: check
     targets: [org-check]
-    asserts: ["including break-glass, when the charter has it"]
+    asserts: ["the member is told before any data moves"]
   - text: "The tally MUST publish, for each jointly held resource, a mandate carrying:"
     verified: check
     targets: [joint-check, k8s-policy-test]
@@ -946,7 +946,7 @@ draft-gamb-uma4agents-terms-00:
     asserts: ["tier 3 pends, Alice approves, trade executes"]
   - text: "The agreement MAY carry the following, and MUST NOT carry anything else that affects the decision:"
     verified: check
-    targets: [intent-check]
+    targets: [intent-check, rules-test]
     asserts: ["but it cannot buy anything either", "but citing one can never widen access"]
   - text: "The authorization server MUST bound its length, MUST record it, and MUST NOT parse it"
     verified: check

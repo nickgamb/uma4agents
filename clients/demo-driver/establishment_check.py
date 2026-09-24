@@ -82,12 +82,14 @@ def hdrs(c: httpx.Client) -> dict:
 
 
 def register(c: httpx.Client, *, key: Ed25519PrivateKey, resource_uri: str,
-             age_s: int = 0) -> httpx.Response:
+             age_s: int = 0, cover_body: bool = True) -> httpx.Response:
     """A registration attempt, as a resource server would make it.
 
     `age_s` backdates the signature. Nothing but a clock separates a replayed
     request from the original, so the only way to test the freshness window
     is to sign as though the request were made that long ago.
+    `cover_body=False` signs without a Content-Digest, leaving the body the
+    request carries outside the signature.
     """
     body = json.dumps({"owner": OWNER, "resource_uri": resource_uri,
                        "name": "establishment-check"}).encode()
@@ -97,7 +99,8 @@ def register(c: httpx.Client, *, key: Ed25519PrivateKey, resource_uri: str,
     try:
         headers = hs.sign(method="POST", authority=AS_AUTHORITY,
                           path="/rs/register", authorization="",
-                          key=key, keyid="uma-pep-1", body=body)
+                          key=key, keyid="uma-pep-1",
+                          body=body if cover_body else None)
     finally:
         hs.time = real
     headers["Content-Type"] = "application/json"
@@ -157,30 +160,36 @@ def main() -> int:
               f"authority ==", flush=True)
 
         # --- who may even ask -------------------------------------------
-        # Four registrations that must not work, described by what is wrong
-        # with each rather than by which check caught it. From out here they
-        # are one status code: this side holds no key any origin publishes, so
-        # every one of these fails on the signature as well as on the thing it
-        # is named for, and only the authorization server's own event log
-        # separates the reasons. Each cause is isolated where it can be —
-        # the freshness window in `make sig-test`, the metadata rules in the
-        # AS's `resource_server.metadata_rejected` events.
+        # Four registrations that must not work, each for its own reason. This
+        # side holds no key any origin publishes, so each would also fail on
+        # the signature — which is why her authority says which check refused
+        # it, and each assertion reads that rather than the status alone.
+        def refused_for(r, why: str) -> bool:
+            return r.status_code == 401 and why in (r.json().get("error_description") or "")
+
         r = register(c, key=stranger, resource_uri=RESOURCE)
         check("signed by a key that origin does not publish: refused",
-              r.status_code == 401 and error_of(r) == "invalid_client",
-              f"{r.status_code} {r.text[:120]}")
+              refused_for(r, "no key that origin publishes verifies the signature"),
+              f"{r.status_code} {r.text[:160]}")
 
         r = register(c, key=stranger, resource_uri=f"{AS}/mcp/{OWNER}")
         check("claiming a resource at an origin that publishes none: refused",
-              r.status_code == 401, f"{r.status_code} {r.text[:120]}")
+              refused_for(r, "publishes no resource metadata"),
+              f"{r.status_code} {r.text[:160]}")
 
-        r = register(c, key=stranger, resource_uri=f"{RS}/mcp/nobody")
+        # The origin serves metadata for this path, and that document claims
+        # a different resource: the one without the trailing slash.
+        r = register(c, key=stranger, resource_uri=f"{RESOURCE}/")
         check("claiming a resource whose metadata names another: refused",
-              r.status_code == 401, f"{r.status_code} {r.text[:120]}")
+              refused_for(r, "claims resource"), f"{r.status_code} {r.text[:160]}")
 
         r = register(c, key=stranger, resource_uri=RESOURCE, age_s=600)
         check("signed long enough ago to have been captured: refused",
-              r.status_code == 401, f"{r.status_code} {r.text[:120]}")
+              refused_for(r, "freshness window"), f"{r.status_code} {r.text[:160]}")
+
+        r = register(c, key=stranger, resource_uri=RESOURCE, cover_body=False)
+        check("signed without covering the body it carries: refused",
+              refused_for(r, "content-digest"), f"{r.status_code} {r.text[:160]}")
 
         before = registry(c)
         # Named, not counted. Two of the attempts above claim a resource at
