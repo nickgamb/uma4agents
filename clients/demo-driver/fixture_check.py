@@ -11,9 +11,13 @@ that has been stripped of everything that is not the protocol:
     one certificate        the resource's, made on first run, because her
                            authority reads a resource's metadata only over
                            https; nothing else has one
-    no registration        the resource publishes its metadata and the
-                           authority reads it; neither was told about the
-                           other beyond one URL
+    no registration call   the resource publishes its metadata and the
+                           authority reads it. The two were provisioned
+                           together, sharing one client secret and seeded
+                           with each other, as a resource server and the
+                           authority set up alongside it are;
+                           `establishment-check` is the case where they were
+                           not
 
 What is left is the part that matters, and it still refuses the calls Alice
 has not agreed to. That is the point being demonstrated: the protection does

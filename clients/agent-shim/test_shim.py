@@ -83,6 +83,9 @@ def _schema_fields(params: ElicitRequestParams) -> set[str]:
     return set((schema.get("properties") or {}).keys())
 
 
+MAX_WAITS = 20
+
+
 async def approve_elicitation(
     context: ClientRequestContext, params: ElicitRequestParams
 ) -> ElicitResult:
@@ -96,9 +99,27 @@ async def approve_elicitation(
     print(f"   [bob-sees-in-his-agent]\n{params.message}\n", flush=True)
     if "keep_waiting" in fields:
         PENDS.append(params.message)
-        return ElicitResult(action="accept", content={"keep_waiting": True})
+        # Bob waits, but not forever: a test that kept answering yes would
+        # hang the suite if Alice's answer never came.
+        return ElicitResult(action="accept",
+                            content={"keep_waiting": len(PENDS) <= MAX_WAITS})
     ELICITATIONS.append(params.message)
     return ElicitResult(action="accept", content={"approve": True})
+
+
+KEY_PATHS = ("/tmp/shim-key-elicit.pem", "/tmp/shim-key-pend.pem",
+             "/tmp/shim-key-fallback.pem")
+
+
+def our_handles() -> set[str]:
+    """The connection handles of the agents this test runs: the thumbprints of
+    the keys the shim was started with, once it has written them."""
+    try:
+        from uma4a_grant import AgentKeys
+    except ImportError:
+        return set()
+    return {AgentKeys.load_or_create(path).thumbprint()
+            for path in KEY_PATHS if os.path.exists(path)}
 
 
 def simulate_alice_approval(count: int = 1) -> None:
@@ -112,7 +133,11 @@ def simulate_alice_approval(count: int = 1) -> None:
         pending = client.get(
             f"{AS_URI}/owner/pending", headers=headers,
         ).json()
-        for p in pending:
+        # Only this test's own agents. Anything else waiting in her queue —
+        # another check's, a person's — is not this test's to answer, and
+        # approving it would also leave this test's own request waiting.
+        mine = our_handles()
+        for p in [p for p in pending if not mine or p.get("handle") in mine]:
             print(f"   [simulated-alice] approving {p['kind']} {p['family']}", flush=True)
             client.post(
                 f"{AS_URI}/owner/pending/{p['family']}/decision",

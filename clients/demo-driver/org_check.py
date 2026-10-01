@@ -297,6 +297,15 @@ def negotiate(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
         return None, str(exc)[:220]
 
 
+def her_ledger(c: httpx.Client, owner: str) -> list:
+    """Her record, oldest first. Assertions read only what was added after a
+    mark taken just before the act under test: the record is append-only and
+    outlives every run, so reading it whole would let an earlier run's entry
+    pass for this one's."""
+    return c.get(f"{OWNERS[owner]['as']}/owner/ledger", headers=hdrs(c, owner),
+                 timeout=15.0).json()
+
+
 def spend(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
           rpt: str) -> list[str]:
     """Use a grant, and report what came back."""
@@ -317,7 +326,6 @@ def main() -> int:                                            # noqa: C901
               flush=True)
         base = c.get(f"{ORG}/admin/charter/versions/1", headers=ADMIN,
                      timeout=15.0).json()["charter"]
-        c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
         for owner in OWNERS:
             ensure_resource_server(c, owner)
             leave(c, owner)
@@ -337,6 +345,9 @@ def main() -> int:                                            # noqa: C901
                    json={"origin": HER_OPERATOR}, headers=hdrs(c, owner),
                    timeout=15.0)
 
+        # After the members are out, for the reason given at the end.
+        c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN,
+              timeout=20.0).raise_for_status()
         alice, carol = OWNERS["alice"], OWNERS["carol"]
 
         # --- 0. where a member's authority finds the organization -------
@@ -538,6 +549,7 @@ def main() -> int:                                            # noqa: C901
 
         # --- 7. shutting an agent out of the book, and only out of it -----
         book_handle = next(x["handle"] for x in conns if x.get("org_tiers"))
+        mark = len(her_ledger(c, "alice"))
         r = c.post(f"{ORG}/admin/members/alice/connections/revoke",
                    json={"handle": book_handle}, headers=ADMIN, timeout=15.0)
         check("an administrator can shut an agent out of the firm's book",
@@ -550,9 +562,7 @@ def main() -> int:                                            # noqa: C901
               "shut out an agent it already shut out",
               any(x["handle"] == book_handle and x.get("blocked_for_organization")
                   for x in shown), f"{[(x['handle'][:14], x.get('blocked_for_organization')) for x in shown]}")
-        entry = [e for e in c.get(f"{alice['as']}/owner/ledger",
-                                  headers=hdrs(c, "alice"), timeout=15.0).json()
-                 if e["kind"] == "org_acted"]
+        entry = [e for e in her_ledger(c, "alice")[mark:] if e["kind"] == "org_acted"]
         check("her record says who did it, and that it was not her",
               entry and (entry[-1].get("by") or {}).get("org") == "northwind",
               f"{entry[-1] if entry else None}")
@@ -588,6 +598,7 @@ def main() -> int:                                            # noqa: C901
         rpt, why = negotiate(c, "alice", fresh, "own")
         check("she admits a second agent, through her own account",
               rpt is not None, f"{why}")
+        mark = len(her_ledger(c, "alice"))
         rpt, why = negotiate(c, "alice", fresh, "shared", answer="org")
         check("an administrator can answer a request waiting on her",
               rpt is not None, f"{why}")
@@ -602,9 +613,7 @@ def main() -> int:                                            # noqa: C901
               new_conns and "firmbook" not in (new_conns[0].get("tiers_approved") or []),
               "an administrator's decision became evidence that she decided — "
               "a fact that is allowed to relax her own rules")
-        entry = [e for e in c.get(f"{alice['as']}/owner/ledger",
-                                  headers=hdrs(c, "alice"), timeout=15.0).json()
-                 if e["kind"] == "approved"]
+        entry = [e for e in her_ledger(c, "alice")[mark:] if e["kind"] == "approved"]
         check("her record says which of them it was",
               entry and (entry[-1].get("by") or {}).get("admin"), f"{entry[-1] if entry else None}")
         c.put(f"{alice['as']}/owner/policies/firmbook", json={"ask_me": False},
@@ -746,6 +755,7 @@ def main() -> int:                                            # noqa: C901
         c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
 
         # --- 10. break-glass: loud, bounded, and around her authority -----
+        mark = len(her_ledger(c, "alice"))
         opened = c.post(f"{ORG}/admin/break-glass",
                         json={"owner": "alice", "window_s": 120,
                               "reason": f"Regulatory hold OPS-{RUN}"},
@@ -753,9 +763,8 @@ def main() -> int:                                            # noqa: C901
         check("an administrator can open a break-glass window",
               opened.status_code == 200, f"{opened.text[:160]}")
         time.sleep(1.0)
-        stages = [e.get("stage") for e in c.get(
-            f"{alice['as']}/owner/ledger", headers=hdrs(c, "alice"),
-            timeout=15.0).json() if e["kind"] == "break_glass"]
+        stages = [e.get("stage") for e in her_ledger(c, "alice")[mark:]
+                  if e["kind"] == "break_glass"]
         check("the member is told before any data moves",
               stages and stages[-1] == "break_glass_opened", f"{stages}")
         bg = AgentKeys()
@@ -791,9 +800,8 @@ def main() -> int:                                            # noqa: C901
         check("and it is spent — an exception is for one act",
               spend(c, "alice", bg, "shared", override) == [])
         time.sleep(1.0)
-        stages = [e.get("stage") for e in c.get(
-            f"{alice['as']}/owner/ledger", headers=hdrs(c, "alice"),
-            timeout=15.0).json() if e["kind"] == "break_glass"]
+        stages = [e.get("stage") for e in her_ledger(c, "alice")[mark:]
+                  if e["kind"] == "break_glass"]
         check("every stage of it is in her own record",
               {"break_glass_opened", "break_glass", "break_glass_used"} <= set(stages),
               f"{stages}")
@@ -959,11 +967,17 @@ def main() -> int:                                            # noqa: C901
 
         # Put the lab back. This charter wants an attested agent and shares a
         # book; a member left enrolled would change what the other demos see.
+        # Members out first: the charter in force may define groups version 1
+        # does not, and a charter cannot drop a group somebody is still in.
         c.request("DELETE", f"{ORG}/admin/invites/alice", headers=ADMIN, timeout=15.0)
-        c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
         for owner in OWNERS:
             leave(c, owner)
+            c.request("DELETE", f"{ORG}/admin/members/{owner}", headers=ADMIN,
+                      timeout=15.0)
             drop_book_tier(c, owner)
+        r = c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
+        check("and the organization's charter is put back as it was",
+              r.status_code == 200, f"{r.status_code} {r.text[:140]}")
 
     print()
     print(f"{len(PASS)} passed, {len(FAIL)} failed", flush=True)

@@ -80,5 +80,57 @@ grant = issued(negotiation({"alice": verdict(3600, consequence="irreversible"),
 check("the heaviest consequence any holder answered under",
       grant.get("consequence") == "irreversible", str(grant.get("consequence")))
 
+print("\n== how many negotiations it holds open ==")
+import asyncio  # noqa: E402
+
+import uma4a_joint as J  # noqa: E402
+
+app.MANDATES["acct"] = J.validate_mandate({
+    "resources": ["acct/*"], "rule": {"kind": "all"},
+    "holders": [{"owner": "alice", "issuer": "https://alice.example"},
+                {"owner": "carol", "issuer": "https://carol.example"}]})
+app.MAX_OPEN = 2
+app.rs_auth = lambda request: None
+
+
+class Perm:
+    async def json(self):
+        return {"resource_id": "acct/read", "resource_scopes": ["read"]}
+
+
+def open_one():
+    try:
+        asyncio.run(app.perm(Perm()))
+        return True
+    except app.HTTPException:
+        return False
+
+
+app.NEGOTIATIONS.clear()
+results = [open_one() for _ in range(3)]
+check("requests nobody signed for are capped per account",
+      results == [True, True, False], str(results))
+for rec in app.NEGOTIATIONS.values():
+    rec["state"] = "awaiting-holders"
+check("and so are the ones agents committed to, which are counted apart",
+      not open_one(), "accepted past the cap")
+
+print("\n== whom it asks ==")
+asked = []
+
+
+async def holder_answers(holder, path, claims):
+    asked.append(holder["owner"])
+    return {"verdict": "x"}
+
+
+app.ask_holder = holder_answers
+app.verify_verdict = lambda jws, h, rec: {"effect": "refuse"}
+rec = {"family": "jnt_c", "account": "acct", "resource_id": "acct/read",
+       "contract_hash": "s256:x", "agreement": "a", "verdicts": {}, "because": {}}
+result = asyncio.run(app.collect(rec, app.MANDATES["acct"]))
+check("nobody after the first refusal under a rule that needed everyone",
+      result["effect"] == "refuse" and asked == ["alice"], str(asked))
+
 print(f"\n{PASSED} passed, {FAILED} failed")
 sys.exit(1 if FAILED else 0)

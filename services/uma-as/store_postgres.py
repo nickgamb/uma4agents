@@ -297,6 +297,13 @@ class PostgresOwnerStore:
                     ticket, rec["family"], self._o)
         return ticket
 
+    async def peek_ticket(self, ticket: str) -> dict | None:
+        row = await self._pool.fetchrow(
+            "SELECT n.rec FROM tickets t JOIN negotiations n ON n.family = t.family "
+            "AND n.owner = t.owner WHERE t.ticket = $1 AND t.owner = $3 "
+            "AND n.expires >= $2", ticket or "", time.time(), self._o)
+        return json.loads(row["rec"]) if row else None
+
     async def consume_ticket(self, ticket: str) -> dict | None:
         # One statement: the ticket is spent by the act of asking about it.
         # Only the index row is deleted -- the negotiation stays addressable

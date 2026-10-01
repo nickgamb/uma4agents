@@ -489,6 +489,12 @@ endpoint using the `urn:ietf:params:oauth:grant-type:uma-ticket` grant type, as
 ticket's single-use rotation, or the meaning of `need_info`,
 `request_submitted`, `request_denied` or `invalid_grant`.
 
+While a request waits on the owner, an authorization server MAY answer each
+poll with the ticket it was presented, and spend that ticket only once the
+request is decided. A grant issued from it is bound to the client's key, so the
+ticket confers nothing on anyone else, and a poll whose response is lost does
+not cost the client the only handle it has on the owner's decision.
+
 ## Claim Token Formats
 
 Where {{UMAGrant}} lets the authorization server name acceptable claim token

@@ -40,10 +40,12 @@ import httpx
 sys.path.insert(0, "/driver/lib")
 from uma4a_grant import (  # noqa: E402
     AgentKeys, GrantDenied, mcp_call, mcp_meta, parse_challenge, run_grant,
-    sign_introduction,
+    sign_introduction, signed_headers,
 )
 
 GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
+GATEWAY_AUTHORITY = GATEWAY.split("://", 1)[1].split("/", 1)[0]
+GATEWAY_PATH = "/" + GATEWAY.split("://", 1)[1].split("/", 1)[1]
 AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
 HIS_OPERATOR = os.environ.get("UMA4A_AGENT_OPERATOR", "https://agent.uma.lab")
@@ -84,6 +86,11 @@ def hdrs(client: httpx.Client) -> dict:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
+# The grants each agent was issued, by (key, tool), so a later step can present
+# one it is already holding rather than only negotiating a new one.
+HELD: dict = {}
+
+
 def negotiate(client, keys, tool, args=None, introduction=None, max_wait_s=12):
     """One negotiation. Returns (granted, asked)."""
     r = mcp_call(client, GATEWAY, "tools/call",
@@ -99,9 +106,10 @@ def negotiate(client, keys, tool, args=None, introduction=None, max_wait_s=12):
 
     op = ({"tool": tool, "params": args} if tool == "execute_trade" else None)
     try:
-        run_grant(client, ch.as_uri, ch.ticket, keys, lambda t: True,
-                  operation=op, introduction=introduction, on_status=status,
-                  max_wait_s=max_wait_s)
+        HELD[(keys.keyid, tool)] = run_grant(
+            client, ch.as_uri, ch.ticket, keys, lambda t: True,
+            operation=op, introduction=introduction, on_status=status,
+            max_wait_s=max_wait_s)
         return True, asked["v"]
     except GrantDenied:
         return False, asked["v"]
@@ -389,6 +397,16 @@ def main() -> int:
         # The claim that matters operationally: not that the record says
         # revoked, but that the sub-agent's next call fails. It holds because
         # the enforcement point introspects here on every call.
+        held = HELD.get((kid_b.keyid, "get_transactions"))
+        r = mcp_call(client, GATEWAY, "tools/call",
+                     {"name": "get_transactions", "arguments": {}}, META,
+                     headers=signed_headers("POST", GATEWAY_AUTHORITY, GATEWAY_PATH,
+                                            held, kid_b)) if held else None
+        check("and the grant a revoked sub-agent was already holding stops working",
+              held is not None and r is not None
+              and (r.status_code != 200 or "error" in (r.text or "")[:400]),
+              "no grant was held to try" if held is None
+              else f"HTTP {r.status_code} {r.text[:160]}")
         granted, _ = negotiate(client, kid_b, "get_transactions", max_wait_s=5)
         check("and a revoked sub-agent's next call does not go through",
               not granted, "it was still able to use a grant")
@@ -436,12 +454,19 @@ if __name__ == "__main__":
     try:
         code = main()
     finally:
+        unrestored = []
         with httpx.Client(verify=CA, timeout=30.0, follow_redirects=True) as c:
             for tier, (rules, ask_me) in ORIGINAL.items():
                 try:
                     set_rules(c, tier, rules, ask_me=ask_me)
-                except Exception:                              # noqa: BLE001
-                    pass
-        print(f"   (her rules on {', '.join(sorted(ORIGINAL))} have been put "
-              f"back as they were)")
+                except Exception as exc:                       # noqa: BLE001
+                    unrestored.append(f"{tier}: {exc}")
+        if unrestored:
+            # A check that leaves her policy edited is a failure whatever it
+            # proved, because every later run negotiates against the edit.
+            print(f"   FAIL her rules could not be put back: {unrestored}")
+            code = code or 1
+        else:
+            print(f"   (her rules on {', '.join(sorted(ORIGINAL))} have been put "
+                  f"back as they were)")
     raise SystemExit(code)

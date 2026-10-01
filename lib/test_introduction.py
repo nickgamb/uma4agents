@@ -174,6 +174,15 @@ check("and a parent_agent cannot make a sub-agent into a sponsor",
           admit, parent_conn={**APPROVED, "parent_handle": "jkt:lead"}))
 
 
+# The order is part of the rule: a refusal names the strongest reason, so a
+# parent failing several checks is refused for the earliest of them.
+check("a revoked parent from another operator is refused as revoked, first",
+      "not active" in refused(admit, parent_conn={**APPROVED, "status": "revoked"},
+                              same_operator=False))
+check("an unapproved parent over its fan-out is refused as unapproved, first",
+      "approv" in refused(admit, parent_conn={**APPROVED, "tiers_approved": []},
+                          live_children=9))
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
     for f in FAIL:

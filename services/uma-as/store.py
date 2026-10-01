@@ -126,6 +126,11 @@ class OwnerStore(Protocol):
         way (``invalid_grant``).
         """
 
+    async def peek_ticket(self, ticket: str) -> dict | None:
+        """The negotiation a live ticket names, without spending the ticket.
+        For a request still waiting on her, where polling must not use up
+        the only handle the agent has."""
+
     async def negotiation(self, family: str) -> dict | None: ...
 
     async def save_negotiation(self, rec: dict) -> None:

@@ -66,8 +66,8 @@ draft-gamb-uma4agents-core-00:
     asserts: ["but it is worth nothing without a ticket of her issuing", "and an operation outside the connection never becomes a grant"]
   - text: "The authorization server MUST distinguish two kinds of pending request, and MUST make the kind available to the owner's decision surface"
     verified: check
-    targets: [shim-test, intent-check]
-    asserts: ["first contact connects, then tier 1 grants", "tier 3 pends, Alice approves, trade executes", "first contact pends until she answers"]
+    targets: [as-test]
+    asserts: ["which kind of request is waiting: meeting an agent, or one operation"]
   - text: "A binding that surfaces the wait MUST be able to say that the party being waited on is not the requesting party's own user"
     verified: check
     targets: [shim-test]
@@ -185,8 +185,8 @@ draft-gamb-uma4agents-core-00:
     asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
   - text: "An enforcement point MUST verify proof of possession against the key returned by introspection rather than the key carried inside the token"
     verified: check
-    targets: [sig-test]
-    asserts: ["a signature over another authority is rejected"]
+    targets: [pep-test]
+    asserts: ["a signature by any key but the one introspection returns is refused", "a grant covering the tool's resource and scope is honoured"]
   - text: "MUST be consumed by an operation that decides and records in one indivisible step, and that reports to its caller whether that caller was the one that consumed it"
     verified: check
     targets: [store-test]
@@ -420,7 +420,7 @@ draft-gamb-uma4agents-lineage-00:
   - text: "The authorization server MUST refuse to act on it unless every one of the following holds, and MUST check them in this order"
     verified: check
     targets: [introduction-test]
-    asserts: ["an agent the owner has never met may not introduce", "a revoked agent may not introduce", "an agent she never approved in person may not introduce", "an agent that was itself introduced may not introduce", "a revoked agent cannot be restored by an introduction", "an agent from another operator may not be introduced", "fan-out is capped"]
+    asserts: ["an agent the owner has never met may not introduce", "a revoked agent may not introduce", "an agent she never approved in person may not introduce", "an agent that was itself introduced may not introduce", "a revoked agent cannot be restored by an introduction", "an agent from another operator may not be introduced", "fan-out is capped", "a revoked parent from another operator is refused as revoked, first", "an unapproved parent over its fan-out is refused as unapproved, first"]
   - text: "The authorization server MUST record why the introduction was not honoured, and MUST then treat the request exactly as one that offered no lineage"
     verified: check
     targets: [subagent-check]
@@ -568,7 +568,7 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "It MUST NOT apply the envelope only at grant time."
     verified: check
     targets: [org-check]
-    asserts: ["the terms document an agent reads names the organization"]
+    asserts: ["terms over the firm's book that exceed the ceiling are refused", "tightening the charter re-clamps every member's book terms"]
   - text: "A terms document MUST state that a layer above the owner is in force over its resources"
     verified: check
     targets: [org-check, org-test]
@@ -844,8 +844,8 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["a directory that did not check out leaves the claim self-asserted", "metadata that does not resolve buys nothing"]
   - text: "An implementation MUST cache a directory hit and MUST NOT cache a miss"
     verified: check
-    targets: [assurance-check]
-    asserts: ["and is still worth nothing on the second try"]
+    targets: [sig-test]
+    asserts: ["a key the directory holds is answered from cache the second time", "and a key it has just published is recognised at once, not after the TTL"]
   - text: "Assurance MUST NOT decide admission."
     verified: check
     targets: [assurance-check]
@@ -888,8 +888,8 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["blocking it revokes every agent it runs, in one step", "and an agent of that operator is refused by name"]
   - text: "Unblocking MUST NOT restore connections that blocking ended."
     verified: check
-    targets: [store-test]
-    asserts: ["test_blocked_operators_round_trip"]
+    targets: [as-test]
+    asserts: ["blocking ends the connections it runs", "and unblocking restores the right to ask, not the connections"]
   - text: "An authorization server MUST assign the identifier of a negotiation once, when the permission ticket is first created, and MUST carry it unchanged through every ticket rotation."
     verified: check
     targets: [store-test]
@@ -1022,8 +1022,8 @@ draft-gamb-uma4agents-terms-00:
     asserts: ["and the record keeps it beside what she dictated"]
   - text: "An authorization server MUST NOT place anything in a terms document that identifies the owner beyond what the resource identifier already discloses."
     verified: check
-    targets: [multi-owner-check]
-    asserts: ["terms template ids name their owner", "and an agent holding no token can dereference them"]
+    targets: [as-test]
+    asserts: ["it carries her terms and nothing that names her beyond the resource id"]
 
 draft-gamb-uma4agents-owner-00:
   - text: "MUST advertise the base URL of the owner's API in its metadata"
@@ -1064,8 +1064,8 @@ draft-gamb-uma4agents-owner-00:
     asserts: ["registration: it carries no secret to fall back on"]
   - text: "The server MUST refuse a unit over a resource it does not protect, over a resource another unit already governs"
     verified: check
-    targets: [rules-test, first-party-check]
-    asserts: ["she can write a tier of her own", "a rule relaxing on what the agent showed is still unstorable"]
+    targets: [rules-test]
+    asserts: ["she cannot write a tier over a resource nobody protects", "she cannot write a tier over a resource another tier governs"]
   - text: "Resources are fixed by registration and MUST NOT be editable here."
     verified: check
     targets: [store-test]

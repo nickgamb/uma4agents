@@ -99,6 +99,10 @@ check("a mandate at or above the floor stands",
 refuses("one below it is refused, in the holders' words",
         {"resources": RESOURCE, "rule": {"kind": "any"},
          "holders": mandate()["holders"]}, floor=2)
+refuses("and so is one holder carrying weight two, where the floor counts people",
+        {"resources": RESOURCE, "rule": {"kind": "threshold", "threshold": 2},
+         "holders": [{"owner": "alice", "issuer": "https://alice-as.uma.lab", "weight": 2},
+                     {"owner": "carol", "issuer": "https://carol-as.uma.lab"}]}, floor=2)
 
 print("\n-- folding every holder's terms into one document --")
 strict = tier(expires=900, scope=("positions:read",),

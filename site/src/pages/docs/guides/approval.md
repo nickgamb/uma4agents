@@ -46,8 +46,9 @@ asking.
 ## 2. Hold the negotiation, do not hold the call
 
 When a request pends, the authority holds the rotated ticket and refuses with a
-"submitted" status. The agent re-presents after an interval, and each poll
-rotates the ticket again.
+"submitted" status. The agent re-presents after an interval, and while she
+decides each poll hands back the same ticket, so a reply lost on the way costs
+the agent nothing. The ticket is spent when there is an outcome.
 
 On the agent's side, the pend is **a state to render, not a call to hold open**.
 An agent that can express waiting to its own user should hand the wait up rather

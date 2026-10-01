@@ -2102,7 +2102,10 @@ async def org_admin_pending(owner: str, request: Request) -> list:
     """
     await require_org_admin(request, owner)
     envelope, _ = await org_scope(owner)
-    return [p for p in await pending_view(owner)
+    # Without her own rules' reasons: why her policy asked is hers, and the
+    # organization is shown what the agent asked and its own reasons only.
+    return [{k: v for k, v in p.items() if k != "because"}
+            for p in await pending_view(owner)
             if org.reaches(p.get("resource_id") or "", envelope)]
 
 
@@ -2155,8 +2158,12 @@ async def org_related_connections(owner: str) -> list:
         touched = (set(conn.get("tiers_granted") or []) |
                    set(conn.get("tiers_approved") or [])) & governed
         if touched or conn["handle"] in pending_handles:
+            # Named fields, not her record: which other tiers she admitted it
+            # at, how often she has revoked it, and the rest of her own
+            # arrangement with it are hers, not the organization's.
             out.append({
-                **conn,
+                **{k: conn.get(k) for k in ("handle", "label", "identity", "status",
+                                            "first_seen", "last_access")},
                 "org_tiers": sorted(touched),
                 # Whether the organization has shut this one out of *its*
                 # resources — which is not the same as her `status`, and the
@@ -2228,7 +2235,16 @@ async def org_admin_operators(owner: str, request: Request) -> list:
     blocked = _org_blocked(await org_record(owner))["operators"]
     rows = [o for o in await operators_view(owner)
             if o["origin"] in origins or o["origin"] in blocked]
-    return [{**o, "blocked_for_organization": o["origin"] in blocked}
+    # Counted over the agents that touch the organization's resources, and
+    # without her own blocks or the origins she claims as hers: those are
+    # her arrangements, not the organization's.
+    def mine(origin: str, active_only: bool) -> int:
+        return sum(1 for c in conns
+                   if operator_origin(c.get("identity") or {}) == origin
+                   and (not active_only or c.get("status") == "active"))
+    return [{"origin": o["origin"], "name": o["name"],
+             "agents": mine(o["origin"], False), "active": mine(o["origin"], True),
+             "blocked_for_organization": o["origin"] in blocked}
             for o in rows]
 
 
@@ -2262,12 +2278,27 @@ async def org_admin_ledger(owner: str, request: Request) -> list:
     changed. Her negotiations about her own accounts are not in here.
     """
     await require_org_admin(request, owner)
-    _, tiers = await org_scope(owner)
+    envelope, tiers = await org_scope(owner)
     org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
                  "org_role", "org_acted", "break_glass"}
+    # By resource where an entry names one; by tier only where every
+    # resource the tier governs is the organization's. A tier over the
+    # firm's book and her own account is not the organization's business
+    # in the half that is hers.
+    all_tiers = await st(owner).tiers()
+    wholly = {t for t in tiers
+              if all(org.reaches(r, envelope) for r in all_tiers.get(t, {}).get("resources") or [])}
     handle = request.query_params.get("handle") or None
-    return [e for e in await st(owner).ledger(handle)
-            if e.get("kind") in org_kinds or e.get("tier") in tiers]
+    out = []
+    for e in await st(owner).ledger(handle):
+        if e.get("kind") in org_kinds:
+            out.append(e)
+        elif e.get("resource_id"):
+            if org.reaches(e["resource_id"], envelope):
+                out.append(e)
+        elif e.get("tier") in wholly:
+            out.append(e)
+    return out
 
 
 # --- Grant API (agent-facing, UMA 2.0 Grant shape) ---------------------------
@@ -3984,6 +4015,18 @@ async def token(request: Request) -> JSONResponse:
     if not await known_owner(ticket_owner):
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
     await st(ticket_owner).reap_expired()
+    # A request still waiting on her is polled, not spent. Spending the
+    # ticket and issuing a new one in the reply would make a single lost
+    # response cost the agent its only handle on her decision, and her
+    # answer would be recorded and never collected. Whatever is issued in
+    # the end is bound to the agent's key, so reusing the ticket while she
+    # decides gives a thief nothing.
+    waiting = await st(ticket_owner).peek_ticket(raw_ticket)
+    if (waiting and waiting.get("state") == "awaiting-owner"
+            and waiting.get("decision") is None):
+        event("ticket.presented", corr=waiting["family"], state="awaiting-owner")
+        return JSONResponse({"error": "request_submitted", "ticket": ticket,
+                             "interval": POLL_INTERVAL}, status_code=403)
     rec = await st(ticket_owner).consume_ticket(raw_ticket)
     if rec is None:
         event("ticket.presented", corr=None, result="invalid_grant")
@@ -4609,10 +4652,18 @@ async def pending_view(owner: str) -> list:
     administrator who saw a different set of pending requests from the person
     they are co-administering with would be looking at a different system.
     """
+    connected = {c["handle"] for c in await st(owner).connections()
+                 if c.get("status") == "active"}
     return [
         {
             "family": rec["family"],
             "kind": rec.get("pending_kind", "operation"),
+            # Whether answering this admits an agent she has no standing
+            # connection with. Said outright because a joint request can come
+            # from a stranger too, and nothing that answers for her may treat
+            # meeting one as routine.
+            "first_contact": (rec.get("pending_kind") == "connection"
+                              or rec.get("handle") not in connected),
             "tier": rec["tier"],
             "purpose": rec["contract"]["purpose"],
             "operation": rec["contract"].get("operation"),

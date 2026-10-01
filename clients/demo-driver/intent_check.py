@@ -311,6 +311,7 @@ def main() -> int:
             threading.Thread(target=loop, daemon=True).start()
 
         watch_then_approve()
+        errand_mark = len(ledger(client))
         ok, asked, err = negotiate(client, stated, "get_positions", reason=errand)
         check("first contact pends until she answers", ok and asked, err or "")
         check("her approval dialog shows the agent's own words",
@@ -321,7 +322,7 @@ def main() -> int:
         check("and afterwards it negotiates without disturbing her",
               ok and not asked, err or "")
 
-        promised = [e for e in ledger(client) if e["kind"] == "promised"]
+        promised = [e for e in ledger(client)[errand_mark:] if e["kind"] == "promised"]
         check("and the record keeps it beside what she dictated",
               any(e.get("reason") == errand for e in promised))
         check("her purpose is still hers, not the agent's",
@@ -340,6 +341,7 @@ def main() -> int:
 
         # ---------------------------------------------------------------
         print("\n== A mandate, cited in the shape AAuth already uses ==")
+        mission_mark = len(ledger(client))
         # ---------------------------------------------------------------
         # Bob's mission is Bob's: approved at his person server, evaluated
         # there, named here by content hash. Alice's authority records the
@@ -363,7 +365,7 @@ def main() -> int:
                              lambda t: None, mission=bad)
             check(f"refused: {why}", err is not None, "it was accepted")
 
-        cited = [e for e in ledger(client)
+        cited = [e for e in ledger(client)[mission_mark:]
                  if (e.get("mission") or {}).get("s256") == mission["s256"]]
         check("the citation is on the record beside her terms", bool(cited))
         check("and it is kept as a reference, not as text she has to trust",
@@ -411,6 +413,7 @@ def main() -> int:
               ledger(client, handle="jkt:nobody") == [])
 
         declined = AgentKeys.load_or_create(f"{KEYS}/intent-declined-{RUN}.pem")
+        decline_mark = len(ledger(client))
         ch = challenge_for(client, "get_positions", {})
         r = client.post(f"{ch.as_uri}/token",
                         data={"grant_type":
@@ -421,7 +424,7 @@ def main() -> int:
                           "urn:ietf:params:oauth:grant-type:uma-ticket",
                           "ticket": r.json()["ticket"], "decline": "true"},
                     timeout=15.0)
-        refusals = [e for e in ledger(client) if e["kind"] == "refused"]
+        refusals = [e for e in ledger(client)[decline_mark:] if e["kind"] == "refused"]
         check("a decline is recorded with nobody to name",
               any(e.get("handle") is None for e in refusals),
               "there is no signature at beat 2, so there is no agent yet")

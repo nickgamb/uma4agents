@@ -256,12 +256,14 @@ def main() -> int:
         # --- an authority holds exactly one owner ---------------------------
         for owner in names:
             others = [x for x in names if x != owner]
-            worst = max(
-                c.get(f"{OWNERS[owner]['as']}/owner/policies",
-                      headers=hdrs(c, x), timeout=15.0).status_code
-                for x in others)
+            # Every other owner, each on her own: one accepted among several
+            # refused is the failure, and a highest-status summary would hide it.
+            answered = {x: c.get(f"{OWNERS[owner]['as']}/owner/policies",
+                                 headers=hdrs(c, x), timeout=15.0).status_code
+                        for x in others}
             check(f"{owner}'s authority will not answer {', '.join(others)}",
-                  worst in (401, 403), f"got {worst}")
+                  all(code in (401, 403) for code in answered.values()),
+                  f"got {answered}")
             check(f"and does answer {owner}",
                   c.get(f"{OWNERS[owner]['as']}/owner/policies",
                         headers=hdrs(c, owner),
@@ -270,16 +272,15 @@ def main() -> int:
         # --- and trusts only her identity provider --------------------------
         for owner in names:
             others = [x for x in names if x != owner]
-            worst = max(
-                c.post(f"{KEYCLOAK}/realms/{OWNERS[owner]['realm']}"
-                       "/protocol/openid-connect/token",
-                       data={"grant_type": "password",
-                             "client_id": "meridian-portal", "username": x,
-                             "password": OWNERS[x]["password"]},
-                       timeout=15.0).status_code
-                for x in others)
+            minted = {x: c.post(f"{KEYCLOAK}/realms/{OWNERS[owner]['realm']}"
+                                "/protocol/openid-connect/token",
+                                data={"grant_type": "password",
+                                      "client_id": "meridian-portal", "username": x,
+                                      "password": OWNERS[x]["password"]},
+                                timeout=15.0).status_code
+                      for x in others}
             check(f"{owner}'s identity provider cannot mint anybody else",
-                  worst >= 400, f"got {worst}")
+                  all(code >= 400 for code in minted.values()), f"got {minted}")
 
         # --- her policy and her terms name her, and nobody else -------------
         tiers = {o: c.get(f"{OWNERS[o]['as']}/owner/policies",

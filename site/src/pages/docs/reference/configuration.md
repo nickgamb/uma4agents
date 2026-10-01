@@ -185,10 +185,10 @@ none of it set, no account is jointly held and the whole layer is inert.
 |---|---|---|
 | `TALLY_ISSUER` | `https://joint-tally.uma.lab` | Its own origin. Holders' authorities verify its requests, and enforcement points verify its grants, against the keys published here |
 | `TALLY_MANDATES` / `TALLY_MANDATES_FILE` | unset | The mandates it counts for. Configuration rather than an API, because a mandate names the electorate and a coordinator that could edit it would be deciding who gets a say |
-| `TALLY_THRESHOLD_FLOOR` | `0` | A minimum the holders may not vote themselves below. A mandate under it is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
+| `TALLY_THRESHOLD_FLOOR` | `0` | The fewest holders who must agree to release anything, which the holders may not vote themselves below. It counts people, not weight: a mandate under which fewer holders than this could release a resource together is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
 | `TALLY_RS_SECRET` | `tally-rs-dev-secret` | What an enforcement point presents to mint tickets and introspect. It buys nothing that matters: the verdicts inside a grant are checked against the holders' published keys, not against this |
 | `TALLY_SIGNING_KEY` | `/keys/tally-ed25519.pem` | Persisted, not generated per process — both holders' authorities cache what this service publishes, and a key that changed on restart reads as a broken mandate |
-| `TALLY_MAX_OPEN_NEGOTIATIONS` | `200` | Negotiations not yet agreed to, per account. Any caller the enforcement point challenges starts one, and each costs a quote from every holder's authority; past the cap a new one is refused with `503`. Abandoned ones are swept once their ticket has lapsed |
+| `TALLY_MAX_OPEN_NEGOTIATIONS` | `200` | Open negotiations per account, in two lanes counted apart: those nobody has signed for yet, and those an agent committed to while the holders are asked. Any caller the enforcement point challenges starts one, and each costs a quote from every holder's authority; past the cap in either lane a new one is refused with `503`. Abandoned ones are swept once their ticket has lapsed, and grants once they expire |
 
 And on the enforcement point:
 

@@ -1218,8 +1218,11 @@ async def break_glass(request: Request) -> JSONResponse:
                    "{tool, params}, for the tool the resource is")
 
     signature = request.headers.get("signature", "")
+    # Kept for twice the window: a signature is accepted while its `created`
+    # is within the window either side of now, so one dated ahead is still
+    # valid a full window after it was spent, and must still be refused.
     for spent, when in list(_SPENT_SIGNATURES.items()):
-        if when < now() - SIGNATURE_WINDOW_S:
+        if when < now() - 2 * SIGNATURE_WINDOW_S:
             _SPENT_SIGNATURES.pop(spent, None)
     if signature in _SPENT_SIGNATURES:
         event("break_glass.replay_refused")
@@ -1236,7 +1239,8 @@ async def break_glass(request: Request) -> JSONResponse:
     authorised_by = None
     voucher_id = req.get("voucher") or ""
     voucher = VOUCHERS.get(voucher_id)
-    if voucher and voucher["expires"] > now() and voucher["owner"] == owner:
+    if (voucher and voucher["expires"] > now() and voucher["owner"] == owner
+            and voucher.get("membership") == (MEMBERS.get(owner) or {}).get("token_jti")):
         authorised_by = f"voucher from {voucher['admin']}"
     else:
         voucher_id = ""
@@ -1310,6 +1314,10 @@ async def break_glass(request: Request) -> JSONResponse:
                        headers={"typ": "at+jwt", "kid": KID})
     GLASS[jti] = {"claims": claims, "spent": False, "issued": utcstamp(),
                   "member": owner, "resource_id": resource_id,
+                  # The membership it was issued under, not only the name: a
+                  # member who leaves and rejoins is a new membership, and an
+                  # override from the old one must not come back with her.
+                  "membership": MEMBERS[owner].get("token_jti"),
                   "reason": reason, "authorised_by": authorised_by}
     note("break_glass.granted", member=owner, resource=resource_id, jti=jti,
          authorised_by=authorised_by, expires_in=ttl)
@@ -1385,7 +1393,9 @@ async def introspect(request: Request, token: str = Form(...)) -> dict:
         return {"active": False, "error": err}
     if GLASS[claims["jti"]]["spent"]:
         return {"active": False, "error": "already_consumed"}
-    if claims["owner"] not in MEMBERS:
+    if claims["owner"] not in MEMBERS or (
+            MEMBERS[claims["owner"]].get("token_jti")
+            != GLASS[claims["jti"]].get("membership")):
         # She left. An override rests entirely on membership, so it stops the
         # moment membership does — including for a token already issued. The
         # relationship it was issued under has ended: `revoked`.
@@ -1417,6 +1427,8 @@ async def consume(request: Request, token: str = Form(...)) -> dict:
     rec = GLASS[claims["jti"]]
     if rec["spent"]:
         return {"consumed": False, "error": "already_consumed"}
+    if (MEMBERS.get(rec["member"]) or {}).get("token_jti") != rec.get("membership"):
+        return {"consumed": False, "error": "revoked"}
     rec["spent"] = True
     note("break_glass.spent", member=rec["member"], jti=claims["jti"],
          resource=rec["resource_id"])
@@ -1971,12 +1983,20 @@ async def admin_open_voucher(request: Request) -> dict:
                             detail="the charter requires a stated reason")
     ttl = min(int(body.get("window_s") or 300), 3600)
     code = f"bgv_{secrets.token_urlsafe(9)}"
+    # Told first, opened only if she was. A window she was not told about is
+    # the quiet override this whole clause exists to make impossible, and a
+    # console saying "announced" over one that was not would be worse.
+    told = await notify_member(owner, {"kind": "break_glass_opened", "by": admin,
+                                       "reason": reason, "window_s": ttl,
+                                       "resources": glass.get("resources") or []})
+    if not told:
+        raise HTTPException(status_code=503,
+                            detail="her authority could not be told, so no window "
+                                   "was opened; try again")
     VOUCHERS[code] = {"owner": owner, "admin": admin, "reason": reason,
-                      "opened": utcstamp(), "expires": now() + ttl}
+                      "opened": utcstamp(), "expires": now() + ttl,
+                      "membership": MEMBERS[owner].get("token_jti")}
     note("break_glass.opened", member=owner, by=admin, window_s=ttl)
-    await notify_member(owner, {"kind": "break_glass_opened", "by": admin,
-                                "reason": reason, "window_s": ttl,
-                                "resources": glass.get("resources") or []})
     return {"voucher": code, "expires_in": ttl, "owner": owner,
             "resources": glass.get("resources") or [],
             "max_expires_in": glass.get("max_expires_in")}

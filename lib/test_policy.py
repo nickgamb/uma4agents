@@ -265,22 +265,27 @@ check("she can write a tier of her own", t["terms"]["purpose"].startswith("Prepa
 check("its terms document starts at v1", t["terms"]["template_id"] == "alice/statements/v1")
 check("and it carries her ask-me choice", t["ask_me"] is True)
 
-for spec, why in (
+for spec, name in (
     ({"id": "x", "resources": ["alice-vault/get_positions"],
-      "terms": {"purpose": "p", "expires_in": 60}}, "a resource another tier governs"),
+      "terms": {"purpose": "p", "expires_in": 60}},
+     "she cannot write a tier over a resource another tier governs"),
     ({"id": "x", "resources": ["alice-vault/nope"],
-      "terms": {"purpose": "p", "expires_in": 60}}, "a resource nobody protects"),
-    ({"id": "x", "terms": {"expires_in": 60}}, "terms with no purpose"),
-    ({"id": "x", "terms": {"purpose": "p"}}, "terms that never expire"),
+      "terms": {"purpose": "p", "expires_in": 60}},
+     "she cannot write a tier over a resource nobody protects"),
+    ({"id": "x", "terms": {"expires_in": 60}},
+     "she cannot write a tier over terms with no purpose"),
+    ({"id": "x", "terms": {"purpose": "p"}},
+     "she cannot write a tier over terms that never expire"),
     ({"id": "x", "resources": [], "rules": [{"when": ["standing.none"], "then": "auto"}],
-      "terms": {"purpose": "p", "expires_in": 60}}, "a rule that cannot relax"),
+      "terms": {"purpose": "p", "expires_in": 60}},
+     "she cannot write a tier over a rule that cannot relax"),
 ):
     try:
         policy.new_tier(spec["id"], spec, shipped, REGISTERED)
         ok = False
     except ValueError:
         ok = True
-    check(f"she cannot write a tier over {why}", ok)
+    check(name, ok)
 
 for bad in ("tier1", "", "has spaces", "../etc"):
     try:

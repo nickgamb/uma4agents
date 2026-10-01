@@ -512,8 +512,8 @@ function memberOperators(owner, operators) {
     <tbody>${operators.map(o => `<tr>
       <td><div class="nm">${esc(o.name)}</div><div class="muted mono" style="font-size:12px">${esc(o.origin)}</div></td>
       <td>${esc(o.active)} active of ${esc(o.agents)}</td>
-      <td class="r"><span class="chip ${o.blocked ? "neg" : "pos"}">${o.blocked ? "blocked" : "accepted"}</span></td>
-      <td class="r">${o.blocked
+      <td class="r"><span class="chip ${o.blocked_for_organization ? "neg" : "pos"}">${o.blocked_for_organization ? "blocked" : "accepted"}</span></td>
+      <td class="r">${o.blocked_for_organization
         ? `<button class="btn ghost sm" data-op="unblock" data-origin="${esc(o.origin)}">Allow again</button>`
         : `<button class="btn danger sm" data-op="block" data-origin="${esc(o.origin)}">Block</button>`}</td>
     </tr>`).join("")}</tbody></table></div>`;

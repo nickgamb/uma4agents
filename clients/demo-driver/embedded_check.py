@@ -107,13 +107,15 @@ def admit_resource_server(client: httpx.Client) -> str:
         entry = registry.get(rs)
         if entry and entry.get("status") == "active":
             return ""
-        # Nothing under this origin, and nothing anywhere waiting for her:
-        # this authority was provisioned with the resource server under a
-        # name instead, and there is nobody to admit. Read once, before the
-        # poke below, so the seeded deployment does not pay for a question
-        # that does not apply to it.
-        if entry is None and attempt == 0 and not any(
-                r.get("status") == "pending" for r in registry.values()):
+        # Provisioned under a name instead: an active resource server whose
+        # resource is at this origin. Then there is nobody to admit. Told
+        # apart from a vault that has simply not introduced itself yet by
+        # what the registry holds, not by whether this is the first look —
+        # on a fresh cluster the first look finds nothing either way.
+        if entry is None and any(
+                r.get("status") == "active"
+                and (r.get("resource_uri") or "").startswith(rs)
+                for r in registry.values()):
             return ""
         if entry and entry.get("status") == "pending":
             client.post(f"{AS_INTERNAL}/owner/resource-servers/decision",

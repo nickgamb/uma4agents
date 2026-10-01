@@ -1959,6 +1959,11 @@ endpoint using the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> gran
 <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.1. This profile does not change the grant type, the
 ticket's single-use rotation, or the meaning of <code>need_info</code>,
 <code>request_submitted</code>, <code>request_denied</code> or <code>invalid_grant</code>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">While a request waits on the owner, an authorization server <span class="bcp14">MAY</span> answer each
+poll with the ticket it was presented, and spend that ticket only once the
+request is decided. A grant issued from it is bound to the client's key, so the
+ticket confers nothing on anyone else, and a poll whose response is lost does
+not cost the client the only handle it has on the owner's decision.<a href="#section-4-2" class="pilcrow">¶</a></p>
 <div id="claim-token-formats">
 <section id="section-4.1">
         <h3 id="name-claim-token-formats">

@@ -147,5 +147,33 @@ check("is refused, not allowed, as unreachable",
       str(result))
 engine.up = True
 
+print("\n== a break-glass window she cannot be told about ==")
+from fastapi import HTTPException  # noqa: E402
+from unittest.mock import AsyncMock  # noqa: E402
+
+app.CHARTERS.append({"version": 3, "charter": charter_mod.validate({
+    **copy.deepcopy(charter_mod.DEFAULT_CHARTER),
+    "claims": ["northwind-vault/*"],
+    "break_glass": {"enabled": True, "resources": ["northwind-vault/*"],
+                    "require_reason": True}}),
+    "published_at": "", "by": "test"})
+app.MEMBERS["alice"] = {"owner": "alice", "token_jti": "m1", "role": None}
+app.require_admin = lambda request: "dana"
+app.notify_member = AsyncMock(return_value=False)
+
+
+class Open:
+    async def json(self):
+        return {"owner": "alice", "reason": "regulatory hold", "window_s": 60}
+
+
+before = set(app.VOUCHERS)
+try:
+    asyncio.run(app.admin_open_voucher(Open()))
+    check("is not opened", False, "opened")
+except HTTPException as exc:
+    check("is not opened, and the administrator is told why",
+          exc.status_code == 503 and set(app.VOUCHERS) == before, str(exc.detail))
+
 print(f"\n{PASSED} passed, {FAILED} failed")
 sys.exit(1 if FAILED else 0)

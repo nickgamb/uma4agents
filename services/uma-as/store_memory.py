@@ -88,6 +88,13 @@ class MemoryOwnerStore:
         self._tickets[ticket] = rec["family"]
         return ticket
 
+    async def peek_ticket(self, ticket: str) -> dict | None:
+        family = self._tickets.get(ticket or "")
+        rec = self._negotiations.get(family) if family else None
+        if not rec or rec["expires"] < time.time():
+            return None
+        return copy.deepcopy(rec)
+
     async def consume_ticket(self, ticket: str) -> dict | None:
         # Only the index entry is removed — the negotiation remains
         # addressable by family so the owner's portal can see and decide a

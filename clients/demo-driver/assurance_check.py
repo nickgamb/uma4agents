@@ -51,6 +51,7 @@ GATEWAY = os.environ.get("UMA4A_GATEWAY", "https://gateway.uma.lab/mcp")
 AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
 OPERATOR = os.environ.get("UMA4A_AGENT_OPERATOR", "https://agent.uma.lab")
+HER_OPERATOR = os.environ.get("UMA4A_ALICE_OPERATOR", "https://alice-agent.uma.lab")
 CA = os.environ.get("UMA4A_CACERT", "/driver/rootCA.pem")
 KEYS = "/driver/keys"
 BUDGET = int(os.environ.get("UMA_AS_PEND_BUDGET", "5"))
@@ -284,6 +285,22 @@ def main() -> int:
         check("metadata that does not resolve buys nothing", l_ok and l_asked)
         l_ok, l_asked, _ = negotiate(client, liar, "get_positions")
         check("and is still worth nothing on the second try", l_ok and l_asked)
+        # The case the same-origin rule exists for, and the one that can fail
+        # if the rule is gone: metadata that does verify — another operator's
+        # — beside a directory that does hold this agent's key, at a
+        # different origin. Without the rule the two would add up to 2.
+        crossed = operator_agent(client, "crossed")
+        crossed.client_id = f"{HER_OPERATOR}/agent.json"
+        approving.set()
+        time.sleep(1.5)
+        decide_all(client, "denied")
+        negotiate(client, crossed, "get_positions", max_wait_s=2)
+        crossed_seen = pending(client)
+        crossed_axes = crossed_seen[0]["assurance"] if crossed_seen else {}
+        check("a directory at another origin than the operator it claims attests nothing",
+              crossed_axes.get("accountability") == 1, str(crossed_axes))
+        decide_all(client, "denied")
+        approving = approve_in_background(client, 60)
 
         print("\n== A rule may turn a stranger away; none may let one in ==")
         # She would rather not hear from agents nobody stands behind. Her rule
@@ -296,21 +313,29 @@ def main() -> int:
                          if "alice-vault/get_positions" in (v.get("resources") or []))
         screen = {"when": ["standing.none", "assurance.accountability_below:1"],
                   "then": "refuse"}
-        r = client.put(f"{AS_PUBLIC}/owner/policies/{tid}", headers=hdrs, timeout=15.0,
-                       json={"rules": (held.get("rules") or []) + [screen]})
-        check("she can write a rule that refuses nameless strangers", r.status_code < 300,
-              r.text[:160])
-        nobody = AgentKeys.load_or_create(f"{KEYS}/assurance-screened-{RUN}.pem")
-        s_ok, s_asked, why = negotiate(client, nobody, "get_positions", max_wait_s=5)
-        check("a nameless stranger is turned away without reaching her",
-              not s_ok and not s_asked and not pending(client), why or "")
-        turned = [e for e in client.get(f"{AS_PUBLIC}/owner/ledger", headers=hdrs,
-                                        timeout=15.0).json()
-                  if e.get("kind") == "refused"
-                  and "standing.none" in (e.get("because") or [])]
-        check("and her record says her rule did it", bool(turned))
-        client.put(f"{AS_PUBLIC}/owner/policies/{tid}", headers=hdrs, timeout=15.0,
-                   json={"rules": held.get("rules") or []})
+        # Hers as she wrote them: a run that died here before would have left
+        # the screen in, and restoring that would make it permanent.
+        hers = [r for r in held.get("rules") or [] if r != screen]
+        try:
+            r = client.put(f"{AS_PUBLIC}/owner/policies/{tid}", headers=hdrs, timeout=15.0,
+                           json={"rules": hers + [screen]})
+            check("she can write a rule that refuses nameless strangers",
+                  r.status_code < 300, r.text[:160])
+            nobody = AgentKeys.load_or_create(f"{KEYS}/assurance-screened-{RUN}.pem")
+            s_ok, s_asked, why = negotiate(client, nobody, "get_positions", max_wait_s=5)
+            check("a nameless stranger is turned away without reaching her",
+                  not s_ok and not s_asked and not pending(client), why or "")
+            turned = [e for e in client.get(f"{AS_PUBLIC}/owner/ledger", headers=hdrs,
+                                            timeout=15.0).json()
+                      if e.get("kind") == "refused"
+                      and "standing.none" in (e.get("because") or [])]
+            check("and her record says her rule did it", bool(turned))
+        finally:
+            restored = client.put(f"{AS_PUBLIC}/owner/policies/{tid}",
+                                  headers=owner_hdrs(client), timeout=15.0,
+                                  json={"rules": hers})
+            check("and her rules are put back as she wrote them",
+                  restored.status_code < 300, restored.text[:160])
 
         print("\n== Her attention has a depth limit ==")
         # She stops answering. A cap on the queue is only observable while
@@ -366,24 +391,29 @@ def main() -> int:
         check("her authority lists the operator behind those agents",
               bool(mine) and mine[0]["active"] >= 2,
               f"{mine[0]['active'] if mine else 0} active")
-        res = client.post(f"{AS_PUBLIC}/owner/operators/block", headers=hdrs,
-                          json={"origin": OPERATOR}, timeout=20.0).json()
-        check("blocking it revokes every agent it runs, in one step",
-              res.get("connections_revoked", 0) >= 2, str(res))
-        blocked_ok, _, why = negotiate(client, accountable, "get_positions",
-                                       max_wait_s=2)
-        check("and an agent of that operator is refused by name",
-              not blocked_ok and OPERATOR in (why or ""), why or "")
-        # It does not remove them from the internet: the same key, without the
-        # claim, is a stranger again — which is the honest limit.
-        anon_again = AgentKeys.load_or_create(f"{KEYS}/assurance-named-{RUN}.pem")
-        anon_again.client_id = None
-        again_ok, again_asked, _ = negotiate(client, anon_again, "get_positions",
-                                             max_wait_s=2)
-        check("but the same party may return anonymously, as a stranger",
-              again_asked or not again_ok)
-        client.post(f"{AS_PUBLIC}/owner/operators/unblock", headers=owner_hdrs(client),
-                    json={"origin": OPERATOR}, timeout=20.0)
+        try:
+            res = client.post(f"{AS_PUBLIC}/owner/operators/block", headers=hdrs,
+                              json={"origin": OPERATOR}, timeout=20.0).json()
+            check("blocking it revokes every agent it runs, in one step",
+                  res.get("connections_revoked", 0) >= 2, str(res))
+            blocked_ok, _, why = negotiate(client, accountable, "get_positions",
+                                           max_wait_s=2)
+            check("and an agent of that operator is refused by name",
+                  not blocked_ok and OPERATOR in (why or ""), why or "")
+            # It does not remove them from the internet: the same key, without
+            # the claim, is a stranger again — which is the honest limit.
+            anon_again = AgentKeys.load_or_create(f"{KEYS}/assurance-named-{RUN}.pem")
+            anon_again.client_id = None
+            again_ok, again_asked, _ = negotiate(client, anon_again, "get_positions",
+                                                 max_wait_s=2)
+            check("but the same party may return anonymously, as a stranger",
+                  again_asked or not again_ok)
+        finally:
+            un = client.post(f"{AS_PUBLIC}/owner/operators/unblock",
+                             headers=owner_hdrs(client), json={"origin": OPERATOR},
+                             timeout=20.0)
+            check("and the operator is let back in afterwards",
+                  un.status_code < 300, un.text[:160])
         say("unblocked — she may deal with them again, but what the block")
         say("revoked stays revoked: it restores the right to ask, not the access")
 

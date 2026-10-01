@@ -238,6 +238,18 @@ async def test_organization_fields_merge(store) -> None:
           await store.update_organization({"blocked": {}}) is False)
 
 
+async def test_peeking_a_ticket_spends_nothing(store) -> None:
+    ticket = await store.mint_ticket({**negotiation("fam_peek"),
+                                      "state": "awaiting-owner", "decision": None}, 60)
+    first, second = await store.peek_ticket(ticket), await store.peek_ticket(ticket)
+    check("peeking at a waiting request's ticket finds it, as often as asked",
+          (first or {}).get("family") == "fam_peek"
+          and (second or {}).get("family") == "fam_peek", f"{first} {second}")
+    check("and leaves it there to be spent once there is an outcome",
+          (await store.consume_ticket(ticket) or {}).get("family") == "fam_peek"
+          and await store.peek_ticket(ticket) is None)
+
+
 async def test_spent_once(store) -> None:
     import time as _t
 
@@ -705,6 +717,7 @@ async def test_claimed_origins_round_trip(store) -> None:
 
 
 TESTS = [
+    test_peeking_a_ticket_spends_nothing,
     test_spent_once,
     test_org_blocks_do_not_overwrite_each_other,
     test_organization_fields_merge,

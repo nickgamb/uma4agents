@@ -268,8 +268,9 @@ and an agent polling for an outcome that cannot change.
 
 **And a group cannot answer what quorum sets the quorum.** A mandate carries a
 floor it may not go below, supplied by something other than the holders — an
-account agreement, or a regulator. In the lab it is `TALLY_THRESHOLD_FLOOR`;
-a mandate below it is refused at startup, by name. This is the same shape as
+account agreement, or a regulator. In the lab it is `TALLY_THRESHOLD_FLOOR`,
+and it counts people rather than weight: a mandate under which fewer holders
+than that could release anything together is refused at startup, by name. This is the same shape as
 an organization's ceiling, which is worth noticing: **peers compose
 horizontally, and an authority above them clamps vertically.** The two
 arrangements are orthogonal rather than competing.

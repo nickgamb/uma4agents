@@ -270,9 +270,16 @@ async def quotes_for(account: str, doc: dict,
                 "owner": h["owner"], "account": account,
                 "resource_id": resource_id})
         except httpx.HTTPError as exc:
+            # Not folded around. A holder who could not be asked has terms
+            # nobody has read, and a document folded without them could carry
+            # a grant under the other holders' terms alone — without her
+            # prohibitions, under a rule one of them can satisfy.
             event("quote.unreachable", account=account, holder=h["owner"],
                   error=str(exc)[:160])
-            continue
+            raise HTTPException(
+                status_code=503,
+                detail=f"{h['owner']}'s authority could not be asked for her "
+                       "terms; try again") from exc
         if answer.get("tier"):
             out.append((h["owner"], answer["tier"]))
         else:
@@ -345,9 +352,18 @@ def verify_verdict(jws: str, holder: dict, rec: dict) -> dict | None:
 
 
 async def collect(rec: dict, doc: dict) -> dict:
-    """Ask every holder who has not answered, and report where it stands."""
+    """Ask the holders who have not answered, until the count is settled,
+    and report where it stands.
+
+    Stopping once it is settled is the point of refusing early: a holder
+    asked after an earlier refusal already decided it would be answering a
+    question nobody needs answered, and would be shown a request in her portal
+    that can no longer go anywhere.
+    """
     for h in doc.get("holders") or []:
         owner = h["owner"]
+        if J.tally(doc, rec["verdicts"])["effect"] != "pending":
+            break
         if owner in rec["verdicts"]:
             continue
         try:
@@ -442,6 +458,12 @@ def sweep() -> None:
     for template_id, doc in list(TERMS.items()):
         if not doc.get("signed") and doc.get("family") not in NEGOTIATIONS:
             TERMS.pop(template_id, None)
+    # A grant past its expiry answers nothing any more: introspection says it
+    # is inactive whether or not it is held. Its signed terms stay, being the
+    # record an agreement cites.
+    for jti, held in list(RPTS.items()):
+        if held["claims"].get("exp", 0) < t:
+            RPTS.pop(jti, None)
 
 
 def account_for(resource_id: str) -> tuple[str | None, dict]:
@@ -468,9 +490,17 @@ async def perm(request: Request) -> dict:
     if account is None:
         raise HTTPException(status_code=400, detail="no mandate covers that resource")
     sweep()
-    if sum(1 for r in NEGOTIATIONS.values()
-           if r["account"] == account and r["state"] in ("new", "need_info")) >= MAX_OPEN:
-        event("ticket.refused", account=account, open=MAX_OPEN)
+    # Counted in two lanes: requests nobody has signed for, which cost a
+    # caller nothing, and those an agent has committed to and holders are
+    # being asked about. A flood of the first cannot crowd out the second,
+    # and each is bounded, so neither can grow this service without limit.
+    open_by_lane = {"unsigned": 0, "committed": 0}
+    for r in NEGOTIATIONS.values():
+        if r["account"] == account:
+            lane = "unsigned" if r["state"] in ("new", "need_info") else "committed"
+            open_by_lane[lane] += 1
+    if open_by_lane["unsigned"] >= MAX_OPEN or open_by_lane["committed"] >= MAX_OPEN:
+        event("ticket.refused", account=account, open=open_by_lane, cap=MAX_OPEN)
         raise HTTPException(status_code=503,
                             detail="too many negotiations are open over this account")
     family = f"jnt_{uuid.uuid4().hex[:12]}"

@@ -184,6 +184,10 @@ check("a grant covering the tool's resource and scope is honoured", d.outcome ==
 check("and the call is reported to her authority, for her record of what was touched",
       honouring.report_access.await_count == 1, str(honouring.report_access.await_count))
 
+d = present(granting(grant()), key=INTRUDER)
+check("a signature by any key but the one introspection returns is refused",
+      d.outcome == "deny" and d.error == "invalid_token", d.error)
+
 d = present(granting(grant(scopes=())))
 check("a grant over the resource without the tool's scope is not",
       d.outcome == "challenge", d.error)

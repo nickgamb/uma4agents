@@ -410,8 +410,10 @@ Then one of:
   *operation approval* (`kind=operation`).
 - **Policy failure / weakened echo / bad signature** → `request_denied`.
 
-For a held ticket the agent re-presents after `interval` (each poll rotates
-it). Alice's decision resolves it: approve → grant (and, for a connection
+For a held ticket the agent re-presents after `interval`. While she decides,
+each poll returns the same ticket — a poll whose reply is lost costs nothing,
+and whatever is issued in the end is bound to the agent's key — and the
+ticket is spent once there is an outcome. Alice's decision resolves it: approve → grant (and, for a connection
 request, the standing relationship is recorded); deny → `request_denied`;
 expiry → `invalid_grant`.
 

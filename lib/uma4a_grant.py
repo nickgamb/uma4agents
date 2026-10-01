@@ -646,10 +646,14 @@ def run_grant(
         if time.time() > deadline:
             raise GrantDenied("timed out waiting for the owner")
         time.sleep(body.get("interval", 3))
-        r = client.post(
-            token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
-        )
-        body = r.json()
+        try:
+            body = client.post(
+                token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
+            ).json()
+        except (httpx.HTTPError, ValueError) as exc:
+            # A poll that did not come back. The ticket is not spent while she
+            # decides, so the same one is presented again next time.
+            on_status(f"poll did not complete ({exc}); asking again")
 
     if "access_token" in body:
         on_status("grant issued")
@@ -753,7 +757,9 @@ async def run_grant_async(
 
     if body.get("error") == "need_info":
         template = body["required_claims"][0]["terms_template"]
-        on_status(f"terms proffered: {template['purpose']}")
+        on_status(f"terms proffered: {template['purpose']} "
+                  f"(expires {template['expires_in']}s, "
+                  f"prohibited: {', '.join(template['prohibited'])})")
         if not await approve_terms(template):
             # Refusals are records too (the owner's ledger notes the decline).
             await client.post(token_url, data={"grant_type": GRANT_TYPE,
@@ -796,10 +802,13 @@ async def run_grant_async(
                 raise GrantDenied("the requesting side stopped waiting for the owner")
             deadline = time.time() + max_wait_s
         await asyncio.sleep(body.get("interval", 3))
-        r = await client.post(
-            token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
-        )
-        body = r.json()
+        try:
+            body = (await client.post(
+                token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
+            )).json()
+        except (httpx.HTTPError, ValueError) as exc:
+            # As above: the same ticket is good for the next poll.
+            on_status(f"poll did not complete ({exc}); asking again")
 
     if "access_token" in body:
         on_status("grant issued")

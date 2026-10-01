@@ -370,6 +370,81 @@ def pulled_registrations() -> None:
     app.RESOURCES.clear()
 
 
+async def an_introduction_by_token() -> None:
+    print("\n== an introducing agent's token ==")
+    other = json.loads(OKPAlgorithm.to_jwk(Ed25519PrivateKey.generate().public_key()))
+    claims = {"iss": "https://ps.example", "sub": "aauth:parent@ps.example",
+              "cnf": {"jwk": other}}
+    with patch.object(app, "verify_agent_token", lambda token: claims):
+        handle, why = await app.introduction_ok(
+            "alice", {"parent_jwk": JWK, "agent_token": "t"},
+            {"level": "pseudonymous"}, None)
+    check("is refused when it binds a key other than the one that introduced",
+          handle is None and "different key" in why, why)
+
+
+async def an_operator_let_back_in() -> None:
+    print("\n== an operator she blocks, and then lets back in ==")
+    store = app.st("alice")
+
+    class Req:
+        def __init__(self, body):
+            self.body = body
+
+        async def json(self):
+            return self.body
+
+    origin = "https://op.example"
+    await store.put_connection({
+        "handle": "jkt:op-agent", "status": "active", "first_seen": app.utcstamp(),
+        "identity": {"client_metadata": {"client_id": f"{origin}/agent.json",
+                                         "verified": True}},
+        "tiers_granted": [], "tiers_approved": []})
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "operator_origin", lambda identity: origin):
+        await app.owner_block_operator(Req({"origin": origin}))
+        blocked = (await store.connection("jkt:op-agent"))["status"]
+        await app.owner_unblock_operator(Req({"origin": origin}))
+    after = (await store.connection("jkt:op-agent"))["status"]
+    check("blocking ends the connections it runs",
+          blocked != "active", blocked)
+    check("and unblocking restores the right to ask, not the connections",
+          after != "active", after)
+
+
+async def what_a_terms_document_says_about_her() -> None:
+    print("\n== what a published terms document says about her ==")
+    tiers = await app.st("alice").tiers()
+    for tier_id, tier in tiers.items():
+        await app.publish_terms("alice", tier_id, tier)
+    docs = await app.st("alice").terms_docs()
+    allowed = {"template_id", "terms_uri", "proffered_by", "name", "tier", "purpose",
+               "scope", "expires_in", "prohibited", "per_operation", "constraints",
+               "organization", "family", "published_at"}
+    extra = sorted({k for d in docs for k in d} - allowed)
+    check("it carries her terms and nothing that names her beyond the resource id",
+          docs and not extra, f"extra fields: {extra}")
+
+
+async def what_her_dialog_is_told() -> None:
+    print("\n== what her decision surface is told about a request ==")
+    store = app.st("alice")
+    for family, kind in (("fam_kind_c", "connection"), ("fam_kind_o", "operation")):
+        await store.mint_ticket({
+            "owner": "alice", "family": family, "state": "awaiting-owner",
+            "decision": None, "pending_kind": kind, "tier": "tier2",
+            "handle": f"jkt:{family}", "resource_id": "alice-vault/get_transactions",
+            "resource_scopes": ["transactions:read"], "contract_hash": "s256:x",
+            "signer_jwk": JWK, "contract": {"purpose": "x", "prohibited": [],
+                                            "_identity": {}}}, 300)
+    kinds = {p["family"]: p["kind"] for p in await app.pending_view("alice")}
+    check("which kind of request is waiting: meeting an agent, or one operation",
+          kinds.get("fam_kind_c") == "connection" and kinds.get("fam_kind_o") == "operation",
+          str(kinds))
+    for family in ("fam_kind_c", "fam_kind_o"):
+        await app.decide_pending("alice", family, "denied", actor=None)
+
+
 async def an_approval_she_has_since_overtaken() -> None:
     print("\n== an approval does not outlive what she withdrew after it ==")
     store = app.st("alice")
@@ -570,6 +645,10 @@ async def main() -> int:
     a_clearance()
     await agreements_and_grants()
     await an_owner_nobody_set_up()
+    await an_operator_let_back_in()
+    await what_her_dialog_is_told()
+    await what_a_terms_document_says_about_her()
+    await an_introduction_by_token()
     pulled_registrations()
     await a_tier_written_again()
     await a_mandate_over_the_firms_own_resource()
