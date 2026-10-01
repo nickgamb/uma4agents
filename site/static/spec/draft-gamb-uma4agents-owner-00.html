@@ -1741,7 +1741,7 @@ her units — and, where she is not a member, whether an invitation is waiting
 on her. <code>POST /organization/preview</code> with <code>{"code": …}</code> returns what a code
 would commit her to and what it would change about terms she has already
 written, without doing it. <code>POST /organization</code> enrols her and <span class="bcp14">MUST</span> be refused
-without <code>"agreed": true</code> in the body. <code>POST /organization/decline</code> records a
+without <code>"agreed": true</code> and the <code>charter_version</code> she was shown in the body. <code>POST /organization/decline</code> records a
 refused invitation. <code>DELETE /organization</code> leaves.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3"><code>POST /joint/preview</code> with <code>{"tally": …, "account": …}</code> returns a mandate and
 what agreeing would mean for her terms; <code>POST /joint</code> agrees to it and <span class="bcp14">MUST</span> be

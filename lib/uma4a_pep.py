@@ -192,7 +192,6 @@ ALLOW = Decision(outcome="allow")
 # negotiations that cannot succeed is not.
 RENEGOTIABLE = frozenset({"expired", "invalid_signature", "unknown_token",
                           "already_consumed", "revoked"})
-TERMINAL = frozenset({"connection_revoked", "organization_revoked"})
 # Not reasons about the grant. The authority could not be asked; or it was,
 # and has not yet authorized this resource server to ask on the owner's behalf.
 UNAVAILABLE = "introspection_unavailable"
@@ -238,7 +237,9 @@ class Enforcer:
         org_issuer: str = "",
         org_internal: str = "",
         org_token: str = "",
+        accepts_overrides: bool = False,
         joint_issuer: str = "",
+        holder_authorities: dict[str, str] | None = None,
         require_content_digest: bool = REQUIRE_CONTENT_DIGEST,
         event=None,
     ) -> None:
@@ -291,12 +292,24 @@ class Enforcer:
         self.org_issuer = org_issuer.rstrip("/")
         self.org_internal = (org_internal or org_issuer).rstrip("/")
         self.org_token = org_token
+        # Only where the organization owns the resource. An owner's own
+        # enforcer also knows the organization, to check its ceiling on her
+        # authority's grants, and must not take that as licence to honour the
+        # organization's own grants over what she holds.
+        self.accepts_overrides = accepts_overrides
         # A tally this resource server accepts grants from, for resources
         # held jointly. Named rather than inferred: a grant is checked
         # against the mandate inside it, and accepting one from any issuer
         # that happened to embed a plausible mandate would be accepting the
         # electorate from the party that assembled it.
         self.joint_issuer = joint_issuer.rstrip("/")
+        # Which authorization server speaks for each holder, as this resource
+        # server was configured — the same fact it holds for every owner it
+        # serves. A holder's verdict is verified against this, never against
+        # an issuer the mandate names: the mandate comes from the tally, which
+        # is the party being checked.
+        self.holder_authorities = {o: a.rstrip("/") for o, a in
+                                   (holder_authorities or {}).items()}
         self.require_content_digest = require_content_digest
         self.event = event or (lambda *a, **k: None)
         self._pat: dict[str, Any] = {"token": None, "expires": 0}
@@ -658,6 +671,15 @@ class Enforcer:
         digest = mandate_digest(mandate)
         if digest is None:
             return "the published mandate is not a mandate this side can count"
+        for h in mandate["holders"]:
+            known = self.holder_authorities.get(h["owner"])
+            if known is None:
+                return (f"{h['owner']} holds this resource, and this resource "
+                        f"server does not know which authority speaks for them")
+            if (h.get("issuer") or "").rstrip("/") != known:
+                return (f"the mandate names {h.get('issuer')!r} for "
+                        f"{h['owner']}, and this resource server knows them "
+                        f"by {known!r}")
         jkt = key_thumbprint(((info.get("cnf") or {}).get("jwk")) or {})
         by_owner = {h["owner"]: h for h in mandate["holders"]}
         verdicts: dict[str, str] = {}
@@ -672,8 +694,8 @@ class Enforcer:
                         f"who is not a holder of this resource")
             claims = await self._verified_verdict(jws, holder)
             if claims is None:
-                return (f"the verdict attributed to {holder['owner']} is not "
-                        f"signed by the authority that holder names")
+                return (f"the verdict attributed to {holder['owner']} does not "
+                        f"verify against that holder's authority, or has expired")
             if claims.get("contract") != info.get("contract"):
                 return (f"{holder['owner']}'s verdict is about a different "
                         f"agreement than this grant was issued for")
@@ -761,7 +783,9 @@ class Enforcer:
 
     async def _verified_verdict(self, jws: str, holder: dict) -> dict | None:
         """One verdict, against the issuing holder's published keys."""
-        issuer = (holder.get("issuer") or "").rstrip("/")
+        issuer = self.holder_authorities.get(holder.get("owner") or "", "")
+        if not issuer:
+            return None
         cached = self._holder_jwks.get(issuer)
         if not cached or cached[0] < time.time():
             try:
@@ -914,6 +938,11 @@ class Enforcer:
         # after this point is the same sequence of checks either way — the
         # override is a different *issuer*, not a shortcut past enforcement.
         override = self.issued_by_organization(rpt)
+        if override and not self.accepts_overrides:
+            self.event("access.denied", reason="override-not-here", tool=f.tool)
+            return Decision(outcome="deny", status=403, error="invalid_token",
+                            description="an organization's own grant is honoured "
+                            "only at the resources it owns, and this is not one")
 
         # 1. Is the token live, and does the relationship behind it stand?
         #    Non-consuming: nothing is spent before every check has passed.
@@ -922,6 +951,12 @@ class Enforcer:
             reason = info.get("error", "")
             self.event("access.denied", reason=f"inactive-rpt: {reason}", tool=f.tool)
             return await self.not_live(reason, f.tool, rid, scopes)
+        if override and info.get("owner") != self.owner:
+            # Issued to another member. The organization's book is
+            # administered per member, and an override is hers alone.
+            self.event("access.denied", reason="override-other-member", tool=f.tool)
+            return Decision(outcome="deny", status=403, error="invalid_token",
+                            description="this override was issued for another member")
 
         # 2. Does the grant cover this resource, with the scopes this tool
         #    needs, at this moment? A permission is the unit of authority, so
@@ -1039,11 +1074,13 @@ class Enforcer:
             # RFC 8785 form, the one the authorization server hashed.
             actual = s256(json.dumps(f.args or {}, sort_keys=True, separators=(",", ":"),
                                      ensure_ascii=False).encode())
-            if not op and f.tool in self.single_use_tools:
-                # A tool this deployment treats as single-use takes a grant
-                # bound to one operation, and a break-glass override is no
-                # exception: the organization's clause is for one act, and an
-                # override naming no operation is authority over the tool.
+            if not op:
+                # Single-use with no operation named is authority over the
+                # tool, whichever side said it was single-use: a tool this
+                # deployment treats as single-use takes a grant bound to one
+                # operation, and a grant that calls itself single-use is
+                # claiming to be bound to one. A break-glass override is no
+                # exception — the organization's clause is for one act.
                 self.event("access.denied", reason="operation-binding-missing",
                            tool=f.tool)
                 return Decision(outcome="deny", status=403, error="operation_required",

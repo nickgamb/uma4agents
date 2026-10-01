@@ -460,7 +460,14 @@ Three things bound it, all of them in the charter she read before she joined:
 - it reaches only resources the charter both **claims** and **names for
   break-glass**. An override outside what was disclosed is not an override, it
   is a second front door;
-- it is short, single-use and bound to the key that asked for it;
+- it is short, single-use, bound to the key that asked for it, and bound to
+  **one operation** — the redemption names the tool and its parameters, and
+  the organization computes the digest the enforcement point checks the call
+  against. An override naming no operation is refused;
+- it is honoured **only at the organization's own resource**, and only for the
+  member it was issued to. An owner's own enforcer knows the organization too,
+  to check its ceiling over her authority's grants, and that is no licence to
+  honour the organization's grants over what she holds;
 - it is **loud**. An administrator opens a window and she is told at that
   moment — before an agent has redeemed anything and before any data has
   moved — and every use lands in her own record.

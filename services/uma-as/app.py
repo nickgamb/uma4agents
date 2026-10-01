@@ -20,6 +20,7 @@ import html
 import json
 import logging
 import os
+import re
 import secrets
 import sys
 import time
@@ -39,10 +40,11 @@ import org
 import uma4a_aauth
 import uma4a_clearance
 import uma4a_consequence
+import uma4a_fetch
 import uma4a_joint
 import uma4a_jose
 import uma4a_profiles
-from uma4a_http_sig import KeyDirectories
+from uma4a_http_sig import KeyDirectories, jwk_thumbprint
 import policy
 import store
 
@@ -377,17 +379,6 @@ def consequence_of(owner: str, resource_id: str) -> str | None:
     """
     return uma4a_consequence.normalise(
         (resources_for(owner).get(resource_id) or {}).get("consequence"))
-
-
-def jwk_thumbprint(jwk: dict) -> str:
-    """RFC 7638 thumbprint (OKP profile)."""
-    canonical = json.dumps(
-        {"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
-        separators=(",", ":"), sort_keys=True,
-    )
-    return "jkt:" + base64.urlsafe_b64encode(
-        hashlib.sha256(canonical.encode()).digest()
-    ).rstrip(b"=").decode()
 
 
 def utcstamp() -> str:
@@ -2094,8 +2085,17 @@ async def org_admin_decision(owner: str, family: str, request: Request) -> dict:
             status_code=403,
             detail="that request is about a resource your organization does "
                    "not share with this member, and is none of its business")
-    return await decide_pending(owner, family, (await request.json()).get("decision"),
-                                actor)
+    decision = (await request.json()).get("decision")
+    if pended.get("pending_kind") == "connection" and decision == "approved":
+        # Approving first contact creates *her* standing connection, which is
+        # admission to everything she holds, not only to the organization's
+        # resources. That is hers to give. The organization may still refuse
+        # a stranger at its own resources; it may not let one in.
+        raise HTTPException(
+            status_code=403,
+            detail="this is an agent asking to be admitted for the first time; "
+                   "only the member admits an agent, and she has been asked")
+    return await decide_pending(owner, family, decision, actor)
 
 
 async def org_related_connections(owner: str) -> list:
@@ -2621,20 +2621,21 @@ async def need_info_response(rec: dict, tier_id: str, tier: dict) -> JSONRespons
 AGENT_ISSUER_CA = os.environ.get("UMA4A_CA_BUNDLE")  # trust bundle for issuer TLS
 
 
+# The agent providers whose tokens this authority believes, as origins. Core
+# leaves which issuers to believe to the deployment and requires that it say;
+# an issuer not listed here is never fetched, let alone believed, and with
+# none listed no agent token is accepted at all.
+AGENT_ISSUERS = [i for i in re.split(r"[\s,]+",
+                                      os.environ.get("UMA_AS_AGENT_ISSUERS", "")) if i]
+
+
 def _fetch_issuer_json(url: str) -> dict:
     """GET one of an agent provider's documents. TLS on the issuer's origin is
     the trust root, as AAuth has it: nothing is read over anything else."""
-    import httpx
-
-    if not url.startswith("https://"):
-        raise ValueError(f"{url} is not https")
-    with httpx.Client(verify=AGENT_ISSUER_CA or True, timeout=5.0) as client:
-        r = client.get(url)
-        r.raise_for_status()
-        return r.json()
+    return uma4a_fetch.get_json(url, verify=AGENT_ISSUER_CA or True)
 
 
-AGENT_TOKENS = uma4a_aauth.AgentTokens(_fetch_issuer_json)
+AGENT_TOKENS = uma4a_aauth.AgentTokens(_fetch_issuer_json, AGENT_ISSUERS)
 
 
 def verify_agent_token(agent_token: str) -> dict:
@@ -2734,7 +2735,7 @@ async def introduction_ok(owner: str, intro: dict | None, identity: dict,
     # else's token beside its own key.
     if token := intro.get("agent_token"):
         try:
-            claims = verify_agent_token(token)
+            claims = await asyncio.to_thread(verify_agent_token, token)
         except Exception as exc:
             return None, f"the introducing agent's token did not verify: {exc}"
         if jwk_thumbprint(claims["cnf"]["jwk"]) != jwk_thumbprint(parent_jwk):
@@ -3154,7 +3155,11 @@ async def verify_resource_server_signature(request: Request, body: bytes,
     return last
 
 
-_CIMD_CACHE: dict[str, dict] = {}
+# Keyed by a URL the agent chooses, so bounded; and a URL that just failed is
+# not fetched again for a minute, so naming one cannot make this server fetch
+# it once per request.
+_CIMD_CACHE = uma4a_fetch.BoundedCache(max_entries=1024)
+_CIMD_FAILED = uma4a_fetch.FailureFloor()
 
 
 def resolve_client_id(client_id: str) -> dict:
@@ -3167,18 +3172,18 @@ def resolve_client_id(client_id: str) -> dict:
     "unresolved" rather than rejecting the contract; what it must never do is
     silently present unverified claims as though they were checked.
     """
-    import httpx
-
     if client_id in _CIMD_CACHE:
         return _CIMD_CACHE[client_id]
     out: dict = {"client_id": client_id, "verified": False}
     try:
         if not client_id.startswith("https://"):
             raise ValueError("client_id must be an https URL")
-        r = httpx.get(client_id, timeout=5.0, follow_redirects=False,
-                      verify=AGENT_ISSUER_CA or True)
-        r.raise_for_status()
-        doc = r.json()
+        _CIMD_FAILED.check(client_id)
+        try:
+            doc = uma4a_fetch.get_json(client_id, verify=AGENT_ISSUER_CA or True)
+        except Exception as exc:
+            _CIMD_FAILED.failed(client_id, str(exc)[:120])
+            raise
         if doc.get("client_id") != client_id:
             raise ValueError("document does not claim the URL it was fetched from")
         out = {
@@ -3193,8 +3198,9 @@ def resolve_client_id(client_id: str) -> dict:
         }
         event("client_metadata.resolved", client_id=client_id,
               client_name=out.get("client_name"))
-        # Only successes are cached: caching a transient failure would keep an
-        # agent nameless in Alice's dialog long after its operator recovered.
+        # Successes are cached; a failure is remembered only for the minute of
+        # the floor, so an agent is not left nameless in Alice's dialog long
+        # after its operator recovers.
         _CIMD_CACHE[client_id] = out
     except Exception as exc:
         out["error"] = str(exc)[:120]
@@ -3396,7 +3402,7 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     lifetime = tier["terms"]["expires_in"]
     if (agreed := int((rec.get("contract") or {}).get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
-    exp = int(now()) + min(3600, lifetime)
+    exp = int(now()) + min(RPT_MAX_LIFETIME_S, lifetime)
     # The grant carries what was asked for, narrowed to what she offered and
     # what the agent agreed to. The ticket's scopes alone were whatever the
     # resource registered for the attempt, which can be more than either.
@@ -3499,6 +3505,19 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
 #   * nothing the tally says is taken on trust. It relays the agent's signed
 #     agreement and this server verifies it, folds nothing and is checked
 #     against her own terms when it claims to have folded faithfully.
+
+
+# The longest any grant this authority's answers back may last. One hour,
+# whatever the terms allow: a grant is re-negotiated past it.
+RPT_MAX_LIFETIME_S = 3600
+
+
+def verdict_exp(contract: dict) -> int:
+    """When an allow verdict stops counting: when the agreement it is about
+    would end, as a grant built on it may last. A shorter life would let an
+    honest grant fail before its own expiry, read as a forgery at the door."""
+    lifetime = int(contract.get("expires_in") or 0) or RPT_MAX_LIFETIME_S
+    return int(now()) + min(RPT_MAX_LIFETIME_S, lifetime)
 
 
 def joint_verdict_jws(claims: dict) -> str:
@@ -3698,7 +3717,7 @@ async def joint_verdict(request: Request) -> dict:
         return {"verdict": joint_verdict_jws({
             "holder": owner, "account": account, "negotiation": negotiation,
             "resource_id": resource_id, "contract": claims.get("contract"),
-            "effect": "allow", "exp": int(now()) + 300,
+            "effect": "allow", "exp": verdict_exp(pended["contract"]),
             **joint_binding(pended["contract"], pended["signer_jwk"], mandate)})}
     if pended is not None:
         return {"pending": True, "family": negotiation}
@@ -3713,8 +3732,8 @@ async def joint_verdict(request: Request) -> dict:
     # is caught, because what comes out is compared against her terms below.
     agreement = claims.get("agreement") or ""
     try:
-        contract, signer_jwk, identity = contract_identity(
-            agreement, record["tally"])
+        contract, signer_jwk, identity = await asyncio.to_thread(
+            contract_identity, agreement, record["tally"])
         requester_claims(contract)
     except Exception as exc:                                    # noqa: BLE001
         return refuse(f"the agreement did not verify: {exc}")
@@ -3815,7 +3834,7 @@ async def joint_verdict(request: Request) -> dict:
     return {"verdict": joint_verdict_jws({
         "holder": owner, "account": account, "negotiation": negotiation,
         "resource_id": resource_id, "contract": claims.get("contract"),
-        "effect": "allow", "exp": int(now()) + 300,
+        "effect": "allow", "exp": verdict_exp(contract),
         **joint_binding(contract, signer_jwk, mandate)})}
 
 
@@ -4025,7 +4044,10 @@ async def token(request: Request) -> JSONResponse:
     if rec["state"] != "need_info":
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
     try:
-        contract, signer_jwk = verify_contract(claim_token, rec)
+        # In a thread: verifying reads documents the agent names (its client
+        # metadata, its operator's key directory, its token's issuer), and a
+        # slow origin must hold up this request, not the whole authority.
+        contract, signer_jwk = await asyncio.to_thread(verify_contract, claim_token, rec)
     except Exception as exc:
         event("contract.rejected", corr=family, reason=str(exc))
         await close_negotiation(rec)
@@ -5221,6 +5243,11 @@ async def owner_join_organization(request: Request) -> dict:
     # what she agreed to alongside the fact that she did. The refusal is not
     # a formality: a portal that forgot to ask would fail here rather than
     # enrol her quietly.
+    if body.get("agreed") and body.get("charter_version") is None:
+        raise HTTPException(
+            status_code=400,
+            detail="name the version of the charter you read; agreeing is to "
+                   "that version")
     if not body.get("agreed"):
         raise HTTPException(
             status_code=400,

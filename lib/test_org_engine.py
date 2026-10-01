@@ -69,8 +69,9 @@ class Engine:
         self.decisions += 1
         if "u4a-org" not in self.modules:
             return httpx.Response(200, json={}, request=request)
-        return httpx.Response(200, json={"result": {"effect": "allow", "because": []}},
-                              request=request)
+        return httpx.Response(200, json={"result": {
+            "decision": {"effect": "allow", "because": []},
+            "custom_loaded": "u4a-custom" in self.modules}}, request=request)
 
 
 engine = Engine()
@@ -108,14 +109,42 @@ engine.modules.clear()
 engine.stays_empty = True
 result = decide()
 check("is refused, not allowed, and says why",
-      result["effect"] == "refuse" and "could not be reached" in result["because"][0],
+      result["effect"] == "refuse" and "holds none of" in result["because"][0],
+      str(result))
+check("and does not call a running engine unreachable",
+      "could not be reached" not in result["because"][0], str(result))
+engine.stays_empty = False
+
+print("\n== an engine that kept the base module and lost the admin's rules ==")
+asyncio.run(app.load_shipped_rego())
+app.CHARTERS.append({"version": 2, "charter": charter_mod.validate({
+    **copy.deepcopy(charter_mod.DEFAULT_CHARTER),
+    "rego": "package u4a.custom\n\ndeny contains \"no\" if false\n"}),
+    "published_at": "", "by": "test"})
+asyncio.run(app.load_custom_rego(app.current()["charter"]["rego"]))
+events.clear()
+check("a charter with rules, held in full, needs no reload",
+      decide()["effect"] == "allow" and "engine.reloaded" not in events)
+engine.modules.pop("u4a-custom")
+result = decide()
+check("the authority notices they are gone, puts them back and asks again",
+      result["effect"] == "allow" and "u4a-custom" in engine.modules
+      and "engine.reloaded" in events, str(result))
+engine.modules.pop("u4a-custom")
+engine.stays_empty = True
+result = decide()
+check("and refuses, naming them, when they will not stay",
+      result["effect"] == "refuse"
+      and "does not hold the organization's own rules" in result["because"][0],
       str(result))
 engine.stays_empty = False
 
 print("\n== an engine that cannot be reached ==")
 engine.up = False
 result = decide()
-check("is refused, not allowed", result["effect"] == "refuse", str(result))
+check("is refused, not allowed, as unreachable",
+      result["effect"] == "refuse" and "could not be reached" in result["because"][0],
+      str(result))
 engine.up = True
 
 print(f"\n{PASSED} passed, {FAILED} failed")

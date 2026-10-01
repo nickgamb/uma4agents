@@ -167,7 +167,7 @@ A party of its own, not a table inside anyone's authorization server.
 | `GET /.well-known/u4a-organization` | Discovery: issuer, JWKS, where to enrol, where decisions come from |
 | `GET /jwks` | Its signing keys. Members verify notices against these; enforcement points verify the grants it signs itself |
 | `POST /member/preview` | The charter in sentences, before anybody has joined |
-| `POST /member/join` | Enrol, by shared code or by an invitation addressed to one person. Returns a membership token her authority holds |
+| `POST /member/join` | Enrol, by an invitation addressed to one person, by the organization's identity provider vouching for her, or by a shared code where one is configured. Names the charter version she agreed to, and is refused without it. Returns a membership token her authority holds |
 | `GET /member/envelope` | The ceiling, and what her role shares with her. Polled, not pushed — a push that failed would be silent on both sides |
 | `POST /decision` | The organization's answer about one request: `allow`, `ask` or `refuse`, and never anything that widens |
 | `POST /member/compliance` | Her authority reporting that the ceiling was applied and which of its fields bit. Never what her terms say |

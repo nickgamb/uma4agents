@@ -396,8 +396,9 @@ Internet-Draft              Owner API for UMA             September 2026
 
    change about terms she has already written, without doing it.  POST
    /organization enrols her and MUST be refused without "agreed": true
-   in the body.  POST /organization/decline records a refused
-   invitation.  DELETE /organization leaves.
+   and the charter_version she was shown in the body.  POST
+   /organization/decline records a refused invitation.  DELETE
+   /organization leaves.
 
    POST /joint/preview with {"tally": …, "account": …} returns a mandate
    and what agreeing would mean for her terms; POST /joint agrees to it
@@ -437,7 +438,6 @@ Internet-Draft              Owner API for UMA             September 2026
    Section 4.1 returns counts rather than success.  A revocation that
    reports rpts_deactivated: 0 against an agent the owner believes is
    active is information she needs, and a bare 200 would have hidden it.
-
 
 
 

@@ -100,6 +100,18 @@ different digest, and no verdict was given under it. The digest is
 `uma4a_joint.mandate_digest`; `make joint-test` pins what changes it and what
 does not.
 
+**It cannot invent a holder.** The digest only binds a mandate to verdicts the
+tally carries, and a tally could carry verdicts it signed itself, for owners it
+made up, under an authority it runs. So the enforcement point verifies each
+verdict against the authority *it* is configured to know speaks for that
+owner — `UMA_OWNER_AUTHORITIES`, the table it already routes her own requests
+by — and refuses a mandate naming an owner it does not serve, or a different
+authority for one it does. `make pep-test` asserts both.
+
+**An honest grant is not refused for lapsing answers.** A verdict lasts as
+long as the agreement it is about, within the one-hour ceiling on any grant,
+and the tally issues no grant that outlives the first verdict it carries.
+
 **And it recomputes against the mandate the tally *publishes*, never the copy
 in the grant.** That distinction is the whole difference between a check and a
 formality. Counting against the embedded copy would leave the electorate in

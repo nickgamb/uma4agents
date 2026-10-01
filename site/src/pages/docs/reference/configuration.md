@@ -45,6 +45,7 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_RPT_AUDIENCE` | `https://gateway.uma.lab` | The `aud` on every grant this authority signs: the enforcement point they are for. One in the lab; a deployment with several names the one it protects |
 | `UMA_AS_STORE` | `memory` | `memory` or `postgres` |
 | `UMA_AS_DATABASE_URL` | — | Required when the store is `postgres` |
+| `UMA_AS_AGENT_ISSUERS` | — | Comma-separated origins of the agent providers whose agent tokens are believed. An issuer not named is refused before anything is fetched from it, and with none named no agent token is accepted. The lab names its person server, `https://ps.uma.lab` |
 | `UMA4A_CA_BUNDLE` | — | Trust bundle used when dereferencing agent-token issuers |
 
 Replicated deployments need `postgres` and a **shared signing key**. Three
@@ -139,7 +140,7 @@ of it set, every line of that layer is inert.
 | `ORG_ADMIN_TOKEN` | unset | A static administrator credential, for a stack with no identity provider. The service refuses to start with it and `ORG_ADMIN_ISSUER` both set; the lab's checks sign in as the administrator instead |
 | `CONSOLE_AUTH` | `oidc` | The administrators' console: `oidc`, or `none` for a stack with no identity provider. It refuses to start on any other value |
 | `ORG_RS_TOKEN` | `org-rs-dev-token` | What an enforcement point presents to read membership and check the grants this service signs |
-| `ORG_JOIN_CODE` | `NW-7K2F-QX` | The shared enrolment code. An invitation has its own, addressed to one person and shown once, to the administrator who creates it |
+| `ORG_JOIN_CODE` | unset (the lab sets `NW-7K2F-QX`) | A shared enrolment code, off unless set. It admits whoever holds it under whatever name they give, which suits onboarding a team and nothing more. An invitation, addressed to one person and shown once to the administrator who creates it, and the organization's identity provider vouching for an employee are the paths that know who is joining. Every join names the charter version the member agreed to |
 | `ORG_BREAK_GLASS_AUDIENCE` | `https://gateway.uma.lab` | Who an override is issued *for*. Configuration rather than a field on the request: an audience the caller chooses is one it can aim at another resource server that also trusts this organization |
 | `ORG_OPA_GRACE_S` | `60` | How long a decision may be answered from cache when the engine cannot be reached. Past it the answer is a refusal — a charter is the organization's protection of its own data, and a request that slipped through while the engine was down is exactly what it exists to prevent |
 

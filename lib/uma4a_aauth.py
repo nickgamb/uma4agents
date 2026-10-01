@@ -19,7 +19,8 @@ signature is verified with the algorithm that key names — never the one the
 token asks for. Verification, in order:
 
   1. the header says `typ: aa-agent+jwt`, and an `alg` of `Ed25519` or `EdDSA`;
-  2. `iss` is an https origin, and `dwk`, if present, is `aauth-agent.json`;
+  2. `iss` is an https origin this server was told to believe, and `dwk`,
+     if present, is `aauth-agent.json`;
   3. the document at `{iss}/.well-known/aauth-agent.json`, if it names an
      `issuer`, names `iss` exactly;
   4. the key at its `jwks_uri` — the one with the header's `kid`, or with no
@@ -32,6 +33,10 @@ token asks for. Verification, in order:
      AAuth's mark of a sub-agent.
 
 Any failure raises `Refused` with the step that failed.
+
+Which issuers to believe is the deployment's to say, and nothing is fetched
+from one it did not name: an agent token is a provider vouching for an agent,
+and a provider anyone may stand up vouches for nothing.
 """
 
 from __future__ import annotations
@@ -101,22 +106,44 @@ class AgentTokens:
     it is where TLS policy lives, so it is supplied rather than built here.
     """
 
-    def __init__(self, fetch: Callable[[str], dict],
+    def __init__(self, fetch: Callable[[str], dict], issuers=(),
                  clock: Callable[[], float] = time.time):
         self._fetch = fetch
+        self._issuers = frozenset(issuer_origin(i) for i in issuers)
         self._clock = clock
         self._lock = threading.Lock()
+        # Keyed by issuer, and only issuers in `_issuers` are ever fetched,
+        # so the cache is as large as the deployment's list and no larger.
         self._keys: dict[str, tuple[float, float, list]] = {}
+        self._failed: dict[str, tuple[float, str]] = {}
 
     def _issuer_keys(self, iss: str, kid: str | None) -> list:
         now = self._clock()
         with self._lock:
             cached = self._keys.get(iss)
+            failed = self._failed.get(iss)
         if cached:
             fetched, expires, keys = cached
             known = kid is None or any(k.get("kid") == kid for k in keys)
             if (known and now < expires) or now - fetched < REFETCH_FLOOR_S:
                 return keys
+        # The once-a-minute bound holds for an issuer that failed, too: one
+        # that cannot be read is not asked again until the minute is up,
+        # however many tokens name it.
+        if failed and now - failed[0] < REFETCH_FLOOR_S:
+            raise Refused(failed[1])
+        try:
+            keys = self._read_keys(iss)
+        except Refused as exc:
+            with self._lock:
+                self._failed[iss] = (now, str(exc))
+            raise
+        with self._lock:
+            self._keys[iss] = (now, now + CACHE_TTL_S, keys)
+            self._failed.pop(iss, None)
+        return keys
+
+    def _read_keys(self, iss: str) -> list:
         try:
             meta = self._fetch(f"{iss}/.well-known/{AGENT_DWK}")
         except Exception as exc:
@@ -125,13 +152,10 @@ class AgentTokens:
         if named is not None and str(named).rstrip("/") != iss:
             raise Refused(f"the issuer's {AGENT_DWK} names {named!r}, not {iss!r}")
         try:
-            keys = [k for k in self._fetch(meta["jwks_uri"])["keys"]
+            return [k for k in self._fetch(meta["jwks_uri"])["keys"]
                     if isinstance(k, dict)]
         except Exception as exc:
             raise Refused(f"the issuer's keys could not be read: {exc}")
-        with self._lock:
-            self._keys[iss] = (now, now + CACHE_TTL_S, keys)
-        return keys
 
     def verify(self, token: str) -> dict:
         try:
@@ -146,6 +170,9 @@ class AgentTokens:
             raise Refused(f"alg must be {ED25519!r} or 'EdDSA', not {alg!r}")
         kid = header.get("kid")
         iss = issuer_origin(unverified.get("iss"))
+        if iss not in self._issuers:
+            raise Refused(f"{iss} is not an agent-token issuer this server "
+                          "has been told to believe")
         if "dwk" in unverified and unverified["dwk"] != AGENT_DWK:
             raise Refused(f"dwk must be {AGENT_DWK!r}, not {unverified['dwk']!r}")
 

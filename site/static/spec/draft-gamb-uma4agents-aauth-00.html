@@ -1451,7 +1451,8 @@ publishes, and <span class="bcp14">MUST</span> refuse it unless:<a href="#sectio
 <code>EdDSA</code>;<a href="#section-2.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.1-2.2">
-            <p id="section-2.1-2.2.1"><code>iss</code> is an <code>https</code> origin, and <code>dwk</code>, where present, is <code>aauth-agent.json</code>;<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-2.1-2.2.1"><code>iss</code> is an <code>https</code> origin the deployment has configured it to believe, and
+<code>dwk</code>, where present, is <code>aauth-agent.json</code>;<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.1-2.3">
             <p id="section-2.1-2.3.1">the document at <code>{iss}/.well-known/aauth-agent.json</code> carries an <code>issuer</code>
@@ -1473,9 +1474,12 @@ header's <code>alg</code> or no algorithm, and verifies the token;<a href="#sect
 <p id="section-2.1-3">A token whose <code>alg</code> is <code>Ed25519</code> <span class="bcp14">MUST</span> also carry <code>dwk</code>, <code>jti</code> and <code>iat</code>, and
 both the issuer's key and <code>cnf.jwk</code> <span class="bcp14">MUST</span> name <code>Ed25519</code>, as
 <span>[<a href="#I-D.hardt-oauth-aauth-protocol" class="cite xref">I-D.hardt-oauth-aauth-protocol</a>]</span> requires.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
-<p id="section-2.1-4">The authorization server <span class="bcp14">MUST NOT</span> fetch an issuer's key set more often than
-once a minute. A token naming a <code>kid</code> the set it holds does not contain is the
-occasion to fetch it again, within that bound; it is how a rotation is noticed.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.1-4">The authorization server <span class="bcp14">MUST NOT</span> fetch anything from an issuer it has not
+been configured to believe. It <span class="bcp14">MUST NOT</span> fetch an issuer's key set more often
+than once a minute, and an attempt that failed counts toward that bound as one
+that succeeded does. A token naming a <code>kid</code> the set it holds does not contain
+is the occasion to fetch it again, within that bound; it is how a rotation is
+noticed.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 <p id="section-2.1-5">The key in <code>cnf.jwk</code> is the key that signed the agreement, and the key the
 grant is confirmed to. The authorization server <span class="bcp14">MUST</span> verify the agreement's
 signature with the algorithm that key names, or <code>EdDSA</code> where it names none,
@@ -1489,9 +1493,11 @@ and <span class="bcp14">MUST NOT</span> take the algorithm from the agreement's 
         </h3>
 <p id="section-2.2-1">The connection handle is formed from <code>sub</code> and <code>iss</code> as <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 5.1
 specifies, and <span class="bcp14">MUST NOT</span> be derived from the key. An <code>aauth:local@domain</code>
-identifier already ends in <code>@</code> and the issuer's host, so the handle is <code>sub</code>
-itself. The agent provider binds a fresh key each session; the subject is what
-persists.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+subject from an issuer whose identifier is <code>https://domain</code> already ends in
+the suffix that rule appends, so its handle is the subject itself; from an
+issuer whose identifier carries a port or a path it does not, and the suffix
+is appended. The agent provider binds a fresh key each session; the subject is
+what persists.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sub-agents">
@@ -1521,10 +1527,12 @@ from <code>parent_agent</code> and <code>iss</code> as <a href="#handle" class="
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-issuers-are-trusted-by-dere" class="section-name selfRef">Issuers Are Trusted by Dereference</a>
         </h3>
 <p id="section-3.1-1"><a href="#verification" class="auto internal xref">Section 2.1</a> resolves an issuer over TLS and believes the keys it
-publishes. <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 5.1 requires a deployment to say which issuers
-it will believe, and this document does not relieve it of that. The issuer
-comparison is what stops a document served at one host from speaking for the
-keys of another.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+publishes, and only for an issuer the deployment named. An agent token is a
+provider vouching for an agent; a provider anyone may stand up vouches for
+nothing, and an authorization server that fetched from whatever issuer a
+token named would also be one any requester could make fetch a URL of its
+choosing. The issuer comparison is what stops a document served at one host
+from speaking for the keys of another.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="algorithms-come-from-the-key">

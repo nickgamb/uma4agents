@@ -83,7 +83,7 @@ def older(**over) -> str:
 
 def refused(token: str, tokens: uma4a_aauth.AgentTokens | None = None) -> str:
     try:
-        (tokens or uma4a_aauth.AgentTokens(fetch)).verify(token)
+        (tokens or uma4a_aauth.AgentTokens(fetch, [ISS])).verify(token)
     except uma4a_aauth.Refused as exc:
         return str(exc)
     return ""
@@ -92,7 +92,7 @@ def refused(token: str, tokens: uma4a_aauth.AgentTokens | None = None) -> str:
 publish()
 
 print("\n== the current shape (draft-hardt-oauth-aauth-protocol-10) ==")
-claims = uma4a_aauth.AgentTokens(fetch).verify(mint())
+claims = uma4a_aauth.AgentTokens(fetch, [ISS]).verify(mint())
 check("is accepted, and says who the agent is",
       claims["sub"] == "aauth:planner@ap.example", str(claims))
 check("and binds the key the agent signs with",
@@ -182,7 +182,7 @@ check("a cnf.jwk that is not an Ed25519 key is refused",
 publish()
 
 print("\n== a sub-agent ==")
-child = uma4a_aauth.AgentTokens(fetch).verify(
+child = uma4a_aauth.AgentTokens(fetch, [ISS]).verify(
     mint(sub="aauth:planner+search1@ap.example", parent_agent="aauth:planner@ap.example"))
 check("parent_agent names the agent that spawned it, and is carried through",
       child.get("parent_agent") == "aauth:planner@ap.example")
@@ -194,7 +194,7 @@ check("an agent cannot name itself its parent",
 print("\n== how often the issuer is asked ==")
 clock = [1000.0]
 FETCHES.clear()
-tokens = uma4a_aauth.AgentTokens(fetch, clock=lambda: clock[0])
+tokens = uma4a_aauth.AgentTokens(fetch, [ISS], clock=lambda: clock[0])
 tokens.verify(mint())
 tokens.verify(mint())
 check("its keys are fetched once and then cached", len(FETCHES) == 2, str(FETCHES))
@@ -204,6 +204,32 @@ clock[0] += uma4a_aauth.REFETCH_FLOOR_S
 DOCS[f"{ISS}/jwks.json"]["keys"].append(jwk(AP, kid="ap-2"))
 check("and after a minute it does, which is how a rotation is noticed",
       refused(mint(kid="ap-2"), tokens) == "" and len(FETCHES) == 4)
+
+print("\n== which issuers are believed ==")
+FETCHES.clear()
+check("an issuer the deployment did not name is refused, and never fetched",
+      "not an agent-token issuer this server" in refused(
+          mint(), uma4a_aauth.AgentTokens(fetch, ["https://other.example"]))
+      and FETCHES == [], str(FETCHES))
+check("and with no issuers named, none is believed",
+      "not an agent-token issuer" in refused(mint(), uma4a_aauth.AgentTokens(fetch)))
+
+print("\n== an issuer that cannot be read ==")
+clock = [5000.0]
+FETCHES.clear()
+saved = dict(DOCS)
+DOCS.clear()
+tokens = uma4a_aauth.AgentTokens(fetch, [ISS], clock=lambda: clock[0])
+first = refused(mint(), tokens)
+refused(mint(), tokens)
+refused(mint(), tokens)
+check("is asked once, however many tokens name it inside a minute",
+      "could not be read" in first and len(FETCHES) == 1, str(FETCHES))
+check("and each refusal says why", "could not be read" in refused(mint(), tokens))
+DOCS.update(saved)
+clock[0] += uma4a_aauth.REFETCH_FLOOR_S
+check("and once the minute is up it is asked again, and believed",
+      refused(mint(), tokens) == "" and len(FETCHES) == 3, str(FETCHES))
 
 print(f"\n{PASSED} passed, {FAILED} failed")
 sys.exit(1 if FAILED else 0)

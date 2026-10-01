@@ -6,7 +6,7 @@ FROM python:3.12-slim
 # small wheel and is never imported unless the Postgres store is chosen.
 RUN pip install --no-cache-dir fastapi uvicorn 'pyjwt[crypto]' python-multipart sse-starlette httpx asyncpg
 WORKDIR /app
-COPY lib/uma4a_http_sig.py .
+COPY lib/uma4a_http_sig.py lib/uma4a_fetch.py ./
 COPY lib/uma4a_org.py .
 COPY lib/uma4a_joint.py .
 COPY lib/uma4a_profiles.py .

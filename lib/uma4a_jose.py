@@ -60,18 +60,6 @@ def alg_of(jwk: dict) -> str:
     return alg
 
 
-def ed25519_key(jwk: dict):
-    """The public key of a JWK that says exactly `Ed25519`, as AAuth requires
-    of every key it conveys. Refuses one that names no algorithm, names
-    `EdDSA`, or whose key type disagrees with it."""
-    if jwk.get("alg") != ED25519:
-        raise ValueError(f"the key must name alg {ED25519!r}, not {jwk.get('alg')!r}")
-    alg_of(jwk)
-    if "d" in jwk:
-        raise ValueError("a published key must not carry its private part")
-    return OKPAlgorithm.from_jwk(json.dumps(jwk))
-
-
 def ed25519_jwk(key) -> dict:
     """The public JWK of an Ed25519 key, naming its algorithm."""
     public = key.public_key() if isinstance(key, Ed25519PrivateKey) else key

@@ -1820,8 +1820,16 @@ does not name her.<a href="#section-2.8-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-2.9-1">A member's authorization server <span class="bcp14">MUST NOT</span> enrol her with an organization without
 her explicit agreement to a specific charter version, and <span class="bcp14">MUST</span> show her, before
-she agrees, what enrolling would change about terms she has already written.<a href="#section-2.9-1" class="pilcrow">¶</a></p>
-<p id="section-2.9-2">The organization issues a membership credential to her authorization server at
+she agrees, what enrolling would change about terms she has already written.
+The enrolment request <span class="bcp14">MUST</span> name that version, and the organization <span class="bcp14">MUST</span> refuse
+one that names none or names a version no longer in force.<a href="#section-2.9-1" class="pilcrow">¶</a></p>
+<p id="section-2.9-2">How a joiner is entitled to enrol is the organization's to decide, and the
+mechanisms differ in what they establish. An invitation addressed to one person,
+or the organization's own identity provider vouching for her, establishes who is
+joining. A code shared with a group establishes only that the joiner holds it:
+whoever does may enrol under any name not already enrolled. An organization
+offering one <span class="bcp14">SHOULD</span> offer it only for onboarding a group it trusts, and <span class="bcp14">SHOULD NOT</span> make it the only mechanism.<a href="#section-2.9-2" class="pilcrow">¶</a></p>
+<p id="section-2.9-3">The organization issues a membership credential to her authorization server at
 enrolment — a JWT with <code>typ</code> of <code>u4a-membership+jwt</code>, signed by the
 organization, naming the member as <code>sub</code> and the organization as <code>org</code> —
 and that server presents it as a bearer credential on every call to the
@@ -1831,19 +1839,19 @@ or when the charter changes. A notice is a JWT with <code>typ</code> of
 <code>u4a-org-notice+jwt</code>, signed by the organization and verified by the member's
 server against the keys it publishes, whose <code>kind</code> is one of
 <code>membership_ended</code>, <code>role_changed</code>, <code>charter_changed</code>, <code>break_glass_opened</code>,
-<code>break_glass</code> or <code>break_glass_used</code>.<a href="#section-2.9-2" class="pilcrow">¶</a></p>
-<p id="section-2.9-3">Each notice <span class="bcp14">MUST</span> carry its own unique <code>jti</code>, and a member's authorization server
+<code>break_glass</code> or <code>break_glass_used</code>.<a href="#section-2.9-3" class="pilcrow">¶</a></p>
+<p id="section-2.9-4">Each notice <span class="bcp14">MUST</span> carry its own unique <code>jti</code>, and a member's authorization server
 <span class="bcp14">MUST</span> act on a given <code>jti</code> once. An identifier shared by several notices — the
 break-glass family of <a href="#break-glass" class="auto internal xref">Section 2.10</a> is three notices about one override — <span class="bcp14">MUST</span>
 travel in a member of its own rather than in <code>jti</code>. Where the two are conflated,
 the second notice about one override is indistinguishable from a replay of the
 first, and the stage an owner most needs to be told about is the one that is
-silently dropped.<a href="#section-2.9-3" class="pilcrow">¶</a></p>
-<p id="section-2.9-4">Leaving <span class="bcp14">MUST</span> withdraw the member's access to claimed resources and the ceiling
+silently dropped.<a href="#section-2.9-4" class="pilcrow">¶</a></p>
+<p id="section-2.9-5">Leaving <span class="bcp14">MUST</span> withdraw the member's access to claimed resources and the ceiling
 over her, and <span class="bcp14">MUST</span> leave every narrowing the ceiling applied in place. Her terms
 were narrowed with her agreement and republished under a new version; undoing
 that would silently widen what agents holding agreements over those versions are
-held to.<a href="#section-2.9-4" class="pilcrow">¶</a></p>
+held to.<a href="#section-2.9-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="break-glass">
@@ -1853,20 +1861,27 @@ held to.<a href="#section-2.9-4" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-2.10-1">Where the charter enables it, the organization <span class="bcp14">MAY</span> reach a claimed resource
 without the member's authorization server, by issuing a grant it signs itself.
-Such a grant <span class="bcp14">MUST</span> be single-use, bound to a key, short-lived, and over a
-resource the charter both claims and names for this purpose. The enforcement
-point <span class="bcp14">MUST</span> recognise it by issuer and <span class="bcp14">MUST</span> introspect it with the organization
-rather than with the member's authorization server.<a href="#section-2.10-1" class="pilcrow">¶</a></p>
+Such a grant <span class="bcp14">MUST</span> be single-use, bound to a key, short-lived, bound to one
+operation, and over a resource the charter both claims and names for this
+purpose. The organization <span class="bcp14">MUST</span> compute the operation's <code>params_s256</code> itself, as
+<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> defines it, over the tool and parameters the request names, and
+<span class="bcp14">MUST</span> refuse a request that names none. The enforcement point <span class="bcp14">MUST</span> recognise it
+by issuer and <span class="bcp14">MUST</span> introspect it with the organization rather than with the
+member's authorization server. It <span class="bcp14">MUST</span> honour it only at a resource the
+organization owns, and only for the member the introspection response names
+in <code>owner</code>; an enforcement point that also checks the organization's ceiling
+over an owner's own resources <span class="bcp14">MUST NOT</span> take that as licence to honour the
+organization's own grants there.<a href="#section-2.10-1" class="pilcrow">¶</a></p>
 <p id="section-2.10-2">The grant is a JWT access token <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> with <code>typ</code> of <code>at+jwt</code>, signed with
 a key at the organization's <code>jwks_uri</code>. It carries <code>iss</code> (the organization's
 issuer identifier), <code>sub</code> and <code>client_id</code> (the thumbprint handle of the key in
 <code>cnf</code>), <code>owner</code>, <code>aud</code>, <code>jti</code>, <code>iat</code>, <code>exp</code>, <code>cnf</code>, <code>permissions</code>, <code>single_use</code>
-of <code>true</code>, <code>operation</code> where one was named, and <code>break_glass</code>: an object
+of <code>true</code>, <code>operation</code>, and <code>break_glass</code>: an object
 naming the <code>org</code>, the stated <code>reason</code>, what <code>authorised_by</code> it — a voucher an
 administrator opened, or an operator the charter lists — and the
 <code>charter_version</code> it was issued under. The enforcement point introspects it at
 the organization's <code>introspection_endpoint</code>, whose answers are those of
-<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5.<a href="#section-2.10-2" class="pilcrow">¶</a></p>
+<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5 with the grant's <code>owner</code> added.<a href="#section-2.10-2" class="pilcrow">¶</a></p>
 <p id="section-2.10-3">The member <span class="bcp14">MUST</span> be notified at the moment the window opens, before any data
 moves. Break-glass cannot be a flag on an ordinary grant: it has to be a grant
 the organization signs, checked with the organization, bounded by a clause the
@@ -2004,7 +2019,9 @@ of <code>u4a-verdict+jwt</code>, carrying:<a href="#section-3.4-1" class="pilcro
           <dd class="break"></dd>
 <dt id="section-3.4-2.13">exp:</dt>
           <dd style="margin-left: 1.5em" id="section-3.4-2.14">
-            <p id="section-3.4-2.14.1"><span class="bcp14">REQUIRED</span>. Short.<a href="#section-3.4-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-3.4-2.14.1"><span class="bcp14">REQUIRED</span>. No earlier than the agreement the verdict is about would end, so
+that a grant within that lifetime can carry it, and no later than the
+longest lifetime the holder's authorization server gives a grant.<a href="#section-3.4-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.4-2.15">cnf_jkt:</dt>
@@ -2216,8 +2233,10 @@ copy embedded in the grant, and refuse unless it covers the resource being
 accessed;<a href="#section-3.9-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.9-2.2">
-            <p id="section-3.9-2.2.1">verify each verdict against the keys published by the issuer the <em>published</em>
-mandate names for that holder;<a href="#section-3.9-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.9-2.2.1">verify each verdict, including its <code>exp</code>, against the keys published by the
+authorization server the enforcement point is itself configured to know
+speaks for that holder, and refuse where the published mandate names a
+holder it knows no authorization server for, or names a different one;<a href="#section-3.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.9-2.3">
             <p id="section-3.9-2.3.1">establish that each verdict names this negotiation and this agreement;<a href="#section-3.9-2.3.1" class="pilcrow">¶</a></p>
@@ -2236,7 +2255,13 @@ operation;<a href="#section-3.9-2.4.1" class="pilcrow">¶</a></p>
 <p id="section-3.9-3">The <code>tally</code> member of the grant is for display and <span class="bcp14">MUST NOT</span> be trusted.<a href="#section-3.9-3" class="pilcrow">¶</a></p>
 <p id="section-3.9-4">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span> refuse a grant that
 carries no <code>joint</code> claim.<a href="#section-3.9-4" class="pilcrow">¶</a></p>
-<p id="section-3.9-5">Reading the mandate from the grant would let the party being checked supply the
+<p id="section-3.9-5">The holders' authorization servers come from the enforcement point's own
+configuration for the same reason the mandate does not come from the grant: the
+mandate is published by the tally, and a tally that could name the issuer each
+verdict is checked against could name issuers it controls, sign verdicts for
+holders it invented, and have every signature verify. The tally <span class="bcp14">MUST NOT</span> issue a
+grant that outlives any <code>allow</code> verdict it carries.<a href="#section-3.9-5" class="pilcrow">¶</a></p>
+<p id="section-3.9-6">Reading the mandate from the grant would let the party being checked supply the
 standard it is checked against: a single genuine verdict beside a rewritten
 threshold would pass with every signature verifying. Reading it from where the
 tally publishes it is safe only because every verdict names the digest of the
@@ -2246,7 +2271,7 @@ bounded by the folded terms, so that an honest grant is always one step 4 can
 re-derive. Carrying the verdicts in
 the grant and re-verifying them at the resource is what makes the tally an
 ordinary service rather than a ledger — there is no ordered history here to
-agree on and no long-lived state a fork could damage.<a href="#section-3.9-5" class="pilcrow">¶</a></p>
+agree on and no long-lived state a fork could damage.<a href="#section-3.9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="no-org-joint">

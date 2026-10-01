@@ -175,6 +175,14 @@ refuse contains msg if {
 # not be an error: an organization that writes no Rego gets the conditions
 # above and nothing else.
 
+# Whether the admin's module is in the engine at all, which the conditions
+# above cannot tell from a module that defines nothing for this request. The
+# authority compares it with the charter in force: a charter with rules and an
+# engine without them is an engine that lost them, not an admin who wrote none.
+default custom_loaded := false
+
+custom_loaded if data.u4a.custom
+
 custom_deny := d if d := data.u4a.custom.deny
 
 custom_ask := a if a := data.u4a.custom.ask

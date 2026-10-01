@@ -128,6 +128,12 @@ PASS: list[str] = []
 FAIL: list[str] = []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def check(name: str, ok: bool, detail: str = "") -> None:
     (PASS if ok else FAIL).append(name)
     print(f"   {'ok  ' if ok else 'FAIL'} {name}"
@@ -256,22 +262,22 @@ def _main() -> int:                                            # noqa: C901
     print("\n2. an employee enrols because the provider says she is one")
     leave_org(c, alice)
     r = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
-               json={"assertion": employee_id_token(c, "alice"), "agreed": True})
+               json={"assertion": employee_id_token(c, "alice"), "agreed": True, "charter_version": charter_v(c)})
     check("no enrolment code — her employer's directory is the entitlement",
           r.status_code == 200, f"{r.status_code} {r.text[:160]}")
     r2 = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
-                json={"assertion": employee_id_token(c, "carol"), "agreed": True})
+                json={"assertion": employee_id_token(c, "carol"), "agreed": True, "charter_version": charter_v(c)})
     check("and one employee's token does not enrol another",
           r2.status_code >= 400, f"accepted {r2.status_code}")
     leave_org(c, alice)
     r3 = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
                 json={"assertion": meridian_token(c, "alice", "alice", "alice-demo",
                                                  "meridian-portal"),
-                      "agreed": True})
+                      "agreed": True, "charter_version": charter_v(c)})
     check("and Meridian's word about who Northwind employs is worth nothing",
           r3.status_code >= 400, f"accepted {r3.status_code}")
     c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
-           json={"assertion": employee_id_token(c, "alice"), "agreed": True})
+           json={"assertion": employee_id_token(c, "alice"), "agreed": True, "charter_version": charter_v(c)})
     # She is a member again. The gateway does not know it yet: the run above
     # left and rejoined several times, and the answer it cached during the
     # first of those stands for its window. Waited out here rather than at
@@ -442,7 +448,7 @@ def _main() -> int:                                            # noqa: C901
 
     print("\n8c. she joins, and the same agent then works")
     r = c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
-               json={"assertion": employee_id_token(c, "alice"), "agreed": True})
+               json={"assertion": employee_id_token(c, "alice"), "agreed": True, "charter_version": charter_v(c)})
     check("signing in at her employer is the whole of the enrolment",
           r.status_code == 200, f"{r.status_code} {r.text[:140]}")
     # And the gateway has to hear about it. The section above asked for the

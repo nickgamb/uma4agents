@@ -665,6 +665,13 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
     if (agreed := int(rec["contract"].get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
     exp = int(now()) + min(3600, lifetime)
+    # And no later than the first of the verdicts it carries: a grant that
+    # outlived one would be refused at the door from that moment on.
+    for o, jws in (rec.get("signed") or {}).items():
+        if rec["verdicts"].get(o) == "allow":
+            ends = jwt.decode(jws, options={"verify_signature": False}).get("exp")
+            if isinstance(ends, (int, float)):
+                exp = min(exp, int(ends))
     offered = list(rec["template"]["scope"] or [])
     scopes = [s for s in (rec["contract"].get("scope") or offered) if s in offered]
     handle = J.key_thumbprint(rec["signer"])

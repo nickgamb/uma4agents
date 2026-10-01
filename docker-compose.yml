@@ -147,6 +147,9 @@ services:
       # Trust bundle for verifying issuers' TLS (AAuth dwk discovery and the
       # realm's JWKS both ride https; the lab CA signs *.uma.lab).
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
+      # The agent providers whose tokens she believes. One: the person server
+      # her identified agents enrol with. Any other issuer is never fetched.
+      UMA_AS_AGENT_ISSUERS: https://ps.uma.lab
       # Where an enrolment code is redeemed, if the owner chooses to join an
       # organization. Naming one here is not enrolment and grants nothing:
       # until she enters a code, every line of the organization layer is
@@ -198,6 +201,7 @@ services:
       UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
       UMA_AS_PEND_BUDGET_ATTRIBUTED: ${UMA_AS_PEND_BUDGET_ATTRIBUTED:-40}
       UMA4A_CA_BUNDLE: /certs/rootCA.pem
+      UMA_AS_AGENT_ISSUERS: https://ps.uma.lab
       # The same organization Alice's authority can enrol with, and the same
       # two variables. Membership is per owner and self-initiated: Carol
       # joins or does not, independently of Alice, from her own portal, and
@@ -331,6 +335,9 @@ services:
          "carol": {"public": "https://carol-as.uma.lab",
                    "internal": "http://carol-as:9000"}}
       UMA_EXPECTED_AUTHORITY: gateway.uma.lab
+      # The gateway's key, named: this process only reads it, and its own
+      # default names a file nothing here creates.
+      UMA_PEP_SIGNING_KEY: /keys/uma-pep-ed25519.pem
     volumes:
       # The origin's signing key, shared with the gateway process. It
       # identifies gateway.uma.lab, not a container: both enforcement modes

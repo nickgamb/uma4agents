@@ -125,8 +125,3 @@ def single_use(consequence) -> bool:
     disagree with itself.
     """
     return normalise(consequence) == "irreversible"
-
-
-def surface_of(consequence: dict[str, str] | None, tool: str) -> str | None:
-    """The class declared for one tool, normalised."""
-    return normalise((consequence or {}).get(tool))

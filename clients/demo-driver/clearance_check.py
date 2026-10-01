@@ -120,6 +120,12 @@ ATTESTED = {"licence_active": True, "jurisdiction": "US-NY", "desk": "equities"}
 PASS, FAIL = [], []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def say(msg: str) -> None:
     print(f"   {msg}", flush=True)
 
@@ -297,7 +303,7 @@ def main() -> int:                                             # noqa: C901
 
         print("\n== 2 · her terms carry it, and she cannot edit it out ==")
         r = c.post(f"{AS_PUBLIC}/owner/organization",
-                   json={"code": JOIN_CODE, "agreed": True},
+                   json={"code": JOIN_CODE, "agreed": True, "charter_version": charter_v(c)},
                    headers=hdrs(c), timeout=20.0)
         check("she joins", r.status_code == 200, f"HTTP {r.status_code} {r.text[:160]}")
         # A trader, because the analyst role this charter hands out on

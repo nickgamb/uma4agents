@@ -105,6 +105,12 @@ OWNERS = {
 PASS, FAIL = [], []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def check(name: str, ok: bool, detail: str = "") -> None:
     (PASS if ok else FAIL).append(name)
     print(f"   {'ok  ' if ok else 'FAIL'} {name}"
@@ -582,7 +588,7 @@ def _main() -> int:                                           # noqa: C901
               f"{r.status_code} {r.text[:140]}")
         alice = OWNERS["alice"]["as"]
         c.post(f"{alice}/owner/organization",
-               json={"code": ORG_CODE, "agreed": True},
+               json={"code": ORG_CODE, "agreed": True, "charter_version": charter_v(c)},
                headers=hdrs(c, "alice"), timeout=20.0)
         time.sleep(1.0)
 

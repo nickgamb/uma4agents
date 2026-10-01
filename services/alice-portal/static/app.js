@@ -38,6 +38,26 @@ function toast(title, detail, kind = "") {
   setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 300); }, 5200);
 }
 
+/* Controls that carry a value somebody else chose — an agent's handle, an
+   operator's origin, a negotiation the tally named, an account — are bound by
+   data attribute and dispatched here. Escaping cannot make a string safe
+   inside an inline handler, because the browser decodes the attribute before
+   it compiles the handler; a value read from `dataset` is never compiled. */
+const ACTIONS = {
+  decide: (d) => decide(d.family, d.decision),
+  trajectory: (d) => trajectory(d.handle),
+  revoke: (d) => revoke(d.handle),
+  operator: (d) => operatorAction(d.op, d.origin),
+  leaveMandate: (d) => leaveMandate(d.account),
+  joinMandate: (d) => joinMandate(d.tally, d.account),
+};
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-act]");
+  if (!t || !ACTIONS[t.dataset.act] || t.disabled) return;
+  e.preventDefault();
+  ACTIONS[t.dataset.act](t.dataset);
+});
+
 function toggleMenu(e) { e.stopPropagation(); $("#usermenu").classList.toggle("open"); }
 document.addEventListener("click", () => $("#usermenu")?.classList.remove("open"));
 
@@ -78,7 +98,7 @@ route("dashboard", async (view) => {
   view.innerHTML = `
     <div class="grid cols-4" style="margin-bottom:18px">
       <div class="card"><h3>Portfolio value</h3><div class="big num">${fmt(p.total_value)}</div>
-        <div class="sub">as of ${p.as_of}</div></div>
+        <div class="sub">as of ${esc(p.as_of)}</div></div>
       <div class="card"><h3>Today</h3><div class="big num ${cls(dayChange)}">${arrow(dayChange)} ${fmt(Math.abs(dayChange))}</div>
         <div class="sub"><span class="${cls(dayChange)}">${pct(0.42)}</span> intraday</div></div>
       <div class="card"><h3>Total gain / loss</h3><div class="big num ${cls(p.total_gain)}">${fmt(p.total_gain)}</div>
@@ -113,7 +133,7 @@ function allocationDonut(positions) {
   }).join("");
   const legend = positions.map((p, i) =>
     `<div class="row"><span class="sw" style="background:${ALLOC_COLORS[i % ALLOC_COLORS.length]}"></span>
-     <span>${p.symbol}</span><span class="pct num">${p.weight.toFixed(1)}%</span></div>`).join("");
+     <span>${esc(p.symbol)}</span><span class="pct num">${p.weight.toFixed(1)}%</span></div>`).join("");
   const svg = `<svg width="160" height="160" viewBox="0 0 160 160" class="spark">${segs}
     <text x="80" y="76" text-anchor="middle" fill="var(--text-dim)" font-size="11">Positions</text>
     <text x="80" y="94" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700">${positions.length}</text></svg>`;
@@ -143,7 +163,7 @@ function holdingsTable(positions, detailed) {
   const rows = positions.map(p => `
     <tr>
       <td><div class="tick"><div class="badge2">${p.symbol.slice(0, 4)}</div>
-        <div><div class="nm">${p.symbol}</div><div class="full">${p.name}</div></div></div></td>
+        <div><div class="nm">${esc(p.symbol)}</div><div class="full">${esc(p.name)}</div></div></div></td>
       ${detailed ? `<td class="r num">${p.quantity.toLocaleString()}</td><td class="r num">${fmt(p.price)}</td>` : ""}
       <td class="r num">${fmt(p.market_value)}</td>
       ${detailed ? `<td class="r num">${fmt(p.cost_basis)}</td>` : ""}
@@ -170,7 +190,7 @@ route("holdings", async (view) => {
       <div class="card"><h3>Positions</h3><div class="big num">${p.positions.length}</div></div>
     </div>
     <div class="card pad-lg"><div class="section-head"><h2>All positions</h2>
-      <span class="muted">as of ${p.as_of}</span></div>
+      <span class="muted">as of ${esc(p.as_of)}</span></div>
       ${holdingsTable(p.positions, true)}</div>`;
 });
 
@@ -196,7 +216,7 @@ route("trade", async (view) => {
         <div class="seg" style="margin-bottom:4px">
           <button data-side="buy" class="buy">Buy</button><button data-side="sell" class="sell">Sell</button></div>
         <label class="fld"><div class="lbl">Instrument</div>
-          <select id="symSel">${syms.map(s => `<option value="${s.symbol}">${s.symbol} · ${s.name}</option>`).join("")}</select></label>
+          <select id="symSel">${syms.map(s => `<option value="${esc(s.symbol)}">${esc(s.symbol)} · ${esc(s.name)}</option>`).join("")}</select></label>
         <label class="fld"><div class="lbl">Quantity (shares)</div>
           <input type="number" id="qtyInput" value="${tradeState.qty}" min="1"></label>
         <label class="fld"><div class="lbl">Order type</div>
@@ -230,14 +250,14 @@ route("trade", async (view) => {
   $("#reviewBtn").onclick = async () => {
     const r = $("#tradeResult");
     r.innerHTML = `<div class="card" style="background:var(--surface-2)">
-      <div class="kv"><span class="k">Action</span><b>${tradeState.side.toUpperCase()} ${tradeState.qty} ${tradeState.symbol}</b></div>
+      <div class="kv"><span class="k">Action</span><b>${esc(tradeState.side.toUpperCase())} ${esc(tradeState.qty)} ${esc(tradeState.symbol)}</b></div>
       <div class="kv"><span class="k">Est. value</span><span class="num">${fmt(price(tradeState.symbol) * tradeState.qty)}</span></div>
       <button class="btn primary sm" id="confirmTrade" style="margin-top:10px">Confirm order</button></div>`;
     $("#confirmTrade").onclick = async () => {
       const res = await api("/api/trade", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ symbol: tradeState.symbol, side: tradeState.side, quantity: tradeState.qty }) });
-      r.innerHTML = `<div class="card" style="border-color:var(--pos)"><b class="pos">✓ Order ${res.status}</b>
-        <div class="sub">${tradeState.side.toUpperCase()} ${tradeState.qty} ${tradeState.symbol} · ${res.note}</div></div>`;
+      r.innerHTML = `<div class="card" style="border-color:var(--pos)"><b class="pos">✓ Order ${esc(res.status)}</b>
+        <div class="sub">${esc(tradeState.side.toUpperCase())} ${esc(tradeState.qty)} ${esc(tradeState.symbol)} · ${esc(res.note)}</div></div>`;
       toast("Order executed", `${tradeState.side.toUpperCase()} ${tradeState.qty} ${tradeState.symbol}`);
     };
   };
@@ -378,13 +398,13 @@ async function renderApprovals(target) {
         enforcement point. The rest are undertakings — they happen where you cannot see.</div>
         </span></div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn pos sm" onclick="decide('${p.family}','approved')">${isConn ? "Connect this agent" : "Approve this operation"}</button>
-        <button class="btn danger sm" onclick="decide('${p.family}','denied')">Deny</button></div>
+        <button class="btn pos sm" data-act="decide" data-family="${esc(p.family)}" data-decision="approved">${isConn ? "Connect this agent" : "Approve this operation"}</button>
+        <button class="btn danger sm" data-act="decide" data-family="${esc(p.family)}" data-decision="denied">Deny</button></div>
     </div>`;
   }).join("");
 }
 window.decide = async (family, decision) => {
-  await api(`/api/agent/pending/${family}/decision`, { method: "POST",
+  await api(`/api/agent/pending/${encodeURIComponent(family)}/decision`, { method: "POST",
     headers: { "content-type": "application/json" }, body: JSON.stringify({ decision }) });
   toast(decision === "approved" ? "Approved" : "Denied", `Request ${family}`);
   renderApprovals($("#aaBody"));
@@ -405,17 +425,17 @@ async function renderConnections(target) {
       <td><div class="tick"><div class="badge2">🤖</div><div>
         <div class="nm">${esc(c.label)}</div>
         ${c.parent_handle ? `<div class="cell-sub">introduced by
-          <a href="#" onclick="trajectory('${esc(c.parent_handle)}');return false"
+          <a href="#" data-act="trajectory" data-handle="${esc(c.parent_handle)}"
             >${esc(c.parent_handle.slice(0, 14))}…</a></div>` : ""}
       </div></div></td>
       <td>${esc(c.identity?.level || "—")}</td>
-      <td class="thumb"><a href="#" onclick="trajectory('${esc(c.handle)}');return false"
+      <td class="thumb"><a href="#" data-act="trajectory" data-handle="${esc(c.handle)}"
         title="Everything this agent has asked for, and what you decided"
         >${esc(c.handle.length > 24 ? c.handle.slice(0, 22) + "…" : c.handle)}</a></td>
-      <td>${(c.first_seen || "").replace("T", " ").replace("Z", "")}</td>
-      <td>${c.last_access ? c.last_access.replace("T", " ").replace("Z", "") : "—"}</td>
-      <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${c.status}</span></td>
-      <td class="r">${c.status === "active" ? `<button class="btn danger sm" onclick="revoke('${esc(c.handle)}')">Revoke</button>` : ""}</td>
+      <td>${esc((c.first_seen || "").replace("T", " ").replace("Z", ""))}</td>
+      <td>${c.last_access ? esc(c.last_access.replace("T", " ").replace("Z", "")) : "—"}</td>
+      <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${esc(c.status)}</span></td>
+      <td class="r">${c.status === "active" ? `<button class="btn danger sm" data-act="revoke" data-handle="${esc(c.handle)}">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 function operatorPanel(operators) {
@@ -431,11 +451,11 @@ function operatorPanel(operators) {
     <table><thead><tr><th>Operator</th><th>Agents</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${operators.map(o => `<tr>
       <td><div class="nm">${esc(o.name)}</div><div class="muted mono" style="font-size:12px">${esc(o.origin)}</div></td>
-      <td>${o.active} active of ${o.agents}</td>
+      <td>${esc(o.active)} active of ${esc(o.agents)}</td>
       <td class="r"><span class="chip ${o.blocked ? "neg" : "pos"}">${o.blocked ? "blocked" : "accepted"}</span></td>
       <td class="r">${o.blocked
-        ? `<button class="btn ghost sm" onclick="operatorAction('unblock','${esc(o.origin)}')">Allow again</button>`
-        : `<button class="btn danger sm" onclick="operatorAction('block','${esc(o.origin)}')">Block operator</button>`}</td>
+        ? `<button class="btn ghost sm" data-act="operator" data-op="unblock" data-origin="${esc(o.origin)}">Allow again</button>`
+        : `<button class="btn danger sm" data-act="operator" data-op="block" data-origin="${esc(o.origin)}">Block operator</button>`}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -517,9 +537,9 @@ async function renderResources(target) {
       <td>${r.shared_by
         ? `<span class="chip warn">shared by ${esc(r.shared_by)}</span>`
         : `<span class="chip">yours</span>`}</td>
-      <td>${(r.resource_scopes || []).map(s => `<span class="chip">${s}</span>`).join(" ")}</td>
+      <td>${(r.resource_scopes || []).map(s => `<span class="chip">${esc(s)}</span>`).join(" ")}</td>
       <td class="nowrap">${r.tier_name
-        ? `${r.tier_name}<div class="cell-sub mono">${r.tier}</div>`
+        ? `${esc(r.tier_name)}<div class="cell-sub mono">${esc(r.tier)}</div>`
         : `<span class="chip neg">no tier — unreachable</span>`}</td>
       <td class="r">${r.tier ? (r.ask_me ? `<span class="chip warn">ask me</span>` : `<span class="chip pos">auto under terms</span>`) : "—"}</td>
     </tr>`).join("")}</tbody></table></div>`;
@@ -583,19 +603,19 @@ async function renderTerms(target) {
   target.innerHTML = Object.entries(tiers).map(([id, t]) => `
     <div class="card pad-lg" style="margin-bottom:14px">
       ${orgBand(org, id)}
-      <div class="section-head"><h2>${t.name}</h2>
-        <span class="muted mono">${t.resources.join(", ") || "no resources yet"}</span>
+      <div class="section-head"><h2>${esc(t.name)}</h2>
+        <span class="muted mono">${esc(t.resources.join(", ")) || "no resources yet"}</span>
         <button class="btn ghost sm" style="margin-left:auto"
                 onclick="deleteTier('${id}')">Delete tier</button></div>
       <div class="muted" style="font-size:12.5px">Published terms:
-        <a class="mono" href="${termsUri(t)}" target="_blank">${t.terms.template_id}</a>
+        <a class="mono" href="${esc(termsUri(t))}" target="_blank" rel="noopener">${esc(t.terms.template_id)}</a>
         — the persistent document agents agree to</div>
       <label class="fld"><div class="lbl">Purpose your terms require the agent to accept</div>
-        <input type="text" id="${id}-purpose" value="${t.terms.purpose}"></label>
+        <input type="text" id="${id}-purpose" value="${esc(t.terms.purpose)}"></label>
       <label class="fld"><div class="lbl">Access expires after (seconds)</div>
-        <input type="number" id="${id}-expires" value="${t.terms.expires_in}"></label>
+        <input type="number" id="${id}-expires" value="${esc(t.terms.expires_in)}"></label>
       <label class="fld"><div class="lbl">Prohibited actions (comma-separated)</div>
-        <input type="text" id="${id}-prohibited" value="${t.terms.prohibited.join(", ")}"></label>
+        <input type="text" id="${id}-prohibited" value="${esc(t.terms.prohibited.join(", "))}"></label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:18px">
         <div class="toggle"><input type="checkbox" id="${id}-askme" ${t.ask_me ? "checked" : ""}><span class="track"></span></div>
         <div><div style="font-weight:560">Ask me every time</div>
@@ -652,8 +672,8 @@ function newTierForm(free) {
         <input type="text" id="nt-prohibited" placeholder="e.g. retention-after-filing, model-training"></label>
       <div class="lbl" style="margin-top:14px">Which of your resources does it govern?</div>
       ${free.length ? free.map(r => `
-        <label class="rule-row"><input type="checkbox" class="nt-res" value="${r._id}">
-          <span>${r.name} <span class="muted mono">${r._id}</span></span></label>`).join("")
+        <label class="rule-row"><input type="checkbox" class="nt-res" value="${esc(r._id)}">
+          <span>${esc(r.name)} <span class="muted mono">${esc(r._id)}</span></span></label>`).join("")
         : `<div class="muted" style="font-size:12.5px">Nothing is ungoverned right now.</div>`}
       <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
         <div class="toggle"><input type="checkbox" id="nt-askme"><span class="track"></span></div>
@@ -698,8 +718,8 @@ function ruleEditor(id, t) {
   const rules = t.rules || [];
   const d = draft[id] || (draft[id] = { when: [], then: "ask" });
   const opts = (VOCAB || []).map(c =>
-    `<option value="${c.condition}" data-takes="${c.takes || ""}" data-relax="${c.may_relax}">
-       ${c.label}${c.takes === "duration" ? " …" : ""}</option>`).join("");
+    `<option value="${esc(c.condition)}" data-takes="${esc(c.takes || "")}" data-relax="${esc(c.may_relax)}">
+       ${esc(c.label)}${c.takes === "duration" ? " …" : ""}</option>`).join("");
   return `
     <div class="rules">
       <div class="lbl" style="margin-top:20px">When may an agent be treated differently?</div>
@@ -887,17 +907,17 @@ function jointCard(m) {
     <div class="section-head"><h2>${esc(m.account)}</h2>
       <span class="chip">${esc(m.rule?.kind || "")}</span>
       <button class="btn ghost sm" style="margin-left:auto"
-        onclick="leaveMandate('${esc(m.account)}')">Leave</button></div>
+        data-act="leaveMandate" data-account="${esc(m.account)}">Leave</button></div>
     <div class="lbl">Held with</div>
     <div>${(m.holders || []).map(h => `<span class="chip${h.weight > 1 ? "" : ""}">${esc(h.owner)}${
-      h.weight > 1 ? ` ×${h.weight}` : ""}</span>`).join(" ")}</div>
+      h.weight > 1 ? ` ×${esc(h.weight)}` : ""}</span>`).join(" ")}</div>
     <div class="note" style="margin-top:12px">${esc(rule || "")}</div>
     ${(m.moved || []).length ? `<div class="note warn" style="margin-top:12px">
       <b>The tally now publishes a different mandate from the one you agreed to.</b>
       Your authority is not answering for this account until you agree to it again.
       ${m.moved.map(c => `<div style="margin-top:6px">${esc(c)}</div>`).join("")}
       <button class="btn primary sm" style="margin-top:10px"
-        onclick="joinMandate('${esc(m.tally)}','${esc(m.account)}')">Agree to the new mandate</button>
+        data-act="joinMandate" data-tally="${esc(m.tally)}" data-account="${esc(m.account)}">Agree to the new mandate</button>
     </div>` : ""}
     <div class="lbl" style="margin-top:18px">Covers</div>
     <div>${(m.resources || []).map(r => `<span class="chip mono">${esc(r)}</span>`).join(" ")}</div>
@@ -932,7 +952,7 @@ window.previewMandate = async () => {
           <span style="font-size:13px">I have read who else holds this and what it takes to
             release it, and I agree to hold it with them.</span></label>
         <button class="btn primary" id="jJoin" style="margin-top:12px" disabled
-          onclick="joinMandate('${esc(tally)}','${esc(account)}')">Join</button>
+          data-act="joinMandate" data-tally="${esc(tally)}" data-account="${esc(account)}">Join</button>
       </div>`;
     $("#jAgree").onchange = e => { $("#jJoin").disabled = !e.target.checked; };
   } catch (e) {

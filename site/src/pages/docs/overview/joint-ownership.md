@@ -76,10 +76,20 @@ inside the grant. Otherwise the party being checked supplies the standard it
 is checked against — one genuine verdict beside a mandate saying one is
 enough would pass, with every signature verifying.
 
-Reading it from the tally is safe for one reason: each owner's verdict names
-the **digest of the mandate she agreed to**. A published mandate with a weight
-moved or an issuer swapped has a different digest, and no verdict was given
-under it.
+Reading it from the tally is safe for two reasons. Each owner's verdict names
+the **digest of the mandate she agreed to**, so a published mandate with a
+weight moved has a different digest, and no verdict was given under it. And
+which authority speaks for each owner is **the enforcement point's own
+configuration** — the same table it uses to send her own requests to her
+authority — not whatever the mandate says. A tally that invented an owner,
+named an authority it runs, and signed that owner's verdict itself would have
+every signature verify; it is refused because the resource server has never
+heard of that owner, or knows her by a different authority.
+
+A verdict lasts as long as the agreement it is about, within the one-hour
+ceiling on any grant, and the tally issues no grant that outlives the first
+verdict it carries. An honest grant is never refused for carrying an answer
+that lapsed before the grant did.
 
 **It cannot put genuine verdicts behind a different grant.** The enforcement
 point sees the grant and the verdicts, never the agreement, so a verdict that

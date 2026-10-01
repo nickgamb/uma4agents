@@ -150,8 +150,8 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
    *  its header carries typ of aa-agent+jwt and an alg of Ed25519 or
       EdDSA;
 
-   *  iss is an https origin, and dwk, where present, is aauth-
-      agent.json;
+   *  iss is an https origin the deployment has configured it to
+      believe, and dwk, where present, is aauth-agent.json;
 
    *  the document at {iss}/.well-known/aauth-agent.json carries an
       issuer equal to iss by exact comparison, where it carries one;
@@ -179,10 +179,12 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
    both the issuer's key and cnf.jwk MUST name Ed25519, as
    [I-D.hardt-oauth-aauth-protocol] requires.
 
-   The authorization server MUST NOT fetch an issuer's key set more
-   often than once a minute.  A token naming a kid the set it holds does
-   not contain is the occasion to fetch it again, within that bound; it
-   is how a rotation is noticed.
+   The authorization server MUST NOT fetch anything from an issuer it
+   has not been configured to believe.  It MUST NOT fetch an issuer's
+   key set more often than once a minute, and an attempt that failed
+   counts toward that bound as one that succeeded does.  A token naming
+   a kid the set it holds does not contain is the occasion to fetch it
+   again, within that bound; it is how a rotation is noticed.
 
    The key in cnf.jwk is the key that signed the agreement, and the key
    the grant is confirmed to.  The authorization server MUST verify the
@@ -194,9 +196,12 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
 
    The connection handle is formed from sub and iss as [U4ACore]
    Section 5.1 specifies, and MUST NOT be derived from the key.  An
-   aauth:local@domain identifier already ends in @ and the issuer's
-   host, so the handle is sub itself.  The agent provider binds a fresh
-   key each session; the subject is what persists.
+   aauth:local@domain subject from an issuer whose identifier is
+   https://domain already ends in the suffix that rule appends, so its
+   handle is the subject itself; from an issuer whose identifier carries
+   a port or a path it does not, and the suffix is appended.  The agent
+   provider binds a fresh key each session; the subject is what
+   persists.
 
 2.3.  Sub-Agents
 
@@ -216,11 +221,6 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
 
 
 
-
-
-
-
-
 Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft       AAuth Agent Credentials for UMA      September 2026
@@ -229,10 +229,13 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
 3.1.  Issuers Are Trusted by Dereference
 
    Section 2.1 resolves an issuer over TLS and believes the keys it
-   publishes.  [U4ACore] Section 5.1 requires a deployment to say which
-   issuers it will believe, and this document does not relieve it of
-   that.  The issuer comparison is what stops a document served at one
-   host from speaking for the keys of another.
+   publishes, and only for an issuer the deployment named.  An agent
+   token is a provider vouching for an agent; a provider anyone may
+   stand up vouches for nothing, and an authorization server that
+   fetched from whatever issuer a token named would also be one any
+   requester could make fetch a URL of its choosing.  The issuer
+   comparison is what stops a document served at one host from speaking
+   for the keys of another.
 
 3.2.  Algorithms Come From the Key
 
@@ -271,9 +274,6 @@ Internet-Draft       AAuth Agent Credentials for UMA      September 2026
    the identified level's purpose; an agent that does not wish to be
    named presents at the pseudonymous level, and this document changes
    nothing about that.
-
-
-
 
 
 

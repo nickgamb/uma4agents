@@ -476,10 +476,11 @@ than permissions are the policy suite and the store tests.
   API takes only her credential, which the resource server never holds, so the
   public path refuses it; in the Kubernetes reference the mesh also refuses the
   direct hop. `k8s-policy-test` asserts both.
-- **Agent-token issuers are trusted by dereference**, with TLS on the issuer
-  origin as the trust root and non-`https` issuers rejected. There is
-  deliberately no issuer allow-list here — which issuers may attest agents is
-  deployment policy, and a real deployment must supply one.
+- **Agent-token issuers are named, then trusted by dereference.** Which
+  issuers may attest agents is deployment policy, so the profile names none;
+  the reference supplies the list as `UMA_AS_AGENT_ISSUERS` and fetches nothing
+  from an issuer not on it. For one that is, TLS on the issuer origin is the
+  trust root and non-`https` issuers are rejected.
 - **Liveness must not depend on a mutual dereference.**
 - **Revocation is atomic and immediate.**
 - **A layer above the owner may only narrow**, and its reach — including what

@@ -353,7 +353,7 @@ her units — and, where she is not a member, whether an invitation is waiting
 on her. `POST /organization/preview` with `{"code": …}` returns what a code
 would commit her to and what it would change about terms she has already
 written, without doing it. `POST /organization` enrols her and MUST be refused
-without `"agreed": true` in the body. `POST /organization/decline` records a
+without `"agreed": true` and the `charter_version` she was shown in the body. `POST /organization/decline` records a
 refused invitation. `DELETE /organization` leaves.
 
 `POST /joint/preview` with `{"tally": …, "account": …}` returns a mandate and

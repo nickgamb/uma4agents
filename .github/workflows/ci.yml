@@ -1,6 +1,6 @@
 # What runs on every push: the half of check-all that needs nothing running
-# (the unit suites, the store suite on both backends, the draft render and
-# the requirements register) and the site on the Node the deploy pins. The
+# (`make check-unit` itself, so a suite added there is in CI by construction;
+# the draft render and the requirements register) and the site on the Node the deploy pins. The
 # live half — every check against the compose stack — is `make check-live`
 # on a machine with the stack up, and the cluster twins are Makefile.k8s.
 name: ci
@@ -13,12 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: rules, signatures, enforcer, introductions, charter, mandate
-        run: make rules-test sig-test pep-test introduction-test org-test joint-test
-      - name: the authorization server's handlers, and the agent's side
-        run: make as-test client-test
-      - name: the store, on both backends
-        run: make store-test
+      - name: every unit suite, as `make check-unit` runs them
+        run: make check-unit
 
   spec:
     runs-on: ubuntu-latest

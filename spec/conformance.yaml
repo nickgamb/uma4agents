@@ -605,6 +605,10 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["standing authority over her agents is not a button press", "and inviting her has made her a member of nothing"]
+  - text: "The enrolment request MUST name that version, and the organization MUST refuse one that names none or names a version no longer in force."
+    verified: check
+    targets: [org-check]
+    asserts: ["and agreeing is to a version — a join naming none is refused"]
   - text: "The organization MUST be able to end a membership and MUST notify the member's authorization server when it does"
     verified: check
     targets: [org-check]
@@ -613,10 +617,18 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [store-test, joint-check]
     asserts: ["test_tier_edits_bump_the_version", "her own terms survive leaving"]
-  - text: "Such a grant MUST be single-use, bound to a key, short-lived, and over a resource the charter both claims and names for this purpose."
+  - text: "Such a grant MUST be single-use, bound to a key, short-lived, bound to one operation, and over a resource the charter both claims and names for this purpose."
     verified: check
-    targets: [org-test, org-check]
-    asserts: ["break-glass over a resource the charter does not claim is refused", "including break-glass, when the charter has it"]
+    targets: [org-test, org-check, pep-test]
+    asserts: ["break-glass over a resource the charter does not claim is refused", "including break-glass, when the charter has it", "a grant calling itself single-use and naming no operation is refused"]
+  - text: "The organization MUST compute the operation's params_s256 itself, as [U4ACore] defines it, over the tool and parameters the request names, and MUST refuse a request that names none."
+    verified: check
+    targets: [org-check]
+    asserts: ["an override naming no operation is refused — it is for one act", "the override is honoured at the enforcement point"]
+  - text: "It MUST honour it only at a resource the organization owns, and only for the member the introspection response names in owner"
+    verified: check
+    targets: [pep-test]
+    asserts: ["is refused at an owner's own resource, whatever the charter names", "and refused at another member's administration of the book"]
   - text: "The enforcement point MUST recognise it by issuer and MUST introspect it with the organization rather than with the member's authorization server."
     verified: check
     targets: [org-check]
@@ -625,6 +637,10 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["the member is told before any data moves"]
+  - text: "The tally MUST NOT issue a grant that outlives any allow verdict it carries."
+    verified: check
+    targets: [tally-test]
+    asserts: ["and no longer than the first verdict it carries"]
   - text: "The tally MUST publish, for each jointly held resource, a mandate, at the URI its authorization server metadata names as u4a_mandate_endpoint"
     verified: check
     targets: [joint-check, k8s-policy-test]
@@ -1072,10 +1088,14 @@ draft-gamb-uma4agents-aauth-00:
     verified: check
     targets: [aauth-test]
     asserts: ["an Ed25519 token whose cnf.jwk names no algorithm is refused", "an Ed25519 token under a key that names no algorithm is refused"]
-  - text: "The authorization server MUST NOT fetch an issuer's key set more often than once a minute."
+  - text: "The authorization server MUST NOT fetch anything from an issuer it has not been configured to believe."
     verified: check
     targets: [aauth-test]
-    asserts: ["an unknown kid does not refetch inside a minute", "and after a minute it does, which is how a rotation is noticed"]
+    asserts: ["an issuer the deployment did not name is refused, and never fetched", "and with no issuers named, none is believed"]
+  - text: "It MUST NOT fetch an issuer's key set more often than once a minute, and an attempt that failed counts toward that bound as one that succeeded does."
+    verified: check
+    targets: [aauth-test]
+    asserts: ["an unknown kid does not refetch inside a minute", "and after a minute it does, which is how a rotation is noticed", "is asked once, however many tokens name it inside a minute"]
   - text: "The authorization server MUST verify the agreement's signature with the algorithm that key names, or EdDSA where it names none, and MUST NOT take the algorithm from the agreement's own header."
     verified: check
     targets: [as-test]

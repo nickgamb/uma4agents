@@ -22,6 +22,7 @@ from dataclasses import replace
 import json
 import logging
 import os
+import re
 import sys
 import time
 
@@ -258,8 +259,15 @@ def shared_tools(grants) -> dict:
             if claims_match(f"{SHARED_NAMESPACE}/{tool}", grants)}
 
 
+# A member, an owner or an account as a path segment names: what the gateway
+# routes on, and what this server will put into a URL it then fetches. Nothing
+# that could change the shape of that URL is one.
+_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+
 def route_of(path: str) -> tuple[str, str]:
-    """(name, kind) for a request path, where kind is own|shared|joint.
+    """(name, kind) for a request path, where kind is own|shared|joint, or
+    unknown for a path this gateway serves nobody at.
 
     On an unauthenticated tool call the path is the only thing that can say
     which authority governs, and the three kinds are three different answers
@@ -269,21 +277,23 @@ def route_of(path: str) -> tuple[str, str]:
     authority. `joint` is one resource with several owners of equal standing,
     and there the path names the *account* rather than a person: no single
     holder's authority governs it, which is the whole difference.
+
+    Read by leading segments, exactly as the gateway routes: a route's prefix
+    covers everything beneath it, so whatever follows the name is the same
+    backend and the same answer. Nothing later in the path is consulted.
     """
-    tail = path.rstrip("/").rsplit("/mcp", 1)[-1].strip("/")
-    shared_leaf = SHARED_PREFIX.rsplit("/", 1)[-1]
-    joint_leaf = JOINT_PREFIX.rsplit("/", 1)[-1]
-    if tail.startswith(f"{shared_leaf}/"):
-        return tail.split("/", 1)[1], "shared"
-    if tail.startswith(f"{joint_leaf}/"):
-        return tail.split("/", 1)[1], "joint"
-    if not tail:
+    segments = [s for s in path.split("?", 1)[0].split("/") if s]
+    for prefix, kind in ((SHARED_PREFIX, "shared"), (JOINT_PREFIX, "joint")):
+        head = prefix.strip("/").split("/")
+        if segments[:len(head)] == head:
+            name = segments[len(head)] if len(segments) > len(head) else ""
+            return (name, kind) if _NAME.fullmatch(name) else (name, "unknown")
+    if segments[:1] != ["mcp"]:
+        return "", "unknown"
+    if len(segments) == 1:
         return OWNER, "own"
-    first = tail.split("/", 1)[0]
+    first = segments[1]
     if first in ALL_OWNERS:
-        # Named the way the gateway routes: an owner's path prefix covers
-        # everything beneath it, so a suffix stays with the owner whose
-        # backend the gateway forwards it to.
         return first, "own"
     # Not an owner, a shared resource or a jointly held account this gateway
     # knows. Never the primary owner: a path the gateway sends elsewhere must
@@ -456,6 +466,9 @@ def _shared_enforcer_for(owner: str) -> Enforcer:
         org_issuer=ORG_ISSUER,
         org_internal=ORG_INTERNAL,
         org_token=ORG_TOKEN,
+        # The organization's own resource: the one place its own grant is
+        # honoured, and then only for the member it was issued to.
+        accepts_overrides=True,
         event=event,
     )
 
@@ -523,7 +536,8 @@ def joint_enforcer(account: str) -> Enforcer | None:
     nothing. What it does know — because it is named in configuration rather
     than read off a token — is which tally it will accept a grant from.
     """
-    if not JOINT_TALLY or (JOINT_ACCOUNTS and account not in JOINT_ACCOUNTS):
+    if (not JOINT_TALLY or not _NAME.fullmatch(account)
+            or (JOINT_ACCOUNTS and account not in JOINT_ACCOUNTS)):
         return None
     if account not in JOINT:
         leaf = f"{JOINT_PREFIX}/{account}"
@@ -541,6 +555,7 @@ def joint_enforcer(account: str) -> Enforcer | None:
             # `realm="alice-vault"` would be naming one holder as the party
             # behind a resource that is equally the other's.
             realm=account,
+            holder_authorities={o: authority_for(o)[0] for o in ALL_OWNERS},
             tools=joint_tools(account),
             single_use_tools=SINGLE_USE_TOOLS,
         consequence=CONSEQUENCE,
@@ -565,11 +580,11 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
     changes what this gateway will serve her a minute later, with nothing
     deployed and nothing restarted.
     """
-    if not ORG_ISSUER:
+    if not ORG_ISSUER or not _NAME.fullmatch(owner):
         return None
-    enforcer = SHARED.get(owner)
-    if enforcer is None:
-        enforcer = SHARED[owner] = _shared_enforcer_for(owner)
+    # Kept only for somebody the organization says is a member, so a caller
+    # cannot grow this table by naming strangers.
+    enforcer = SHARED.get(owner) or _shared_enforcer_for(owner)
     try:
         doc = await enforcer.membership(fresh=fresh)
     except Exception as exc:                                    # noqa: BLE001
@@ -581,8 +596,10 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
             raise Unreadable("the organization could not be reached") from exc
         return None
     if not doc.get("member"):
+        SHARED.pop(owner, None)
         return None
     enforcer.tools = shared_tools(doc.get("grants") or [])
+    SHARED[owner] = enforcer
     return enforcer
 
 
@@ -1028,7 +1045,11 @@ async def _require_as_signature(request: Request, who: str,
 
 @app.get("/owner-resources/{owner}")
 async def owner_resources_for(owner: str, request: Request) -> Response:
-    return await owner_resources(request, owner if owner in ALL_OWNERS else None)
+    # An owner this resource server does not serve has no listing, exactly as
+    # she has no metadata document; never the primary owner's in her place.
+    if owner not in ALL_OWNERS:
+        return JSONResponse({"error": "no such resource"}, status_code=404)
+    return await owner_resources(request, owner)
 
 
 @app.get("/owner-resources")

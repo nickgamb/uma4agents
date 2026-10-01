@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jwt.algorithms import OKPAlgorithm
 
 import uma4a_jose
-from uma4a_http_sig import sign
+from uma4a_http_sig import jwk_thumbprint, sign
 
 # MyTerms-shaped agreement: the owner proffers the terms; this side signs them.
 AGREEMENT_FORMAT = "https://u4a.ai/spec/terms/1.0#myterms-agreement-v1+jws"
@@ -204,8 +204,11 @@ class AgentKeys:
         """
         if self.agent_token:
             claims = jwt.decode(self.agent_token, options={"verify_signature": False})
-            sub, host = claims.get("sub", ""), urlparse(claims.get("iss", "")).netloc
-            return sub if sub.endswith(f"@{host}") else f"{sub}@{host}"
+            # Qualified as the authority qualifies it: by the whole issuer,
+            # port and path included, so the two always name one connection.
+            issuer = urlparse(claims.get("iss", ""))
+            sub, where = claims.get("sub", ""), issuer.netloc + issuer.path.rstrip("/")
+            return sub if sub.endswith(f"@{where}") else f"{sub}@{where}"
         return self.thumbprint()
 
     def thumbprint(self) -> str:
@@ -219,11 +222,7 @@ class AgentKeys:
         the only thing the owner's authority can check against the JWS in
         front of it.
         """
-        jwk = self.public_jwk()
-        canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
-                               separators=(",", ":"), sort_keys=True)
-        return "jkt:" + base64.urlsafe_b64encode(
-            hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
+        return jwk_thumbprint(self.public_jwk())
 
 
 @dataclass

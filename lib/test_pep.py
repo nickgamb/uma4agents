@@ -329,7 +329,8 @@ def joint_grant(verdicts=None, scopes=("read",), lasts=300, **over) -> dict:
 
 def jointly(info: dict, published: dict | None = None) -> Enforcer:
     e = granting(info, tools={"read": ("joint/read", ["read"])},
-                 single_use_tools=set(), joint_issuer=TALLY, realm="joint")
+                 single_use_tools=set(), joint_issuer=TALLY, realm="joint",
+                 holder_authorities={n: f"https://{n}.example" for n in HOLDERS})
     later = time.time() + 3600
     e._mandates["joint"] = (later, published or MANDATE)
     for name, key in HOLDERS.items():
@@ -391,6 +392,67 @@ bare.pop("joint")
 d = present(jointly(bare), tool="read")
 check("a jointly held resource refuses a grant carrying no verdicts at all",
       refused_jointly(d), d.error)
+
+print("\n== an organization's own grant ==")
+
+
+def overriding(info: dict, here: bool, owner: str = "alice") -> Enforcer:
+    """An enforcer facing a grant the organization signed itself."""
+    e = granting(info, org_issuer="https://org.example", accepts_overrides=here,
+                 owner=owner, tools={"get_positions": ("northwind-vault/get_positions",
+                                                       ["positions:read"])})
+    e.issued_by_organization = lambda rpt: True
+    e.org_introspect = AsyncMock(return_value=info)
+    e.org_consume = AsyncMock(return_value={"consumed": True})
+    e.org_report = AsyncMock()
+    return e
+
+
+book = grant(rid="northwind-vault/get_positions", owner="alice", single_use=True,
+             operation={"tool": "get_positions",
+                        "params_s256": s256(json.dumps({}).encode())})
+d = present(overriding(book, here=True))
+check("is honoured at the organization's own resource, for its member",
+      d.outcome == "allow", d.error)
+d = present(overriding(book, here=False))
+check("is refused at an owner's own resource, whatever the charter names",
+      d.outcome == "deny" and d.status == 403, d.error)
+d = present(overriding(book, here=True, owner="carol"))
+check("and refused at another member's administration of the book",
+      d.outcome == "deny" and "another member" in d.description, d.description)
+
+d = present(overriding({**book, "operation": None}, here=True))
+check("a grant calling itself single-use and naming no operation is refused",
+      d.outcome == "deny" and d.error == "operation_required", d.error)
+
+print("\n== a tally that invents its electorate ==")
+MALLORY = Ed25519PrivateKey.generate()
+invented = {**MANDATE, "rule": {"kind": "any"},
+            "holders": [{"owner": "mallory", "issuer": "https://mallory.example",
+                         "weight": 1},
+                        {"owner": "alice", "issuer": "https://alice.example",
+                         "weight": 1}]}
+fake = jwt.encode({"iss": "https://mallory.example", "holder": "mallory",
+                   "account": "joint", "negotiation": "fam_j",
+                   "resource_id": "joint/read", "contract": "s256:agreement",
+                   "effect": "allow", "iat": int(time.time()),
+                   "exp": int(time.time()) + 300, "cnf_jkt": key_thumbprint(AGENT_JWK),
+                   "scope": ["read"], "expires_in": 300,
+                   "mandate_s256": mandate_digest(invented)}, MALLORY,
+                  algorithm="EdDSA", headers={"typ": "u4a-verdict+jwt"})
+e = jointly(joint_grant(verdicts=[fake]), published=invented)
+e._holder_jwks["https://mallory.example"] = (
+    time.time() + 3600, [json.loads(OKPAlgorithm.to_jwk(MALLORY.public_key()))])
+d = present(e, tool="read")
+check("a holder this resource server does not know is refused, however well signed",
+      refused_jointly(d) and "does not know" in d.description, d.description)
+moved = {**MANDATE, "holders": [{"owner": "alice", "issuer": "https://mallory.example",
+                                 "weight": 1},
+                                {"owner": "carol", "issuer": "https://carol.example",
+                                 "weight": 1}]}
+d = present(jointly(joint_grant(), published=moved), tool="read")
+check("and a mandate naming another authority for a known holder is refused",
+      refused_jointly(d) and "knows them by" in d.description, d.description)
 
 print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
 if FAILED:

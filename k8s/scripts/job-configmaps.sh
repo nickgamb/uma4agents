@@ -68,6 +68,7 @@ kubectl -n "$NS" create configmap ts-agent \
 kubectl -n "$NS" create configmap demo-lib \
   --from-file=uma4a_grant.py="$ROOT/lib/uma4a_grant.py" \
   --from-file=uma4a_http_sig.py="$ROOT/lib/uma4a_http_sig.py" \
+  --from-file=uma4a_fetch.py="$ROOT/lib/uma4a_fetch.py" \
   --from-file=uma4a_jose.py="$ROOT/lib/uma4a_jose.py" \
   --from-file=uma4a_aauth.py="$ROOT/lib/uma4a_aauth.py" \
   --from-file=uma4a_enroll.py="$ROOT/lib/uma4a_enroll.py" \

@@ -712,13 +712,15 @@ refused (401). And in the Kubernetes reference the mesh refuses the direct hop
 to it from any workload but her portal (403), while the same port serves her
 published keys (200). `k8s-policy-test` asserts both paths.
 
-**Agent-token issuers are trusted by dereference.** `verify_agent_token`
-resolves `iss` via AAuth discovery over TLS and believes the published keys.
-TLS on the issuer origin is the trust root (AAuth's own precondition), and
-non-`https` issuers are rejected. There is deliberately **no issuer allowlist**
-here: which issuers may attest agents to a given authorization server is a
-deployment policy, not a wire-protocol rule, and a real deployment must supply
-one.
+**Agent-token issuers are named, then trusted by dereference.** An agent
+token is believed only from an issuer in `UMA_AS_AGENT_ISSUERS`; any other is
+refused before anything is fetched from it, and with none named no agent token
+is accepted. For a named issuer, `verify_agent_token` resolves `iss` via AAuth
+discovery over TLS and believes the published keys — TLS on the issuer origin
+is the trust root, as AAuth has it. Every document an agent's request names
+(its token's issuer, its client metadata, its operator's key directory) is
+read off the event loop, under one deadline and a byte cap, and an origin that
+failed is not asked again for a minute.
 
 **Liveness must not depend on a mutual dereference.** The AS pulls what the RS
 publishes; the RS authenticates that pull by fetching the AS's keys mid-request.
