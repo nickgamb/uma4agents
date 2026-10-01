@@ -21,6 +21,7 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
+  RFC8785:
   RFC7515:
   RFC7519:
   RFC9068:
@@ -515,6 +516,10 @@ account:
 negotiation:
 : REQUIRED. The negotiation identifier this verdict answers.
 
+resource_id:
+: REQUIRED. The resource the negotiation is over, as the tally named it when it
+  asked.
+
 contract:
 : REQUIRED. The digest of the agreement the agent signed, as {{U4ATerms}}.
 
@@ -596,9 +601,9 @@ folding party be untrusted.
 
 ## The Mandate Digest {#mandate-digest}
 
-The digest of a mandate is `s256:` followed by the base64url encoding, without
-padding, of the SHA-256 hash of the JSON serialization — members sorted by name,
-no insignificant whitespace — of an object with exactly three members:
+The digest of a mandate is `s256` as {{U4ACore}} defines it: `s256:` followed by
+the base64url encoding, without padding, of the SHA-256 hash of the {{RFC8785}}
+serialization of an object with exactly three members:
 
 holders:
 : Each holder reduced to `owner`, `issuer` with any trailing slash removed, and
@@ -694,7 +699,8 @@ call under such a grant:
    authorization server the enforcement point is itself configured to know
    speaks for that holder, and refuse where the published mandate names a
    holder it knows no authorization server for, or names a different one;
-3. establish that each verdict names this negotiation and this agreement;
+3. establish that each verdict names this negotiation, this agreement and the
+   resource being accessed;
 4. establish, for each `allow` verdict, that its `mandate_s256` is the digest of
    the published mandate, and that the grant is bound to the key `cnf_jkt`
    names, carries no scope beyond `scope`, lasts no longer than `expires_in`,

@@ -502,6 +502,8 @@ async def discovery() -> dict:
             "client_credentials",
         ],
         "claim_token_formats_supported": [AGREEMENT_FORMAT, ID_JAG_FORMAT],
+        "signing_alg_values_supported": ["EdDSA", uma4a_jose.ED25519],
+        "http_message_signature_alg_values_supported": ["ed25519"],
         "uma_profiles_supported": list(uma4a_profiles.AUTHORIZATION_SERVER),
     }
 
@@ -894,6 +896,15 @@ async def require_owner_signature(request: Request) -> str:
     except VerifyError as exc:
         raise HTTPException(
             status_code=401, detail=f"owner signature did not verify: {exc}") from exc
+    # A request that changes something is accepted once. Within the freshness
+    # window a captured one could otherwise be sent again — an edit to her
+    # policy she has since undone, put back by somebody else. Kept for twice
+    # the window, since a signature dated ahead is valid that long.
+    if request.method not in ("GET", "HEAD") and not await st(OWNER_KEY_OWNER).spend_once(
+            "owner-signature:" + hashlib.sha256(sig.encode()).hexdigest(),
+            time.time() + 120):
+        raise HTTPException(status_code=401,
+                            detail="that signed request was already received")
 
     # Named, never inferred. Treating a valid signature as "whoever the
     # request seems to be about" would let one key holder act as somebody

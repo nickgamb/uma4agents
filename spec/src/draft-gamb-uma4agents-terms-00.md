@@ -194,12 +194,12 @@ does not echo it. Two members are defined here:
 
 per_operation:
 : OPTIONAL. Boolean. Where `true`, a grant under these terms is bound to one
-  operation and spent once, as {{U4ACore}} Section 7.2, and the agreement MUST
+  operation and spent once, as {{U4ACore}} Section 7.3, and the agreement MUST
   name the operation proposed.
 
 organization:
 : Present where a layer above the owner is in force over these resources
-  ({{U4AMultiParty}} Section 2.4), and absent otherwise. An object naming that
+  ({{U4AMultiParty}} Section 2.5), and absent otherwise. An object naming that
   layer: its `name`, `id` and `issuer`, the `charter_version` the terms were
   clamped under, and `requires`, a list of what it requires in sentences.
 
@@ -246,7 +246,11 @@ family:
 : REQUIRED. The identifier of this negotiation, stable across ticket rotations.
 
 resource_id:
-: REQUIRED. The resource the terms are being proffered over.
+: REQUIRED. The resource the terms are being proffered over. It tells the
+  client what it is being asked to agree about. The agreement need not echo it:
+  the authorization server binds an agreement to its resource through the
+  ticket and `family` it was proffered under, and MUST NOT take the resource
+  from the agreement.
 
 ~~~ json
 {
@@ -309,7 +313,10 @@ agent_token:
   names the signing key, where the requesting side is identified.
 
 The authorization server MUST verify the JWS against the key so named, and MUST
-refuse an agreement carrying neither. The key that signs the agreement is the key
+refuse an agreement carrying neither. It verifies with the algorithm the key
+names in its `alg` member, or with `EdDSA` where a bare Ed25519 `jwk` names none,
+and MUST refuse a JWS whose header `alg` differs from that or whose key type and
+curve disagree with it. The header chooses nothing about how it is verified. The key that signs the agreement is the key
 that is confirmed in the grant, so that the party that agreed and the party that
 later acts are provably the same.
 

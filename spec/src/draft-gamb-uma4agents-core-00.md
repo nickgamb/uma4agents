@@ -36,6 +36,7 @@ normative:
   RFC9396:
   RFC9421:
   RFC9530:
+  RFC9864:
   RFC9728:
   UMAGrant:
     title: "User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"
@@ -308,6 +309,24 @@ will not accept, and MUST advertise every grant type and claim token format it
 will. This requirement establishes an accurate source of truth for an agent
 making first contact with the authorization server, and enables clean
 interoperability failures in the absence of human intervention.
+
+Its metadata also carries two members this document defines:
+
+signing_alg_values_supported:
+: The JWS `alg` values {{RFC7515}} it verifies on an agreement or other signed
+  claim token, which MUST include `EdDSA` and `Ed25519` {{RFC9864}}.
+
+http_message_signature_alg_values_supported:
+: The {{RFC9421}} algorithms it verifies on a signed request, which MUST include
+  `ed25519`.
+
+Ed25519 is mandatory to implement for every signature this set defines: the
+client's agreement, the client's and resource server's signed requests, the
+owner's signed request, and the requesting party token. A client that signs with
+another algorithm MAY be supported and MUST be refused by an authorization server
+that has not advertised it, with an `error_description` naming the algorithm. Without
+one algorithm every party holds, two conformant implementations need not be able
+to talk to each other at all.
 
 # The Challenge {#the-challenge}
 
@@ -607,8 +626,15 @@ owner who has never met it can be told something true about it:
   authorization server MUST resolve and MUST reject unless the document's own
   `client_id` matches the URL it was fetched from;
 - a `Signature-Agent` {{I-D.meunier-webbotauth-registry}} naming a directory of
-  keys the operator publishes, which MUST be covered by the request signature
-  where it is present.
+  keys the operator publishes.
+
+Both travel in the protected header of the agreement ({{U4ATerms}}), as the
+members `client_id` and `signature_agent`, so the agreement's signature covers
+them. A client that also sends a `Signature-Agent` header on a request to the
+resource MUST cover it with that request's signature ({{signature-profile}}). The
+operator is the origin of the client identifier; a `signature_agent` directory at
+any other origin attests to nothing, since a client could otherwise name a
+directory it controls and vouch for itself.
 
 Neither is an authorization input. The key that verifies a request is always the
 one confirmed by the grant, the connection handle is unchanged by the presence or
@@ -658,6 +684,28 @@ reason nothing in its logs names.
 
 A verifier MUST echo the received `@signature-params` value verbatim when
 reconstructing the base, rather than re-serializing it from parsed components.
+
+The algorithm is the one the verifying key is registered for, never the one the
+signature parameters or a header name. A signature whose `alg` parameter, where
+present, disagrees with its key MUST be refused.
+
+A signature MUST carry the `created` parameter, and a verifier MUST refuse one
+whose `created` is further from its own clock than a window it is configured
+with, in either direction. The window SHOULD NOT exceed five minutes; the
+reference uses sixty seconds. Where `expires` is present the verifier MUST
+refuse a signature past it. A signature without `created` is refused rather than
+treated as fresh, since otherwise a captured request is valid for as long as
+the key is.
+
+A signed request that changes the owner's state — any owner request other than
+a read — MUST NOT be accepted twice. The authorization server keeps each such
+signature it accepts for at least twice the window and refuses a second
+presentation. The signer of such a request SHOULD include a fresh `nonce` parameter:
+Ed25519 is deterministic and `created` counts seconds, so the same request sent
+twice within a second would otherwise carry the same signature and the second
+would be refused as a replay. A request to the protected resource is not held to this: a client
+that needs an operation performed at most once asks for a single-use grant
+({{operation-binding}}), whose consumption is the replay control.
 
 ## Covering the Body {#content-digest}
 

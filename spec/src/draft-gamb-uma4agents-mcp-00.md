@@ -244,7 +244,7 @@ party token in an `Authorization` header with the `PoP` scheme and signed as
 {{U4ACore}} Section 6. Where the enforcement point is in process, the signature
 components are the HTTP request that carried the JSON-RPC message.
 
-For a single-use grant ({{U4ACore}} Section 7.2), the operation is the call's
+For a single-use grant ({{U4ACore}} Section 7.3), the operation is the call's
 `params.name` and its parameters are `params.arguments`.
 
 # Waiting {#waiting}

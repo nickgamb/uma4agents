@@ -590,6 +590,9 @@ Internet-Draft          Multi-Party Authorization         September 2026
    negotiation:  REQUIRED.  The negotiation identifier this verdict
       answers.
 
+   resource_id:  REQUIRED.  The resource the negotiation is over, as the
+      tally named it when it asked.
+
    contract:  REQUIRED.  The digest of the agreement the agent signed,
       as [U4ATerms].
 
@@ -608,15 +611,15 @@ Internet-Draft          Multi-Party Authorization         September 2026
    expires_in:  REQUIRED in an allow.  The lifetime the agreement
       carries.
 
-   operation:  REQUIRED in an allow whose agreement names an operation.
-      Its tool and params_s256, as in the operation claim of [U4ACore].
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   operation:  REQUIRED in an allow whose agreement names an operation.
+      Its tool and params_s256, as in the operation claim of [U4ACore].
 
    mandate_s256:  REQUIRED in an allow.  The digest of the mandate the
       holder agreed to, as Section 3.5.
@@ -666,9 +669,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-
-
-
 Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft          Multi-Party Authorization         September 2026
@@ -694,10 +694,10 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 3.5.  The Mandate Digest
 
-   The digest of a mandate is s256: followed by the base64url encoding,
-   without padding, of the SHA-256 hash of the JSON serialization —
-   members sorted by name, no insignificant whitespace — of an object
-   with exactly three members:
+   The digest of a mandate is s256 as [U4ACore] defines it: s256:
+   followed by the base64url encoding, without padding, of the SHA-256
+   hash of the [RFC8785] serialization of an object with exactly three
+   members:
 
    holders:  Each holder reduced to owner, issuer with any trailing
       slash removed, and weight, ordered by owner.
@@ -822,8 +822,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
        where the published mandate names a holder it knows no
        authorization server for, or names a different one;
 
-   3.  establish that each verdict names this negotiation and this
-       agreement;
+   3.  establish that each verdict names this negotiation, this
+       agreement and the resource being accessed;
 
    4.  establish, for each allow verdict, that its mandate_s256 is the
        digest of the published mandate, and that the grant is bound to
@@ -997,10 +997,10 @@ Internet-Draft          Multi-Party Authorization         September 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
-              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
-              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
-
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
 
 
 
@@ -1009,6 +1009,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 18]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
 
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
@@ -1054,10 +1058,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
 
-   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
-              Protected Resource Metadata", RFC 9728,
-              DOI 10.17487/RFC9728, April 2025,
-              <https://www.rfc-editor.org/rfc/rfc9728>.
 
 
 
@@ -1065,6 +1065,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 19]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
 
    [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
               implementation", 2026,
@@ -1074,11 +1079,6 @@ Appendix A.  Identifiers Used by This Document
 
    This appendix lists the identifiers this document defines.  It is
    informative and requests no registration.
-
-
-
-
-
 
 
 

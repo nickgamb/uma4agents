@@ -1205,8 +1205,11 @@ class Enforcer:
             resource_metadata=self.resource_metadata_url,
             scopes=scopes,
             authorization_details=details,
+            # RFC 8785, as core defines s256: UTF-8, not \u escapes, so a
+            # tool or resource named outside ASCII hashes as it does elsewhere.
             authorization_reference=s256(
-                json.dumps(details, sort_keys=True, separators=(",", ":")).encode()),
+                json.dumps(details, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode()),
         )
 
     @staticmethod

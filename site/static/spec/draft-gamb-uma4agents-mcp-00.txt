@@ -302,7 +302,7 @@ Internet-Draft             MCP Binding for UMA            September 2026
    process, the signature components are the HTTP request that carried
    the JSON-RPC message.
 
-   For a single-use grant ([U4ACore] Section 7.2), the operation is the
+   For a single-use grant ([U4ACore] Section 7.3), the operation is the
    call's params.name and its parameters are params.arguments.
 
 5.  Waiting

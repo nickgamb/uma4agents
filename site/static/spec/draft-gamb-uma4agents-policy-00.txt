@@ -91,19 +91,19 @@ Table of Contents
    7.  Operators . . . . . . . . . . . . . . . . . . . . . . . . . .  11
      7.1.  Blocking  . . . . . . . . . . . . . . . . . . . . . . . .  11
      7.2.  The Limit . . . . . . . . . . . . . . . . . . . . . . . .  11
-   8.  The Record  . . . . . . . . . . . . . . . . . . . . . . . . .  11
+   8.  The Record  . . . . . . . . . . . . . . . . . . . . . . . . .  12
      8.1.  One Correlation Identifier  . . . . . . . . . . . . . . .  12
      8.2.  Refusals Are Recorded . . . . . . . . . . . . . . . . . .  12
      8.3.  The Row Names the Counterparty  . . . . . . . . . . . . .  12
      8.4.  Not the Owner's Decision  . . . . . . . . . . . . . . . .  12
-     8.5.  Enforcement Point Reports Do Not Carry the Handle . . . .  12
+     8.5.  Enforcement Point Reports Do Not Carry the Handle . . . .  13
    9.  Security Considerations . . . . . . . . . . . . . . . . . . .  13
      9.1.  The Asymmetry Is the Security Model . . . . . . . . . . .  13
      9.2.  Assurance Is Derived, Never Claimed . . . . . . . . . . .  13
      9.3.  Trajectory Reads Are Not Atomic . . . . . . . . . . . . .  13
      9.4.  The Bound Is a Depth, and the Depth Is Small  . . . . . .  13
    10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  13
-     10.1.  The Record Is a Per-Agent History  . . . . . . . . . . .  13
+     10.1.  The Record Is a Per-Agent History  . . . . . . . . . . .  14
      10.2.  Operator Claims Are Visible to the Owner . . . . . . . .  14
    11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  14
 
@@ -118,7 +118,7 @@ Internet-Draft           Owner Policy for Agents          September 2026
      12.1.  Normative References . . . . . . . . . . . . . . . . . .  14
      12.2.  Informative References . . . . . . . . . . . . . . . . .  15
    Appendix A.  A Condition Vocabulary . . . . . . . . . . . . . . .  16
-   Appendix B.  Record Entry Kinds . . . . . . . . . . . . . . . . .  17
+   Appendix B.  Record Entry Kinds . . . . . . . . . . . . . . . . .  18
    Appendix C.  Implementation Status  . . . . . . . . . . . . . . .  18
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  18
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  18
@@ -456,9 +456,10 @@ Internet-Draft           Owner Policy for Agents          September 2026
    Accountability:  Whether anyone named and reachable stands behind the
       agent.  Level 0: nobody.  Level 1: the agent named a client
       metadata document [I-D.ietf-oauth-client-id-metadata-document]
-      that resolved and claims its own URL.  Level 2: the operator that
-      document names publishes, in a key directory
-      [I-D.meunier-webbotauth-registry] at the same origin, the JWK
+      that resolved and claims its own URL.  Level 2: the operator — the
+      origin of that document's client_id — publishes, in the key
+      directory named by the agreement's signature_agent header member
+      [I-D.meunier-webbotauth-registry] at that same origin, the JWK
       thumbprint [RFC7638] of the key that signed the agreement.
 
    The decomposition follows the same reasoning as the separation of
@@ -494,10 +495,9 @@ Internet-Draft           Owner Policy for Agents          September 2026
    something true to tighten on, and give the attention budget of
    Section 6 a lane.
 
-   A lie can only cost the liar friction.  An agent that claims an
-   operator it does not belong to gains nothing, because the claim never
-   widens anything; it loses the attributable lane and the owner's
-   trust.
+
+
+
 
 
 
@@ -505,6 +505,11 @@ Gamb & Maler              Expires 19 March 2027                 [Page 9]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+   A lie can only cost the liar friction.  An agent that claims an
+   operator it does not belong to gains nothing, because the claim never
+   widens anything; it loses the attributable lane and the owner's
+   trust.
 
 5.  The Owner's Own Agent
 
@@ -517,11 +522,11 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
    An authorization server MUST let the owner claim an operator origin
    as her own, and MUST class an agent as the owner's own only where
-   both hold: the operator it names is one she has claimed, and that
-   operator's key directory publishes the key that signed.  The first
-   half is her decision; the second is a check her authority ran on
-   material only the operator controls.  Neither is anything the
-   requesting side can assert.
+   both hold: the operator it names, the origin of its client_id, is one
+   she has claimed, and that operator's key directory publishes the key
+   that signed.  The first half is her decision; the second is a check
+   her authority ran on material only the operator controls.  Neither is
+   anything the requesting side can assert.
 
    This condition MAY relax a rule (see Section 3.1).  It MUST NOT skip
    first contact, and it MUST NOT beat a restriction that also matched.
@@ -549,11 +554,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    the owner's first question, not her queue, and is counted as a first
    contact would be.
 
-   [UMAGrant] Section 3.3.6 answers request_denied with 403.  The bound
-   uses 429 because the refusal reports the state of the owner's queue
-   rather than a decision about the request, and a client should not
-   read it as one.
-
 
 
 
@@ -561,6 +561,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+   [UMAGrant] Section 3.3.6 answers request_denied with 403.  The bound
+   uses 429 because the refusal reports the state of the owner's queue
+   rather than a decision about the request, and a client should not
+   read it as one.
 
 6.2.  Two Lanes
 
@@ -601,11 +606,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    the honest limit of operator-level refusal, and it is why the lanes
    of Section 6.2 matter more than the block does.
 
-8.  The Record
-
-   An authorization server implementing this document keeps an append-
-   only record of what was promised, decided, done and withdrawn, and
-   the following are requirements on it.
 
 
 
@@ -617,6 +617,12 @@ Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+8.  The Record
+
+   An authorization server implementing this document keeps an append-
+   only record of what was promised, decided, done and withdrawn, and
+   the following are requirements on it.
 
 8.1.  One Correlation Identifier
 
@@ -656,14 +662,8 @@ Internet-Draft           Owner Policy for Agents          September 2026
    owner personally approved" is allowed to relax a rule, so a decision
    taken on her behalf must not produce that fact.
 
-8.5.  Enforcement Point Reports Do Not Carry the Handle
 
-   Where an enforcement point reports an allowed call to the
-   authorization server, the authorization server MUST resolve the agent
-   from the negotiation and MUST NOT accept a handle from the report.
-   The enforcement point is the resource server's component; which agent
-   did what is the owner's record and not the resource server's to
-   assert.
+
 
 
 
@@ -673,6 +673,15 @@ Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+8.5.  Enforcement Point Reports Do Not Carry the Handle
+
+   Where an enforcement point reports an allowed call to the
+   authorization server, the authorization server MUST resolve the agent
+   from the negotiation and MUST NOT accept a handle from the report.
+   The enforcement point is the resource server's component; which agent
+   did what is the owner's record and not the resource server's to
+   assert.
 
 9.  Security Considerations
 
@@ -711,15 +720,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 10.  Privacy Considerations
 
-10.1.  The Record Is a Per-Agent History
-
-   Section 8.3 makes the record queryable by agent, which is what the
-   owner needs and is also a history of one party's requests kept by
-   another.  Retention is deployment policy.  An implementation SHOULD
-   let the owner see every entry that names an agent, since she is the
-   party it was kept for.
-
-
 
 
 
@@ -729,6 +729,14 @@ Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+10.1.  The Record Is a Per-Agent History
+
+   Section 8.3 makes the record queryable by agent, which is what the
+   owner needs and is also a history of one party's requests kept by
+   another.  Retention is deployment policy.  An implementation SHOULD
+   let the owner see every entry that names an agent, since she is the
+   party it was kept for.
 
 10.2.  Operator Claims Are Visible to the Owner
 
@@ -769,14 +777,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
-   [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
-              Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
-              2015, <https://www.rfc-editor.org/rfc/rfc7638>.
-
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
 
 
 
@@ -785,6 +785,14 @@ Gamb & Maler              Expires 19 March 2027                [Page 14]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+   [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
+              Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
+              2015, <https://www.rfc-editor.org/rfc/rfc7638>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
    [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
               Profile for Autonomous Agents", Work in Progress,
@@ -825,14 +833,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               implementation", 2026,
               <https://github.com/nickgamb/uma4agents>.
 
-   [U4ALineage]
-              Gamb, N. and E. Maler, "Agent Lineage for User-Managed
-              Access (UMA) 2.0", Work in Progress, Internet-Draft,
-              draft-gamb-uma4agents-lineage-00, 2026,
-              <https://u4a.ai/spec/draft-gamb-uma4agents-lineage-
-              00.html>.
-
-
 
 
 
@@ -841,6 +841,13 @@ Gamb & Maler              Expires 19 March 2027                [Page 15]
 
 Internet-Draft           Owner Policy for Agents          September 2026
 
+
+   [U4ALineage]
+              Gamb, N. and E. Maler, "Agent Lineage for User-Managed
+              Access (UMA) 2.0", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-lineage-00, 2026,
+              <https://u4a.ai/spec/draft-gamb-uma4agents-lineage-
+              00.html>.
 
    [U4AMultiParty]
               Gamb, N. and E. Maler, "Multi-Party Authorization for
@@ -883,13 +890,6 @@ Appendix A.  A Condition Vocabulary
    |                                  |          | this unit before   |
    +----------------------------------+----------+--------------------+
    | standing.revoked_before          | observed | the owner has      |
-   |                                  |          | revoked this agent |
-   |                                  |          | before             |
-   +----------------------------------+----------+--------------------+
-   | standing.age_below:D             | observed | the connection is  |
-   |                                  |          | younger than D     |
-   +----------------------------------+----------+--------------------+
-   | standing.denials_above:N         | observed | recently denied    |
 
 
 
@@ -898,6 +898,13 @@ Gamb & Maler              Expires 19 March 2027                [Page 16]
 Internet-Draft           Owner Policy for Agents          September 2026
 
 
+   |                                  |          | revoked this agent |
+   |                                  |          | before             |
+   +----------------------------------+----------+--------------------+
+   | standing.age_below:D             | observed | the connection is  |
+   |                                  |          | younger than D     |
+   +----------------------------------+----------+--------------------+
+   | standing.denials_above:N         | observed | recently denied    |
    |                                  |          | more than N times  |
    +----------------------------------+----------+--------------------+
    | standing.tiers_above:N           | observed | recently asked at  |
@@ -934,6 +941,19 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
       Table 1: The reference implementation's condition vocabulary.
 
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
 Appendix B.  Record Entry Kinds
 
    This appendix is not normative.  The reference implementation's
@@ -945,14 +965,6 @@ Appendix B.  Record Entry Kinds
    identity_refused, revoked; claimed, disclaimed for the owner's own
    operators; and the kinds defined by [U4AMultiParty] for organizations
    and jointly held resources.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 17]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
 Appendix C.  Implementation Status
 
@@ -991,6 +1003,13 @@ Authors' Addresses
    Email: nickgamb@gmail.com
 
 
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 18]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    Eve Maler
    Venn Factory
 
@@ -1005,4 +1024,41 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 18]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 19]

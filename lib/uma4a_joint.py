@@ -177,8 +177,12 @@ def mandate_digest(doc: dict) -> str | None:
         "resources": sorted(m["resources"]),
         "rule": {"kind": m["rule"]["kind"], "threshold": m["rule"]["threshold"]},
     }
+    # RFC 8785: members sorted, no whitespace, and UTF-8 rather than \u
+    # escapes, so an owner or resource named outside ASCII yields the same
+    # bytes in every implementation.
     return "s256:" + _b64_sha256(
-        json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode())
+        json.dumps(canonical, sort_keys=True, separators=(",", ":"),
+                   ensure_ascii=False).encode())
 
 
 def key_thumbprint(jwk: dict) -> str | None:

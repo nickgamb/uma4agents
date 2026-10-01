@@ -106,6 +106,7 @@ must_fail("an expired signature is rejected",
 # only thing standing between a captured request and a replay of it, so it is
 # worth a case where nothing else about the request is wrong — a valid key, a
 # valid body, and the clock as the sole reason.
+import re                                                       # noqa: E402
 import time as _time                                             # noqa: E402
 import uma4a_http_sig as _hs                                     # noqa: E402
 
@@ -119,10 +120,10 @@ def _signed_at(offset_s):
         _hs.time = real
 
 
+_recent = _signed_at(-5)
 ok("a signature made just now verifies",
-   lambda: verify(**A, public_key=pub,
-                  **{"signature_input": _signed_at(-5)["Signature-Input"],
-                     "signature": _signed_at(-5)["Signature"]}))
+   lambda: verify(**A, signature_input=_recent["Signature-Input"],
+                  signature=_recent["Signature"], public_key=pub))
 
 _stale = _signed_at(-3600)
 must_fail("a signature older than the freshness window is rejected",
@@ -133,6 +134,23 @@ _future = _signed_at(3600)
 must_fail("and one dated far in the future is too",
           lambda: verify(**A, signature_input=_future["Signature-Input"],
                          signature=_future["Signature"], public_key=pub))
+
+# Without `created` there is nothing to measure, and a signature that cannot
+# be dated would be fresh for as long as its key is.
+_undated = sign(**A, key=k, keyid="agent-1")
+must_fail("a signature with no created parameter is refused",
+          lambda: verify(**A, signature_input=re.sub(r";created=\d+", "",
+                                                     _undated["Signature-Input"]),
+                         signature=_undated["Signature"], public_key=pub))
+
+_twice = (sign(**A, key=k, keyid="agent-1"), sign(**A, key=k, keyid="agent-1"))
+
+
+def _distinct():
+    assert _twice[0]["Signature"] != _twice[1]["Signature"], "same signature"
+
+
+ok("the same request signed twice in one second carries two signatures", _distinct)
 
 # The authority is the verifier's, from configuration. A signature over the
 # same request against a different authority is a signature over a different

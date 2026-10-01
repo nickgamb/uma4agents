@@ -19,6 +19,7 @@ AAuth Go verifier is binding-document work.
 import base64
 import hashlib
 import json
+import secrets
 import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -104,7 +105,14 @@ def sign(method: str, authority: str, path: str, authorization: str,
     header too. Any request that carries meaning in its body should pass it;
     the verifier can then refuse a request whose bytes were changed after
     signing.
+
+    A fresh `nonce` is added unless one is given. Ed25519 is deterministic and
+    `created` counts seconds, so without it the same request sent twice in one
+    second carries the same signature — and a verifier that refuses a replayed
+    signature would refuse the second, legitimate, one.
     """
+    if nonce is None:
+        nonce = secrets.token_urlsafe(12)
     created = int(time.time())
     covered = REQUIRED_COMPONENTS
     if signature_agent is not None:
@@ -149,6 +157,8 @@ def verify(method: str, authority: str, path: str, authorization: str,
         label, params = signature_input.split("=", 1)
         if label != LABEL:
             raise VerifyError(f"unexpected signature label {label!r}")
+        if ";created=" not in params:
+            raise VerifyError("signature has no created parameter")
         created = int(params.split("created=", 1)[1].split(";", 1)[0])
         keyid = params.split('keyid="', 1)[1].split('"', 1)[0]
     except (IndexError, ValueError) as exc:

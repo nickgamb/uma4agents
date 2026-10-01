@@ -13,6 +13,38 @@
 # draft. The check names are the ones the suites print, verbatim.
 
 draft-gamb-uma4agents-core-00:
+  - text: "The JWS alg values [RFC7515] it verifies on an agreement or other signed claim token, which MUST include EdDSA and Ed25519"
+    verified: check
+    targets: [as-test]
+    asserts: ["it advertises Ed25519 for signed claim tokens"]
+  - text: "The [RFC9421] algorithms it verifies on a signed request, which MUST include ed25519."
+    verified: check
+    targets: [as-test]
+    asserts: ["and ed25519 for signed requests"]
+  - text: "A client that signs with another algorithm MAY be supported and MUST be refused by an authorization server that has not advertised it"
+    verified: check
+    targets: [as-test]
+    asserts: ["an algorithm it does not advertise is refused, by name"]
+  - text: "A signature whose alg parameter, where present, disagrees with its key MUST be refused."
+    verified: check
+    targets: [sig-test]
+    asserts: ["a signature claiming another algorithm is refused"]
+  - text: "A signature MUST carry the created parameter, and a verifier MUST refuse one whose created is further from its own clock than a window it is configured with"
+    verified: check
+    targets: [sig-test]
+    asserts: ["a signature with no created parameter is refused", "a signature older than the freshness window is rejected", "and one dated far in the future is too"]
+  - text: "Where expires is present the verifier MUST refuse a signature past it."
+    verified: check
+    targets: [sig-test]
+    asserts: ["an expired signature is rejected"]
+  - text: "A signed request that changes the owner's state — any owner request other than a read — MUST NOT be accepted twice."
+    verified: check
+    targets: [as-test]
+    asserts: ["the same signed change sent again is refused"]
+  - text: "The signer of such a request SHOULD include a fresh nonce parameter"
+    verified: check
+    targets: [sig-test]
+    asserts: ["the same request signed twice in one second carries two signatures"]
   - text: "It MUST be a digest over the attested facts and MUST NOT carry the facts themselves"
     verified: check
     targets: [clearance-check, k8s-clearance-check]
@@ -87,7 +119,7 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, assurance-check]
     asserts: ["agent CIMD: OK", "metadata that does not resolve buys nothing"]
-  - text: "a Signature-Agent [I-D.meunier-webbotauth-registry] naming a directory of keys the operator publishes, which MUST be covered by the request signature where it is present"
+  - text: "A client that also sends a Signature-Agent header on a request to the resource MUST cover it with that request's signature"
     verified: check
     targets: [sig-test, smoke-test]
     asserts: ["covers signature-agent, with tag + expires", "a swapped Signature-Agent must not verify", "a Signature-Agent the signature does not cover is refused", "signatures directory: OK"]
@@ -920,6 +952,14 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["the operator's own directory raised accountability to 2", "the operator publishing this agent's key is worth more than saying so"]
 
 draft-gamb-uma4agents-terms-00:
+  - text: "It verifies with the algorithm the key names in its alg member, or with EdDSA where a bare Ed25519 jwk names none"
+    verified: check
+    targets: [as-test]
+    asserts: ["an agreement is verified with the algorithm its key names", "and not with one its header asks for instead", "a bare key names no algorithm, so it is held to the one it always signed"]
+  - text: "The agreement need not echo it: the authorization server binds an agreement to its resource through the ticket"
+    verified: check
+    targets: [as-test]
+    asserts: ["the resource a grant covers is the negotiation's, whatever the agreement names"]
   - text: "An authorization server implementing this document MUST include it."
     verified: check
     targets: [smoke-test]

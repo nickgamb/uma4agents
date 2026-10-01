@@ -216,6 +216,19 @@ because:
 handle:
 : The client's connection handle, or null before first contact.
 
+first_contact:
+: `true` where answering admits a client she has no standing connection with
+  — a `connection` request, or a request of another kind from a client she
+  has not met. Nothing that answers on her behalf ({{arrangements}}) may
+  approve one.
+
+resource_id:
+: The resource the request is over.
+
+enforced:
+: For each prohibition the resource server enforces itself, the mechanism that
+  enforces it; the rest are undertakings.
+
 organization:
 : Where a layer above the owner had a say ({{U4AMultiParty}}), what it said,
   separately from her own rules.
@@ -232,7 +245,7 @@ Two portals open on the same request are two callers, and the tap that lands
 second must not be recorded as a second decision.
 
 Where the credential proves someone acting for the owner rather than the
-owner ({{U4AMultiParty}} Section 2.7), the decision MUST be recorded as
+owner ({{U4AMultiParty}} Section 2.8), the decision MUST be recorded as
 theirs.
 
 # Relationships {#relationships}
@@ -240,10 +253,11 @@ theirs.
 ## Agents {#connections}
 
 `GET /connections` returns every standing connection ({{U4ACore}} Section 9),
-each carrying its `handle`, `identity`, `label`, `status`, `first_seen`,
-`last_access`, the policy units the owner personally approved it at, the units
-it has been granted at, its revocation count, and where another agent
-introduced it, that agent's handle.
+each carrying `handle`, `identity`, `label`, `status` (`active` or `revoked`),
+`first_seen`, `last_access`, `tiers_approved` (the policy units the owner
+personally approved it at), `tiers_granted` (the units it has been granted
+at), `revocations` (how many times she has revoked it), and, where another
+agent introduced it, `parent_handle`.
 
 `POST /connections/revoke` with a body `{"handle": …}` ends one. The handle
 travels in the body for the reason `client_id` does below: an identified agent's
@@ -312,7 +326,7 @@ registration and MUST NOT be editable here. Every edit MUST produce a new
 terms version ({{U4ATerms}} Section 2.1); the response carries the unit as
 stored, and where a layer above the owner narrowed what she wrote, a
 `clamped` array of sentences saying what moved ({{U4AMultiParty}}
-Section 2.4).
+Section 2.5).
 
 `DELETE /policies/{id}` removes one. Its resources become ungoverned, which
 is denied ({{U4APolicy}} Section 2); the response names them. Published
@@ -324,20 +338,33 @@ terms versions MUST NOT be deleted with it.
 of objects each carrying `condition` (the name, with its level where the
 condition is one sentence per level), `takes` (`duration`, `count` or null),
 `label` (the sentence shown to the owner), and `may_relax`. This is the
-publication {{U4APolicy}} Section 3.4 requires; a surface that offers the
+publication {{U4APolicy}} Section 3.6 requires; a surface that offers the
 owner a condition it does not list will compose a rule the server refuses.
 
 # The Record {#record}
 
-`GET /ledger` returns the record of {{U4APolicy}} Section 8, oldest first.
-With `?handle=` it returns one agent's part of it: every promise that agent
-made, every decision about it, and everything it touched, in order.
+`GET /ledger` returns the record of {{U4APolicy}} Section 8, oldest first, as
+an array of entries each carrying `kind`, `family`, `ts` and `handle` (null
+where no agent can be named), with members particular to the kind beside them.
+The kinds are: `promised`, `approved`, `denied`, `refused`, `relaxed`,
+`connected`, `revoked`, `touched`, `identity_refused`, `claimed`,
+`disclaimed`; for an organization, `org_joined`, `org_left`, `org_declined`,
+`org_clamped`, `org_refused`, `org_role`, `org_acted` and `break_glass`; and for
+a jointly held resource, `joint_joined`, `joint_left`, `joint_moved`,
+`joint_allowed` and `joint_refused`. A surface SHOULD tolerate a kind it does not
+know, showing it as an entry rather than failing on it. With `?handle=` it
+returns one agent's part of the record: every promise that agent made, every
+decision about it, and everything it touched, in order.
 
 `GET /events` is a server-sent event stream {{SSE}} carrying a message for
 each thing that happens that the owner may want to act on: a request arriving
 to wait on her, a decision landing, a resource server introducing itself, an
 organization or a co-holder changing something. The event name is the
-message's `type`. On a replicated authorization server the subscription MUST
+message's `type`, one of `pending`, `decided`, `resource_server_pending`,
+`resource_server_decided`, `organization`, `joint` and `break_glass`; a surface
+SHOULD ignore a type it does not know, and SHOULD re-read the state the stream
+concerns when it reconnects, since a message sent while it was disconnected is
+not replayed. On a replicated authorization server the subscription MUST
 be a property of the shared state rather than of the process serving the
 stream, since the decision the owner is waiting for may be produced by any
 replica.
@@ -402,7 +429,7 @@ requires it be rendered as text: it is the one field on this surface that the
 counterparty authored.
 
 An organization's view of the same data is not this surface; it is the scoped
-view of {{U4AMultiParty}} Section 2.6, and the scoping is applied by the
+view of {{U4AMultiParty}} Section 2.7, and the scoping is applied by the
 owner's server before it answers.
 
 # IANA Considerations

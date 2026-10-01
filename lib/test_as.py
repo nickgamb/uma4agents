@@ -128,6 +128,10 @@ async def agreements_and_grants() -> None:
     refuses("a bare key names no algorithm, so it is held to the one it always signed",
             lambda: app.verify_contract(signed("Ed25519", JWK), negotiating()),
             "not allowed")
+    refuses("an algorithm it does not advertise is refused, by name",
+            lambda: app.verify_contract(signed("EdDSA", {**JWK, "alg": "ES256"}),
+                                        negotiating()),
+            "ES256")
     refuses("a reason past the ceiling is refused wherever an agreement is accepted",
             lambda: app.requester_claims({"reason": "x" * (app.MAX_REASON + 1)}),
             "permitted length")
@@ -142,6 +146,16 @@ async def agreements_and_grants() -> None:
           claims["exp"] - time.time() <= 61, f"{claims['exp'] - time.time():.0f}s")
     check("and neither does its permission",
           claims["permissions"][0]["exp"] - time.time() <= 61)
+
+    raw_other, other_res = agreement(resource_id="alice-vault/execute_trade")
+    rec_other = negotiating()
+    contract_o, signer_o = app.verify_contract(other_res, rec_other)
+    rec_other.update(contract=contract_o, agreement_jws=raw_other)
+    granted_for = unverified((await app.issue_rpt(
+        rec_other, app.s256(raw_other.encode()), signer_o, None))["access_token"])
+    check("the resource a grant covers is the negotiation's, whatever the agreement names",
+          [p["resource_id"] for p in granted_for["permissions"]]
+          == ["alice-vault/get_positions"], str(granted_for["permissions"]))
 
     raw_long, long_ = agreement(expires_in=86400)
     rec_long = negotiating()
@@ -638,6 +652,47 @@ def a_clearance() -> None:
                        headers={"typ": clearance.TYP, "kid": "org-1"}))
 
 
+async def her_signed_request_sent_twice() -> None:
+    print("\n== her signed request, sent a second time ==")
+    from starlette.requests import Request
+    from uma4a_http_sig import sign
+    key = Ed25519PrivateKey.generate()
+    body = b'{"decision":"approved"}'
+    path = "/owner/pending/fam_x/decision"
+    headers = sign("POST", app.OWNER_EXPECTED_AUTHORITY, path, "", key, "her-device", body=body)
+
+    def request(method: str = "POST"):
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        sent = {"done": False}
+
+        async def receive():
+            if sent["done"]:
+                return {"type": "http.disconnect"}
+            sent["done"] = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return Request({"type": "http", "method": method, "path": path, "query_string": b"",
+                        "headers": raw, "server": ("as", 80), "scheme": "http"}, receive)
+
+    with patch.object(app, "owner_device_key", return_value=key.public_key()):
+        first = await app.require_owner_signature(request())
+        check("the first is hers", first == app.OWNER_KEY_OWNER)
+        try:
+            await app.require_owner_signature(request())
+            check("the same signed change sent again is refused", False, "accepted")
+        except app.HTTPException as exc:
+            check("the same signed change sent again is refused",
+                  exc.status_code == 401 and "already" in exc.detail, exc.detail)
+
+
+async def what_it_says_it_verifies() -> None:
+    print("\n== the algorithms it says it verifies ==")
+    meta = await app.discovery()
+    check("it advertises Ed25519 for signed claim tokens",
+          {"EdDSA", "Ed25519"} <= set(meta.get("signing_alg_values_supported", [])))
+    check("and ed25519 for signed requests",
+          "ed25519" in meta.get("http_message_signature_alg_values_supported", []))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
@@ -656,6 +711,8 @@ async def main() -> int:
     await an_approval_she_has_since_overtaken()
     await a_holders_verdict()
     await an_unreachable_organization()
+    await her_signed_request_sent_twice()
+    await what_it_says_it_verifies()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 
