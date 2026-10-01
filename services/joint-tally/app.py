@@ -58,6 +58,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
+import uma4a_consequence
 import uma4a_joint as J
 import uma4a_profiles
 
@@ -283,9 +284,14 @@ async def quotes_for(account: str, doc: dict,
 _HOLDER_JWKS: dict[str, tuple[float, list]] = {}
 
 
-def holder_keys(issuer: str) -> list:
+def holder_keys(issuer: str, fresh: bool = False) -> list:
     cached = _HOLDER_JWKS.get(issuer)
-    if cached and cached[0] > now():
+    if cached and cached[0] > now() and not fresh:
+        return cached[1]
+    # A fresh read, for a verdict no cached key verifies, at most once a
+    # minute: a holder's rotation is noticed, and a forger cannot make this
+    # service fetch on every verdict it sends.
+    if fresh and cached and now() - (cached[0] - 300) < 60:
         return cached[1]
     with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
         r = c.get(f"{issuer.rstrip('/')}/jwks")
@@ -305,7 +311,12 @@ def verify_verdict(jws: str, holder: dict, rec: dict) -> dict | None:
     would appear nowhere. Catching it here makes the failure legible where it
     happens.
     """
-    for jwk_dict in holder_keys(holder["issuer"]):
+    def candidates():
+        # Lazily: the fresh read is made only once the cached keys are spent.
+        yield from holder_keys(holder["issuer"])
+        yield from holder_keys(holder["issuer"], fresh=True)
+
+    for jwk_dict in candidates():
         try:
             claims = jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                 algorithms=["EdDSA"], issuer=holder["issuer"],
@@ -664,14 +675,23 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
     lifetime = int(rec["template"]["expires_in"] or 900)
     if (agreed := int(rec["contract"].get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
-    exp = int(now()) + min(3600, lifetime)
+    exp = int(now()) + lifetime
     # And no later than the first of the verdicts it carries: a grant that
     # outlived one would be refused at the door from that moment on.
+    # And it declares the heaviest consequence any holder answered under, so
+    # the enforcement point's check that an operation has not since been
+    # declared heavier applies to it as to any grant.
+    consequence = None
     for o, jws in (rec.get("signed") or {}).items():
         if rec["verdicts"].get(o) == "allow":
-            ends = jwt.decode(jws, options={"verify_signature": False}).get("exp")
+            said = jwt.decode(jws, options={"verify_signature": False})
+            ends = said.get("exp")
             if isinstance(ends, (int, float)):
                 exp = min(exp, int(ends))
+            heavier = uma4a_consequence.rank(said.get("consequence"))
+            if heavier is not None and (consequence is None
+                                        or heavier > uma4a_consequence.rank(consequence)):
+                consequence = uma4a_consequence.normalise(said.get("consequence"))
     offered = list(rec["template"]["scope"] or [])
     scopes = [s for s in (rec["contract"].get("scope") or offered) if s in offered]
     handle = J.key_thumbprint(rec["signer"])
@@ -703,6 +723,8 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
             "tally": result,
         },
     }
+    if consequence:
+        claims["consequence"] = consequence
     if rec["contract"].get("operation"):
         claims["single_use"] = True
         claims["operation"] = {

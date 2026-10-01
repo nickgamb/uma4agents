@@ -178,8 +178,11 @@ def grant(rid="alice-vault/get_positions", scopes=("positions:read",), **over) -
 
 
 print("\n== what a grant has to cover ==")
-d = present(granting(grant()))
+honouring = granting(grant())
+d = present(honouring)
 check("a grant covering the tool's resource and scope is honoured", d.outcome == "allow", d.error)
+check("and the call is reported to her authority, for her record of what was touched",
+      honouring.report_access.await_count == 1, str(honouring.report_access.await_count))
 
 d = present(granting(grant(scopes=())))
 check("a grant over the resource without the tool's scope is not",
@@ -424,6 +427,22 @@ check("and refused at another member's administration of the book",
 d = present(overriding({**book, "operation": None}, here=True))
 check("a grant calling itself single-use and naming no operation is refused",
       d.outcome == "deny" and d.error == "operation_required", d.error)
+
+unread = jointly(joint_grant())
+unread.published_mandate = AsyncMock(return_value=None)
+d = present(unread, tool="read")
+check("a mandate that cannot be read is a 503 to retry, not a terminal refusal",
+      d.outcome == "deny" and d.status == 503 and d.error == "temporarily_unavailable",
+      f"{d.status} {d.error}")
+
+print("\n== what a joint grant says an operation leaves behind ==")
+heavy = [verdict("alice", consequence="irreversible"), verdict("carol")]
+d = present(jointly(joint_grant(verdicts=heavy)), tool="read")
+check("a joint grant lighter than a holder's answer is refused",
+      refused_jointly(d) and "lighter consequence" in d.description, d.description)
+d = present(jointly(joint_grant(verdicts=heavy, consequence="irreversible")), tool="read")
+check("and one carrying it is honoured, so the re-check applies to it",
+      d.outcome == "allow", d.error)
 
 print("\n== a tally that invents its electorate ==")
 MALLORY = Ed25519PrivateKey.generate()

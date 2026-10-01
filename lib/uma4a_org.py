@@ -129,7 +129,10 @@ def reaches(resource_id: str, envelope: dict) -> bool:
     it lives at the authority of the person being asked rather than in the
     document of the party doing the asking.
     """
-    if resource_id in (envelope.get("excluded") or ()):
+    # Matched as patterns, as claims are: a mandate may name its resources
+    # as `account/*`, and an exact comparison against that would leave every
+    # one of them inside the organization's reach.
+    if claims_match(resource_id, envelope.get("excluded") or []):
         return False
     return claims_match(resource_id, envelope.get("claims") or [])
 

@@ -187,7 +187,7 @@ charter version rather than editing the one in force:
 | `PUT /admin/roles/{id}` | Create a group or change what it reaches. Refused if it grants anything the charter does not claim |
 | `DELETE /admin/roles/{id}` | Remove a group. Refused while anybody is in it — deleting one fails closed for its members, which is an access change nobody would see happen |
 | `POST /admin/roles/default` | Which group somebody lands in when they join. `null` is valid: joining grants nothing until an administrator says what this person is |
-| `POST /admin/members/{owner}/role` | Move one member. The only endpoint in this console that widens anything |
+| `POST /admin/members/{owner}/role` | Move one member. With `PUT /admin/roles/{id}`, the way this console widens what somebody reaches |
 | `PUT /admin/members/{owner}/clearance` | What this organization is prepared to attest about one member. An empty object withdraws it, and access stops within the attestation's lifetime |
 
 ## The tally, for a resource held jointly

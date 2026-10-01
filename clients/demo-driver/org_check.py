@@ -717,6 +717,17 @@ def main() -> int:                                            # noqa: C901
         check("a group with members in it cannot be deleted out from under them",
               r.status_code == 409 and "alice" in r.text,
               f"{r.status_code} {r.text[:180]}")
+        in_force = c.get(f"{ORG}/admin/charter", headers=ADMIN, timeout=15.0).json()
+        without = {**in_force["charter"],
+                   "roles": {k: v for k, v in in_force["charter"]["roles"].items()
+                             if k != "analyst"},
+                   "base_version": in_force["version"]}
+        if without.get("default_role") == "analyst":
+            without["default_role"] = None
+        r = c.put(f"{ORG}/admin/charter", json=without, headers=ADMIN, timeout=20.0)
+        check("nor edited out of the charter, which is the same act by another door",
+              r.status_code == 409 and "analyst" in r.text,
+              f"{r.status_code} {r.text[:180]}")
         r = c.post(f"{ORG}/admin/roles/default", json={"role": "desk"},
                    headers=ADMIN, timeout=20.0)
         check("an administrator can say which group joiners land in",
@@ -911,6 +922,25 @@ def main() -> int:                                            # noqa: C901
         check("while another member's access is unaffected",
               c.get(f"{carol['as']}/owner/organization", headers=hdrs(c, "carol"),
                     timeout=15.0).json().get("enrolled") is True)
+
+        # --- 12b. the organization ends a membership ----------------------
+        def her_endings() -> list:
+            return [e for e in c.get(f"{carol['as']}/owner/ledger",
+                                     headers=hdrs(c, "carol"), timeout=15.0).json()
+                    if e["kind"] == "org_left"]
+        before = len(her_endings())
+        r = c.request("DELETE", f"{ORG}/admin/members/carol", headers=ADMIN,
+                      timeout=15.0)
+        check("an administrator can end a member's membership",
+              r.status_code == 200, f"{r.status_code} {r.text[:140]}")
+        time.sleep(1.0)
+        check("her authority is told, and stops treating her as a member",
+              c.get(f"{carol['as']}/owner/organization", headers=hdrs(c, "carol"),
+                    timeout=15.0).json().get("enrolled") is False)
+        ended = her_endings()[before:]
+        check("and her record says the organization ended it",
+              len(ended) == 1 and "organization" in (ended[0].get("why") or ""),
+              f"{ended}")
 
         # --- 13. an invitation she does not want -------------------------
         again = c.post(f"{ORG}/admin/invites", json={"owner": "alice", "note": "come back"},

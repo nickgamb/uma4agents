@@ -228,6 +228,17 @@ async def publish_charter(doc: dict, by: str, base_version: int | None = None) -
                        f"v{base_version} this change was made against; reload "
                        "and make it again")
         validated = charter_mod.validate(doc)
+        # A group somebody is in cannot disappear in a charter edit any more
+        # than by deleting it: either way its members would fail closed on
+        # everything, an access change nobody would see happen.
+        kept = set((validated.get("roles") or {}).keys())
+        orphaned = sorted({m.get("role") for m in MEMBERS.values()
+                           if m.get("role") and m.get("role") not in kept})
+        if orphaned:
+            raise HTTPException(
+                status_code=409,
+                detail=f"{', '.join(orphaned)} still has members; move them to "
+                       "another group before removing it")
         await load_custom_rego(validated.get("rego") or "")
         entry = {
             "version": len(CHARTERS) + 1,
@@ -422,9 +433,13 @@ def _bearer(request: Request) -> str:
 _ADMIN_JWKS: tuple[float, list] = (0.0, [])
 
 
-def admin_issuer_keys() -> list:
+def admin_issuer_keys(fresh: bool = False) -> list:
     global _ADMIN_JWKS
-    if _ADMIN_JWKS[0] > now():
+    if _ADMIN_JWKS[0] > now() and not fresh:
+        return _ADMIN_JWKS[1]
+    # A token naming a key not yet cached earns one fresh read — the realm
+    # rotated — at most once a minute, since any caller can send one.
+    if fresh and _ADMIN_JWKS[1] and now() - (_ADMIN_JWKS[0] - 300) < 60:
         return _ADMIN_JWKS[1]
     with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
         meta = c.get(ADMIN_METADATA_URL)
@@ -449,7 +464,10 @@ def require_admin(request: Request) -> str:
 
     try:
         header = jwt.get_unverified_header(token)
-        for jwk_dict in admin_issuer_keys():
+        keys = admin_issuer_keys()
+        if header.get("kid") and not any(k.get("kid") == header["kid"] for k in keys):
+            keys = admin_issuer_keys(fresh=True)
+        for jwk_dict in keys:
             if jwk_dict.get("use") == "enc":
                 continue
             if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
@@ -1223,7 +1241,8 @@ async def break_glass(request: Request) -> JSONResponse:
     else:
         voucher_id = ""
         for origin in glass.get("invokers") or []:
-            if invoker_published_key(origin, thumb):
+            # Off the event loop: it reads the operator's key directory.
+            if await asyncio.to_thread(invoker_published_key, origin, thumb):
                 authorised_by = f"operator {origin}"
                 break
     if authorised_by is None:

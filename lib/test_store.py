@@ -238,6 +238,37 @@ async def test_organization_fields_merge(store) -> None:
           await store.update_organization({"blocked": {}}) is False)
 
 
+async def test_spent_once(store) -> None:
+    import time as _t
+
+    first, second = await asyncio.gather(store.spend_once("notice:n1", _t.time() + 60),
+                                         store.spend_once("notice:n1", _t.time() + 60))
+    check("a value spent twice at once is spent exactly once",
+          sorted([first, second]) == [False, True], f"{first} {second}")
+    check("and stays spent", await store.spend_once("notice:n1", _t.time() + 60) is False)
+    await store.spend_once("notice:old", _t.time() - 1)
+    check("one past its expiry may be spent again, being no longer a replay",
+          await store.spend_once("notice:old", _t.time() + 60) is True)
+
+
+async def test_org_blocks_do_not_overwrite_each_other(store) -> None:
+    await store.set_organization({"issuer": "https://org.example", "token": "t"})
+    await asyncio.gather(store.change_org_block("handles", "h1"),
+                         store.change_org_block("handles", "h2"),
+                         store.change_org_block("operators", "https://op.example"))
+    blocked = (await store.organization() or {}).get("blocked") or {}
+    check("blocks made at once all stand",
+          sorted(blocked.get("handles") or []) == ["h1", "h2"]
+          and blocked.get("operators") == ["https://op.example"], str(blocked))
+    await store.change_org_block("handles", "h1")
+    after = await store.change_org_block("handles", "h1", remove=True)
+    check("a block is listed once, and removing it removes it",
+          after.get("handles") == ["h2"], str(after))
+    await store.clear_organization()
+    check("and there is nothing to block once the membership is gone",
+          await store.change_org_block("handles", "h3") is None)
+
+
 async def test_revoke_burns_live_grants(store) -> None:
     """Revocation deactivates the connection and every live token under it in
     one step. If the two halves could come apart, a revoked agent would keep
@@ -674,6 +705,8 @@ async def test_claimed_origins_round_trip(store) -> None:
 
 
 TESTS = [
+    test_spent_once,
+    test_org_blocks_do_not_overwrite_each_other,
     test_organization_fields_merge,
     test_ticket_is_spent_once,
     test_save_creates_an_unseen_negotiation,

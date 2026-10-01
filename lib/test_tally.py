@@ -43,9 +43,9 @@ HOLDER = Ed25519PrivateKey.generate()
 AGENT = {"kty": "OKP", "crv": "Ed25519", "x": "A" * 43}
 
 
-def verdict(lasts: int) -> str:
-    return jwt.encode({"holder": "h", "effect": "allow", "exp": int(time.time()) + lasts},
-                      HOLDER, algorithm="EdDSA")
+def verdict(lasts: int, **over) -> str:
+    return jwt.encode({"holder": "h", "effect": "allow", "exp": int(time.time()) + lasts,
+                       **over}, HOLDER, algorithm="EdDSA")
 
 
 def negotiation(verdicts: dict, agreed: int = 3600) -> dict:
@@ -56,9 +56,13 @@ def negotiation(verdicts: dict, agreed: int = 3600) -> dict:
             "signed": verdicts, "verdicts": {o: "allow" for o in verdicts}}
 
 
-def issued_exp(rec: dict) -> int:
+def issued(rec: dict) -> dict:
     token = app.issue(rec, {"holders": [], "rule": {}, "resources": []}, {})["access_token"]
-    return jwt.decode(token, options={"verify_signature": False})["exp"]
+    return jwt.decode(token, options={"verify_signature": False})
+
+
+def issued_exp(rec: dict) -> int:
+    return issued(rec)["exp"]
 
 
 print("\n== how long a grant built from verdicts lasts ==")
@@ -69,6 +73,12 @@ check("as long as the agreement, when every verdict outlasts it",
 exp = issued_exp(negotiation({"alice": verdict(3600), "carol": verdict(600)}))
 check("and no longer than the first verdict it carries",
       exp <= now + 600 + 2, f"{exp - now}")
+
+print("\n== what it says an operation leaves behind ==")
+grant = issued(negotiation({"alice": verdict(3600, consequence="irreversible"),
+                            "carol": verdict(3600, consequence="reversible")}))
+check("the heaviest consequence any holder answered under",
+      grant.get("consequence") == "irreversible", str(grant.get("consequence")))
 
 print(f"\n{PASSED} passed, {FAILED} failed")
 sys.exit(1 if FAILED else 0)

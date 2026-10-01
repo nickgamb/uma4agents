@@ -49,6 +49,7 @@ class MemoryOwnerStore:
         self._mandates: dict[str, dict] = {}
         self._subscribers: list[asyncio.Queue] = []
         self._seeded = False
+        self._spent: dict[str, float] = {}
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -361,6 +362,24 @@ class MemoryOwnerStore:
         self._organization.update(copy.deepcopy(fields))
         return True
 
+    async def spend_once(self, key: str, expires: float) -> bool:
+        spent = self._spent
+        for k in [k for k, e in spent.items() if e < time.time()]:
+            spent.pop(k, None)
+        if key in spent:
+            return False
+        spent[key] = float(expires)
+        return True
+
+    async def change_org_block(self, key: str, value: str,
+                               remove: bool = False) -> dict | None:
+        if self._organization is None:
+            return None
+        blocked = self._organization.setdefault("blocked", {})
+        listed = [x for x in blocked.get(key) or [] if x != value]
+        blocked[key] = listed if remove else listed + [value]
+        return copy.deepcopy(blocked)
+
     async def clear_organization(self) -> bool:
         had = self._organization is not None
         self._organization = None
@@ -407,4 +426,6 @@ class MemoryStore:
         return st
 
     async def owners(self) -> list[str]:
-        return sorted(self._owners)
+        # Seeded owners only. Reading an owner's state makes an empty record
+        # for her here, and an owner nobody seeded is not one this server has.
+        return sorted(o for o, s in self._owners.items() if s._seeded)

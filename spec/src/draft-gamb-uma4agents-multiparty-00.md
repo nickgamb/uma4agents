@@ -526,8 +526,7 @@ because:
 
 exp:
 : REQUIRED. No earlier than the agreement the verdict is about would end, so
-  that a grant within that lifetime can carry it, and no later than the
-  longest lifetime the holder's authorization server gives a grant.
+  that a grant within that lifetime can carry it.
 
 cnf_jkt:
 : REQUIRED in an `allow`. `jkt(k)`, as {{U4ACore}} defines it, of the key `k`
@@ -547,8 +546,15 @@ mandate_s256:
 : REQUIRED in an `allow`. The digest of the mandate the holder agreed to, as
   {{mandate-digest}}.
 
+consequence:
+: REQUIRED in an `allow` where the resource declares one for the operation.
+  The consequence class of {{U4ACore}} the holder's authorization server read
+  when it answered.
+
 An `allow` verdict MUST carry `cnf_jkt`, `scope`, `expires_in` and
-`mandate_s256`, and MUST carry `operation` where the agreement names one. A
+`mandate_s256`, and MUST carry `operation` where the agreement names one and
+`consequence` where the resource declares one. The tally's grant MUST carry the
+most severe `consequence` any `allow` verdict it carries names. A
 verdict that said only "yes, to this agreement" could be carried inside any grant
 the tally chose to issue beside it, because the enforcement point checks
 verdicts against the grant and never sees the agreement. Stating the grant's
@@ -692,8 +698,8 @@ call under such a grant:
 4. establish, for each `allow` verdict, that its `mandate_s256` is the digest of
    the published mandate, and that the grant is bound to the key `cnf_jkt`
    names, carries no scope beyond `scope`, lasts no longer than `expires_in`,
-   and, where the verdict names an `operation`, is single-use and bound to that
-   operation;
+   declares no lighter `consequence` than the verdict names, and, where the
+   verdict names an `operation`, is single-use and bound to that operation;
 5. re-run the count of {{count}} and refuse unless it allows.
 
 The `tally` member of the grant is for display and MUST NOT be trusted.
@@ -726,7 +732,14 @@ A charter claim MUST NOT match a jointly held resource, and a holder's
 authorization server MUST refuse to apply an organization's envelope or decision
 to one regardless. A jointly held resource MUST NOT share a policy unit with any
 other resource, since a ceiling applies to a whole unit once it reaches any
-resource in it.
+resource in it. A holder's authorization server MUST compare a resource against
+the mandate's resources as patterns, as it compares charter claims.
+
+The protection runs one way. A holder's authorization server MUST refuse to agree
+to a mandate covering a resource an organization she belongs to claims, and MUST
+NOT treat such a mandate as taking that resource out of the organization's reach:
+otherwise a member could lift her organization's ceiling off its own resource by
+joining a mandate any party could publish.
 
 Peers compose horizontally; an authority above them clamps vertically. The two
 are orthogonal rather than rival, and this document keeps them apart.

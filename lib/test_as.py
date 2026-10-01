@@ -143,6 +143,17 @@ async def agreements_and_grants() -> None:
     check("and neither does its permission",
           claims["permissions"][0]["exp"] - time.time() <= 61)
 
+    raw_long, long_ = agreement(expires_in=86400)
+    rec_long = negotiating()
+    rec_long["template"] = {**rec_long["template"], "expires_in": 172800}
+    contract_long, signer_long = app.verify_contract(long_, rec_long)
+    rec_long.update(contract=contract_long, agreement_jws=raw_long)
+    lasting = unverified((await app.issue_rpt(
+        rec_long, app.s256(raw_long.encode()), signer_long, None))["access_token"])
+    check("and as long as it agreed to, when her terms allow it, past any hour",
+          abs(lasting["exp"] - time.time() - 86400) <= 5,
+          f"{lasting['exp'] - time.time():.0f}s")
+
     handle = app.connection_handle(contract["_identity"], signer)
     store = app.st("alice")
     await store.put_connection({"handle": handle, "status": "active",
@@ -211,6 +222,204 @@ async def whose_approval() -> None:
         else:
             check("an administrator's approval is not recorded as hers",
                   "tier2" not in approved, f"tiers_approved={approved}")
+
+
+async def an_owner_nobody_set_up() -> None:
+    print("\n== a name nobody set up is not an owner ==")
+    from fastapi import HTTPException
+
+    for label, attempt in (
+            ("her terms index", lambda: app.terms_index("mallory")),
+            ("a terms document", lambda: app.terms_document("mallory/x/v1", None))):
+        try:
+            await attempt()
+            check(f"{label} for an unknown owner is refused", False, "answered")
+        except HTTPException as exc:
+            check(f"{label} for an unknown owner is refused", exc.status_code == 404,
+                  str(exc.status_code))
+    check("and asking made no owner of her", "mallory" not in await app.STORE.owners(),
+          str(await app.STORE.owners()))
+
+
+async def a_mandate_over_the_firms_own_resource() -> None:
+    print("\n== a jointly held account cannot take the firm's resource out of its reach ==")
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
+
+    class Req:
+        async def json(self):
+            return {"tally": "https://tally.example", "account": "a", "agreed": True}
+
+    REFUSED = "her authority refuses to agree to a mandate over what her organization claims"
+    firm = {"claims": ["northwind-vault/*"]}
+    mandate = {"resources": ["northwind-vault/*"],
+               "holders": [{"owner": "alice"}, {"owner": "carol"}]}
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "fetch_mandate", AsyncMock(return_value=mandate)), \
+            patch.object(app, "org_envelope", AsyncMock(return_value=firm)):
+        try:
+            await app.owner_joint_join(Req())
+            check(REFUSED, False, "agreed")
+        except HTTPException as exc:
+            check(REFUSED, exc.status_code == 409, str(exc.detail))
+    client = SimpleNamespace(envelope=firm)
+    with patch.object(app, "org_client", AsyncMock(return_value=client)), \
+            patch.object(app, "jointly_held",
+                         AsyncMock(return_value={"northwind-vault/*", "meridian-joint/*"})):
+        env = await app.org_envelope("alice")
+    check("and one she holds anyway does not lift the firm's ceiling off it",
+          env["excluded"] == ["meridian-joint/*"], str(env["excluded"]))
+
+
+async def a_tier_written_again() -> None:
+    print("\n== a tier deleted and written again ==")
+
+    class Req:
+        def __init__(self, body):
+            self.body = body
+
+        async def json(self):
+            return self.body
+
+    spec = {"id": "drafts", "name": "Drafts", "resources": [],
+            "terms": {"purpose": "drafting", "expires_in": 600}}
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "org_envelope", AsyncMock(return_value=None)):
+        first = await app.owner_create_policy(Req(spec))
+        await app.owner_delete_policy("drafts", Req({}))
+        second = await app.owner_create_policy(Req({**spec, "terms": {
+            "purpose": "something else entirely", "expires_in": 600}}))
+    check("continues its numbering, so one id never names two documents",
+          first["terms"]["template_id"] == "alice/drafts/v1"
+          and second["terms"]["template_id"] == "alice/drafts/v2",
+          f"{first['terms']['template_id']} then {second['terms']['template_id']}")
+
+
+def pulled_registrations() -> None:
+    print("\n== what a pull believes about a resource server ==")
+    RU = "https://rs.example/mcp"
+    rs_key, other_key = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    rs_jwk = json.loads(OKPAlgorithm.to_jwk(rs_key.public_key()))
+
+    def documents(signer=rs_key, iss=RU, owner="alice", rid="x/get") -> dict:
+        signed = jwt.encode({"iss": iss, "owner_resources_endpoint":
+                             "https://rs.example/owner-resources/alice"}, signer,
+                            algorithm="EdDSA")
+        return {
+            app.well_known_prm_url(RU): {"resource": RU, "authorization_servers":
+                                         [app.ISSUER], "jwks_uri": "https://rs.example/jwks",
+                                         "signed_metadata": signed},
+            "https://rs.example/jwks": {"keys": [rs_jwk]},
+            "https://rs.example/owner-resources/alice": {
+                "owner": owner, "resources": [{"_id": rid, "resource_scopes": ["s"]}]},
+        }
+
+    class Client:
+        docs: dict = {}
+
+        def __init__(self, **_):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def stream(self, method, url, **_):
+            body = json.dumps(Client.docs[url]).encode()
+
+            class Resp:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *_):
+                    return False
+
+                def raise_for_status(self):
+                    pass
+
+                def iter_bytes(self):
+                    yield body
+            return Resp()
+
+    def pull(client_id="rs-a", **over):
+        Client.docs = documents(**over)
+        with patch("httpx.Client", Client):
+            return app.pull_registrations(client_id, {"resource_uri": RU}, "alice")
+
+    app.RESOURCES.clear()
+    check("a resource server's own signed listing is registered for her",
+          pull() == 1 and ("alice", "x/get") in app.RESOURCES, str(list(app.RESOURCES)))
+    for label, over in (
+            ("metadata signed by a key the resource does not publish is refused",
+             {"signer": other_key}),
+            ("metadata naming another resource as its issuer is refused",
+             {"iss": "https://other.example/mcp"}),
+            ("a listing that names another owner is refused", {"owner": "carol"})):
+        try:
+            pull(**over)
+            check(label, False, "accepted")
+        except ValueError:
+            check(label, True)
+    pull(client_id="rs-b")
+    check("and an id another resource server registered for her is not taken over",
+          app.RESOURCES[("alice", "x/get")]["source"] == "rs-a",
+          app.RESOURCES[("alice", "x/get")]["source"])
+    app.RESOURCES.clear()
+
+
+async def an_approval_she_has_since_overtaken() -> None:
+    print("\n== an approval does not outlive what she withdrew after it ==")
+    store = app.st("alice")
+    issued = AsyncMock(return_value={"access_token": "t"})
+
+    async def pend(family: str, handle: str, kind: str, seen: int = 0) -> None:
+        await store.mint_ticket({
+            "owner": "alice", "family": family, "state": "awaiting-owner",
+            "decision": None, "pending_kind": kind, "tier": "tier2",
+            "handle": handle, "revocations_seen": seen,
+            "resource_id": "alice-vault/get_transactions",
+            "resource_scopes": ["transactions:read"], "contract_hash": "s256:x",
+            "signer_jwk": JWK, "contract": {"purpose": "x", "prohibited": [],
+                                            "_identity": {}}}, 300)
+        await app.decide_pending("alice", family, "approved", actor=None)
+
+    async def collect(family: str):
+        issued.reset_mock()
+        with patch.object(app, "issue_rpt", issued):
+            return await app.pending_poll(await store.negotiation(family))
+
+    await store.put_connection({"handle": "jkt:later", "status": "active",
+                                "first_seen": app.utcstamp(),
+                                "tiers_granted": [], "tiers_approved": []})
+    await pend("fam_later", "jkt:later", "operation")
+    await store.revoke_connection("jkt:later")
+    r = await collect("fam_later")
+    check("an approval collected after she revoked the agent issues nothing",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
+
+    await pend("fam_again", "jkt:later", "connection", seen=1)
+    r = await collect("fam_again")
+    check("but admitting it again, knowing it was revoked, still works",
+          r.status_code == 200 and issued.called, f"{r.status_code}")
+
+    await pend("fam_twice", "jkt:later", "connection", seen=1)
+    await store.revoke_connection("jkt:later")
+    r = await collect("fam_twice")
+    check("and a revocation between its asking and its collecting is not undone",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
+
+    await store.put_connection({"handle": "jkt:cleared", "status": "active",
+                                "first_seen": app.utcstamp(),
+                                "tiers_granted": [], "tiers_approved": []})
+    await pend("fam_cleared", "jkt:cleared", "operation")
+    with patch.object(app, "clearance_unmet",
+                      AsyncMock(return_value=(["the licence is no longer attested"], {}))):
+        r = await collect("fam_cleared")
+    check("a clearance lost while she was deciding is read again before the grant",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
 
 
 MANDATE = {"account": "joint", "resources": ["joint/*"], "rule": {"kind": "all"},
@@ -360,7 +569,12 @@ async def main() -> int:
     identities()
     a_clearance()
     await agreements_and_grants()
+    await an_owner_nobody_set_up()
+    pulled_registrations()
+    await a_tier_written_again()
+    await a_mandate_over_the_firms_own_resource()
     await whose_approval()
+    await an_approval_she_has_since_overtaken()
     await a_holders_verdict()
     await an_unreachable_organization()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")

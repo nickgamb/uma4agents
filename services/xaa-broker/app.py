@@ -146,6 +146,10 @@ def idp_keys(fresh: bool = False) -> list:
     age, keys = _JWKS_CACHE
     if keys and not fresh and now() - age < JWKS_TTL:
         return keys
+    # A key id nobody has seen asks for a fresh read, and any caller can send
+    # one. At most once a minute.
+    if keys and fresh and now() - age < 60:
+        return keys
     with _client() as c:
         conf = c.get(f"{IDP_ISSUER}/.well-known/openid-configuration").json()
         jwks = c.get(conf["jwks_uri"]).json()

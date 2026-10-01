@@ -2020,8 +2020,7 @@ of <code>u4a-verdict+jwt</code>, carrying:<a href="#section-3.4-1" class="pilcro
 <dt id="section-3.4-2.13">exp:</dt>
           <dd style="margin-left: 1.5em" id="section-3.4-2.14">
             <p id="section-3.4-2.14.1"><span class="bcp14">REQUIRED</span>. No earlier than the agreement the verdict is about would end, so
-that a grant within that lifetime can carry it, and no later than the
-longest lifetime the holder's authorization server gives a grant.<a href="#section-3.4-2.14.1" class="pilcrow">¶</a></p>
+that a grant within that lifetime can carry it.<a href="#section-3.4-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.4-2.15">cnf_jkt:</dt>
@@ -2051,10 +2050,19 @@ that signed the agreement.<a href="#section-3.4-2.16.1" class="pilcrow">¶</a></
             <p id="section-3.4-2.24.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code>. The digest of the mandate the holder agreed to, as
 <a href="#mandate-digest" class="auto internal xref">Section 3.5</a>.<a href="#section-3.4-2.24.1" class="pilcrow">¶</a></p>
 </dd>
+          <dd class="break"></dd>
+<dt id="section-3.4-2.25">consequence:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.4-2.26">
+            <p id="section-3.4-2.26.1"><span class="bcp14">REQUIRED</span> in an <code>allow</code> where the resource declares one for the operation.
+The consequence class of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> the holder's authorization server read
+when it answered.<a href="#section-3.4-2.26.1" class="pilcrow">¶</a></p>
+</dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-3.4-3">An <code>allow</code> verdict <span class="bcp14">MUST</span> carry <code>cnf_jkt</code>, <code>scope</code>, <code>expires_in</code> and
-<code>mandate_s256</code>, and <span class="bcp14">MUST</span> carry <code>operation</code> where the agreement names one. A
+<code>mandate_s256</code>, and <span class="bcp14">MUST</span> carry <code>operation</code> where the agreement names one and
+<code>consequence</code> where the resource declares one. The tally's grant <span class="bcp14">MUST</span> carry the
+most severe <code>consequence</code> any <code>allow</code> verdict it carries names. A
 verdict that said only "yes, to this agreement" could be carried inside any grant
 the tally chose to issue beside it, because the enforcement point checks
 verdicts against the grant and never sees the agreement. Stating the grant's
@@ -2245,8 +2253,8 @@ holder it knows no authorization server for, or names a different one;<a href="#
             <p id="section-3.9-2.4.1">establish, for each <code>allow</code> verdict, that its <code>mandate_s256</code> is the digest of
 the published mandate, and that the grant is bound to the key <code>cnf_jkt</code>
 names, carries no scope beyond <code>scope</code>, lasts no longer than <code>expires_in</code>,
-and, where the verdict names an <code>operation</code>, is single-use and bound to that
-operation;<a href="#section-3.9-2.4.1" class="pilcrow">¶</a></p>
+declares no lighter <code>consequence</code> than the verdict names, and, where the
+verdict names an <code>operation</code>, is single-use and bound to that operation;<a href="#section-3.9-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.9-2.5">
             <p id="section-3.9-2.5.1">re-run the count of <a href="#count" class="auto internal xref">Section 3.7</a> and refuse unless it allows.<a href="#section-3.9-2.5.1" class="pilcrow">¶</a></p>
@@ -2283,9 +2291,14 @@ agree on and no long-lived state a fork could damage.<a href="#section-3.9-6" cl
 authorization server <span class="bcp14">MUST</span> refuse to apply an organization's envelope or decision
 to one regardless. A jointly held resource <span class="bcp14">MUST NOT</span> share a policy unit with any
 other resource, since a ceiling applies to a whole unit once it reaches any
-resource in it.<a href="#section-3.10-1" class="pilcrow">¶</a></p>
-<p id="section-3.10-2">Peers compose horizontally; an authority above them clamps vertically. The two
-are orthogonal rather than rival, and this document keeps them apart.<a href="#section-3.10-2" class="pilcrow">¶</a></p>
+resource in it. A holder's authorization server <span class="bcp14">MUST</span> compare a resource against
+the mandate's resources as patterns, as it compares charter claims.<a href="#section-3.10-1" class="pilcrow">¶</a></p>
+<p id="section-3.10-2">The protection runs one way. A holder's authorization server <span class="bcp14">MUST</span> refuse to agree
+to a mandate covering a resource an organization she belongs to claims, and <span class="bcp14">MUST NOT</span> treat such a mandate as taking that resource out of the organization's reach:
+otherwise a member could lift her organization's ceiling off its own resource by
+joining a mandate any party could publish.<a href="#section-3.10-2" class="pilcrow">¶</a></p>
+<p id="section-3.10-3">Peers compose horizontally; an authority above them clamps vertically. The two
+are orthogonal rather than rival, and this document keeps them apart.<a href="#section-3.10-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

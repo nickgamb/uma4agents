@@ -40,6 +40,7 @@ What arrives here is the notice, and what this module does with it is put it
 in front of her. See `/org/notice` in app.py.
 """
 
+import asyncio
 import os
 import time
 
@@ -59,6 +60,7 @@ from uma4a_org import (claims_match as _claims_match, clamp as _clamp,
 ENVELOPE_TTL_S = float(os.environ.get("UMA_AS_ORG_TTL_S", "30"))
 ENVELOPE_STALE_MAX_S = float(os.environ.get("UMA_AS_ORG_STALE_MAX_S", "600"))
 HTTP_TIMEOUT_S = float(os.environ.get("UMA_AS_ORG_TIMEOUT_S", "5"))
+RETRY_S = float(os.environ.get("UMA_AS_ORG_RETRY_S", "15"))
 CA_BUNDLE = os.environ.get("UMA4A_CA_BUNDLE")
 
 
@@ -108,6 +110,12 @@ class OrgClient:
         self.envelope = envelope
         self.fetched = time.time()
         self.failing: str | None = None
+        # When a refresh last failed. An organization that is down is asked
+        # again after RETRY_S, not on every request: each attempt can take a
+        # whole timeout, and a request over her own resources must not pay
+        # for an organization that has nothing to do with it.
+        self.failed_at = 0.0
+        self._refreshing = asyncio.Lock()
         # What the organization attests about her, and when it was read.
         self._clearance: str | None = None
         self._clearance_at = 0.0
@@ -118,6 +126,9 @@ class OrgClient:
 
     def stale(self) -> bool:
         return time.time() - self.fetched > ENVELOPE_TTL_S
+
+    def backing_off(self) -> bool:
+        return bool(self.failing) and time.time() - self.failed_at < RETRY_S
 
     def unusable(self) -> bool:
         """Past the point where a copy that could not be refreshed still
@@ -141,6 +152,7 @@ class OrgClient:
             r.raise_for_status()
         except httpx.HTTPError as exc:
             self.failing = str(exc)
+            self.failed_at = time.time()
             return None, str(exc)
         self.envelope = r.json()
         self.fetched = time.time()

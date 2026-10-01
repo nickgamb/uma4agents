@@ -126,9 +126,9 @@ about why, and about what it is not true of.
 not decide anything locally. It introspects the grant at the authority on every
 call, and a grant whose connection is no longer active fails there. So a
 revocation lands on the next call the agent makes, whenever that is, rather
-than at the grant's expiry. This is also the ceiling on how long a grant can be
-useful at all: an RPT is capped at one hour regardless of what the tier's terms
-say.
+than at the grant's expiry. That is why a grant can last as long as her terms
+say it does: its expiry is when it stops by itself, not how long a withdrawal
+takes to reach it.
 
 **Two things the enforcement point does cache, and for how long.** Both are
 inputs it can read without asking about a specific grant, and both are cached

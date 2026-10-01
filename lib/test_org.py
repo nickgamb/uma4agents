@@ -395,6 +395,8 @@ check("but the ceiling does not, once it is excluded",
 check("and her own resources are still reached",
       uma4a_org.reaches("alice-vault/get_positions",
                         {**wide, "excluded": [joint]}))
+check("a mandate naming its resources as a pattern excludes every one of them",
+      not uma4a_org.reaches(joint, {**wide, "excluded": ["meridian-joint/*"]}))
 jt = {"name": "joint", "resources": [joint], "ask_me": False,
       "terms": {"expires_in": 86400, "scope": ["positions:read"],
                 "prohibited": []}}

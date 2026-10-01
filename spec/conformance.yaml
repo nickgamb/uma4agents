@@ -535,8 +535,8 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["where both require a claim, only values both accept survive", "a requirement she wrote and the charter is silent on is kept"]
   - text: "Each notice MUST carry its own unique jti"
     verified: check
-    targets: [org-check, k8s-org-check]
-    asserts: ["every stage of it is in her own record"]
+    targets: [org-check, k8s-org-check, store-test]
+    asserts: ["every stage of it is in her own record", "a value spent twice at once is spent exactly once"]
   - text: "An identifier shared by several notices"
     verified: check
     targets: [org-check, k8s-org-check]
@@ -612,7 +612,7 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "The organization MUST be able to end a membership and MUST notify the member's authorization server when it does"
     verified: check
     targets: [org-check]
-    asserts: ["an administrator can change what a member may reach", "with nothing restarted and no new deployment"]
+    asserts: ["an administrator can end a member's membership", "her authority is told, and stops treating her as a member", "and her record says the organization ended it"]
   - text: "Leaving MUST withdraw the member's access to claimed resources and the ceiling over her, and MUST leave every narrowing the ceiling applied in place."
     verified: check
     targets: [store-test, joint-check]
@@ -637,6 +637,18 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["the member is told before any data moves"]
+  - text: "A holder's authorization server MUST compare a resource against the mandate's resources as patterns, as it compares charter claims."
+    verified: check
+    targets: [org-test]
+    asserts: ["a mandate naming its resources as a pattern excludes every one of them"]
+  - text: "A holder's authorization server MUST refuse to agree to a mandate covering a resource an organization she belongs to claims, and MUST NOT treat such a mandate as taking that resource out of the organization's reach"
+    verified: check
+    targets: [as-test]
+    asserts: ["her authority refuses to agree to a mandate over what her organization claims", "and one she holds anyway does not lift the firm's ceiling off it"]
+  - text: "The tally's grant MUST carry the most severe consequence any allow verdict it carries names."
+    verified: check
+    targets: [tally-test, pep-test]
+    asserts: ["the heaviest consequence any holder answered under", "a joint grant lighter than a holder's answer is refused"]
   - text: "The tally MUST NOT issue a grant that outlives any allow verdict it carries."
     verified: check
     targets: [tally-test]

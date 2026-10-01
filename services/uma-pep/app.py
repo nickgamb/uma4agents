@@ -37,7 +37,7 @@ from jwt.algorithms import OKPAlgorithm
 import uma4a_consequence
 from uma4a_publish import (AuthorityKeys, owner_resources_document,
                            prm_document, sign_metadata, verify_owner_as_query)
-from uma4a_pep import MANDATE_TTL_S, AuthzFacts, Enforcer, parse_mcp
+from uma4a_pep import MANDATE_TTL_S, STALE_GRACE_S, AuthzFacts, Enforcer, parse_mcp
 
 AS_PUBLIC = os.environ.get("UMA_AS_PUBLIC", "https://alice-as.uma.lab")
 AS_INTERNAL = os.environ.get("UMA_AS_INTERNAL", "http://uma-as:9000")
@@ -499,7 +499,10 @@ async def mandate_of(account: str) -> dict | None:
             doc = r.json()
     except (httpx.HTTPError, ValueError) as exc:
         event("mandate.unreachable", account=account, error=str(exc)[:160])
-        if cached:
+        # The same grace the enforcer gives its own copy, and no more: a copy
+        # of any age would keep listing a holder who left long after anyone
+        # could say she was still one.
+        if cached and cached[0] > time.time() - STALE_GRACE_S:
             return cached[1]
         raise Unreadable(f"the tally for {account} could not be reached") from exc
     _MANDATES[account] = (time.time() + MANDATE_TTL_S, doc)
@@ -588,13 +591,10 @@ async def shared_enforcer(owner: str, fresh: bool = False) -> Enforcer | None:
     try:
         doc = await enforcer.membership(fresh=fresh)
     except Exception as exc:                                    # noqa: BLE001
-        # Unreachable past the grace window: nothing is shared that cannot be
-        # established as shared. A caller publishing what she administers
-        # asks fresh, and is told it could not be established rather than
-        # that there is nothing.
-        if fresh:
-            raise Unreadable("the organization could not be reached") from exc
-        return None
+        # Unreachable past the grace window: whether this is shared with her
+        # cannot be established, and every caller is told exactly that —
+        # never that nothing is shared, and never that something is.
+        raise Unreadable("the organization could not be reached") from exc
     if not doc.get("member"):
         SHARED.pop(owner, None)
         return None
@@ -749,7 +749,16 @@ async def decide(request: Request, rest: str, body: bytes) -> Response:
                               "error_description": "this gateway serves no "
                               "jointly held account by that name"})
     elif kind == "shared":
-        enforcer = await shared_enforcer(owner)
+        try:
+            enforcer = await shared_enforcer(owner)
+        except Unreadable as exc:
+            # Whether the organization shares this with her could not be
+            # established. That is not "not shared": it is a question that
+            # could not be asked, and the agent may try again.
+            event("access.denied", reason="org-unreachable", owner=owner,
+                  path=original_path)
+            return deny(503, {"error": "temporarily_unavailable",
+                              "error_description": str(exc)})
         if enforcer is None:
             # Not a member, or the organization stopped sharing. Not a
             # challenge: there is no authority to negotiate with about a

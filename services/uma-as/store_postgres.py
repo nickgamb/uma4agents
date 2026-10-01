@@ -70,7 +70,7 @@ class PostgresStore:
     # it is owner-scoped shows up here as a question rather than as silence.
     _OWNER_KEYED = ("negotiations", "tickets", "rpts", "connections",
                     "resource_servers", "blocked_operators", "owned_operators",
-                    "terms_docs", "tiers")
+                    "terms_docs", "tiers", "spent")
 
     async def _assert_owner_keys(self, conn) -> None:
         """Refuse to run against a database whose keys predate multi-owner.
@@ -720,6 +720,28 @@ class PostgresOwnerStore:
             "UPDATE organizations SET record = (record::jsonb || $2::jsonb)::json "
             "WHERE owner = $1 RETURNING owner", self._o, json.dumps(fields))
         return row is not None
+
+    async def spend_once(self, key: str, expires: float) -> bool:
+        await self._pool.execute(
+            "DELETE FROM spent WHERE owner = $1 AND expires < now()", self._o)
+        row = await self._pool.fetchrow(
+            "INSERT INTO spent (owner, key, expires) VALUES ($1, $2, to_timestamp($3)) "
+            "ON CONFLICT DO NOTHING RETURNING key", self._o, key, float(expires))
+        return row is not None
+
+    async def change_org_block(self, key: str, value: str,
+                               remove: bool = False) -> dict | None:
+        # One statement: the row lock makes concurrent blocks from different
+        # replicas apply one after the other, each to the other's result.
+        row = await self._pool.fetchrow(
+            "UPDATE organizations SET record = (record::jsonb || jsonb_build_object("
+            "'blocked', COALESCE(record::jsonb->'blocked', '{}'::jsonb) || "
+            "jsonb_build_object($2::text, "
+            "(COALESCE(record::jsonb->'blocked'->$2::text, '[]'::jsonb) - $3::text) || "
+            "CASE WHEN $4::bool THEN '[]'::jsonb ELSE jsonb_build_array($3::text) END)"
+            "))::json WHERE owner = $1 RETURNING record::jsonb->'blocked' AS blocked",
+            self._o, key, value, remove)
+        return json.loads(row["blocked"]) if row is not None else None
 
     async def clear_organization(self) -> bool:
         row = await self._pool.fetchrow(

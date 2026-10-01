@@ -126,9 +126,10 @@ window.rotateCode = async () => {
 };
 
 /* ---- Groups -------------------------------------------------------------
-   The one screen in this console that hands something out. Everything else
-   here narrows — the ceiling, the conditions, revoking an agent — and a
-   member joined because of what is on this page.
+   Where this console hands things out: what each group reaches, and who is
+   in it. The ceiling and conditions narrow, and loosening them in a new
+   charter version only stops narrowing; revoking an agent narrows. A member
+   joined because of what is on this page.
 
    A group is charter data, not engine data, and saving one publishes a
    charter version. That is deliberate and it is the answer to "why isn't
@@ -321,9 +322,9 @@ route("members", async (view) => {
      way this table could be made to run someone else's code. */
   view.querySelectorAll("[data-remove]").forEach(b =>
     b.addEventListener("click", () => removeMember(b.dataset.remove)));
-  /* The one control in this console that widens anything. Everything else
-     here narrows; a role is what the organization gives, and it is the
-     reason anybody joins. */
+  /* Moving a member widens or narrows what she reaches, with editing what a
+     group reaches the other control here that can widen. A role is what the
+     organization gives, and it is the reason anybody joins. */
   view.querySelectorAll("[data-role-for]").forEach(sel =>
     sel.addEventListener("change", () => setRole(sel.dataset.roleFor, sel.value)));
   wireInvites(view);
@@ -571,6 +572,9 @@ route("charter", async (view) => {
   setTitle("Charter", `<b>Policy</b> › version in force`);
   const doc = await api("/api/org/charter");
   $("#charterChip").textContent = `charter v${doc.version}`;
+  // The version every tab's publish is made against, so a charter changed
+  // underneath any of them is refused rather than overwritten.
+  CHARTER_VERSION = doc.version ?? null;
   if (charterMode === "code") return charterCode(view, doc);
   if (charterMode === "rego") return charterRego(view, doc);
   charterForm(view, doc);
@@ -713,17 +717,22 @@ window.saveForm = async () => {
   const doc = {
     ...CHARTER,
     claims: list("#c-claims"),
+    // Each section starts from what is in force, so a field this form does
+    // not show — a clearance the charter requires, how an identity provider's
+    // subjects map to members — is published as it was rather than dropped.
     envelope: {
+      ...(CHARTER.envelope || {}),
       max_expires_in: parseInt($("#c-exp").value, 10),
       // Blank means "no scope restriction", which is different from "no scope
       // may be granted". The second is a legitimate and very loud thing to
       // write and it is written as an explicit empty list in the code editor,
       // never produced by leaving a box empty.
-      ...(scopes.length ? { allowed_scopes: scopes } : {}),
+      allowed_scopes: scopes.length ? scopes : undefined,
       require_prohibited: list("#c-prohibited"),
       always_ask: list("#c-ask"),
     },
     conditions: {
+      ...(CHARTER.conditions || {}),
       min_accountability: parseInt($("#c-acct").value, 10) || 0,
       min_binding: parseInt($("#c-bind").value, 10) || 0,
       min_provenance: parseInt($("#c-prov").value, 10) || 0,
@@ -731,6 +740,7 @@ window.saveForm = async () => {
       require_mission: $("#c-mission").checked,
     },
     identity_provider: {
+      ...(CHARTER.identity_provider || {}),
       enabled: $("#c-idp-on").checked,
       issuer: $("#c-idp-iss").value.trim(),
       assertion: "id-jag",
@@ -738,6 +748,7 @@ window.saveForm = async () => {
       enrol: $("#c-idp-enrol").checked,
     },
     break_glass: {
+      ...(CHARTER.break_glass || {}),
       enabled: $("#c-glass").checked,
       resources: list("#c-glass-res"),
       max_expires_in: parseInt($("#c-glass-exp").value, 10) || 900,
@@ -751,7 +762,8 @@ window.saveForm = async () => {
 async function publishCharter(doc) {
   try {
     const r = await api("/api/org/charter", { method: "PUT",
-      headers: { "content-type": "application/json" }, body: JSON.stringify(doc) });
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...doc, base_version: doc.base_version ?? CHARTER_VERSION }) });
     toast("Charter v" + r.version + " published", "Every member's authority re-clamps to it");
     $("#charterError").innerHTML = "";
     render();
