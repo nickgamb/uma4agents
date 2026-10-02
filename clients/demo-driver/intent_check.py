@@ -284,7 +284,7 @@ def main() -> int:
         errand = "Suitability review before Thursday's client meeting."
 
         # Read her queue before answering it, so the dialog can be inspected.
-        seen = {"reason": None}
+        seen = {"reason": None, "error": None}
 
         def watch_then_approve() -> None:
             import threading
@@ -295,17 +295,25 @@ def main() -> int:
                 # to read, once inside decide_all to approve — leaves a gap a
                 # pend can arrive in and be approved unread, which three
                 # replicas behind an edge make wide enough to hit.
-                hdrs = owner_hdrs(client)
-                for _ in range(40):
-                    items = pending(client)
-                    for p in items:
-                        if p.get("reason"):
-                            seen["reason"] = p["reason"]
-                        client.post(f"{AS_PUBLIC}/owner/pending/{p['family']}/decision",
-                                    json={"decision": "approved"}, headers=hdrs,
-                                    timeout=15.0)
-                    if items:
-                        return
+                # Until this check's own request has been read and answered,
+                # not until any request has: one an earlier step left behind
+                # would otherwise be answered in its place. A listing that
+                # fails is noted and listed again rather than ending the
+                # watch silently, which a thread does.
+                for _ in range(120):
+                    try:
+                        hdrs = owner_hdrs(client)
+                        items = pending(client)
+                        for p in items:
+                            if p.get("reason"):
+                                seen["reason"] = p["reason"]
+                            client.post(f"{AS_PUBLIC}/owner/pending/{p['family']}/decision",
+                                        json={"decision": "approved"}, headers=hdrs,
+                                        timeout=15.0)
+                        if seen["reason"] == errand:
+                            return
+                    except Exception as exc:                    # noqa: BLE001
+                        seen["error"] = f"{type(exc).__name__}: {str(exc)[:120]}"
                     _t.sleep(0.5)
 
             threading.Thread(target=loop, daemon=True).start()
@@ -313,7 +321,8 @@ def main() -> int:
         watch_then_approve()
         errand_mark = len(ledger(client))
         ok, asked, err = negotiate(client, stated, "get_positions", reason=errand)
-        check("first contact pends until she answers", ok and asked, err or "")
+        check("first contact pends until she answers", ok and asked,
+              f"{err or ''} {seen['error'] or ''}".strip())
         check("her approval dialog shows the agent's own words",
               seen["reason"] == errand, f"saw {seen['reason']!r}")
         say(f'she is shown: "{errand}"')
