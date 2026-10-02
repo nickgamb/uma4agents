@@ -108,6 +108,19 @@ data:
           lambda: denied("http://uma-pep.meridian.svc.cluster.local:9002/check/mcp"))
     check("cannot read the owner-bound resource listing",
           lambda: denied("http://uma-pep.meridian.svc.cluster.local:9002/owner-resources"))
+    # The listing is also routed through the gateway's public name, because
+    # her authority pulls it from there. On that path nothing in the mesh
+    # stands in the way; the signature her authority's key makes is what
+    # does, and an unsigned request is refused by the resource itself.
+    def unsigned_listing():
+        try:
+            urllib.request.urlopen("https://gateway.uma.lab/owner-resources/alice",
+                                   timeout=10, context=ctx)
+            return False, "served without her authority's signature"
+        except urllib.error.HTTPError as exc:
+            return exc.code == 401, f"HTTP {exc.code} (expected 401)"
+    check("and on the public hostname, only her authority's signature reads it",
+          unsigned_listing)
 
     # The organization is the third party in this lab, and its boundary is
     # the one that would be easiest to leave open: an administration API and

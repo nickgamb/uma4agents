@@ -148,18 +148,6 @@ spec:
         - source:
             principals:
               - cluster.local/ns/uma-edge/sa/edge
-              - cluster.local/ns/meridian/sa/uma-pep
-              # The same resource server enforcing in-process. It calls
-              # this surface because it carries the same obligations;
-              # only the process they run in differs. Named separately
-              # rather than folded into the gateway's identity — they are
-              # two workloads, and one SPIFFE identity for both would be
-              # the modelling error this lab exists to avoid.
-              #
-              # Alice's authority only. It serves her book, so Carol's
-              # authority, the organization and the tally learn nothing
-              # about it — each of those has its own copy of this rule.
-              - cluster.local/ns/meridian/sa/alice-vault-embedded
       to:
         - operation:
             paths:
@@ -200,6 +188,39 @@ spec:
               #   /joint/verdict  her authority's answer about one request
               - /joint/quote
               - /joint/verdict
+              - /.well-known/*
+              - /health
+              - /health/*
+    # The resource server, from inside. Only the protection API and what it
+    # needs to verify: no terms, no organization surface, no joint verdicts.
+    # Those reach her authority from the edge and are verified in the
+    # process; a resource server holding them as well would be one compromised
+    # workload away from speaking for the organization or the tally.
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/uma-pep
+              # The same resource server enforcing in-process. It calls
+              # this surface because it carries the same obligations;
+              # only the process they run in differs. Named separately
+              # rather than folded into the gateway's identity — they are
+              # two workloads, and one SPIFFE identity for both would be
+              # the modelling error this lab exists to avoid.
+              #
+              # Alice's authority only. It serves her book, so Carol's
+              # authority, the organization and the tally learn nothing
+              # about it — each of those has its own copy of this rule.
+              - cluster.local/ns/meridian/sa/alice-vault-embedded
+      to:
+        - operation:
+            paths:
+              - /token
+              - /rs/register
+              - /perm
+              - /introspect
+              - /consume
+              - /jwks
+              - /audit/access
               - /.well-known/*
               - /health
               - /health/*
@@ -335,7 +356,6 @@ spec:
         - source:
             principals:
               - cluster.local/ns/uma-edge/sa/edge
-              - cluster.local/ns/meridian/sa/uma-pep
       to:
         - operation:
             paths:
@@ -371,6 +391,28 @@ spec:
               #   /joint/verdict  her authority's answer about one request
               - /joint/quote
               - /joint/verdict
+              - /.well-known/*
+              - /health
+              - /health/*
+    # The resource server, from inside. Only the protection API and what it
+    # needs to verify: no terms, no organization surface, no joint verdicts.
+    # Those reach her authority from the edge and are verified in the
+    # process; a resource server holding them as well would be one compromised
+    # workload away from speaking for the organization or the tally.
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/meridian/sa/uma-pep
+      to:
+        - operation:
+            paths:
+              - /token
+              - /rs/register
+              - /perm
+              - /introspect
+              - /consume
+              - /jwks
+              - /audit/access
               - /.well-known/*
               - /health
               - /health/*

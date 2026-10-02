@@ -282,6 +282,20 @@ k8s-demo:
 .PHONY: k8s-policy-test
 k8s-policy-test:
 	$(call run_job,policy-test,cat $(K8S)/base/jobs/policy-test.yaml,300s)
+	@# The second half runs as the enforcement point's own identity, in its
+	@# own namespace, because the rules it asserts name that identity.
+	@kubectl -n meridian delete job policy-test-pep --ignore-not-found >/dev/null 2>&1
+	@kubectl apply -f $(K8S)/base/jobs/policy-test-pep.yaml >/dev/null
+	@end=$$(( $$(date +%s) + 300 )); \
+	while [ $$(date +%s) -lt $$end ]; do \
+		case "$$(kubectl -n meridian get job policy-test-pep \
+			-o jsonpath='{.status.conditions[*].type}' 2>/dev/null)" in \
+			*Complete*|*Failed*) break ;; \
+		esac; \
+		sleep 3; \
+	done
+	@kubectl -n meridian logs job/policy-test-pep 2>/dev/null
+	@test "$$(kubectl -n meridian get job policy-test-pep -o jsonpath='{.status.succeeded}')" = "1"
 
 ## k8s-assurance-check: agent assurance and the owner's attention budget,
 ## proved through the edge from the requesting party's namespace.

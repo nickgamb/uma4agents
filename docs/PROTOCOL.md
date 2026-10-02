@@ -712,7 +712,9 @@ enforced twice. The owner API takes only her credential, which the resource
 server never holds, so a call reaching it through the public hostname is
 refused (401). And in the Kubernetes reference the mesh refuses the direct hop
 to it from any workload but her portal (403), while the same port serves her
-published keys (200). `k8s-policy-test` asserts both paths.
+published keys (200). `k8s-policy-test` asserts both paths, the second from
+the enforcement point's own identity, which also cannot reach the surfaces her
+organization and the tally use.
 
 **Agent-token issuers are named, then trusted by dereference.** An agent
 token is believed only from an issuer in `UMA_AS_AGENT_ISSUERS`; any other is

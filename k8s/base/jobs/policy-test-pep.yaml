@@ -1,0 +1,100 @@
+# The same boundary, from the enforcement point's side of it.
+#
+# policy-test.yaml asserts what the requesting party is shut out of. This one
+# runs as the resource server's own identity, meridian/sa/uma-pep, because the
+# rules that matter here name that identity: it may reach Alice's protection
+# API and her keys, and nothing else on her authority — not her policy, not
+# the surfaces her organization and the tally use. A refusal asserted from any
+# other identity would pass whether or not that rule existed.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policy-test-pep
+  namespace: meridian
+data:
+  policy.py: |
+    """Assert what the enforcement point's identity can and cannot reach."""
+    import sys, urllib.error, urllib.request
+
+    passed, failed = [], []
+
+    def check(name, fn):
+        try:
+            ok, detail = fn()
+        except Exception as exc:                                  # noqa: BLE001
+            ok, detail = False, f"{type(exc).__name__}: {str(exc)[:80]}"
+        (passed if ok else failed).append(name)
+        print(("  ok   " if ok else "  FAIL ") + name + (f" — {detail}" if detail and not ok else ""))
+
+    def status(url, method="GET"):
+        try:
+            return urllib.request.urlopen(
+                urllib.request.Request(url, method=method, data=b"" if method == "POST" else None),
+                timeout=8).status
+        except urllib.error.HTTPError as exc:
+            return exc.code
+
+    def refused_by_mesh(url, method="GET"):
+        # The waypoint answers a denied L7 rule with 403 and the body
+        # "RBAC: access denied". The authority itself never says that, so the
+        # body is what tells the mesh's refusal from the application's.
+        try:
+            urllib.request.urlopen(
+                urllib.request.Request(url, method=method, data=b"" if method == "POST" else None),
+                timeout=8)
+            return False, "the call succeeded — this should have been refused"
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")
+            return exc.code == 403 and "RBAC" in body, f"HTTP {exc.code}: {body[:60]}"
+
+    def reached(url, method="GET"):
+        # Through the mesh to the process: whatever the authority answered,
+        # it was the authority answering.
+        code = status(url, method)
+        return code != 403, f"HTTP {code}"
+
+    AS = "http://uma-as.alice.svc.cluster.local:9000"
+    print("\n== the enforcement point reaches what it enforces with ==")
+    check("her published keys", lambda: (status(f"{AS}/jwks") == 200, ""))
+    check("her introspection endpoint", lambda: reached(f"{AS}/introspect", "POST"))
+    check("her permission endpoint", lambda: reached(f"{AS}/perm", "POST"))
+
+    print("\n== and nothing else on her authority ==")
+    check("not her policy", lambda: refused_by_mesh(f"{AS}/owner/policies"))
+    check("not the organization's notice surface",
+          lambda: refused_by_mesh(f"{AS}/org/notice", "POST"))
+    check("not the tally's verdict surface",
+          lambda: refused_by_mesh(f"{AS}/joint/verdict", "POST"))
+    check("not her terms roster", lambda: refused_by_mesh(f"{AS}/terms"))
+
+    print(f"\nk8s-policy-test (enforcement point): {len(passed)} passed, {len(failed)} failed")
+    sys.exit(1 if failed else 0)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: policy-test-pep
+  namespace: meridian
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: policy-test-pep }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: uma-pep
+      containers:
+        - name: policy
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["python3", "/script/policy.py"]
+          volumeMounts:
+            - { name: script, mountPath: /script, readOnly: true }
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 192Mi }
+      volumes:
+        - name: script
+          configMap: { name: policy-test-pep }
