@@ -1500,6 +1500,11 @@ async def org_client(owner: str) -> org.OrgClient | None:
         if record is None:
             _ORG.pop(owner, None)
             return None
+        if record.get("token") != client.token:
+            # She enrolled again, through another replica: this one's
+            # credential is from a membership that has ended.
+            _ORG.pop(owner, None)
+            return await org_client(owner)
         if (stored := record.get("envelope")) and stored != client.envelope:
             client.envelope = stored
     if not client.stale() or client.backing_off():

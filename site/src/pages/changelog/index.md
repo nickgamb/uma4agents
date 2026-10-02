@@ -61,7 +61,7 @@ release within that month. One entry per release.
 - **Authorization server:** unauthenticated requests could create owners.
 - **Authorization server:** a provisioned resource-server secret that the deployment changed was never picked up by the registration seeded from it, locking the resource server out.
 - **Authorization server:** an organization's operator block was not applied at introspection.
-- **Authorization server:** an organization's notice reached one replica, and the others applied the previous charter and role until their own refresh fell due. Each replica now adopts the envelope another has stored.
+- **Authorization server:** an organization's notice reached one replica, and the others applied the previous charter and role until their own refresh fell due. Each replica now adopts the envelope another has stored, and a replica holding the credential of a membership she has since renewed uses the current one.
 - **Authorization server:** a replica rebuilt its resource registry from the first approved resource server that answered, and could refuse another's tickets for a resource both serve.
 - **Authorization server:** an introduced agent's later requests and joint pends from strangers did not count against her attention budget.
 - **Authorization server:** an organization notice or identity assertion replayed to another replica was acted on again.

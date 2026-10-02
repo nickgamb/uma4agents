@@ -874,6 +874,14 @@ async def a_charter_another_replica_read() -> None:
         client = await app.org_client("alice")
     check("is applied here at once, not when this replica's own read falls due",
           client.envelope == newer, str(client.envelope))
+    cached.fetched = _time.time()
+    app._ORG["alice"] = cached
+    with patch.object(app, "org_record", AsyncMock(return_value={
+            "issuer": "https://org.example", "token": "m-token-2", "envelope": newer})):
+        rejoined = await app.org_client("alice")
+    check("and a credential from a membership she has since renewed is not used again",
+          rejoined is not None and rejoined.token == "m-token-2", str(getattr(rejoined, "token", None)))
+    app._ORG["alice"] = cached
     with patch.object(app, "org_record", AsyncMock(return_value=None)):
         gone = await app.org_client("alice")
     check("and a membership another replica ended is ended here too",

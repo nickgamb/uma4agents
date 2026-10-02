@@ -41,6 +41,7 @@ in front of her. See `/org/notice` in app.py.
 """
 
 import asyncio
+import logging
 import os
 import time
 
@@ -48,6 +49,8 @@ from uma4a_org import (claims_match as _claims_match, clamp as _clamp,
                        compliance as _compliance, governs as _governs,
                        patch_for as _patch_for, reaches as _reaches,
                        tier_view as _tier_view, would_exceed as _would_exceed)
+
+log = logging.getLogger("uma-as.org")
 
 # Where the envelope is re-read from, and how long a copy may be trusted.
 #
@@ -257,9 +260,14 @@ class OrgClient:
         try:
             async with httpx.AsyncClient(verify=CA_BUNDLE or True,
                                          timeout=HTTP_TIMEOUT_S) as c:
-                await c.post(f"{self.issuer}/member/leave", headers=self.headers)
-        except httpx.HTTPError:
-            pass
+                r = await c.post(f"{self.issuer}/member/leave", headers=self.headers)
+            if not r.is_success:
+                log.warning("the organization did not acknowledge leaving: %s",
+                            r.status_code)
+        except httpx.HTTPError as exc:
+            # She has left either way; her authority stops applying the
+            # ceiling. Said, so an organization still listing her is traceable.
+            log.warning("the organization could not be told she left: %s", exc)
 
 
 async def preview(issuer: str, code: str) -> dict:
