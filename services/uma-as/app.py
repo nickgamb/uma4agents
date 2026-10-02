@@ -3969,6 +3969,26 @@ async def joint_verdict(request: Request) -> dict:
                         consequence_of(owner, resource_id))})}
 
 
+async def provisioned_secret(owner: str, client_id: str, rs: dict) -> dict:
+    """The registration, holding the secret this deployment provisions now.
+
+    A provisioned secret is the deployment's to set, and the registration
+    seeded from it is written once. Without this, rotating the secret the
+    resource server and this authority are configured with would leave the
+    stored copy behind and lock the resource server out. Only the configured
+    client's secret follows the configuration, and only the secret: a
+    registration she revoked stays revoked.
+    """
+    configured = os.environ.get("UMA_AS_RS_CLIENT_SECRET")
+    if (not configured or client_id != os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
+            or secrets.compare_digest(configured, rs["secret"])):
+        return rs
+    rs = {**rs, "secret": configured}
+    await st(owner).put_resource_server(client_id, rs)
+    event("rs.secret_reprovisioned", owner=owner, client_id=client_id)
+    return rs
+
+
 @app.post("/token")
 async def token(request: Request) -> JSONResponse:
     # Read before parsing. A resource server with no shared secret
@@ -4007,6 +4027,7 @@ async def token(request: Request) -> JSONResponse:
         # compare_digest("", "") is true, and a record with no secret must
         # never be openable by sending none.
         if rs.get("secret"):
+            rs = await provisioned_secret(pat_owner, client_id, rs)
             if not secrets.compare_digest(client_secret or "", rs["secret"]):
                 return JSONResponse({"error": "invalid_client"}, status_code=401)
         elif await verify_resource_server_signature(

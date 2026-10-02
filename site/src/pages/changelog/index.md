@@ -57,6 +57,7 @@ release within that month. One entry per release.
 - **Authorization server:** an approval recorded before the owner revoked the agent, blocked its operator or lost a clearance was still honoured.
 - **Authorization server:** an agreement naming no scope was granted every scope the ticket asked for.
 - **Authorization server:** unauthenticated requests could create owners.
+- **Authorization server:** a provisioned resource-server secret that the deployment changed was never picked up by the registration seeded from it, locking the resource server out.
 - **Authorization server:** an organization's operator block was not applied at introspection.
 - **Authorization server:** an introduced agent's later requests and joint pends from strangers did not count against her attention budget.
 - **Authorization server:** an organization notice or identity assertion replayed to another replica was acted on again.

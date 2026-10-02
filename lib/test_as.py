@@ -776,6 +776,35 @@ async def the_wire_from_her_organization() -> None:
             check("a question not signed by the tally her mandate names is refused",
                   exc.status_code == 401, exc.detail)
 
+    store = app.st("alice")
+    seeded = await store.resource_server("meridian-gateway")
+    await store.put_resource_server("meridian-gateway", {**seeded, "secret": "old-secret"})
+    with patch.dict(os.environ, {"UMA_AS_RS_CLIENT_SECRET": "rotated-secret"}):
+        rotated = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=rotated-secret",
+            "application/x-www-form-urlencoded"))
+        stale = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=old-secret",
+            "application/x-www-form-urlencoded"))
+    check("a provisioned secret the deployment rotated is the one that works",
+          rotated.status_code == 200 and stale.status_code == 401,
+          f"{rotated.status_code} {stale.status_code}")
+    await store.put_resource_server("meridian-gateway", {**seeded, "secret": "old-secret",
+                                                         "status": "revoked"})
+    with patch.dict(os.environ, {"UMA_AS_RS_CLIENT_SECRET": "rotated-secret"}):
+        revoked = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=rotated-secret",
+            "application/x-www-form-urlencoded"))
+    check("and one she revoked stays revoked", revoked.status_code == 403,
+          str(revoked.status_code))
+    await store.put_resource_server("meridian-gateway", seeded)
+
     pat = await app.token(_request(
         "POST", "/token",
         b"grant_type=client_credentials&scope=uma_protection&owner=mallory&client_id=rs",
