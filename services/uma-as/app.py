@@ -1490,6 +1490,18 @@ async def org_client(owner: str) -> org.OrgClient | None:
             return None
         client = _ORG[owner] = org.OrgClient(
             record["issuer"], record["token"], record.get("envelope") or {})
+    elif not client.stale():
+        # A notice reaches one replica, which re-reads the envelope and
+        # writes it to the shared store. The others would go on applying the
+        # charter and role they last read until their own refresh fell due;
+        # adopting what is stored — always the latest any replica read —
+        # closes that window for the price of one store read.
+        record = await org_record(owner)
+        if record is None:
+            _ORG.pop(owner, None)
+            return None
+        if (stored := record.get("envelope")) and stored != client.envelope:
+            client.envelope = stored
     if not client.stale() or client.backing_off():
         return client
     async with client._refreshing:

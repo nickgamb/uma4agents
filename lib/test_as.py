@@ -862,6 +862,24 @@ async def the_wire_from_her_organization() -> None:
           str(pat.status_code))
 
 
+async def a_charter_another_replica_read() -> None:
+    print("\n== a charter another replica has already read ==")
+    import time as _time
+    cached = app.org.OrgClient("https://org.example", "m-token", {"charter_version": 1})
+    cached.fetched = _time.time()
+    app._ORG["alice"] = cached
+    newer = {"charter_version": 2, "claims": ["northwind-vault/*"]}
+    with patch.object(app, "org_record", AsyncMock(return_value={
+            "issuer": "https://org.example", "token": "m-token", "envelope": newer})):
+        client = await app.org_client("alice")
+    check("is applied here at once, not when this replica's own read falls due",
+          client.envelope == newer, str(client.envelope))
+    with patch.object(app, "org_record", AsyncMock(return_value=None)):
+        gone = await app.org_client("alice")
+    check("and a membership another replica ended is ended here too",
+          gone is None and "alice" not in app._ORG, str(gone))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
@@ -884,6 +902,7 @@ async def main() -> int:
     await her_signed_request_sent_twice()
     await what_it_says_it_verifies()
     await the_wire_from_her_organization()
+    await a_charter_another_replica_read()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 
