@@ -66,7 +66,7 @@ spec:
             - { name: TALLY_ISSUER, value: "https://joint-tally.uma.lab" }
             - { name: TALLY_AUDIENCE, value: "https://gateway.uma.lab" }
             - name: TALLY_RS_SECRET
-              valueFrom: { secretKeyRef: { name: tally-config, key: rs-secret } }
+              valueFrom: { secretKeyRef: { name: tally-rs, key: token } }
             # A minimum the holders may not vote themselves below. Zero here
             # so the lab can carry both an every-holder account and an
             # either-holder one; set it and the second is refused at startup,

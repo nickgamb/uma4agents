@@ -103,7 +103,7 @@ spec:
               value: meridian-gateway
             - name: UMA_AS_RS_CLIENT_SECRET
               valueFrom:
-                secretKeyRef: { name: uma-as-config, key: rs-client-secret }
+                secretKeyRef: { name: rs-client, key: token }
             # The replicated backend. Under compose this variable is unset
             # and the in-process store is used instead — same image, same
             # code, one env var apart.
@@ -181,10 +181,10 @@ spec:
 
           lifecycle:
             preStop:
-              # Let an in-flight grant finish. A negotiation interrupted
-              # between the commit and the token is not fatal — the ticket is
-              # still valid and the agent retries — but there is no reason to
-              # cause it.
+              # Let an in-flight grant finish rather than cut it off. An agent
+              # whose request was interrupted negotiates again, which costs
+              # the owner nothing if she had not yet been asked and a second
+              # ask if she had — no reason to cause either.
               exec: { command: ["sleep", "5"] }
       terminationGracePeriodSeconds: 30
       volumes:

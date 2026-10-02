@@ -76,30 +76,30 @@ Table of Contents
      2.1.  The Public Layer  . . . . . . . . . . . . . . . . . . . .   3
      2.2.  The Protected Layer . . . . . . . . . . . . . . . . . . .   4
    3.  Declarative Registration  . . . . . . . . . . . . . . . . . .   5
-     3.1.  Staleness . . . . . . . . . . . . . . . . . . . . . . . .   5
+     3.1.  Staleness . . . . . . . . . . . . . . . . . . . . . . . .   6
      3.2.  Liveness  . . . . . . . . . . . . . . . . . . . . . . . .   6
-   4.  Establishment . . . . . . . . . . . . . . . . . . . . . . . .   6
-     4.1.  Registration by Origin  . . . . . . . . . . . . . . . . .   6
-     4.2.  The Answer Is the Owner's . . . . . . . . . . . . . . . .   7
-     4.3.  Obtaining the PAT . . . . . . . . . . . . . . . . . . . .   8
-     4.4.  Withdrawal  . . . . . . . . . . . . . . . . . . . . . . .   8
-   5.  Introspection Reasons . . . . . . . . . . . . . . . . . . . .   8
-     5.1.  Non-Consuming by Default  . . . . . . . . . . . . . . . .   9
+   4.  Establishment . . . . . . . . . . . . . . . . . . . . . . . .   7
+     4.1.  Registration by Origin  . . . . . . . . . . . . . . . . .   7
+     4.2.  The Answer Is the Owner's . . . . . . . . . . . . . . . .   8
+     4.3.  Obtaining the PAT . . . . . . . . . . . . . . . . . . . .   9
+     4.4.  Withdrawal  . . . . . . . . . . . . . . . . . . . . . . .   9
+   5.  Introspection Reasons . . . . . . . . . . . . . . . . . . . .   9
+     5.1.  Non-Consuming by Default  . . . . . . . . . . . . . . . .  10
    6.  Reporting Allowed Access  . . . . . . . . . . . . . . . . . .  10
-   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  10
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  11
      7.1.  An Endpoint That Dereferences Will Dereference What It Is
-           Told  . . . . . . . . . . . . . . . . . . . . . . . . . .  10
-     7.2.  The Owner's Policy Is Not on the Protection API . . . . .  10
-     7.3.  Revocation Reads the Store  . . . . . . . . . . . . . . .  10
+           Told  . . . . . . . . . . . . . . . . . . . . . . . . . .  11
+     7.2.  The Owner's Policy Is Not on the Protection API . . . . .  11
+     7.3.  Revocation Reads the Store  . . . . . . . . . . . . . . .  11
    8.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  11
-   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
-   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
-     10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
-     10.2.  Informative References . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
-   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .  12
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  13
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  13
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  15
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  15
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
 
 
 
@@ -215,9 +215,9 @@ Internet-Draft             FedAuthz for Agents            September 2026
    The signature profile is that of [U4ACore] Section 6.1, with
    @authority taken from the resource server's configuration.
 
-
-
-
+   The listing is selected by the URL, not by a parameter.  A resource
+   server that serves several owners publishes a resource, and a
+   metadata document, per owner, each naming that owner's authorization
 
 
 
@@ -225,6 +225,41 @@ Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+   server and its own owner_resources_endpoint; the endpoint read from
+   one owner's document is the listing for that owner.  The
+   authorization server requests it with GET, signed with a key at its
+   own jwks_uri and covering authorization as the empty string.  The
+   resource server verifies the signature against the keys of the
+   authorization server its configuration names for that owner, and MUST
+   NOT take the signer from the request.
+
+   A successful response is a JSON object with these members:
+
+   owner:  OPTIONAL.  The owner the listing is for.  Where present, the
+      authorization server MUST refuse a listing that names an owner
+      other than the one it pulled for.
+
+   resources:  REQUIRED.  An array of resource descriptions.  Each
+      carries _id (REQUIRED, the resource identifier), resource_scopes
+      (REQUIRED, an array of scope names), and MAY carry name, type and
+      consequence, with the meanings of the corresponding members of a
+      resource description in [UMAFedAuthz] Section 3.1 and of
+      Section 2.1.
+
+   {
+     "owner": "alice",
+     "resources": [
+       {"_id": "alice-vault/get_positions", "name": "Positions",
+        "resource_scopes": ["positions:read"],
+        "consequence": "disclosing"},
+       {"_id": "alice-vault/execute_trade", "name": "Trade",
+        "resource_scopes": ["trades:execute"],
+        "consequence": "irreversible"}
+     ]
+   }
+
+                   Figure 1: An owner-resources listing.
 
    This is the privacy split.  The public document says what the
    resource is; whose things sit behind it is served only to the party
@@ -239,6 +274,13 @@ Internet-Draft             FedAuthz for Agents            September 2026
    require the resource server to push resource descriptions.  The
    classic resource registration endpoint of [UMAFedAuthz] Section 3
    remains conformant and MAY be offered alongside.
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    To register a resource server's resources for an owner, the
    authorization server:
@@ -258,6 +300,13 @@ Internet-Draft             FedAuthz for Agents            September 2026
    One fetch replaces N registration calls, and there is one registry
    with one writer.
 
+   A resource may be registered for one owner from more than one
+   resource server she has approved: the same account behind a gateway
+   and enforcing in process is one resource under two enforcement
+   points.  The authorization server MUST answer a permission request
+   for a resource only from a resource server whose listing carries it,
+   and a resource stays registered while any of them does.
+
 3.1.  Staleness
 
    The registry the authorization server holds may lag what the resource
@@ -270,18 +319,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
    and re-pushing — placed with the party that can act on it without a
    round trip.
 
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 5]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
 3.2.  Liveness
 
    The pull and its verification form a call cycle: the authorization
@@ -291,6 +328,15 @@ Internet-Draft             FedAuthz for Agents            September 2026
    readiness on the pull having completed, and a resource server
    verifying a signed request MUST either tolerate a live back-call to
    the authorization server or verify against keys it already holds.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    Gating readiness on "my registry is populated" deadlocks: the
    authorization server will not serve its keys until it has pulled, and
@@ -314,29 +360,16 @@ Internet-Draft             FedAuthz for Agents            September 2026
    A resource server MAY introduce itself to an owner's authorization
    server by sending a request naming the owner and the resource it
    serves, signed with [RFC9421] using a key published at the origin of
-   that resource.
+   that resource.  The request is a POST of a JSON object to the
+   authorization server's rs_registration_endpoint, carrying owner
+   (REQUIRED, the owner as the authorization server names her),
+   resource_uri (REQUIRED, the resource's identifier as its protected
+   resource metadata states it) and name (OPTIONAL, a display name).  An
+   authorization server offering this MUST advertise
+   rs_registration_endpoint in its metadata.
 
    The request MUST carry a Content-Digest [RFC9530] covered by the
    signature.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 6]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
 
    POST /rs/register HTTP/1.1
    Host: alice-as.example
@@ -354,7 +387,14 @@ Internet-Draft             FedAuthz for Agents            September 2026
      "name": "Meridian Vault"
    }
 
-        Figure 1: A resource server registering by origin signature.
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
+
+        Figure 2: A resource server registering by origin signature.
                      Line breaks are for display only.
 
    The authorization server MUST verify the signature by:
@@ -387,13 +427,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
    MUST record the resource server in the owner's registry as pending,
    and MUST issue no PAT until the owner has approved it.
 
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
    {
      "client_id": "https://rs.example",
      "status": "pending",
@@ -409,6 +442,14 @@ Internet-Draft             FedAuthz for Agents            September 2026
    on demand has turned an unauthenticated endpoint into unbounded
    state.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
+
 4.3.  Obtaining the PAT
 
    Once the owner has approved, the resource server obtains a PAT with
@@ -419,6 +460,14 @@ Internet-Draft             FedAuthz for Agents            September 2026
    authentication applies — a provisioned secret or an origin signature
    — is a property of the stored registration, so that a resource server
    registered by signature cannot later fall back to guessing a secret.
+
+   A resource server holds a PAT issued in each owner's name ([U4ACore]
+   Section 8.1), so the token request names the owner in an owner
+   parameter.  An authorization server that serves more than one owner
+   MUST refuse a PAT request that names none, unless it has a
+   deployment-configured default; it MUST refuse one naming an owner it
+   does not serve, and MUST NOT create an owner on the strength of the
+   request.
 
    While the owner has not answered, the token endpoint MUST respond 403
    with error of authorization_pending.  After the owner has revoked the
@@ -443,19 +492,19 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
    expired:  The token's lifetime has passed.
 
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
    invalid_signature:  The token did not verify.
 
    unknown_token:  The token was not issued by this authorization
       server, its record is gone, or it was issued against the resources
       of an owner other than the one the protection API access token
       represents.
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    already_consumed:  A single-use token has been spent.
 
@@ -499,19 +548,19 @@ Internet-Draft             FedAuthz for Agents            September 2026
    had already been spent, not_single_use when it is not a single-use
    token, and otherwise the reason introspection would give for it now.
 
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
 6.  Reporting Allowed Access
 
    An enforcement point SHOULD report each call it allows to the
    authorization server, naming the negotiation it was made under and
    what was reached, so that the owner's record holds what was done
    alongside what was promised.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    An enforcement point MUST NOT be told, and MUST NOT report, the
    identity handle of the client.  The authorization server resolves it
@@ -555,16 +604,19 @@ Internet-Draft             FedAuthz for Agents            September 2026
    that reached only the replica that served the request would leave the
    others honouring a credential the owner had just withdrawn.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 10]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
 8.  Privacy Considerations
 
    The considerations of [UMAFedAuthz] Section 8 apply.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    The split in Section 2 exists because the alternative is a
    disclosure.  A public document listing the resources a named person
@@ -609,18 +661,18 @@ Internet-Draft             FedAuthz for Agents            September 2026
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 11]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
-
    [RFC9530]  Polli, R. and L. Pardue, "Digest Fields", RFC 9530,
               DOI 10.17487/RFC9530, February 2024,
               <https://www.rfc-editor.org/rfc/rfc9530>.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
@@ -669,7 +721,11 @@ Appendix A.  Identifiers Used by This Document
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
@@ -701,6 +757,19 @@ Internet-Draft             FedAuthz for Agents            September 2026
    |                          |               | requesting   |         |
    |                          |               | party token  |         |
    +--------------------------+---------------+--------------+---------+
+   | rs_registration_endpoint | Authorization | URL at       | Section |
+   |                          | server        | which a      | 4.1     |
+   |                          | metadata      | resource     |         |
+   |                          | [RFC8414]     | server       |         |
+   |                          |               | registers    |         |
+   |                          |               | by origin    |         |
+   |                          |               | signature    |         |
+   +--------------------------+---------------+--------------+---------+
+   | owner                    | Token request | The owner a  | Section |
+   |                          | parameter     | PAT is       | 4.3     |
+   |                          |               | requested    |         |
+   |                          |               | for          |         |
+   +--------------------------+---------------+--------------+---------+
    | error                    | Token         | Why an       | Section |
    |                          | introspection | inactive     | 5       |
    |                          | response      | token is     |         |
@@ -708,6 +777,14 @@ Internet-Draft             FedAuthz for Agents            September 2026
    +--------------------------+---------------+--------------+---------+
 
                 Table 1: Identifiers used by this document.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]
+
+Internet-Draft             FedAuthz for Agents            September 2026
+
 
 Appendix B.  Implementation Status
 
@@ -720,15 +797,6 @@ Appendix B.  Implementation Status
    identical stack and measured before push was retired to a preserved
    branch.  The deadlock of Section 3.2 and the fail-open reading that
    Section 4.1 warns against were both found by running it.
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 13]
-
-Internet-Draft             FedAuthz for Agents            September 2026
-
 
 Acknowledgments
 
@@ -769,16 +837,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 14]
+Gamb & Maler              Expires 19 March 2027                [Page 15]

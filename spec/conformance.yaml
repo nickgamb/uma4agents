@@ -13,6 +13,38 @@
 # draft. The check names are the ones the suites print, verbatim.
 
 draft-gamb-uma4agents-core-00:
+  - text: "The JWS alg values [RFC7515] it verifies on an agreement or other signed claim token, which MUST include EdDSA and Ed25519"
+    verified: check
+    targets: [as-test]
+    asserts: ["it advertises Ed25519 for signed claim tokens"]
+  - text: "The [RFC9421] algorithms it verifies on a signed request, which MUST include ed25519."
+    verified: check
+    targets: [as-test]
+    asserts: ["and ed25519 for signed requests"]
+  - text: "A client that signs with another algorithm MAY be supported and MUST be refused by an authorization server that has not advertised it"
+    verified: check
+    targets: [as-test]
+    asserts: ["an algorithm it does not advertise is refused, by name"]
+  - text: "A signature whose alg parameter, where present, disagrees with its key MUST be refused."
+    verified: check
+    targets: [sig-test]
+    asserts: ["a signature claiming another algorithm is refused"]
+  - text: "A signature MUST carry the created parameter, and a verifier MUST refuse one whose created is further from its own clock than a window it is configured with"
+    verified: check
+    targets: [sig-test]
+    asserts: ["a signature with no created parameter is refused", "a signature older than the freshness window is rejected", "and one dated far in the future is too"]
+  - text: "Where expires is present the verifier MUST refuse a signature past it."
+    verified: check
+    targets: [sig-test]
+    asserts: ["an expired signature is rejected"]
+  - text: "A signed request that changes the owner's state — any owner request other than a read — MUST NOT be accepted twice."
+    verified: check
+    targets: [as-test]
+    asserts: ["the same signed change sent again is refused"]
+  - text: "The signer of such a request SHOULD include a fresh nonce parameter"
+    verified: check
+    targets: [sig-test]
+    asserts: ["the same request signed twice in one second carries two signatures"]
   - text: "It MUST be a digest over the attested facts and MUST NOT carry the facts themselves"
     verified: check
     targets: [clearance-check, k8s-clearance-check]
@@ -25,10 +57,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [pep-test]
     asserts: ["a grant issued before anything was declared is not refused for it"]
-  - text: "An introspection response for an active token MUST carry cnf and permissions, and single_use, operation, contract and consequence where the token carries them"
+  - text: "An introspection response for an active token MUST carry cnf and permissions, and single_use, operation, contract, consequence and clearance where the token carries them"
     verified: check
     targets: [as-test, pep-test, consequence-check]
-    asserts: ["and is given what enforcement reads, from the answer rather than the token", "the class it was issued against is honoured", "and the call she approved goes through"]
+    asserts: ["and is given what enforcement reads, from the answer rather than the token", "a grant issued under a clearance says so when introspected, as the same digest", "the class it was issued against is honoured", "and the call she approved goes through"]
   - text: "REQUIRED, as [RFC9068]. aud names the resource server the token is for"
     verified: check
     targets: [as-test]
@@ -56,18 +88,22 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, k8s-smoke-test]
     asserts: ["gateway challenge: OK", "an unauthorized tool call is refused with a ticket"]
-  - text: "A client MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
+  - text: "A client MUST fetch the resource's metadata from the URL [RFC9728] Section 3 forms from the resource it called, and MUST refuse a challenge whose resource_metadata names any other URL."
     verified: check
-    targets: [multi-owner-check, k8s-smoke-test]
-    asserts: ["no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+    targets: [client-test, ts-agent-check]
+    asserts: ["a challenge pointing at metadata anywhere but the resource called is refused", "a challenge her resource's own metadata names is corroborated"]
+  - text: "It MUST verify that the document's resource member identifies the resource being accessed"
+    verified: check
+    targets: [client-test, multi-owner-check, k8s-smoke-test, ts-agent-check]
+    asserts: ["metadata for another resource is refused", "a challenge naming an authority the resource never published is refused", "no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
   - text: "MAY be accepted as a claim_token with claim_token_format of urn:ietf:params:oauth:token-type:id-jag, in which case the authorization server MUST treat it as a claim about identity and reach, and MUST NOT treat it as conferring access"
     verified: check
     targets: [xaa-check]
     asserts: ["but it is worth nothing without a ticket of her issuing", "and an operation outside the connection never becomes a grant"]
   - text: "The authorization server MUST distinguish two kinds of pending request, and MUST make the kind available to the owner's decision surface"
     verified: check
-    targets: [shim-test, intent-check]
-    asserts: ["first contact connects, then tier 1 grants", "tier 3 pends, Alice approves, trade executes", "first contact pends until she answers"]
+    targets: [as-test]
+    asserts: ["which kind of request is waiting: meeting an agent, or one operation"]
   - text: "A binding that surfaces the wait MUST be able to say that the party being waited on is not the requesting party's own user"
     verified: check
     targets: [shim-test]
@@ -87,7 +123,7 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, assurance-check]
     asserts: ["agent CIMD: OK", "metadata that does not resolve buys nothing"]
-  - text: "a Signature-Agent [I-D.meunier-webbotauth-registry] naming a directory of keys the operator publishes, which MUST be covered by the request signature where it is present"
+  - text: "A client that also sends a Signature-Agent header on a request to the resource MUST cover it with that request's signature"
     verified: check
     targets: [sig-test, smoke-test]
     asserts: ["covers signature-agent, with tag + expires", "a swapped Signature-Agent must not verify", "a Signature-Agent the signature does not cover is refused", "signatures directory: OK"]
@@ -179,14 +215,25 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [as-test]
     asserts: ["admitting the same agent again does not revive what revocation ended"]
-  - text: "An enforcement point MUST NOT consume a single-use token before step 5."
+  - text: "An enforcement point MUST NOT consume a single-use token before step 5, and a refusal at any earlier step leaves it unspent."
     verified: check
-    targets: [embedded-check]
-    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
+    targets: [embedded-check, pep-test]
+    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again", "and a single-use grant refused for it is not spent"]
+  - text: "A document that adds a value MUST say whether it is terminal."
+    verified: binding
+    because: the requirement is on a binding or extension document; mcp-00 and multiparty-00 state it for each value they add
+  - text: "A client that receives a value it does not recognise MUST treat it as terminal and MUST NOT send the same request with the same token again."
+    verified: check
+    targets: [client-test]
+    asserts: ["a refusal value this client has never heard of is final", "and so is one carried in a JSON-RPC error's data", "an unavailable authority is the one refusal worth sending again"]
+  - text: "A binding MUST define how the operation and its parameters are read from a request."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a grant marked single-use is spent even at a tool not listed as one"]
   - text: "An enforcement point MUST verify proof of possession against the key returned by introspection rather than the key carried inside the token"
     verified: check
-    targets: [sig-test]
-    asserts: ["a signature over another authority is rejected"]
+    targets: [pep-test]
+    asserts: ["a signature by any key but the one introspection returns is refused", "a grant covering the tool's resource and scope is honoured"]
   - text: "MUST be consumed by an operation that decides and records in one indivisible step, and that reports to its caller whether that caller was the one that consumed it"
     verified: check
     targets: [store-test]
@@ -222,7 +269,7 @@ draft-gamb-uma4agents-core-00:
   - text: "An authorization server MUST NOT hold a static owner credential of its own."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot reach Alice's authorization server directly", "cannot read Alice's policy"]
+    asserts: ["cannot reach Alice's authorization server directly", "cannot read Alice's policy", "not her policy", "and through her public hostname, her credential is what refuses it"]
   - text: "Every handler MUST act on the owner the credential proved rather than on one the request named."
     verified: check
     targets: [multi-owner-check, store-test]
@@ -261,7 +308,7 @@ draft-gamb-uma4agents-core-00:
   - text: "Which resources a named person owns MUST NOT be published at an unauthenticated URI."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the resource's published metadata is readable by anyone"]
   - text: "a decision the owner did not personally take MUST NOT be"
     verified: check
     targets: [org-check]
@@ -272,6 +319,26 @@ draft-gamb-uma4agents-core-00:
     asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
 
 draft-gamb-uma4agents-fedauthz-00:
+  - text: "The authorization server MUST answer a permission request for a resource only from a resource server whose listing carries it"
+    verified: check
+    targets: [as-test]
+    asserts: ["a resource server that serves it may", "one she approved for something else may not", "but one this replica had not yet read it from is read again, then answered", "a second resource server she approved may serve the same resource", "and when one stops publishing it, it stays registered for the other"]
+  - text: "The resource server verifies the signature against the keys of the authorization server its configuration names for that owner, and MUST NOT take the signer from the request."
+    verified: check
+    targets: [gateway-test]
+    asserts: ["her authority's signature reads her listing", "a signature by any other key does not, whoever sent it"]
+  - text: "Where present, the authorization server MUST refuse a listing that names an owner other than the one it pulled for."
+    verified: check
+    targets: [as-test]
+    asserts: ["a listing that names another owner is refused"]
+  - text: "An authorization server offering this MUST advertise rs_registration_endpoint in its metadata."
+    verified: check
+    targets: [as-test]
+    asserts: ["it advertises where the parties beside her reach it"]
+  - text: "An authorization server that serves more than one owner MUST refuse a PAT request that names none, unless it has a deployment-configured default"
+    verified: check
+    targets: [as-test]
+    asserts: ["a PAT for an owner it does not serve is refused, and creates no owner"]
   - text: "the value MUST be one of reversible, compensatable, forward_recoverable or irreversible"
     verified: check
     targets: [consequence-check, k8s-consequence-check]
@@ -291,7 +358,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "It MUST NOT name which owners have instances behind it."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the resource's published metadata is readable by anyone"]
   - text: "The document MUST carry signed_metadata as [RFC9728] Section 2.2"
     verified: check
     targets: [k8s-smoke-test]
@@ -299,7 +366,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "MUST serve them only to a request signed with [RFC9421] by the authorization server that owner has named"
     verified: check
     targets: [k8s-policy-test, k8s-smoke-test]
-    asserts: ["cannot read the owner-bound resource listing", "the authorization server pulled what the resource publishes"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the authorization server pulled what the resource publishes"]
   - text: "MUST be able to learn what a resource server protects by fetching, and MUST NOT require the resource server to push resource descriptions"
     verified: check
     targets: [k8s-smoke-test, fixture]
@@ -420,7 +487,7 @@ draft-gamb-uma4agents-lineage-00:
   - text: "The authorization server MUST refuse to act on it unless every one of the following holds, and MUST check them in this order"
     verified: check
     targets: [introduction-test]
-    asserts: ["an agent the owner has never met may not introduce", "a revoked agent may not introduce", "an agent she never approved in person may not introduce", "an agent that was itself introduced may not introduce", "a revoked agent cannot be restored by an introduction", "an agent from another operator may not be introduced", "fan-out is capped"]
+    asserts: ["an agent the owner has never met may not introduce", "a revoked agent may not introduce", "an agent she never approved in person may not introduce", "an agent that was itself introduced may not introduce", "a revoked agent cannot be restored by an introduction", "an agent from another operator may not be introduced", "fan-out is capped", "a revoked parent from another operator is refused as revoked, first", "an unapproved parent over its fan-out is refused as unapproved, first"]
   - text: "The authorization server MUST record why the introduction was not honoured, and MUST then treat the request exactly as one that offered no lineage"
     verified: check
     targets: [subagent-check]
@@ -529,14 +596,42 @@ draft-gamb-uma4agents-mcp-00:
     asserts: ["truncated body: OK"]
 
 draft-gamb-uma4agents-multiparty-00:
+  - text: "The organization MUST refuse one whose jti is not the one it recorded when that member last enrolled"
+    verified: check
+    targets: [org-test]
+    asserts: ["a membership credential from an earlier enrolment opens nothing"]
+  - text: "It MUST carry iss, iat, exp and the typ stated for the exchange, and the receiver MUST refuse one of another typ."
+    verified: check
+    targets: [as-test]
+    asserts: ["a tally request must be typed as one", "a notice must be typed as one"]
+  - text: "Where the organization holds no attestation for the member it MUST answer 404"
+    verified: check
+    targets: [org-test]
+    asserts: ["no attestation is a 404, not an empty one"]
+  - text: "It MUST NOT carry any value from her policy."
+    verified: check
+    targets: [org-test]
+    asserts: ["and nothing else — no purpose, no template id, no prohibition of hers", "a compliance report keeps counts and field names, nothing from her policy"]
+  - text: "The member's authorization server MUST act on a notice's jti once until its exp, across every replica"
+    verified: check
+    targets: [as-test, store-test]
+    asserts: ["the same notice is acted on once"]
+  - text: "A kind it does not recognise it MUST accept without acting on it."
+    verified: check
+    targets: [as-test]
+    asserts: ["a kind it does not know is accepted and nothing is done"]
+  - text: "A holder's authorization server MUST refuse a request from a tally other than the one the mandate she agreed to names"
+    verified: check
+    targets: [as-test]
+    asserts: ["a question not signed by the tally her mandate names is refused"]
   - text: "Combined with any requirement the member wrote by intersection"
     verified: check
     targets: [org-test]
     asserts: ["where both require a claim, only values both accept survive", "a requirement she wrote and the charter is silent on is kept"]
   - text: "Each notice MUST carry its own unique jti"
     verified: check
-    targets: [org-check, k8s-org-check]
-    asserts: ["every stage of it is in her own record"]
+    targets: [org-check, k8s-org-check, store-test]
+    asserts: ["every stage of it is in her own record", "a value spent twice at once is spent exactly once"]
   - text: "An identifier shared by several notices"
     verified: check
     targets: [org-check, k8s-org-check]
@@ -568,7 +663,7 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "It MUST NOT apply the envelope only at grant time."
     verified: check
     targets: [org-check]
-    asserts: ["the terms document an agent reads names the organization"]
+    asserts: ["terms over the firm's book that exceed the ceiling are refused", "tightening the charter re-clamps every member's book terms"]
   - text: "A terms document MUST state that a layer above the owner is in force over its resources"
     verified: check
     targets: [org-check, org-test]
@@ -612,7 +707,7 @@ draft-gamb-uma4agents-multiparty-00:
   - text: "The organization MUST be able to end a membership and MUST notify the member's authorization server when it does"
     verified: check
     targets: [org-check]
-    asserts: ["an administrator can change what a member may reach", "with nothing restarted and no new deployment"]
+    asserts: ["an administrator can end a member's membership", "her authority is told, and stops treating her as a member", "and her record says the organization ended it"]
   - text: "Leaving MUST withdraw the member's access to claimed resources and the ceiling over her, and MUST leave every narrowing the ceiling applied in place."
     verified: check
     targets: [store-test, joint-check]
@@ -637,6 +732,18 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["the member is told before any data moves"]
+  - text: "A holder's authorization server MUST compare a resource against the mandate's resources as patterns, as it compares charter claims."
+    verified: check
+    targets: [org-test]
+    asserts: ["a mandate naming its resources as a pattern excludes every one of them"]
+  - text: "A holder's authorization server MUST refuse to agree to a mandate covering a resource an organization she belongs to claims, and MUST NOT treat such a mandate as taking that resource out of the organization's reach"
+    verified: check
+    targets: [as-test]
+    asserts: ["her authority refuses to agree to a mandate over what her organization claims", "and one she holds anyway does not lift the firm's ceiling off it"]
+  - text: "The tally's grant MUST carry the most severe consequence any allow verdict it carries names."
+    verified: check
+    targets: [tally-test, pep-test]
+    asserts: ["the heaviest consequence any holder answered under", "a joint grant lighter than a holder's answer is refused"]
   - text: "The tally MUST NOT issue a grant that outlives any allow verdict it carries."
     verified: check
     targets: [tally-test]
@@ -735,6 +842,10 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a holder cannot read her co-owner's queue", "and carries none of her co-owner's terms"]
 
 draft-gamb-uma4agents-policy-00:
+  - text: "The digest a grant carries ([U4ACore] Section 7.1) is s256 over the [RFC8785] serialization of that clearance object, as verified."
+    verified: check
+    targets: [as-test, clearance-check]
+    asserts: ["a grant issued under a clearance says so when introspected, as the same digest", "the grant carries that a clearance was checked, as a digest"]
   - text: "An authorization server offering such a condition MUST treat it as one that may only tighten"
     verified: check
     targets: [rules-test]
@@ -832,8 +943,8 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["a directory that did not check out leaves the claim self-asserted", "metadata that does not resolve buys nothing"]
   - text: "An implementation MUST cache a directory hit and MUST NOT cache a miss"
     verified: check
-    targets: [assurance-check]
-    asserts: ["and is still worth nothing on the second try"]
+    targets: [sig-test]
+    asserts: ["a key the directory holds is answered from cache the second time", "and a key it has just published is recognised at once, not after the TTL"]
   - text: "Assurance MUST NOT decide admission."
     verified: check
     targets: [assurance-check]
@@ -876,8 +987,8 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["blocking it revokes every agent it runs, in one step", "and an agent of that operator is refused by name"]
   - text: "Unblocking MUST NOT restore connections that blocking ended."
     verified: check
-    targets: [store-test]
-    asserts: ["test_blocked_operators_round_trip"]
+    targets: [as-test]
+    asserts: ["blocking ends the connections it runs", "and unblocking restores the right to ask, not the connections"]
   - text: "An authorization server MUST assign the identifier of a negotiation once, when the permission ticket is first created, and MUST carry it unchanged through every ticket rotation."
     verified: check
     targets: [store-test]
@@ -908,6 +1019,14 @@ draft-gamb-uma4agents-policy-00:
     asserts: ["the operator's own directory raised accountability to 2", "the operator publishing this agent's key is worth more than saying so"]
 
 draft-gamb-uma4agents-terms-00:
+  - text: "It verifies with the algorithm the key names in its alg member, or with EdDSA where a bare Ed25519 jwk names none"
+    verified: check
+    targets: [as-test]
+    asserts: ["an agreement is verified with the algorithm its key names", "and not with one its header asks for instead", "a bare key names no algorithm, so it is held to the one it always signed"]
+  - text: "The agreement need not echo it: the authorization server binds an agreement to its resource through the ticket"
+    verified: check
+    targets: [as-test]
+    asserts: ["the resource a grant covers is the negotiation's, whatever the agreement names"]
   - text: "An authorization server implementing this document MUST include it."
     verified: check
     targets: [smoke-test]
@@ -1010,8 +1129,8 @@ draft-gamb-uma4agents-terms-00:
     asserts: ["and the record keeps it beside what she dictated"]
   - text: "An authorization server MUST NOT place anything in a terms document that identifies the owner beyond what the resource identifier already discloses."
     verified: check
-    targets: [multi-owner-check]
-    asserts: ["terms template ids name their owner", "and an agent holding no token can dereference them"]
+    targets: [as-test]
+    asserts: ["it carries her terms and nothing that names her beyond the resource id"]
 
 draft-gamb-uma4agents-owner-00:
   - text: "MUST advertise the base URL of the owner's API in its metadata"
@@ -1052,8 +1171,8 @@ draft-gamb-uma4agents-owner-00:
     asserts: ["registration: it carries no secret to fall back on"]
   - text: "The server MUST refuse a unit over a resource it does not protect, over a resource another unit already governs"
     verified: check
-    targets: [rules-test, first-party-check]
-    asserts: ["she can write a tier of her own", "a rule relaxing on what the agent showed is still unstorable"]
+    targets: [rules-test]
+    asserts: ["she cannot write a tier over a resource nobody protects", "she cannot write a tier over a resource another tier governs"]
   - text: "Resources are fixed by registration and MUST NOT be editable here."
     verified: check
     targets: [store-test]

@@ -147,5 +147,80 @@ check("is refused, not allowed, as unreachable",
       str(result))
 engine.up = True
 
+print("\n== a break-glass window she cannot be told about ==")
+from fastapi import HTTPException  # noqa: E402
+from unittest.mock import AsyncMock  # noqa: E402
+
+app.CHARTERS.append({"version": 3, "charter": charter_mod.validate({
+    **copy.deepcopy(charter_mod.DEFAULT_CHARTER),
+    "claims": ["northwind-vault/*"],
+    "break_glass": {"enabled": True, "resources": ["northwind-vault/*"],
+                    "require_reason": True}}),
+    "published_at": "", "by": "test"})
+app.MEMBERS["alice"] = {"owner": "alice", "token_jti": "m1", "role": None}
+app.require_admin = lambda request: "dana"
+app.notify_member = AsyncMock(return_value=False)
+
+
+class Open:
+    async def json(self):
+        return {"owner": "alice", "reason": "regulatory hold", "window_s": 60}
+
+
+before = set(app.VOUCHERS)
+try:
+    asyncio.run(app.admin_open_voucher(Open()))
+    check("is not opened", False, "opened")
+except HTTPException as exc:
+    check("is not opened, and the administrator is told why",
+          exc.status_code == 503 and set(app.VOUCHERS) == before, str(exc.detail))
+
+print("\n-- where its counterparts reach it --")
+meta = asyncio.run(app.discovery())
+check("it advertises every endpoint a member's authority and an enforcement point call",
+      all(meta.get(k) for k in (
+          "enrolment_endpoint", "enrolment_preview_endpoint", "invitation_endpoint",
+          "leave_endpoint", "envelope_endpoint", "decision_endpoint", "clearance_endpoint",
+          "compliance_endpoint", "membership_endpoint", "introspection_endpoint",
+          "consumption_endpoint", "audit_endpoint")),
+      str(sorted(meta)))
+
+print("\n-- what a member's authority presents, and what it is told --")
+
+
+class Member:
+    def __init__(self, token: str, body: dict | None = None):
+        self.headers = {"authorization": f"Bearer {token}"}
+        self._body = body or {}
+
+    async def json(self):
+        return self._body
+
+
+app.MEMBERS["bob"] = {"owner": "bob", "token_jti": "", "role": None, "as_uri": "https://bob-as.example",
+                      "charter_version": 1, "compliance": None, "clearance": {}}
+current_token = app.membership_token("bob")
+stale_token = app.membership_token("bob")
+app.MEMBERS["bob"]["token_jti"] = app.jwt.decode(current_token, options={"verify_signature": False})["jti"]
+try:
+    asyncio.run(app.member_envelope(Member(stale_token)))
+    check("a membership credential from an earlier enrolment opens nothing", False, "opened")
+except HTTPException as exc:
+    check("a membership credential from an earlier enrolment opens nothing",
+          exc.status_code == 403, str(exc.detail))
+try:
+    asyncio.run(app.member_clearance(Member(current_token)))
+    check("no attestation is a 404, not an empty one", False, "answered")
+except HTTPException as exc:
+    check("no attestation is a 404, not an empty one", exc.status_code == 404, str(exc.detail))
+asyncio.run(app.member_compliance(Member(current_token, {
+    "charter_version": 1, "resources_governed": 2, "tiers_governed": 1,
+    "clamped_fields": ["max_expires_in"], "within": True,
+    "tiers": {"tier1": {"scopes": ["positions:read"]}}})))
+check("a compliance report keeps counts and field names, nothing from her policy",
+      "tiers" not in app.MEMBERS["bob"]["compliance"]
+      and app.MEMBERS["bob"]["compliance"]["clamped_fields"] == ["max_expires_in"],
+      str(app.MEMBERS["bob"]["compliance"]))
+
 print(f"\n{PASSED} passed, {FAILED} failed")
 sys.exit(1 if FAILED else 0)

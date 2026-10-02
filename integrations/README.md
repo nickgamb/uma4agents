@@ -118,7 +118,7 @@ upstream receives an `X-Uma-Contract` header and never the agent's
 `Authorization`. The registration and owner-approval steps above are the ones
 the lab's own gateway performs on every start.
 
-What has not been run is a full n8n instance behind it. The sidecar speaks HTTP
-to an HTTP upstream and parses MCP from the body — it has no knowledge of the
-tool behind it — so the n8n-specific part is configuration rather than code,
-but it is worth saying plainly that the vendor half is untested.
+A live n8n behind a live sidecar, with an agent negotiating through them, is in
+[n8n/README.md](n8n/README.md#run-it-yourself-against-the-lab): the call is
+challenged, the grant is negotiated, n8n answers, and n8n refuses a call that
+did not come through the sidecar.

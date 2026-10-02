@@ -154,7 +154,9 @@ pages. **Groups** is what a member gets and agrees to; saving one publishes a
 charter version, because it changes the bargain. **Charter → Rules** is what the
 firm enforces operationally, in Rego, and it can only refuse or interrupt —
 never grant, and never answer for her. The test for which page a rule belongs
-on: *would a member have to agree to it again?*
+on: *is it part of what a member is shown, and agrees to, when she joins?* A
+new charter version applies to existing members when it is published; her
+authority re-applies the ceiling and records the version.
 
 **7 · Her portal — Organization → Leave.** *Taken back.* Run step 4 again:
 refused, and the resource is gone. **Leaving takes back exactly what joining

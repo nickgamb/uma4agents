@@ -110,12 +110,18 @@ The challenge names an authorization server. The resource's published metadata
 also names authorization servers. The agent must check one against the other,
 and refuse a challenge naming an authority the resource has never claimed.
 
+The agent finds that metadata from the resource it called, at the URL RFC 9728
+§3 forms — `https://host/.well-known/oauth-protected-resource/mcp` for
+`https://host/mcp` — and refuses a challenge whose `resource_metadata` points
+anywhere else. Following the pointer instead would let a forged challenge name a
+document on its own host that lists its own authorization server.
+
 Without that check, anything able to return a 401 can send an agent off to
 negotiate with a server of its choosing — and the agent will sign terms, present
 credentials, and hand over whatever the attacker's "authorization server" asks
 for.
 
-The check is two lines and closes the hole entirely.
+The check is a few lines and closes the hole entirely.
 
 ## Troubleshooting
 

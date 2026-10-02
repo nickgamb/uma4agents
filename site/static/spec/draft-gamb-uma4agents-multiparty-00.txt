@@ -76,36 +76,36 @@ Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
      1.1.  Relationship to the Set . . . . . . . . . . . . . . . . .   3
-     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   3
+     1.2.  Notational Conventions  . . . . . . . . . . . . . . . . .   4
    2.  Part I: A Layer Above the Owner . . . . . . . . . . . . . . .   4
      2.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .   4
      2.2.  Discovery . . . . . . . . . . . . . . . . . . . . . . . .   4
      2.3.  The Charter . . . . . . . . . . . . . . . . . . . . . . .   5
      2.4.  Delegation  . . . . . . . . . . . . . . . . . . . . . . .   5
      2.5.  The Envelope, Clamped on Write  . . . . . . . . . . . . .   6
-     2.6.  The Decision  . . . . . . . . . . . . . . . . . . . . . .   6
-     2.7.  What the Organization May See . . . . . . . . . . . . . .   7
-     2.8.  Acting for a Member . . . . . . . . . . . . . . . . . . .   7
+     2.6.  The Decision  . . . . . . . . . . . . . . . . . . . . . .   7
+     2.7.  What the Organization May See . . . . . . . . . . . . . .   8
+     2.8.  Acting for a Member . . . . . . . . . . . . . . . . . . .   8
      2.9.  Enrolment and Leaving . . . . . . . . . . . . . . . . . .   8
      2.10. Break-Glass . . . . . . . . . . . . . . . . . . . . . . .   9
-   3.  Part II: Owners of Equal Standing . . . . . . . . . . . . . .   9
-     3.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .   9
-     3.2.  The Mandate . . . . . . . . . . . . . . . . . . . . . . .  10
+   3.  Part II: Owners of Equal Standing . . . . . . . . . . . . . .  10
+     3.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .  10
+     3.2.  The Mandate . . . . . . . . . . . . . . . . . . . . . . .  11
      3.3.  The Fold  . . . . . . . . . . . . . . . . . . . . . . . .  11
-     3.4.  Verdicts  . . . . . . . . . . . . . . . . . . . . . . . .  11
+     3.4.  Verdicts  . . . . . . . . . . . . . . . . . . . . . . . .  12
      3.5.  The Mandate Digest  . . . . . . . . . . . . . . . . . . .  13
-     3.6.  Verdicts Are Not Claims . . . . . . . . . . . . . . . . .  13
-     3.7.  The Count . . . . . . . . . . . . . . . . . . . . . . . .  13
+     3.6.  Verdicts Are Not Claims . . . . . . . . . . . . . . . . .  14
+     3.7.  The Count . . . . . . . . . . . . . . . . . . . . . . . .  14
      3.8.  The Grant Carries the Verdicts  . . . . . . . . . . . . .  14
-     3.9.  Re-Verification at the Enforcement Point  . . . . . . . .  14
-     3.10. No Organization Reaches a Jointly Held Resource . . . . .  16
-   4.  Security Considerations . . . . . . . . . . . . . . . . . . .  16
-     4.1.  A Layer Above May Only Narrow . . . . . . . . . . . . . .  16
-     4.2.  Reach Stops at the Claim  . . . . . . . . . . . . . . . .  16
-     4.3.  An Administrator's Decision Is Not the Owner's  . . . . .  16
-     4.4.  The Mandate Is Read Where It Is Published . . . . . . . .  16
-     4.5.  Silence Is Not Consent  . . . . . . . . . . . . . . . . .  16
-     4.6.  Break-Glass Is Loud . . . . . . . . . . . . . . . . . . .  17
+     3.9.  Re-Verification at the Enforcement Point  . . . . . . . .  15
+     3.10. No Organization Reaches a Jointly Held Resource . . . . .  17
+   4.  The Wire Between Parties  . . . . . . . . . . . . . . . . . .  17
+     4.1.  Member's Authorization Server to Organization . . . . . .  18
+     4.2.  Organization to Member's Authorization Server . . . . . .  19
+     4.3.  Enforcement Point to Organization . . . . . . . . . . . .  20
+     4.4.  Tally to Holder's Authorization Server  . . . . . . . . .  21
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .  21
+     5.1.  A Layer Above May Only Narrow . . . . . . . . . . . . . .  21
 
 
 
@@ -114,17 +114,22 @@ Gamb & Maler              Expires 19 March 2027                 [Page 2]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-   5.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  17
-     5.1.  Members Are Not Visible to Each Other . . . . . . . . . .  17
-     5.2.  The Ceiling Is Disclosed to the Agent . . . . . . . . . .  17
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  17
-   7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  17
-     7.1.  Normative References  . . . . . . . . . . . . . . . . . .  17
-     7.2.  Informative References  . . . . . . . . . . . . . . . . .  18
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  19
-   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  21
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  21
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  21
+     5.2.  Reach Stops at the Claim  . . . . . . . . . . . . . . . .  22
+     5.3.  An Administrator's Decision Is Not the Owner's  . . . . .  22
+     5.4.  The Mandate Is Read Where It Is Published . . . . . . . .  22
+     5.5.  Silence Is Not Consent  . . . . . . . . . . . . . . . . .  22
+     5.6.  Break-Glass Is Loud . . . . . . . . . . . . . . . . . . .  22
+   6.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  22
+     6.1.  Members Are Not Visible to Each Other . . . . . . . . . .  22
+     6.2.  The Ceiling Is Disclosed to the Agent . . . . . . . . . .  22
+   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  23
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  23
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  23
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .  24
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  25
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  26
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  26
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  27
 
 1.  Introduction
 
@@ -154,13 +159,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
    https://u4a.ai/spec/multiparty/1.0.  An implementation MAY implement
    Part I, Part II, or both.
 
-1.2.  Notational Conventions
 
-   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
-   "OPTIONAL" in this document are to be interpreted as described in
-   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
-   capitals, as shown here.
+
 
 
 
@@ -169,6 +169,14 @@ Gamb & Maler              Expires 19 March 2027                 [Page 3]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+1.2.  Notational Conventions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
 
    Throughout, a _policy unit_ is as defined in [U4APolicy] Section 2.
 
@@ -210,14 +218,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
       reads the envelope in force (Section 2.5).
 
    decision_endpoint:  REQUIRED.  Where a member's authorization server
-      asks about a request (Section 2.6).
-
-   introspection_endpoint:  REQUIRED where the charter enables break-
-      glass.  Where an enforcement point introspects a grant the
-      organization signed (Section 2.10).
-
-   claims:  REQUIRED.  The charter's claims.
-
 
 
 
@@ -225,6 +225,20 @@ Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+      asks about a request (Section 2.6).
+
+   introspection_endpoint, consumption_endpoint:  REQUIRED where the
+      charter enables break-glass.  Where an enforcement point
+      introspects, and spends, a grant the organization signed
+      (Section 2.10).
+
+   enrolment_preview_endpoint, invitation_endpoint, leave_endpoint,
+
+   clearance_endpoint, compliance_endpoint, membership_endpoint,
+   audit_endpoint:  REQUIRED.  The remaining exchanges of Section 4.
+
+   claims:  REQUIRED.  The charter's claims.
 
    charter_version:  REQUIRED.  The version of the charter in force.
 
@@ -260,6 +274,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    Each role MUST carry a delegation value, one of:
 
    none:  The member may reach the resource herself.  No agent acting
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
       for her may.
 
    first-party-only:  An agent the member activated herself ([U4APolicy]
@@ -273,14 +295,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    about parties rather than permissions, and it is only expressible
    because the member's authorization server can already distinguish an
    agent she activated from one somebody else operates.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 5]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
 2.5.  The Envelope, Clamped on Write
 
@@ -316,10 +330,25 @@ Internet-Draft          Multi-Party Authorization         September 2026
    The clamp is applied on write so that the ceiling appears in the
    terms document the requesting side dereferences and signs, rather
    than being applied invisibly at the door.  A terms document MUST
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    state that a layer above the owner is in force over its resources, in
    its organization member ([U4ATerms] Section 2): an agent reads the
    document before it signs anything, and that is the only moment at
    which "these terms are not hers alone" is information it can act on.
+
+   An enforcement point MAY also check a grant over a claimed resource
+   against the ceiling, as a second line behind the clamp.  One that
+   does refuses a grant that exceeds it with the refusal value
+   organization_envelope_exceeded, status 403, which is terminal: the
+   authority that answered is issuing more than the organization
+   permits, and negotiating again reproduces that exactly.
 
 2.6.  The Decision
 
@@ -330,14 +359,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    scopes attempted, the policy unit as tier, the expires_in, purpose,
    reason, mission and operation of the agreement, and the assurance and
    standing facts of [U4APolicy]; the member's authorization server
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 6]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    presents its membership credential with them, as a POST to the
    organization's decision_endpoint.
 
@@ -358,6 +379,20 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
    A request over a resource the charter does not claim MUST NOT be sent
    to the organization.
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
 2.7.  What the Organization May See
 
@@ -387,13 +422,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    *  an introspection response for a grant so affected carries error of
       organization_revoked, which is terminal ([U4AFedAuthz] Section 5).
 
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    The organization conveys each such action to the member's
    authorization server as a short-lived JWT with typ of u4a-org-
    admin+jwt, signed by the organization, naming the member as sub, the
@@ -414,6 +442,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    How a joiner is entitled to enrol is the organization's to decide,
    and the mechanisms differ in what they establish.  An invitation
    addressed to one person, or the organization's own identity provider
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    vouching for her, establishes who is joining.  A code shared with a
    group establishes only that the joiner holds it: whoever does may
    enrol under any name not already enrolled.  An organization offering
@@ -441,15 +477,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    and the stage an owner most needs to be told about is the one that is
    silently dropped.
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    Leaving MUST withdraw the member's access to claimed resources and
    the ceiling over her, and MUST leave every narrowing the ceiling
    applied in place.  Her terms were narrowed with her agreement and
@@ -471,6 +498,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    resource the organization owns, and only for the member the
    introspection response names in owner; an enforcement point that also
    checks the organization's ceiling over an owner's own resources MUST
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    NOT take that as licence to honour the organization's own grants
    there.
 
@@ -484,7 +519,10 @@ Internet-Draft          Multi-Party Authorization         September 2026
    and the charter_version it was issued under.  The enforcement point
    introspects it at the organization's introspection_endpoint, whose
    answers are those of [U4AFedAuthz] Section 5 with the grant's owner
-   added.
+   added, and spends it at the organization's consumption_endpoint, as
+   the last step of [U4ACore] Section 8.2.  Both are authenticated with
+   the credential the organization provisioned for that enforcement
+   point (Section 4).
 
    The member MUST be notified at the moment the window opens, before
    any data moves.  Break-glass cannot be a flag on an ordinary grant:
@@ -497,15 +535,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 3.1.  Parties
 
    Holder:  A resource owner under [U4ACore] who holds a resource
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
       jointly with others.  Each holder has her own authorization
       server.
 
@@ -519,6 +548,19 @@ Internet-Draft          Multi-Party Authorization         September 2026
    without privileging the place it is put.  The tally is that place,
    and the rest of Part II is what makes it unable to lie rather than
    trusted.
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
 3.2.  The Mandate
 
@@ -552,16 +594,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    Authoring a mandate is where "who decides who decides" lives, and
    this document leaves it to configuration.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 10]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
 3.3.  The Fold
 
    When a client presents a ticket for a jointly held resource, the
@@ -577,6 +609,15 @@ Internet-Draft          Multi-Party Authorization         September 2026
    would be two chances to disagree about what "narrower" means in the
    two places where disagreeing is worst.
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
 3.4.  Verdicts
 
    Each holder's authorization server, asked by the tally about one
@@ -590,6 +631,9 @@ Internet-Draft          Multi-Party Authorization         September 2026
    negotiation:  REQUIRED.  The negotiation identifier this verdict
       answers.
 
+   resource_id:  REQUIRED.  The resource the negotiation is over, as the
+      tally named it when it asked.
+
    contract:  REQUIRED.  The digest of the agreement the agent signed,
       as [U4ATerms].
 
@@ -598,9 +642,7 @@ Internet-Draft          Multi-Party Authorization         September 2026
    because:  OPTIONAL.  Reasons, for a refusal.
 
    exp:  REQUIRED.  No earlier than the agreement the verdict is about
-      would end, so that a grant within that lifetime can carry it, and
-      no later than the longest lifetime the holder's authorization
-      server gives a grant.
+      would end, so that a grant within that lifetime can carry it.
 
    cnf_jkt:  REQUIRED in an allow. jkt(k), as [U4ACore] defines it, of
       the key k that signed the agreement.
@@ -610,28 +652,34 @@ Internet-Draft          Multi-Party Authorization         September 2026
    expires_in:  REQUIRED in an allow.  The lifetime the agreement
       carries.
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 11]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    operation:  REQUIRED in an allow whose agreement names an operation.
       Its tool and params_s256, as in the operation claim of [U4ACore].
 
    mandate_s256:  REQUIRED in an allow.  The digest of the mandate the
       holder agreed to, as Section 3.5.
 
+   consequence:  REQUIRED in an allow where the resource declares one
+      for the operation.  The consequence class of [U4ACore] the
+      holder's authorization server read when it answered.
+
    An allow verdict MUST carry cnf_jkt, scope, expires_in and
-   mandate_s256, and MUST carry operation where the agreement names one.
-   A verdict that said only "yes, to this agreement" could be carried
-   inside any grant the tally chose to issue beside it, because the
-   enforcement point checks verdicts against the grant and never sees
-   the agreement.  Stating the grant's material facts as the holder's
-   authority verified them is what lets the enforcement point refuse a
-   grant that is not the one agreed to.
+   mandate_s256, and MUST carry operation where the agreement names one
+   and consequence where the resource declares one.  The tally's grant
+   MUST carry the most severe consequence any allow verdict it carries
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+   names.  A verdict that said only "yes, to this agreement" could be
+   carried inside any grant the tally chose to issue beside it, because
+   the enforcement point checks verdicts against the grant and never
+   sees the agreement.  Stating the grant's material facts as the
+   holder's authority verified them is what lets the enforcement point
+   refuse a grant that is not the one agreed to.
 
    A holder's authorization server that has recorded the owner's
    approval of one agreement MUST NOT issue an allow verdict about a
@@ -667,19 +715,20 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
                        Figure 1: A verdict's claims.
 
+3.5.  The Mandate Digest
+
+   The digest of a mandate is s256 as [U4ACore] defines it: s256:
+   followed by the base64url encoding, without padding, of the SHA-256
+   hash of the [RFC8785] serialization of an object with exactly three
+   members:
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
-
-3.5.  The Mandate Digest
-
-   The digest of a mandate is s256: followed by the base64url encoding,
-   without padding, of the SHA-256 hash of the JSON serialization —
-   members sorted by name, no insignificant whitespace — of an object
-   with exactly three members:
 
    holders:  Each holder reduced to owner, issuer with any trailing
       slash removed, and weight, ordered by owner.
@@ -720,16 +769,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    holder.  Silence and unreachability MUST both fail closed; only the
    record distinguishes them.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 13]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
 3.8.  The Grant Carries the Verdicts
 
    A grant the tally issues MUST carry a joint claim with:
@@ -739,6 +778,13 @@ Internet-Draft          Multi-Party Authorization         September 2026
    mandate:  REQUIRED.  The mandate as the tally holds it.
 
    verdicts:  REQUIRED.  Every verdict received, as issued.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
    tally:  OPTIONAL.  The tally's own count, for display.
 
@@ -778,30 +824,38 @@ Internet-Draft          Multi-Party Authorization         September 2026
        use the copy embedded in the grant, and refuse unless it covers
        the resource being accessed;
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 14]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    2.  verify each verdict, including its exp, against the keys
        published by the authorization server the enforcement point is
        itself configured to know speaks for that holder, and refuse
        where the published mandate names a holder it knows no
        authorization server for, or names a different one;
 
-   3.  establish that each verdict names this negotiation and this
-       agreement;
+   3.  establish that each verdict names this negotiation, this
+       agreement and the resource being accessed;
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 15]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
 
    4.  establish, for each allow verdict, that its mandate_s256 is the
        digest of the published mandate, and that the grant is bound to
        the key cnf_jkt names, carries no scope beyond scope, lasts no
-       longer than expires_in, and, where the verdict names an
-       operation, is single-use and bound to that operation;
+       longer than expires_in, declares no lighter consequence than the
+       verdict names, and, where the verdict names an operation, is
+       single-use and bound to that operation;
 
    5.  re-run the count of Section 3.7 and refuse unless it allows.
+
+   A refusal under this list carries the refusal value
+   joint_mandate_unsatisfied, status 403, which is terminal.  Where the
+   mandate or a holder's keys cannot be fetched, the enforcement point
+   answers temporarily_unavailable instead: that is a party it could not
+   ask, not a decision anybody made.
 
    The tally member of the grant is for display and MUST NOT be trusted.
 
@@ -837,7 +891,9 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 15]
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 16]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
@@ -848,104 +904,48 @@ Internet-Draft          Multi-Party Authorization         September 2026
    holder's authorization server MUST refuse to apply an organization's
    envelope or decision to one regardless.  A jointly held resource MUST
    NOT share a policy unit with any other resource, since a ceiling
-   applies to a whole unit once it reaches any resource in it.
+   applies to a whole unit once it reaches any resource in it.  A
+   holder's authorization server MUST compare a resource against the
+   mandate's resources as patterns, as it compares charter claims.
+
+   The protection runs one way.  A holder's authorization server MUST
+   refuse to agree to a mandate covering a resource an organization she
+   belongs to claims, and MUST NOT treat such a mandate as taking that
+   resource out of the organization's reach: otherwise a member could
+   lift her organization's ceiling off its own resource by joining a
+   mandate any party could publish.
 
    Peers compose horizontally; an authority above them clamps
    vertically.  The two are orthogonal rather than rival, and this
    document keeps them apart.
 
-4.  Security Considerations
+4.  The Wire Between Parties
 
-4.1.  A Layer Above May Only Narrow
+   This section fixes the messages the sections above name.  Every
+   exchange is HTTPS with JSON bodies unless stated.  Each endpoint is
+   at the path shown, relative to the receiving party's issuer
+   identifier, and is advertised in that party's metadata under the
+   member shown, so that a party configured with an issuer can reach it,
+   and one that reads metadata finds the same URL.
 
-   See Section 2.5 and Section 2.6.  The one-directionality of every
-   envelope field and of the decision's effect on the member's own
-   result is the property the whole of Part I rests on.  An
-   implementation SHOULD be able to demonstrate over its full envelope
-   that no combination of envelope and terms produces wider terms than
-   it started with.
+   Three credentials are used, and each authenticates exactly one
+   direction:
 
-4.2.  Reach Stops at the Claim
+   membership credential:  A JWT with typ of u4a-membership+jwt, issued
+      by the organization at enrolment and carrying iss, sub (the
+      member), org, iat and jti.  A member's authorization server
+      presents it as a bearer token on every organization endpoint
+      marked _member_ below.  The organization MUST refuse one whose jti
+      is not the one it recorded when that member last enrolled, so that
+      a credential from before she left, or before she rejoined, opens
+      nothing.
 
-   See Section 2.7 and Section 2.8.  Everything the organization can see
-   or do stops at the resources its charter claims, and the scoping is
-   applied by the member's authorization server before it answers.  An
-   organization given a member's whole record because it is easier has
-   been given her relationships with parties that have nothing to do
-   with it.
-
-4.3.  An Administrator's Decision Is Not the Owner's
-
-   See Section 2.8.  "The owner personally approved" may relax a rule
-   under [U4APolicy]; a decision taken for her must not produce that
-   fact.
-
-4.4.  The Mandate Is Read Where It Is Published
-
-   See Section 3.9.  This is the single check that makes the tally
-   untrusted.
-
-4.5.  Silence Is Not Consent
-
-   See Section 3.7.  A holder who has not answered and a holder who
-   cannot be reached both count for nothing.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 16]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
-4.6.  Break-Glass Is Loud
-
-   See Section 2.10.  An emergency path that can be exercised quietly is
-   an ordinary path with a better name.
-
-5.  Privacy Considerations
-
-5.1.  Members Are Not Visible to Each Other
-
-   Under Part I, an organization's view of one member is filtered to
-   claimed resources and says nothing about any other member.  Under
-   Part II, a holder's authorization server MUST NOT expose another
-   holder's pending queue, decisions or record; each holder sees her own
-   verdicts and the count.
-
-5.2.  The Ceiling Is Disclosed to the Agent
-
-   Section 2.5 requires that a terms document state when a layer above
-   the owner is in force.  That discloses to the requesting side that
-   the owner is a member of some organization, which is a fact about
-   her.  The alternative — a ceiling applied invisibly — asks the agent
-   to sign terms that are not the terms it will be held to, and this
-   document prefers the disclosure.
-
-6.  IANA Considerations
-
-   This document has no IANA actions.  The identifiers it uses are
-   listed in Appendix A.
-
-7.  References
-
-7.1.  Normative References
-
-   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119,
-              DOI 10.17487/RFC2119, March 1997,
-              <https://www.rfc-editor.org/rfc/rfc2119>.
-
-   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
-              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
-              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
-
-   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
-              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
-              <https://www.rfc-editor.org/rfc/rfc7519>.
-
-
-
+   signed message:  A JWT signed with a key at the sender's jwks_uri and
+      verified by the receiver against the keys of the party its own
+      records name: the organization the owner enrolled with, or the
+      tally the mandate names.  It MUST carry iss, iat, exp and the typ
+      stated for the exchange, and the receiver MUST refuse one of
+      another typ.
 
 
 
@@ -954,54 +954,54 @@ Gamb & Maler              Expires 19 March 2027                [Page 17]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+   enforcement point credential:  A credential the organization or tally
+      provisioned for an enforcement point, presented as a bearer token.
+      Both run as infrastructure for the same deployment, so a
+      provisioned credential is the honest shape; a member's
+      authorization server is never reached this way.
 
-   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
-              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
-              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+4.1.  Member's Authorization Server to Organization
 
-   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
-              Profile for Autonomous Agents", Work in Progress,
-              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
-              <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
+    +==========+=========+=============================+==============+
+    |Exchange  |Request  | Metadata member, path       |Authentication|
+    +==========+=========+=============================+==============+
+    |Preview   |POST,    | enrolment_preview_endpoint, |the enrolment |
+    |          |{"code"} | /member/preview             |code          |
+    +----------+---------+-----------------------------+--------------+
+    |Invitation|GET,     | invitation_endpoint,        |none          |
+    |          |?owner=  | /member/invitation          |              |
+    +----------+---------+-----------------------------+--------------+
+    |Decline   |POST,    | invitation_endpoint +       |the           |
+    |          |{"owner",| /decline                    |invitation's  |
+    |          |"code"}  |                             |code          |
+    +----------+---------+-----------------------------+--------------+
+    |Enrol     |POST, see| enrolment_endpoint,         |a code, an    |
+    |          |below    | /member/join                |invitation or |
+    |          |         |                             |an assertion  |
+    |          |         |                             |(Section 2.9) |
+    +----------+---------+-----------------------------+--------------+
+    |Envelope  |GET      | envelope_endpoint, /member/ |member        |
+    |          |         | envelope                    |              |
+    +----------+---------+-----------------------------+--------------+
+    |Decision  |POST, the| decision_endpoint,          |member        |
+    |          |request  | /decision                   |              |
+    |          |facts    |                             |              |
+    +----------+---------+-----------------------------+--------------+
+    |Clearance |GET      | clearance_endpoint,         |member        |
+    |          |         | /member/clearance           |              |
+    +----------+---------+-----------------------------+--------------+
+    |Compliance|POST, see| compliance_endpoint,        |member        |
+    |          |below    | /member/compliance          |              |
+    +----------+---------+-----------------------------+--------------+
+    |Leave     |POST     | leave_endpoint, /member/    |member        |
+    |          |         | leave                       |              |
+    +----------+---------+-----------------------------+--------------+
 
-   [U4AFedAuthz]
-              Gamb, N. and E. Maler, "Federated Authorization for
-              Autonomous Agents", Work in Progress, Internet-Draft,
-              draft-gamb-uma4agents-fedauthz-00, 2026,
-              <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
-              00.html>.
+       Table 1: Exchanges a member's authorization server initiates.
 
-   [U4APolicy]
-              Gamb, N. and E. Maler, "Owner Policy, Assurance and
-              Attention for User-Managed Access (UMA) 2.0", Work in
-              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
-              2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
-              00.html>.
-
-   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
-              Managed Access (UMA) 2.0", Work in Progress, Internet-
-              Draft, draft-gamb-uma4agents-terms-00, 2026,
-              <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
-
-   [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
-              Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
-              Kantara Recommendation, 7 January 2018,
-              <https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-
-              grant-2.0.html>.
-
-7.2.  Informative References
-
-   [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
-              Work Group, "Solving Data Sharing Challenges with UMA: The
-              Julie Adams Healthcare Use Case from PP2PI",
-              Kantara Editors' Draft Report, March 2023,
-              <https://kantara.atlassian.net/wiki/spaces/uma/
-              pages/4850258/Notes+drafts+and+WIP>.
-
-
+   The enrolment request carries owner (REQUIRED), as_uri (REQUIRED, the
+   member's authorization server, to which notices and administrator
+   actions will be sent), charter_version (REQUIRED, Section 2.9), and
 
 
 
@@ -1010,36 +1010,36 @@ Gamb & Maler              Expires 19 March 2027                [Page 18]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
-              Code: The Implementation Status Section", BCP 205,
-              RFC 7942, DOI 10.17487/RFC7942, July 2016,
-              <https://www.rfc-editor.org/rfc/rfc7942>.
+   whichever of code and assertion the organization's enrolment path
+   requires.  The response carries membership_token, the membership
+   credential, beside the members of an envelope document.
 
-   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
-              Protected Resource Metadata", RFC 9728,
-              DOI 10.17487/RFC9728, April 2025,
-              <https://www.rfc-editor.org/rfc/rfc9728>.
+   An envelope document carries org, name, issuer, charter_version,
+   published_at, the envelope fields of Section 2.5 in force for this
+   member, and her role as role, role_name, grants and delegation.  The
+   preview and envelope exchanges answer with one.
 
-   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
-              implementation", 2026,
-              <https://github.com/nickgamb/uma4agents>.
+   A decision request carries the facts of Section 2.6, at least
+   resource_id.  The answer carries effect (allow, ask or refuse),
+   because (an array of sentences the member is shown), governed
+   (whether the charter claims the resource) and charter_version.
 
-Appendix A.  Identifiers Used by This Document
+   A clearance answer carries clearance, a JWT with typ of u4a-
+   clearance+jwt ([U4APolicy]), and expires_in.  Where the organization
+   holds no attestation for the member it MUST answer 404, which her
+   authority treats as unmet rather than as an error.
 
-   This appendix lists the identifiers this document defines.  It is
-   informative and requests no registration.
+   A compliance report carries charter_version, resources_governed,
+   tiers_governed, clamped_fields (the names of the envelope fields that
+   narrowed her terms) and within.  It MUST NOT carry any value from her
+   policy.
 
+4.2.  Organization to Member's Authorization Server
 
-
-
-
-
-
-
-
-
-
-
+   A notice is POSTed to the member's authorization server's
+   org_notice_endpoint (/org/notice) as {"notice": <JWT>}, a signed
+   message with typ of u4a-org-notice+jwt carrying sub (the member),
+   org, jti, an exp no more than five minutes after iat, and kind:
 
 
 
@@ -1066,54 +1066,54 @@ Gamb & Maler              Expires 19 March 2027                [Page 19]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-         +======================+=================+=============+
-         | Identifier           | Kind            | Defined in  |
-         +======================+=================+=============+
-         | application/u4a-     | Media type      | Section 3.4 |
-         | verdict+jwt          |                 |             |
-         +----------------------+-----------------+-------------+
-         | application/u4a-     | Media type      | Section 2.9 |
-         | membership+jwt       |                 |             |
-         +----------------------+-----------------+-------------+
-         | application/u4a-org- | Media type      | Section 2.9 |
-         | notice+jwt           |                 |             |
-         +----------------------+-----------------+-------------+
-         | application/u4a-org- | Media type      | Section 2.8 |
-         | admin+jwt            |                 |             |
-         +----------------------+-----------------+-------------+
-         | joint                | JWT claim       | Section 3.8 |
-         |                      | [RFC7519]       |             |
-         +----------------------+-----------------+-------------+
-         | family               | JWT claim       | Section 3.8 |
-         |                      | [RFC7519]       |             |
-         +----------------------+-----------------+-------------+
-         | break_glass          | JWT claim       | Section     |
-         |                      | [RFC7519]       | 2.10        |
-         +----------------------+-----------------+-------------+
-         | /.well-known/u4a-    | Well-known URI  | Section 2.2 |
-         | organization         |                 |             |
-         +----------------------+-----------------+-------------+
-         | enrolment_endpoint,  | Organization    | Section 2.2 |
-         | envelope_endpoint,   | metadata member |             |
-         | decision_endpoint    |                 |             |
-         +----------------------+-----------------+-------------+
-         | u4a_mandate_endpoint | Authorization   | Section 3.2 |
-         |                      | server metadata |             |
-         |                      | member          |             |
-         +----------------------+-----------------+-------------+
-         | org                  | JWT claim       | Section     |
-         |                      | [RFC7519]       | 2.9,        |
-         |                      |                 | Section 2.8 |
-         +----------------------+-----------------+-------------+
-         | kind                 | JWT claim       | Section 2.9 |
-         |                      | [RFC7519]       |             |
-         +----------------------+-----------------+-------------+
-         | admin                | JWT claim       | Section 2.8 |
-         |                      | [RFC7519]       |             |
-         +----------------------+-----------------+-------------+
+    +=====================+======================+====================+
+    | Kind                | Further members      | The member's       |
+    |                     |                      | authorization      |
+    |                     |                      | server             |
+    +=====================+======================+====================+
+    | charter_changed     | charter_version      | re-reads the       |
+    |                     |                      | envelope and re-   |
+    |                     |                      | applies it         |
+    +---------------------+----------------------+--------------------+
+    | role_changed        | role, by             | re-reads the       |
+    |                     |                      | envelope and       |
+    |                     |                      | records the change |
+    +---------------------+----------------------+--------------------+
+    | membership_ended    | by                   | ends the enrolment |
+    |                     |                      | as Section 2.9     |
+    +---------------------+----------------------+--------------------+
+    | break_glass_opened, | reason, resource_id, | records it and     |
+    | break_glass,        | authorised_by or by, | tells the member   |
+    | break_glass_used    | the operation's      | (Section 2.10)     |
+    |                     | tool, as applicable  |                    |
+    +---------------------+----------------------+--------------------+
 
-               Table 1: Identifiers used by this document.
+                           Table 2: Notice kinds.
 
+   The member's authorization server MUST act on a notice's jti once
+   until its exp, across every replica, and MUST answer 409 to a second
+   presentation.  A kind it does not recognise it MUST accept without
+   acting on it.
+
+   An administrator's action (Section 2.8) is sent to org_admin_endpoint
+   (/org/admin) followed by /{owner}/ and one of pending,
+   pending/{family}/decision, connections, connections/revoke,
+   connections/restore, operators, operators/{action} or ledger, with a
+   signed message of typ u4a-org-admin+jwt as the bearer token.  It
+   carries sub (the member), org, admin and an exp no more than two
+   minutes after iat.  The bodies and answers are those of the owner's
+   own API for the same operation ([U4AOwner]), narrowed to what
+   Section 2.7 allows.
+
+4.3.  Enforcement Point to Organization
+
+      +===============+============+===============================+
+      | Exchange      | Request    | Metadata member, path         |
+      +===============+============+===============================+
+      | Membership    | GET        | membership_endpoint +         |
+      |               |            | /{owner}, /membership/{owner} |
+      +---------------+------------+-------------------------------+
+      | Introspection | POST, form | introspection_endpoint,       |
 
 
 
@@ -1121,6 +1121,308 @@ Gamb & Maler              Expires 19 March 2027                [Page 20]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+      |               | token=     | /introspect                   |
+      +---------------+------------+-------------------------------+
+      | Consumption   | POST, form | consumption_endpoint,         |
+      |               | token=     | /consume                      |
+      +---------------+------------+-------------------------------+
+      | Access report | POST       | audit_endpoint, /audit/access |
+      +---------------+------------+-------------------------------+
+
+        Table 3: Exchanges an enforcement point initiates with an
+                              organization.
+
+   Each is authenticated with the enforcement point credential.  A
+   membership answer is {"member": false}, or "member": true with since
+   and the members of an envelope document.  A consumption answer
+   carries consumed and, where false, error from the vocabulary of
+   [U4AFedAuthz] Section 5.
+
+4.4.  Tally to Holder's Authorization Server
+
+   The tally asks with a signed message of typ u4a-tally-req+jwt, POSTed
+   as {"request": <JWT>}. Every request carries owner (the holder, as
+   her authorization server names her) and account.
+
+   A quote, at joint_quote_endpoint (/joint/quote), adds resource_id.
+   The answer carries owner, tier_id and tier (her terms over the
+   resource as Section 3.3 reads them), or tier of null with because
+   where she has written none.
+
+   A verdict request, at joint_verdict_endpoint (/joint/verdict), adds
+   negotiation, resource_id, contract (the agreement's digest) and
+   agreement (the agreement JWS, so that her authority verifies it
+   itself).  The answer carries verdict, a verdict as Section 3.4, or
+   pending of true with family while she has not answered.
+
+   A holder's authorization server MUST refuse a request from a tally
+   other than the one the mandate she agreed to names, and MUST answer
+   about her alone.
+
+5.  Security Considerations
+
+5.1.  A Layer Above May Only Narrow
+
+   See Section 2.5 and Section 2.6.  The one-directionality of every
+   envelope field and of the decision's effect on the member's own
+   result is the property the whole of Part I rests on.  An
+   implementation SHOULD be able to demonstrate over its full envelope
+   that no combination of envelope and terms produces wider terms than
+   it started with.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 21]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+5.2.  Reach Stops at the Claim
+
+   See Section 2.7 and Section 2.8.  Everything the organization can see
+   or do stops at the resources its charter claims, and the scoping is
+   applied by the member's authorization server before it answers.  An
+   organization given a member's whole record because it is easier has
+   been given her relationships with parties that have nothing to do
+   with it.
+
+5.3.  An Administrator's Decision Is Not the Owner's
+
+   See Section 2.8.  "The owner personally approved" may relax a rule
+   under [U4APolicy]; a decision taken for her must not produce that
+   fact.
+
+5.4.  The Mandate Is Read Where It Is Published
+
+   See Section 3.9.  This is the single check that makes the tally
+   untrusted.
+
+5.5.  Silence Is Not Consent
+
+   See Section 3.7.  A holder who has not answered and a holder who
+   cannot be reached both count for nothing.
+
+5.6.  Break-Glass Is Loud
+
+   See Section 2.10.  An emergency path that can be exercised quietly is
+   an ordinary path with a better name.
+
+6.  Privacy Considerations
+
+6.1.  Members Are Not Visible to Each Other
+
+   Under Part I, an organization's view of one member is filtered to
+   claimed resources and says nothing about any other member.  Under
+   Part II, a holder's authorization server MUST NOT expose another
+   holder's pending queue, decisions or record; each holder sees her own
+   verdicts and the count.
+
+6.2.  The Ceiling Is Disclosed to the Agent
+
+   Section 2.5 requires that a terms document state when a layer above
+   the owner is in force.  That discloses to the requesting side that
+   the owner is a member of some organization, which is a fact about
+   her.  The alternative — a ceiling applied invisibly — asks the agent
+   to sign terms that are not the terms it will be held to, and this
+   document prefers the disclosure.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 22]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+7.  IANA Considerations
+
+   This document has no IANA actions.  The identifiers it uses are
+   listed in Appendix A.
+
+8.  References
+
+8.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [U4ACore]  Gamb, N. and E. Maler, "User-Managed Access (UMA) 2.0
+              Profile for Autonomous Agents", Work in Progress,
+              Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
+              <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
+
+   [U4AFedAuthz]
+              Gamb, N. and E. Maler, "Federated Authorization for
+              Autonomous Agents", Work in Progress, Internet-Draft,
+              draft-gamb-uma4agents-fedauthz-00, 2026,
+              <https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-
+              00.html>.
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 23]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+   [U4AOwner] Gamb, N. and E. Maler, "The Resource Owner's API for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-owner-00, 2026,
+              <https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html>.
+
+   [U4APolicy]
+              Gamb, N. and E. Maler, "Owner Policy, Assurance and
+              Attention for User-Managed Access (UMA) 2.0", Work in
+              Progress, Internet-Draft, draft-gamb-uma4agents-policy-00,
+              2026, <https://u4a.ai/spec/draft-gamb-uma4agents-policy-
+              00.html>.
+
+   [U4ATerms] Gamb, N. and E. Maler, "Owner-Proffered Terms for User-
+              Managed Access (UMA) 2.0", Work in Progress, Internet-
+              Draft, draft-gamb-uma4agents-terms-00, 2026,
+              <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
+
+   [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
+              Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
+              Kantara Recommendation, 7 January 2018,
+              <https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-
+              grant-2.0.html>.
+
+8.2.  Informative References
+
+   [PP2PI]    Lush, N., Ed. and Kantara Initiative User-Managed Access
+              Work Group, "Solving Data Sharing Challenges with UMA: The
+              Julie Adams Healthcare Use Case from PP2PI",
+              Kantara Editors' Draft Report, March 2023,
+              <https://kantara.atlassian.net/wiki/spaces/uma/
+              pages/4850258/Notes+drafts+and+WIP>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
+
+   [U4ALAB]   Gamb, N. and E. Maler, "UMA for Agents: a reference
+              implementation", 2026,
+              <https://github.com/nickgamb/uma4agents>.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 24]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+    +=======================================+===============+=========+
+    | Identifier                            | Kind          | Defined |
+    |                                       |               | in      |
+    +=======================================+===============+=========+
+    | application/u4a-verdict+jwt           | Media type    | Section |
+    |                                       |               | 3.4     |
+    +---------------------------------------+---------------+---------+
+    | application/u4a-membership+jwt        | Media type    | Section |
+    |                                       |               | 2.9     |
+    +---------------------------------------+---------------+---------+
+    | application/u4a-org-notice+jwt        | Media type    | Section |
+    |                                       |               | 2.9     |
+    +---------------------------------------+---------------+---------+
+    | application/u4a-org-admin+jwt         | Media type    | Section |
+    |                                       |               | 2.8     |
+    +---------------------------------------+---------------+---------+
+    | joint                                 | JWT claim     | Section |
+    |                                       | [RFC7519]     | 3.8     |
+    +---------------------------------------+---------------+---------+
+    | family                                | JWT claim     | Section |
+    |                                       | [RFC7519]     | 3.8     |
+    +---------------------------------------+---------------+---------+
+    | break_glass                           | JWT claim     | Section |
+    |                                       | [RFC7519]     | 2.10    |
+    +---------------------------------------+---------------+---------+
+    | /.well-known/u4a-organization         | Well-known    | Section |
+    |                                       | URI           | 2.2     |
+    +---------------------------------------+---------------+---------+
+    | enrolment_endpoint,                   | Organization  | Section |
+    | envelope_endpoint, decision_endpoint, | metadata      | 2.2,    |
+    | enrolment_preview_endpoint,           | member        | Section |
+    | invitation_endpoint, leave_endpoint,  |               | 4       |
+    | clearance_endpoint,                   |               |         |
+    | compliance_endpoint,                  |               |         |
+    | membership_endpoint,                  |               |         |
+    | introspection_endpoint,               |               |         |
+    | consumption_endpoint, audit_endpoint  |               |         |
+    +---------------------------------------+---------------+---------+
+    | org_notice_endpoint,                  | Authorization | Section |
+    | org_admin_endpoint,                   | server        | 4       |
+    | joint_quote_endpoint,                 | metadata      |         |
+    | joint_verdict_endpoint                | member        |         |
+    +---------------------------------------+---------------+---------+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 25]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
+    | application/u4a-tally-req+jwt         | Media type    | Section |
+    |                                       |               | 4.4     |
+    +---------------------------------------+---------------+---------+
+    | u4a_mandate_endpoint                  | Authorization | Section |
+    |                                       | server        | 3.2     |
+    |                                       | metadata      |         |
+    |                                       | member        |         |
+    +---------------------------------------+---------------+---------+
+    | org                                   | JWT claim     | Section |
+    |                                       | [RFC7519]     | 2.9,    |
+    |                                       |               | Section |
+    |                                       |               | 2.8     |
+    +---------------------------------------+---------------+---------+
+    | kind                                  | JWT claim     | Section |
+    |                                       | [RFC7519]     | 2.9     |
+    +---------------------------------------+---------------+---------+
+    | admin                                 | JWT claim     | Section |
+    |                                       | [RFC7519]     | 2.8     |
+    +---------------------------------------+---------------+---------+
+
+                Table 4: Identifiers used by this document.
 
 Appendix B.  Implementation Status
 
@@ -1149,6 +1451,13 @@ Acknowledgments
    server name a different authority for a shared, a personal and a
    jointly held resource at three paths.
 
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 26]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
 Authors' Addresses
 
    Nick Gamb
@@ -1173,4 +1482,31 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 21]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 27]

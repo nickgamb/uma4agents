@@ -601,26 +601,31 @@ ts-agent-check:
 ROTATION_PG = UMA_AS_STORE=postgres UMA_AS_DATABASE_URL=postgres://u4a:u4a@pg:5432/u4a
 .PHONY: rotation-check
 rotation-check:
-	docker compose --profile test up -d --wait pg
-	$(ROTATION_PG) docker compose up -d --force-recreate uma-as
-	@until docker compose exec -T uma-as python -c \
-		"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/health')" >/dev/null 2>&1; \
-		do sleep 2; done
-	docker compose --profile test run --rm rotation-check --phase before
-	@docker compose exec -T uma-as python -c "\
+	@# Every exit from the first change on restores the memory store and the
+	@# original key, and a restore that fails fails the check. Waits are
+	@# bounded: an authority that never comes up is a failure, not a hang.
+	@set +e; status=1; \
+	up() { for i in $$(seq 1 60); do \
+		docker compose exec -T uma-as python -c \
+			"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/health')" \
+			>/dev/null 2>&1 && return 0; sleep 2; done; \
+		echo "uma-as did not come up within two minutes"; return 1; }; \
+	docker compose --profile test up -d --wait pg \
+	&& $(ROTATION_PG) docker compose up -d --force-recreate uma-as && up \
+	&& docker compose --profile test run --rm rotation-check --phase before \
+	&& docker compose exec -T uma-as python -c "\
 	from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; \
 	from cryptography.hazmat.primitives import serialization as s; \
 	open('/keys/uma-as-2.pem','wb').write(Ed25519PrivateKey.generate().private_bytes( \
-		s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()))"
-	$(ROTATION_PG) UMA_AS_SIGNING_KEY=/keys/uma-as-2.pem UMA_AS_KID=uma-as-2 \
+		s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()))" \
+	&& $(ROTATION_PG) UMA_AS_SIGNING_KEY=/keys/uma-as-2.pem UMA_AS_KID=uma-as-2 \
 	UMA_AS_PREVIOUS_KEYS=/keys/uma-as-ed25519.pem UMA_AS_PREVIOUS_KIDS=uma-as-1 \
-		docker compose up -d --force-recreate uma-as
-	@until docker compose exec -T uma-as python -c \
-		"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/health')" >/dev/null 2>&1; \
-		do sleep 2; done
-	@docker compose --profile test run --rm rotation-check --phase after; status=$$?; \
+		docker compose up -d --force-recreate uma-as && up \
+	&& docker compose --profile test run --rm rotation-check --phase after \
+	&& status=0; \
 	echo "Restoring the original signing key and the memory store"; \
-	docker compose up -d --force-recreate uma-as >/dev/null 2>&1; \
+	docker compose up -d --force-recreate uma-as >/dev/null 2>&1 && up \
+		|| { echo "restore FAILED: uma-as is not back on its own key"; status=1; }; \
 	docker compose --profile test rm -sf pg >/dev/null 2>&1; \
 	exit $$status
 

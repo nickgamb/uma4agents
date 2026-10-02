@@ -42,7 +42,7 @@ WWW-Authenticate: UMA realm="alice-vault",
 | `as_uri` | UMA 2.0 | The owner's authorization server |
 | `ticket` | UMA 2.0 | The negotiation handle |
 | `scope` | RFC 6750 §3 | Scopes the call needed |
-| `resource_metadata` | RFC 9728 §5.1 | The document that lets the client corroborate `as_uri` |
+| `resource_metadata` | RFC 9728 §5.1 | The resource's metadata URL, which must equal the one RFC 9728 §3 forms from the resource called; the client reads that document to corroborate `as_uri` |
 | `error`, `authorization_remediation` | `draft-ietf-oauth-rar-metadata-remediation` | Structured remediation |
 
 `authorization_remediation` decodes to:
@@ -229,18 +229,42 @@ copies.
 The agent retries with an RFC 9421 signature over `@method @authority @path
 authorization`, the RPT in an `Authorization: PoP …` header.
 
+Every signature in the set is Ed25519: `ed25519` for an RFC 9421 request,
+`Ed25519` or `EdDSA` for a JWS, as the authorization server's metadata says in
+`signing_alg_values_supported` and `http_message_signature_alg_values_supported`.
+The algorithm is taken from the key, never from the header. A signed request
+carries `created` and is refused outside a sixty-second window either side of
+the verifier's clock, or past its `expires`. A signed owner request that changes
+anything is accepted once; a second presentation of the same signature is
+refused. A client that needs an operation done at most once asks for a
+single-use grant.
+
+A client's `client_id` and `signature_agent` travel in the agreement's protected
+header. The operator is the origin of the `client_id`; a key directory at any
+other origin attests to nothing.
+
 The enforcement point checks **in this order**, and the order is normative:
 
 1. `POST /introspect` — non-consuming. Is the token live, does the connection
    still stand?
-2. The tool maps to a `resource_id` present in `permissions`.
-3. The request signature verifies against the RPT's `cnf` key.
-4. For single-use grants, an exact `operation.params_s256` match.
+2. The tool maps to a `resource_id` present in `permissions`, with the scopes
+   it needs, inside the permission's own `exp`/`nbf`. If not, a challenge.
+   The organization's ceiling (`organization_envelope_exceeded`) and a joint
+   mandate (`joint_mandate_unsatisfied`) are checked here.
+3. The request signature verifies against the RPT's `cnf` key
+   (`invalid_token`, 401), and the operation has not been re-declared worse
+   than the grant's `consequence` (`consequence_changed`).
+4. For single-use grants, an exact `operation.params_s256` match. A call with
+   no `arguments` has the parameters `{}`.
 5. `POST /consume` — atomic, and only now.
 
 Consuming earlier lets an unsigned replay destroy an approval the owner
-personally gave. A caller that loses the consume race is told `consumed: false`
-and must deny.
+personally gave, and a refusal at any earlier step leaves the grant unspent. A
+caller that loses the consume race is told `consumed: false` and must deny.
+
+Every refusal value except `temporarily_unavailable` is terminal for the token
+presented. A client that receives one it does not recognise treats it as
+terminal and does not send the same call again with the same token.
 
 ## Introspection reasons
 

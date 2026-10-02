@@ -86,9 +86,8 @@ named an authority it runs, and signed that owner's verdict itself would have
 every signature verify; it is refused because the resource server has never
 heard of that owner, or knows her by a different authority.
 
-A verdict lasts as long as the agreement it is about, within the one-hour
-ceiling on any grant, and the tally issues no grant that outlives the first
-verdict it carries. An honest grant is never refused for carrying an answer
+A verdict lasts as long as the agreement it is about, and the tally issues no
+grant that outlives the first verdict it carries. An honest grant is never refused for carrying an answer
 that lapsed before the grant did.
 
 **It cannot put genuine verdicts behind a different grant.** The enforcement
@@ -174,6 +173,13 @@ instead, which is where a co-owner's safety has to live: an administrator
 cannot see a request waiting on her about the joint account, cannot answer
 one, and the organization's ceiling does not touch the terms she writes over
 it.
+
+The protection runs one way. A mandate's resources are matched as patterns,
+so `meridian-joint/*` excludes everything under it — but a mandate cannot take
+out what her organization itself claims. Her authority refuses to agree to one
+over the firm's own resources, and ignores one when deciding what the firm
+may reach, so a member cannot lift the firm's ceiling off its own book by
+joining a mandate anyone could publish.
 
 One consequence is visible to her: terms over a jointly held resource cannot
 share a tier with anything else. They are half somebody else's, and a mixed

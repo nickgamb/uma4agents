@@ -56,7 +56,7 @@ protocol: `make init && make up`. It runs the same code without a cluster.
 make k8s-smoke-test
 ```
 
-Expect **15 passed, 0 failed**. Fewer usually means something is still
+Expect **14 passed, 0 failed**. Fewer usually means something is still
 settling — wait a minute and run it again.
 
 ```bash
@@ -107,8 +107,10 @@ token and being refused.
 
 > `SIM=1` taps for her, which is how the headless runs work. It also means
 > nothing reaches her portal, so use `SIM=0` when you want to see the point. If
-> she does not answer within a couple of minutes the run ends with `grant
-> denied: timed out waiting for the owner`, which is correct rather than broken.
+> she does not answer within fifteen minutes — the driver's own wait,
+> `UMA4A_OWNER_WAIT_S` — the run ends with `grant denied: timed out waiting for
+> the owner`, which is correct rather than broken. Her authority keeps the
+> request for an hour regardless.
 
 ## Read what happened
 

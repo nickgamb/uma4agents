@@ -302,8 +302,9 @@ Internet-Draft             MCP Binding for UMA            September 2026
    process, the signature components are the HTTP request that carried
    the JSON-RPC message.
 
-   For a single-use grant ([U4ACore] Section 7.2), the operation is the
-   call's params.name and its parameters are params.arguments.
+   For a single-use grant ([U4ACore] Section 7.3), the operation is the
+   call's params.name and its parameters are params.arguments.  A call
+   with no arguments member has the parameters {}.
 
 5.  Waiting
 
@@ -329,7 +330,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    method over a body naming a protected one is two parsers disagreeing
    about one message, which is the request-smuggling shape arriving in a
    new protocol.
-
 
 
 
@@ -410,7 +410,8 @@ Internet-Draft             MCP Binding for UMA            September 2026
    dev.uma4agents/uma-enforcement follows [MCP]'s convention for vendor-
    prefixed extension identifiers.  The refusal values
    missing_routing_headers and header_body_mismatch are this binding's,
-   carried in data beside those of [U4ACore] Section 3.3.
+   carried in data beside those of [U4ACore] Section 3.3; both are
+   terminal.
 
 12.  References
 
@@ -439,7 +440,6 @@ Internet-Draft             MCP Binding for UMA            September 2026
    [RFC6454]  Barth, A., "The Web Origin Concept", RFC 6454,
               DOI 10.17487/RFC6454, December 2011,
               <https://www.rfc-editor.org/rfc/rfc6454>.
-
 
 
 

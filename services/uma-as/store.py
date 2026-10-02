@@ -126,6 +126,11 @@ class OwnerStore(Protocol):
         way (``invalid_grant``).
         """
 
+    async def peek_ticket(self, ticket: str) -> dict | None:
+        """The negotiation a live ticket names, without spending the ticket.
+        For a request still waiting on her, where polling must not use up
+        the only handle the agent has."""
+
     async def negotiation(self, family: str) -> dict | None: ...
 
     async def save_negotiation(self, rec: dict) -> None:
@@ -404,6 +409,20 @@ class OwnerStore(Protocol):
     async def update_organization(self, fields: dict) -> bool:
         """Merge these top-level keys into the membership record, atomically.
         False when there is no record to update."""
+
+    async def spend_once(self, key: str, expires: float) -> bool:
+        """True the first time `key` is spent, False every time after, until
+        `expires` (epoch seconds). One atomic step across replicas: a value
+        that may be acted on once must be acted on once by the deployment,
+        not once per process."""
+
+    async def change_org_block(self, key: str, value: str,
+                               remove: bool = False) -> dict | None:
+        """Add `value` to, or remove it from, the membership record's
+        `blocked[key]` list, as one atomic step, and return the result.
+        ``None`` when there is no record. Two administrators blocking at once
+        must both stay blocked, which a read, an edit and a write cannot
+        promise across replicas."""
 
     async def clear_organization(self) -> bool:
         """Drop it. False if she was not enrolled.

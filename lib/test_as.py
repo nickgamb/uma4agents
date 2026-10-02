@@ -128,6 +128,10 @@ async def agreements_and_grants() -> None:
     refuses("a bare key names no algorithm, so it is held to the one it always signed",
             lambda: app.verify_contract(signed("Ed25519", JWK), negotiating()),
             "not allowed")
+    refuses("an algorithm it does not advertise is refused, by name",
+            lambda: app.verify_contract(signed("EdDSA", {**JWK, "alg": "ES256"}),
+                                        negotiating()),
+            "ES256")
     refuses("a reason past the ceiling is refused wherever an agreement is accepted",
             lambda: app.requester_claims({"reason": "x" * (app.MAX_REASON + 1)}),
             "permitted length")
@@ -143,15 +147,49 @@ async def agreements_and_grants() -> None:
     check("and neither does its permission",
           claims["permissions"][0]["exp"] - time.time() <= 61)
 
+    raw_other, other_res = agreement(resource_id="alice-vault/execute_trade")
+    rec_other = negotiating()
+    contract_o, signer_o = app.verify_contract(other_res, rec_other)
+    rec_other.update(contract=contract_o, agreement_jws=raw_other)
+    granted_for = unverified((await app.issue_rpt(
+        rec_other, app.s256(raw_other.encode()), signer_o, None))["access_token"])
+    check("the resource a grant covers is the negotiation's, whatever the agreement names",
+          [p["resource_id"] for p in granted_for["permissions"]]
+          == ["alice-vault/get_positions"], str(granted_for["permissions"]))
+
+    raw_long, long_ = agreement(expires_in=86400)
+    rec_long = negotiating()
+    rec_long["template"] = {**rec_long["template"], "expires_in": 172800}
+    contract_long, signer_long = app.verify_contract(long_, rec_long)
+    rec_long.update(contract=contract_long, agreement_jws=raw_long)
+    lasting = unverified((await app.issue_rpt(
+        rec_long, app.s256(raw_long.encode()), signer_long, None))["access_token"])
+    check("and as long as it agreed to, when her terms allow it, past any hour",
+          abs(lasting["exp"] - time.time() - 86400) <= 5,
+          f"{lasting['exp'] - time.time():.0f}s")
+
     handle = app.connection_handle(contract["_identity"], signer)
     store = app.st("alice")
     await store.put_connection({"handle": handle, "status": "active",
                                 "first_seen": app.utcstamp()})
     token = issued["access_token"]
 
+    raw_c, cleared = agreement()
+    rec_c = negotiating()
+    contract_c, signer_c = app.verify_contract(cleared, rec_c)
+    rec_c.update(contract=contract_c, agreement_jws=raw_c, clearance={"licence": "series-7"})
+    cleared_token = (await app.issue_rpt(rec_c, app.s256(raw_c.encode()), signer_c,
+                                         None))["access_token"]
+
     print("\n== who may ask about a grant ==")
     with patch.object(app, "require_pat", AsyncMock(return_value="alice")):
         mine = await app.introspect(None, token=token, consume=None)
+        cleared_answer = await app.introspect(None, token=cleared_token, consume=None)
+    check("a grant issued under a clearance says so when introspected, as the same digest",
+          cleared_answer.get("clearance") == unverified(cleared_token).get("clearance")
+          == app.s256(json.dumps({"licence": "series-7"}, sort_keys=True,
+                                 separators=(",", ":"), ensure_ascii=False).encode()),
+          str(cleared_answer.get("clearance")))
     check("the owner's own resource server is told the grant is live",
           mine.get("active") is True, str(mine))
     check("and is given what enforcement reads, from the answer rather than the token",
@@ -211,6 +249,327 @@ async def whose_approval() -> None:
         else:
             check("an administrator's approval is not recorded as hers",
                   "tier2" not in approved, f"tiers_approved={approved}")
+
+
+async def an_owner_nobody_set_up() -> None:
+    print("\n== a name nobody set up is not an owner ==")
+    from fastapi import HTTPException
+
+    for label, attempt in (
+            ("her terms index", lambda: app.terms_index("mallory")),
+            ("a terms document", lambda: app.terms_document("mallory/x/v1", None))):
+        try:
+            await attempt()
+            check(f"{label} for an unknown owner is refused", False, "answered")
+        except HTTPException as exc:
+            check(f"{label} for an unknown owner is refused", exc.status_code == 404,
+                  str(exc.status_code))
+    check("and asking made no owner of her", "mallory" not in await app.STORE.owners(),
+          str(await app.STORE.owners()))
+
+
+async def a_mandate_over_the_firms_own_resource() -> None:
+    print("\n== a jointly held account cannot take the firm's resource out of its reach ==")
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
+
+    class Req:
+        async def json(self):
+            return {"tally": "https://tally.example", "account": "a", "agreed": True}
+
+    REFUSED = "her authority refuses to agree to a mandate over what her organization claims"
+    firm = {"claims": ["northwind-vault/*"]}
+    mandate = {"resources": ["northwind-vault/*"],
+               "holders": [{"owner": "alice"}, {"owner": "carol"}]}
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "fetch_mandate", AsyncMock(return_value=mandate)), \
+            patch.object(app, "org_envelope", AsyncMock(return_value=firm)):
+        try:
+            await app.owner_joint_join(Req())
+            check(REFUSED, False, "agreed")
+        except HTTPException as exc:
+            check(REFUSED, exc.status_code == 409, str(exc.detail))
+    client = SimpleNamespace(envelope={**firm, "grants": ["northwind-vault/*"]})
+    with patch.object(app, "org_client", AsyncMock(return_value=client)), \
+            patch.object(app, "jointly_held",
+                         AsyncMock(return_value={"northwind-vault/*", "meridian-joint/*"})):
+        env = await app.org_envelope("alice")
+    check("and one she holds anyway does not lift the firm's ceiling off it",
+          env["excluded"] == ["meridian-joint/*"], str(env["excluded"]))
+    greedy = SimpleNamespace(envelope={"claims": ["northwind-vault/*", "meridian-joint/*"],
+                                       "grants": ["northwind-vault/*"]})
+    with patch.object(app, "org_client", AsyncMock(return_value=greedy)), \
+            patch.object(app, "jointly_held",
+                         AsyncMock(return_value={"meridian-joint/*"})):
+        env = await app.org_envelope("alice")
+    check("but a charter claiming her joint account does not bring it into reach",
+          env["excluded"] == ["meridian-joint/*"], str(env["excluded"]))
+
+
+async def a_tier_written_again() -> None:
+    print("\n== a tier deleted and written again ==")
+
+    class Req:
+        def __init__(self, body):
+            self.body = body
+
+        async def json(self):
+            return self.body
+
+    spec = {"id": "drafts", "name": "Drafts", "resources": [],
+            "terms": {"purpose": "drafting", "expires_in": 600}}
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "org_envelope", AsyncMock(return_value=None)):
+        first = await app.owner_create_policy(Req(spec))
+        await app.owner_delete_policy("drafts", Req({}))
+        second = await app.owner_create_policy(Req({**spec, "terms": {
+            "purpose": "something else entirely", "expires_in": 600}}))
+    check("continues its numbering, so one id never names two documents",
+          first["terms"]["template_id"] == "alice/drafts/v1"
+          and second["terms"]["template_id"] == "alice/drafts/v2",
+          f"{first['terms']['template_id']} then {second['terms']['template_id']}")
+
+
+def pulled_registrations() -> None:
+    print("\n== what a pull believes about a resource server ==")
+    RU = "https://rs.example/mcp"
+    rs_key, other_key = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    rs_jwk = json.loads(OKPAlgorithm.to_jwk(rs_key.public_key()))
+
+    def documents(signer=rs_key, iss=RU, owner="alice", rid="x/get") -> dict:
+        signed = jwt.encode({"iss": iss, "owner_resources_endpoint":
+                             "https://rs.example/owner-resources/alice"}, signer,
+                            algorithm="EdDSA")
+        return {
+            app.well_known_prm_url(RU): {"resource": RU, "authorization_servers":
+                                         [app.ISSUER], "jwks_uri": "https://rs.example/jwks",
+                                         "signed_metadata": signed},
+            "https://rs.example/jwks": {"keys": [rs_jwk]},
+            "https://rs.example/owner-resources/alice": {
+                "owner": owner, "resources": [{"_id": rid, "resource_scopes": ["s"]}]},
+        }
+
+    class Client:
+        docs: dict = {}
+
+        def __init__(self, **_):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def stream(self, method, url, **_):
+            body = json.dumps(Client.docs[url]).encode()
+
+            class Resp:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *_):
+                    return False
+
+                def raise_for_status(self):
+                    pass
+
+                def iter_bytes(self):
+                    yield body
+            return Resp()
+
+    def pull(client_id="rs-a", **over):
+        Client.docs = documents(**over)
+        with patch("httpx.Client", Client):
+            return app.pull_registrations(client_id, {"resource_uri": RU}, "alice")
+
+    app.RESOURCES.clear()
+    check("a resource server's own signed listing is registered for her",
+          pull() == 1 and ("alice", "x/get") in app.RESOURCES, str(list(app.RESOURCES)))
+    for label, over in (
+            ("metadata signed by a key the resource does not publish is refused",
+             {"signer": other_key}),
+            ("metadata naming another resource as its issuer is refused",
+             {"iss": "https://other.example/mcp"}),
+            ("a listing that names another owner is refused", {"owner": "carol"})):
+        try:
+            pull(**over)
+            check(label, False, "accepted")
+        except ValueError:
+            check(label, True)
+    pull(client_id="rs-b")
+    check("a second resource server she approved may serve the same resource",
+          app.RESOURCES[("alice", "x/get")]["sources"] == ["rs-a", "rs-b"],
+          str(app.RESOURCES[("alice", "x/get")].get("sources")))
+
+    Client.docs = documents(rid="y/get")
+    with patch("httpx.Client", Client):
+        app.pull_registrations("rs-a", {"resource_uri": RU}, "alice")
+    check("and when one stops publishing it, it stays registered for the other",
+          app.RESOURCES[("alice", "x/get")]["sources"] == ["rs-b"],
+          str(app.RESOURCES.get(("alice", "x/get"))))
+    app.RESOURCES.clear()
+
+
+async def who_may_ask_about_a_resource() -> None:
+    print("\n== who may ask for a ticket over a resource ==")
+    from types import SimpleNamespace
+    app.RESOURCES[("alice", "x/get")] = {"resource_scopes": ["s"], "owner": "alice",
+                                         "sources": ["rs-a", "rs-b"]}
+
+    async def perm(as_client: str):
+        class Req:
+            state = SimpleNamespace(pat_client=as_client)
+
+            async def json(self):
+                return {"resource_id": "x/get", "resource_scopes": ["s"]}
+        with patch.object(app, "require_pat", AsyncMock(return_value="alice")), \
+                patch.object(app, "pull_registrations_now", AsyncMock()):
+            return await app.register_permission(Req())
+
+    check("a resource server that serves it may",
+          (await perm("rs-b")).status_code == 201, str((await perm("rs-b")).status_code))
+    with patch.object(app, "pull_registrations", lambda *a: None):
+        refused = await perm("rs-c")
+    check("one she approved for something else may not",
+          refused.status_code == 400 and b"invalid_resource_id" in refused.body,
+          str(refused.status_code))
+
+    def now_lists_it(client_id, rs, owner):
+        app.RESOURCES[("alice", "x/get")]["sources"] = ["rs-a", "rs-b", "rs-c"]
+    with patch.object(app, "pull_registrations", now_lists_it):
+        late = await perm("rs-c")
+    check("but one this replica had not yet read it from is read again, then answered",
+          late.status_code == 201, str(late.status_code))
+    app.RESOURCES.clear()
+
+
+async def an_introduction_by_token() -> None:
+    print("\n== an introducing agent's token ==")
+    other = json.loads(OKPAlgorithm.to_jwk(Ed25519PrivateKey.generate().public_key()))
+    claims = {"iss": "https://ps.example", "sub": "aauth:parent@ps.example",
+              "cnf": {"jwk": other}}
+    with patch.object(app, "verify_agent_token", lambda token: claims):
+        handle, why = await app.introduction_ok(
+            "alice", {"parent_jwk": JWK, "agent_token": "t"},
+            {"level": "pseudonymous"}, None)
+    check("is refused when it binds a key other than the one that introduced",
+          handle is None and "different key" in why, why)
+
+
+async def an_operator_let_back_in() -> None:
+    print("\n== an operator she blocks, and then lets back in ==")
+    store = app.st("alice")
+
+    class Req:
+        def __init__(self, body):
+            self.body = body
+
+        async def json(self):
+            return self.body
+
+    origin = "https://op.example"
+    await store.put_connection({
+        "handle": "jkt:op-agent", "status": "active", "first_seen": app.utcstamp(),
+        "identity": {"client_metadata": {"client_id": f"{origin}/agent.json",
+                                         "verified": True}},
+        "tiers_granted": [], "tiers_approved": []})
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")), \
+            patch.object(app, "operator_origin", lambda identity: origin):
+        await app.owner_block_operator(Req({"origin": origin}))
+        blocked = (await store.connection("jkt:op-agent"))["status"]
+        await app.owner_unblock_operator(Req({"origin": origin}))
+    after = (await store.connection("jkt:op-agent"))["status"]
+    check("blocking ends the connections it runs",
+          blocked != "active", blocked)
+    check("and unblocking restores the right to ask, not the connections",
+          after != "active", after)
+
+
+async def what_a_terms_document_says_about_her() -> None:
+    print("\n== what a published terms document says about her ==")
+    tiers = await app.st("alice").tiers()
+    for tier_id, tier in tiers.items():
+        await app.publish_terms("alice", tier_id, tier)
+    docs = await app.st("alice").terms_docs()
+    allowed = {"template_id", "terms_uri", "proffered_by", "name", "tier", "purpose",
+               "scope", "expires_in", "prohibited", "per_operation", "constraints",
+               "organization", "family", "published_at"}
+    extra = sorted({k for d in docs for k in d} - allowed)
+    check("it carries her terms and nothing that names her beyond the resource id",
+          docs and not extra, f"extra fields: {extra}")
+
+
+async def what_her_dialog_is_told() -> None:
+    print("\n== what her decision surface is told about a request ==")
+    store = app.st("alice")
+    for family, kind in (("fam_kind_c", "connection"), ("fam_kind_o", "operation")):
+        await store.mint_ticket({
+            "owner": "alice", "family": family, "state": "awaiting-owner",
+            "decision": None, "pending_kind": kind, "tier": "tier2",
+            "handle": f"jkt:{family}", "resource_id": "alice-vault/get_transactions",
+            "resource_scopes": ["transactions:read"], "contract_hash": "s256:x",
+            "signer_jwk": JWK, "contract": {"purpose": "x", "prohibited": [],
+                                            "_identity": {}}}, 300)
+    kinds = {p["family"]: p["kind"] for p in await app.pending_view("alice")}
+    check("which kind of request is waiting: meeting an agent, or one operation",
+          kinds.get("fam_kind_c") == "connection" and kinds.get("fam_kind_o") == "operation",
+          str(kinds))
+    for family in ("fam_kind_c", "fam_kind_o"):
+        await app.decide_pending("alice", family, "denied", actor=None)
+
+
+async def an_approval_she_has_since_overtaken() -> None:
+    print("\n== an approval does not outlive what she withdrew after it ==")
+    store = app.st("alice")
+    issued = AsyncMock(return_value={"access_token": "t"})
+
+    async def pend(family: str, handle: str, kind: str, seen: int = 0) -> None:
+        await store.mint_ticket({
+            "owner": "alice", "family": family, "state": "awaiting-owner",
+            "decision": None, "pending_kind": kind, "tier": "tier2",
+            "handle": handle, "revocations_seen": seen,
+            "resource_id": "alice-vault/get_transactions",
+            "resource_scopes": ["transactions:read"], "contract_hash": "s256:x",
+            "signer_jwk": JWK, "contract": {"purpose": "x", "prohibited": [],
+                                            "_identity": {}}}, 300)
+        await app.decide_pending("alice", family, "approved", actor=None)
+
+    async def collect(family: str):
+        issued.reset_mock()
+        with patch.object(app, "issue_rpt", issued):
+            return await app.pending_poll(await store.negotiation(family))
+
+    await store.put_connection({"handle": "jkt:later", "status": "active",
+                                "first_seen": app.utcstamp(),
+                                "tiers_granted": [], "tiers_approved": []})
+    await pend("fam_later", "jkt:later", "operation")
+    await store.revoke_connection("jkt:later")
+    r = await collect("fam_later")
+    check("an approval collected after she revoked the agent issues nothing",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
+
+    await pend("fam_again", "jkt:later", "connection", seen=1)
+    r = await collect("fam_again")
+    check("but admitting it again, knowing it was revoked, still works",
+          r.status_code == 200 and issued.called, f"{r.status_code}")
+
+    await pend("fam_twice", "jkt:later", "connection", seen=1)
+    await store.revoke_connection("jkt:later")
+    r = await collect("fam_twice")
+    check("and a revocation between its asking and its collecting is not undone",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
+
+    await store.put_connection({"handle": "jkt:cleared", "status": "active",
+                                "first_seen": app.utcstamp(),
+                                "tiers_granted": [], "tiers_approved": []})
+    await pend("fam_cleared", "jkt:cleared", "operation")
+    with patch.object(app, "clearance_unmet",
+                      AsyncMock(return_value=(["the licence is no longer attested"], {}))):
+        r = await collect("fam_cleared")
+    check("a clearance lost while she was deciding is read again before the grant",
+          r.status_code == 403 and not issued.called, f"{r.status_code}")
 
 
 MANDATE = {"account": "joint", "resources": ["joint/*"], "rule": {"kind": "all"},
@@ -354,15 +713,204 @@ def a_clearance() -> None:
                        headers={"typ": clearance.TYP, "kid": "org-1"}))
 
 
+async def her_signed_request_sent_twice() -> None:
+    print("\n== her signed request, sent a second time ==")
+    from starlette.requests import Request
+    from uma4a_http_sig import sign
+    key = Ed25519PrivateKey.generate()
+    body = b'{"decision":"approved"}'
+    path = "/owner/pending/fam_x/decision"
+    headers = sign("POST", app.OWNER_EXPECTED_AUTHORITY, path, "", key, "her-device", body=body)
+
+    def request(method: str = "POST"):
+        raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+        sent = {"done": False}
+
+        async def receive():
+            if sent["done"]:
+                return {"type": "http.disconnect"}
+            sent["done"] = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return Request({"type": "http", "method": method, "path": path, "query_string": b"",
+                        "headers": raw, "server": ("as", 80), "scheme": "http"}, receive)
+
+    with patch.object(app, "owner_device_key", return_value=key.public_key()):
+        first = await app.require_owner_signature(request())
+        check("the first is hers", first == app.OWNER_KEY_OWNER)
+        try:
+            await app.require_owner_signature(request())
+            check("the same signed change sent again is refused", False, "accepted")
+        except app.HTTPException as exc:
+            check("the same signed change sent again is refused",
+                  exc.status_code == 401 and "already" in exc.detail, exc.detail)
+
+
+async def what_it_says_it_verifies() -> None:
+    print("\n== the algorithms it says it verifies ==")
+    meta = await app.discovery()
+    check("it advertises Ed25519 for signed claim tokens",
+          {"EdDSA", "Ed25519"} <= set(meta.get("signing_alg_values_supported", [])))
+    check("and ed25519 for signed requests",
+          "ed25519" in meta.get("http_message_signature_alg_values_supported", []))
+    check("it advertises where the parties beside her reach it",
+          all(meta.get(k) for k in ("rs_registration_endpoint", "org_notice_endpoint",
+                                    "org_admin_endpoint", "joint_quote_endpoint",
+                                    "joint_verdict_endpoint")))
+    forged = jwt.encode({"owner": "alice", "account": "x", "iss": "https://tally.example",
+                         "exp": int(time.time()) + 60}, KEY, algorithm="EdDSA",
+                        headers={"typ": "u4a-verdict+jwt"})
+    try:
+        app.tally_claims(forged, "https://tally.example")
+        check("a tally request must be typed as one", False, "accepted")
+    except app.HTTPException as exc:
+        check("a tally request must be typed as one", exc.status_code == 401, exc.detail)
+
+
+def _request(method: str, path: str, body: bytes, ctype: str):
+    from starlette.requests import Request
+    sent = {"done": False}
+
+    async def receive():
+        if sent["done"]:
+            return {"type": "http.disconnect"}
+        sent["done"] = True
+        return {"type": "http.request", "body": body, "more_body": False}
+    return Request({"type": "http", "method": method, "path": path, "query_string": b"",
+                    "headers": [(b"content-type", ctype.encode())],
+                    "server": ("as", 443), "scheme": "https"}, receive)
+
+
+async def the_wire_from_her_organization() -> None:
+    print("\n== what the parties beside her send ==")
+    org_key = Ed25519PrivateKey.generate()
+    org_jwk = json.loads(OKPAlgorithm.to_jwk(org_key.public_key()))
+
+    def notice(kind: str, typ: str = "u4a-org-notice+jwt", jti: str = "n-1") -> object:
+        token = jwt.encode({"iss": "https://org.example", "sub": "alice", "org": "nw",
+                            "kind": kind, "iat": int(time.time()),
+                            "exp": int(time.time()) + 300, "jti": jti},
+                           org_key, algorithm="EdDSA", headers={"typ": typ})
+        return _request("POST", "/org/notice", json.dumps({"notice": token}).encode(),
+                        "application/json")
+
+    with patch.object(app, "org_record",
+                      AsyncMock(return_value={"issuer": "https://org.example", "envelope": {}})), \
+            patch.object(app, "issuer_keys", lambda issuer, fresh=False: [org_jwk]):
+        try:
+            await app.org_notice(notice("charter_changed", typ="u4a-org-admin+jwt", jti="n-0"))
+            check("a notice must be typed as one", False, "accepted")
+        except app.HTTPException as exc:
+            check("a notice must be typed as one", exc.status_code == 401, exc.detail)
+        answer = await app.org_notice(notice("something_added_later"))
+        check("a kind it does not know is accepted and nothing is done",
+              answer == {"received": "something_added_later"}, str(answer))
+        try:
+            await app.org_notice(notice("something_added_later"))
+            check("the same notice is acted on once", False, "accepted twice")
+        except app.HTTPException as exc:
+            check("the same notice is acted on once", exc.status_code == 409, exc.detail)
+
+    tally_key, elsewhere = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    asked = jwt.encode({"owner": "alice", "account": "joint", "iss": "https://tally.example",
+                        "iat": int(time.time()), "exp": int(time.time()) + 60},
+                       elsewhere, algorithm="EdDSA", headers={"typ": "u4a-tally-req+jwt"})
+    with patch.object(app, "issuer_keys", lambda issuer, fresh=False: [
+            json.loads(OKPAlgorithm.to_jwk(tally_key.public_key()))]):
+        try:
+            app.tally_claims(asked, "https://tally.example")
+            check("a question not signed by the tally her mandate names is refused",
+                  False, "answered")
+        except app.HTTPException as exc:
+            check("a question not signed by the tally her mandate names is refused",
+                  exc.status_code == 401, exc.detail)
+
+    store = app.st("alice")
+    seeded = await store.resource_server("meridian-gateway")
+    await store.put_resource_server("meridian-gateway", {**seeded, "secret": "old-secret"})
+    with patch.dict(os.environ, {"UMA_AS_RS_CLIENT_SECRET": "rotated-secret"}):
+        rotated = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=rotated-secret",
+            "application/x-www-form-urlencoded"))
+        stale = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=old-secret",
+            "application/x-www-form-urlencoded"))
+    check("a provisioned secret the deployment rotated is the one that works",
+          rotated.status_code == 200 and stale.status_code == 401,
+          f"{rotated.status_code} {stale.status_code}")
+    await store.put_resource_server("meridian-gateway", {**seeded, "secret": "old-secret",
+                                                         "status": "revoked"})
+    with patch.dict(os.environ, {"UMA_AS_RS_CLIENT_SECRET": "rotated-secret"}):
+        revoked = await app.token(_request(
+            "POST", "/token",
+            b"grant_type=client_credentials&scope=uma_protection&owner=alice"
+            b"&client_id=meridian-gateway&client_secret=rotated-secret",
+            "application/x-www-form-urlencoded"))
+    check("and one she revoked stays revoked", revoked.status_code == 403,
+          str(revoked.status_code))
+    await store.put_resource_server("meridian-gateway", seeded)
+
+    pat = await app.token(_request(
+        "POST", "/token",
+        b"grant_type=client_credentials&scope=uma_protection&owner=mallory&client_id=rs",
+        "application/x-www-form-urlencoded"))
+    check("a PAT for an owner it does not serve is refused, and creates no owner",
+          pat.status_code == 401 and "mallory" not in await app.STORE.owners(),
+          str(pat.status_code))
+
+
+async def a_charter_another_replica_read() -> None:
+    print("\n== a charter another replica has already read ==")
+    import time as _time
+    cached = app.org.OrgClient("https://org.example", "m-token", {"charter_version": 1})
+    cached.fetched = _time.time()
+    app._ORG["alice"] = cached
+    newer = {"charter_version": 2, "claims": ["northwind-vault/*"]}
+    with patch.object(app, "org_record", AsyncMock(return_value={
+            "issuer": "https://org.example", "token": "m-token", "envelope": newer})):
+        client = await app.org_client("alice")
+    check("is applied here at once, not when this replica's own read falls due",
+          client.envelope == newer, str(client.envelope))
+    cached.fetched = _time.time()
+    app._ORG["alice"] = cached
+    with patch.object(app, "org_record", AsyncMock(return_value={
+            "issuer": "https://org.example", "token": "m-token-2", "envelope": newer})):
+        rejoined = await app.org_client("alice")
+    check("and a credential from a membership she has since renewed is not used again",
+          rejoined is not None and rejoined.token == "m-token-2", str(getattr(rejoined, "token", None)))
+    app._ORG["alice"] = cached
+    with patch.object(app, "org_record", AsyncMock(return_value=None)):
+        gone = await app.org_client("alice")
+    check("and a membership another replica ended is ended here too",
+          gone is None and "alice" not in app._ORG, str(gone))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
     identities()
     a_clearance()
     await agreements_and_grants()
+    await an_owner_nobody_set_up()
+    await an_operator_let_back_in()
+    await what_her_dialog_is_told()
+    await what_a_terms_document_says_about_her()
+    await an_introduction_by_token()
+    pulled_registrations()
+    await who_may_ask_about_a_resource()
+    await a_tier_written_again()
+    await a_mandate_over_the_firms_own_resource()
     await whose_approval()
+    await an_approval_she_has_since_overtaken()
     await a_holders_verdict()
     await an_unreachable_organization()
+    await her_signed_request_sent_twice()
+    await what_it_says_it_verifies()
+    await the_wire_from_her_organization()
+    await a_charter_another_replica_read()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 

@@ -36,7 +36,7 @@ See **[FINDINGS.md](FINDINGS.md)** for the recommendations to spec authors,
 **[docs/KUBERNETES.md](docs/KUBERNETES.md)** for the reference architecture and
 a fifteen-minute demo guide,
 **[docs/PROTOCOL.md](docs/PROTOCOL.md)** for the wire contract, and
-**[docs/MCP-BINDING.md](docs/MCP-BINDING.md)** for how the grant rides MCP
+**[docs/MCP-BINDING.md](docs/MCP-BINDING.md)** (normative text: [the MCP binding draft](https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html)) for how the grant rides MCP
 2026-07-28 (plus the extension it proposes,
 [ext-auth-third-party-authorization.md](docs/ext-auth-third-party-authorization.md)).
 
@@ -93,7 +93,7 @@ toolchain present, `*.uma.lab` already resolving, and the walkthrough open
 beside a terminal. Thirteen minutes to a running three-node cluster, then:
 
 ```bash
-make k8s-smoke-test   # 15 checks
+make k8s-smoke-test   # 14 checks
 make k8s-demo-all     # Alice's whole day
 make codespaces-web   # her portal, in a browser tab
 ```
@@ -124,7 +124,7 @@ and can revoke any of them.
 
 ### Demonstrating it
 
-Six run sheets, one per use case — what to type, what to click, and what is
+Run sheets, one per use case — what to type, what to click, and what is
 worth saying while it happens. Each is driven by asking an agent a question and
 then deciding as the owner.
 
@@ -139,7 +139,7 @@ then deciding as the owner.
 | [Her personal AI](docs/cards/personal-ai.html) | Standing consent answering, and refusing what it cannot ask her about |
 | [The firm's book](docs/cards/organization.html) | A resource that is hers to administer only while she is a member |
 
-The same six are on the site under
+The same sheets are on the site under
 [Guides → Lab demonstrations](https://u4a.ai/docs/guides/demos/).
 
 ## Screenshots
@@ -318,6 +318,10 @@ overridden via a `.env` file (see `.env.example`); the realm values live in
 token, the gateway's PAT, the agent's `aa-agent+jwt` — are all issued at
 runtime (OIDC login, `client_credentials`, and AAuth enrollment
 respectively); none of them are configured strings.
+
+The Kubernetes deployment commits none of these for anything the public edge
+can reach: `make kind-up` generates them once per cluster (see
+[docs/KUBERNETES.md](docs/KUBERNETES.md)).
 
 ## Troubleshooting
 

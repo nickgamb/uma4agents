@@ -78,7 +78,7 @@ spec:
             - { name: ORG_ADMIN_ISSUER, value: "https://keycloak.uma.lab/realms/northwind" }
             - { name: ORG_ADMIN_CLIENTS, value: "meridian-org-console" }
             - name: ORG_RS_TOKEN
-              valueFrom: { secretKeyRef: { name: org-config, key: rs-token } }
+              valueFrom: { secretKeyRef: { name: org-rs, key: token } }
             - name: ORG_JOIN_CODE
               valueFrom: { secretKeyRef: { name: org-config, key: join-code } }
             - { name: UMA4A_CA_BUNDLE, value: /certs/rootCA.pem }

@@ -269,11 +269,22 @@ class DiscoveryMismatch(Exception):
 
 
 def validate_resource_metadata(doc: dict, resource_url: str,
-                               as_uri: str | None = None) -> dict:
+                               as_uri: str | None = None,
+                               named: str | None = None) -> dict:
     """RFC 9728 §3.3 client validation: the `resource` value must identify
     the resource being accessed. When a challenge is in hand, its as_uri
     must be among the published authorization_servers — the TLS-anchored
-    metadata corroborates the (unauthenticated) challenge header."""
+    metadata corroborates the (unauthenticated) challenge header.
+
+    `doc` is the document found from the resource this client called, as
+    RFC 9728 §3 forms the URL, never from where a challenge points: a forged
+    challenge can name a document on its own host that lists its own
+    authorization server. A challenge whose `resource_metadata` (`named`)
+    points anywhere else is refused for the same reason."""
+    if named is not None and named != well_known_prm_url(resource_url):
+        raise DiscoveryMismatch(
+            f"challenge names metadata at {named}, not "
+            f"{well_known_prm_url(resource_url)}")
     if doc.get("resource") != resource_url:
         raise DiscoveryMismatch(
             f"metadata is for {doc.get('resource')!r}, not {resource_url!r}")
@@ -289,6 +300,9 @@ def validate_resource_metadata(doc: dict, resource_url: str,
 # and no authority, and presenting one gets an agent nothing except the
 # chance to negotiate for itself.
 INTRODUCTION_TYP = "u4a-introduction-v1+jws"
+
+# How many times an agent will sign terms dictated again in one negotiation.
+MAX_DICTATIONS = 3
 
 
 def sign_introduction(keys: AgentKeys, child_jkt: str, as_uri: str,
@@ -468,6 +482,23 @@ def jsonrpc_challenge(payload: dict | None) -> tuple[str, str] | None:
     return None
 
 
+def refusal(status: int, body: dict | None) -> tuple[str, bool]:
+    """The refusal value an enforcement point answered with, and whether it is
+    terminal.
+
+    Only `temporarily_unavailable` says the same request may be sent again.
+    Every other value, including one this client has never heard of, is
+    final for the token it was sent with: treating an unknown value as
+    retryable would turn every value added after this client was written into
+    a loop.
+    """
+    body = body or {}
+    data = (body.get("error") or {}).get("data") if isinstance(body.get("error"), dict) else None
+    value = (data or {}).get("error") if isinstance(data, dict) else body.get("error")
+    value = value if isinstance(value, str) and value else f"http_{status}"
+    return value, value != "temporarily_unavailable"
+
+
 def receipt_filename(receipt_jws: str) -> str:
     """The file a counter-signed receipt is kept under, named for its
     negotiation.
@@ -593,29 +624,34 @@ def run_grant(
     r = client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
 
-    # Beat 1a: the server wants to know whose agent this is before it will
-    # say anything about terms. Nothing was arranged in advance — where to go
-    # and what to ask for are both in what it just said.
-    if (ask := identity_ask(body)) is not None:
-        if enterprise is None:
-            raise GrantDenied(
-                "this resource is governed by an organization that federates "
-                "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
-        on_status(f"identity required — exchanging at {endpoint}")
-        # A client of its own, trusting the provider's world as well as this
-        # deployment's — see `provider_trust`.
-        with httpx.Client(verify=provider_trust(enterprise.ca_bundle),
-                          timeout=30.0) as idp:
-            assertion = id_jag_from(idp.post(endpoint, data=payload))
-        on_status("assertion obtained, presenting it")
-        r = client.post(token_url, data={"grant_type": GRANT_TYPE,
-                                         "ticket": body["ticket"],
-                                         "claim_token": assertion,
-                                         "claim_token_format": ID_JAG_FORMAT})
-        body = r.json()
-
-    if body.get("error") == "need_info":
+    # Bounded rather than once: terms that changed between proffer and commit
+    # — an organization's ceiling re-applied, her own edit — are dictated
+    # again, and the agent agrees to what is in force or to nothing.
+    for _ in range(MAX_DICTATIONS):
+        # Beat 1a: the server wants to know whose agent this is before it will
+        # say anything about terms. Nothing was arranged in advance — where to go
+        # and what to ask for are both in what it just said.
+        if (ask := identity_ask(body)) is not None:
+            if enterprise is None:
+                raise GrantDenied(
+                    "this resource is governed by an organization that federates "
+                    "identity, and this agent carries no enterprise credentials")
+            endpoint, payload = id_jag_request(ask, enterprise, as_uri)
+            on_status(f"identity required — exchanging at {endpoint}")
+            # A client of its own, trusting the provider's world as well as this
+            # deployment's — see `provider_trust`.
+            with httpx.Client(verify=provider_trust(enterprise.ca_bundle),
+                              timeout=30.0) as idp:
+                assertion = id_jag_from(idp.post(endpoint, data=payload))
+            on_status("assertion obtained, presenting it")
+            r = client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                             "ticket": body["ticket"],
+                                             "claim_token": assertion,
+                                             "claim_token_format": ID_JAG_FORMAT})
+            body = r.json()
+        if body.get("error") != "need_info" or "terms_template" not in (
+                (body.get("required_claims") or [{}])[0]):
+            break
         template = body["required_claims"][0]["terms_template"]
         on_status(f"terms proffered: {template['purpose']} "
                   f"(expires {template['expires_in']}s, "
@@ -646,10 +682,14 @@ def run_grant(
         if time.time() > deadline:
             raise GrantDenied("timed out waiting for the owner")
         time.sleep(body.get("interval", 3))
-        r = client.post(
-            token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
-        )
-        body = r.json()
+        try:
+            body = client.post(
+                token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
+            ).json()
+        except (httpx.HTTPError, ValueError) as exc:
+            # A poll that did not come back. The ticket is not spent while she
+            # decides, so the same one is presented again next time.
+            on_status(f"poll did not complete ({exc}); asking again")
 
     if "access_token" in body:
         on_status("grant issued")
@@ -734,26 +774,30 @@ async def run_grant_async(
     r = await client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
 
-    if (ask := identity_ask(body)) is not None:
-        if enterprise is None:
-            raise GrantDenied(
-                "this resource is governed by an organization that federates "
-                "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
-        on_status(f"identity required — exchanging at {endpoint}")
-        async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
-                                     timeout=30.0) as idp:
-            assertion = id_jag_from(await idp.post(endpoint, data=payload))
-        on_status("assertion obtained, presenting it")
-        r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
-                                               "ticket": body["ticket"],
-                                               "claim_token": assertion,
-                                               "claim_token_format": ID_JAG_FORMAT})
-        body = r.json()
-
-    if body.get("error") == "need_info":
+    for _ in range(MAX_DICTATIONS):
+        if (ask := identity_ask(body)) is not None:
+            if enterprise is None:
+                raise GrantDenied(
+                    "this resource is governed by an organization that federates "
+                    "identity, and this agent carries no enterprise credentials")
+            endpoint, payload = id_jag_request(ask, enterprise, as_uri)
+            on_status(f"identity required — exchanging at {endpoint}")
+            async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
+                                         timeout=30.0) as idp:
+                assertion = id_jag_from(await idp.post(endpoint, data=payload))
+            on_status("assertion obtained, presenting it")
+            r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                                   "ticket": body["ticket"],
+                                                   "claim_token": assertion,
+                                                   "claim_token_format": ID_JAG_FORMAT})
+            body = r.json()
+        if body.get("error") != "need_info" or "terms_template" not in (
+                (body.get("required_claims") or [{}])[0]):
+            break
         template = body["required_claims"][0]["terms_template"]
-        on_status(f"terms proffered: {template['purpose']}")
+        on_status(f"terms proffered: {template['purpose']} "
+                  f"(expires {template['expires_in']}s, "
+                  f"prohibited: {', '.join(template['prohibited'])})")
         if not await approve_terms(template):
             # Refusals are records too (the owner's ledger notes the decline).
             await client.post(token_url, data={"grant_type": GRANT_TYPE,
@@ -796,10 +840,13 @@ async def run_grant_async(
                 raise GrantDenied("the requesting side stopped waiting for the owner")
             deadline = time.time() + max_wait_s
         await asyncio.sleep(body.get("interval", 3))
-        r = await client.post(
-            token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
-        )
-        body = r.json()
+        try:
+            body = (await client.post(
+                token_url, data={"grant_type": GRANT_TYPE, "ticket": body["ticket"]}
+            )).json()
+        except (httpx.HTTPError, ValueError) as exc:
+            # As above: the same ticket is good for the next poll.
+            on_status(f"poll did not complete ({exc}); asking again")
 
     if "access_token" in body:
         on_status("grant issued")

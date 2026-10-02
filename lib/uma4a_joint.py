@@ -125,11 +125,20 @@ def validate_mandate(doc: dict, floor: int = 0) -> dict:
             raise MandateError(
                 f"rule.threshold must be between 1 and {total}, the total "
                 f"weight of the holders")
-    if floor and rule["threshold"] < floor:
-        raise MandateError(
-            f"this resource requires at least {floor} of the holders' weight "
-            f"to release it, and this mandate asks for {rule['threshold']}. "
-            f"That floor is not the holders' to lower.")
+    if floor:
+        # A floor counts people, not weight: "at least two of them must agree"
+        # is not met by one holder carrying weight two. The fewest holders who
+        # could release it together are the heaviest ones.
+        fewest, carried = 0, 0
+        for w in sorted((h["weight"] for h in holders), reverse=True):
+            fewest, carried = fewest + 1, carried + w
+            if carried >= rule["threshold"]:
+                break
+        if fewest < floor:
+            raise MandateError(
+                f"this resource requires at least {floor} holders to agree to "
+                f"release it, and under this mandate {fewest} could. That floor "
+                f"is not the holders' to lower.")
     out["rule"] = rule
     out["total_weight"] = total
     return out
@@ -168,8 +177,12 @@ def mandate_digest(doc: dict) -> str | None:
         "resources": sorted(m["resources"]),
         "rule": {"kind": m["rule"]["kind"], "threshold": m["rule"]["threshold"]},
     }
+    # RFC 8785: members sorted, no whitespace, and UTF-8 rather than \u
+    # escapes, so an owner or resource named outside ASCII yields the same
+    # bytes in every implementation.
     return "s256:" + _b64_sha256(
-        json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode())
+        json.dumps(canonical, sort_keys=True, separators=(",", ":"),
+                   ensure_ascii=False).encode())
 
 
 def key_thumbprint(jwk: dict) -> str | None:

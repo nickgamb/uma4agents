@@ -16,6 +16,7 @@ import asyncio
 import base64
 import hashlib
 import calendar
+import copy
 import html
 import json
 import logging
@@ -111,6 +112,13 @@ def serves(owner: str) -> bool:
     return SERVED_OWNER is None or owner == SERVED_OWNER
 
 
+async def known_owner(owner: str) -> bool:
+    """An owner this server serves and has actually set up. Checked before an
+    unauthenticated request reads anything by a name the caller supplied,
+    because reading an owner's state is how an owner's state gets made."""
+    return serves(owner) and (owner == DEFAULT_OWNER or owner in await STORE.owners())
+
+
 # Tickets are minted by this server, so they can carry the owner they belong
 # to. A multi-tenant deployment needs that: a ticket arrives with no session
 # and no token, and there is nothing else on the request that says whose
@@ -200,10 +208,6 @@ ID_JAG_CLAIM = "urn:ietf:params:oauth:token-type:id-jag"
 # same value the resource server publishes as its own identifier.
 RS_RESOURCE_URI = os.environ.get("UMA_AS_RS_RESOURCE_URI",
                                  "https://gateway.uma.lab/mcp")
-# Spent assertions, by `jti`, until they expire. An ID-JAG is minted for one
-# negotiation and one authorization server; replaying one is not a thing a
-# well-behaved client does.
-_ID_JAG_SPENT: dict[str, float] = {}
 AGREEMENT_CLAIM = "https://u4a.ai/spec/terms/1.0#myterms-agreement"
 TICKET_TTL = 300
 # How long a held "ask-me" ticket stays valid. The demo's own premise is that
@@ -357,7 +361,9 @@ SUBAGENT_FANOUT = int(os.environ.get("UMA_AS_SUBAGENT_FANOUT", "3"))
 TRAJECTORY_WINDOW = os.environ.get("UMA_AS_TRAJECTORY_WINDOW", "7d")
 
 STORE: store.Store = store.make_store()
-RESOURCES: dict[str, dict] = {}
+# Keyed by (owner, resource id): one owner's entry is never another's, even
+# where a resource server publishes the same id to several of them.
+RESOURCES: dict[tuple[str, str], dict] = {}
 
 
 def resources_for(owner: str) -> dict[str, dict]:
@@ -367,8 +373,7 @@ def resources_for(owner: str) -> dict[str, dict]:
     every owner it serves. An entry that names another owner is not hers to
     list, write a tier over, or ask a permission against.
     """
-    return {rid: d for rid, d in RESOURCES.items()
-            if d.get("owner") in (None, owner)}
+    return {rid: d for (o, rid), d in RESOURCES.items() if o == owner}
 
 
 def consequence_of(owner: str, resource_id: str) -> str | None:
@@ -491,12 +496,22 @@ async def discovery() -> dict:
         "jwks_uri": f"{ISSUER}/jwks",
         "terms_endpoint": f"{ISSUER}/terms",
         "owner_endpoint": f"{ISSUER}/owner",
+        "rs_registration_endpoint": f"{ISSUER}/rs/register",
+        # Where the parties above and beside an owner reach her authority:
+        # an organization's notices and administrator actions, and a tally's
+        # questions about a jointly held resource.
+        "org_notice_endpoint": f"{ISSUER}/org/notice",
+        "org_admin_endpoint": f"{ISSUER}/org/admin",
+        "joint_quote_endpoint": f"{ISSUER}/joint/quote",
+        "joint_verdict_endpoint": f"{ISSUER}/joint/verdict",
         "response_types_supported": [],
         "grant_types_supported": [
             "urn:ietf:params:oauth:grant-type:uma-ticket",
             "client_credentials",
         ],
         "claim_token_formats_supported": [AGREEMENT_FORMAT, ID_JAG_FORMAT],
+        "signing_alg_values_supported": ["EdDSA", uma4a_jose.ED25519],
+        "http_message_signature_alg_values_supported": ["ed25519"],
         "uma_profiles_supported": list(uma4a_profiles.AUTHORIZATION_SERVER),
     }
 
@@ -583,6 +598,8 @@ async def terms_index(owner: str = None) -> dict:
     """One owner's proffered terms. `?owner=` on a multi-tenant instance;
     the served owner otherwise."""
     who = owner or DEFAULT_OWNER
+    if not await known_owner(who):
+        raise HTTPException(status_code=404, detail="no such owner here")
     return {
         "owner": who,
         "proffered_by": ISSUER,
@@ -691,6 +708,8 @@ async def annotate_enforced(owner: str, doc: dict) -> dict:
 @app.get("/terms/{template_id:path}")
 async def terms_document(template_id: str, request: Request, format: str = None):
     owner = owner_of_template(template_id)
+    if not await known_owner(owner):
+        raise HTTPException(status_code=404, detail="unknown terms document")
     doc = await st(owner).terms_doc(template_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="unknown terms document")
@@ -762,6 +781,9 @@ async def require_pat(request: Request) -> str:
     if rs is None or rs["status"] != "active":
         raise HTTPException(status_code=401,
                             detail="the owner has revoked this resource server")
+    # Which resource server is asking, for the handlers that bind it to the
+    # resources it registered.
+    request.state.pat_client = claims.get("azp", "")
     return owner
 
 
@@ -769,9 +791,16 @@ _OWNER_KEYS_CACHE: dict[str, tuple[float, list]] = {}
 JWKS_CACHE_TTL = 300
 
 
-def owner_issuer_keys() -> list:
+KEY_REFETCH_FLOOR_S = 60.0
+
+
+def owner_issuer_keys(fresh: bool = False) -> list:
     cached = _OWNER_KEYS_CACHE.get(OWNER_ISSUER)
-    if cached and cached[0] > now():
+    if cached and cached[0] > now() and not fresh:
+        return cached[1]
+    # Her identity provider rotates keys; a token naming one not yet cached
+    # earns one fresh read, at most once a minute.
+    if fresh and cached and now() - (cached[0] - JWKS_CACHE_TTL) < KEY_REFETCH_FLOOR_S:
         return cached[1]
     import httpx
 
@@ -875,6 +904,15 @@ async def require_owner_signature(request: Request) -> str:
     except VerifyError as exc:
         raise HTTPException(
             status_code=401, detail=f"owner signature did not verify: {exc}") from exc
+    # A request that changes something is accepted once. Within the freshness
+    # window a captured one could otherwise be sent again — an edit to her
+    # policy she has since undone, put back by somebody else. Kept for twice
+    # the window, since a signature dated ahead is valid that long.
+    if request.method not in ("GET", "HEAD") and not await st(OWNER_KEY_OWNER).spend_once(
+            "owner-signature:" + hashlib.sha256(sig.encode()).hexdigest(),
+            time.time() + 120):
+        raise HTTPException(status_code=401,
+                            detail="that signed request was already received")
 
     # Named, never inferred. Treating a valid signature as "whoever the
     # request seems to be about" would let one key holder act as somebody
@@ -952,7 +990,10 @@ def require_owner_oidc(request: Request) -> str:
         header = jwt.get_unverified_header(token)
         claims = None
         last_error: Exception | None = None
-        for jwk_dict in owner_issuer_keys():
+        keys = owner_issuer_keys()
+        if header.get("kid") and not any(k.get("kid") == header["kid"] for k in keys):
+            keys = owner_issuer_keys(fresh=True)
+        for jwk_dict in keys:
             if jwk_dict.get("use") == "enc":
                 continue
             if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
@@ -1002,7 +1043,7 @@ def well_known_prm_url(resource_uri: str) -> str:
             f"/.well-known/oauth-protected-resource{u.path.rstrip('/')}")
 
 
-def pull_registrations(client_id: str, rs: dict) -> int:
+def pull_registrations(client_id: str, rs: dict, owner: str = DEFAULT_OWNER) -> int:
     """Read the RS's published metadata and materialize the registry.
 
     Takes the resource-server record rather than looking it up: this runs on
@@ -1086,9 +1127,26 @@ def pull_registrations(client_id: str, rs: dict) -> int:
     # tickets for a resource nobody was serving. Declarative registration
     # means the published document is the truth, and that has to include the
     # absences.
+    # Whose listing this is, is settled by whose registry asked for it: a
+    # resource server that names another owner is not answering this pull.
+    if body.get("owner") not in (None, owner):
+        raise ValueError(f"the listing names {body.get('owner')!r}, and this "
+                         f"pull was made for {owner!r}")
     seen, count = set(), 0
     for res in body.get("resources", []):
-        RESOURCES[res["_id"]] = {
+        held = RESOURCES.get((owner, res["_id"])) or {}
+        # One resource may be served by more than one resource server she has
+        # approved — her vault behind a gateway and the same vault enforcing
+        # in process are one account under two enforcement points. Each is
+        # recorded as serving it, and only those may ask about it (`/perm`),
+        # so a server she approved for something else gains nothing here
+        # without publishing the id itself, and withdrawing it from one
+        # leaves it registered for the others.
+        sources = set(held.get("sources") or ()) | {client_id}
+        if held and held.get("resource_scopes") != res["resource_scopes"]:
+            event("resources.redescribed", owner=owner, resource_id=res["_id"],
+                  by=client_id, sources=sorted(sources))
+        RESOURCES[(owner, res["_id"])] = {
             "resource_scopes": res["resource_scopes"],
             "name": res.get("name"),
             "type": res.get("type"),
@@ -1101,17 +1159,20 @@ def pull_registrations(client_id: str, rs: dict) -> int:
             "icon_uri": None,
             "description": None,
             "registered_via": "pull",
-            "owner": body.get("owner"),
-            "source": client_id,
+            "owner": owner,
+            "sources": sorted(sources),
         }
         seen.add(res["_id"])
         count += 1
-    withdrawn = [rid for rid, d in RESOURCES.items()
-                 if d.get("source") == client_id
-                 and d.get("owner") == body.get("owner") and rid not in seen]
+    withdrawn = [rid for (o, rid), d in RESOURCES.items()
+                 if o == owner and client_id in (d.get("sources") or ()) and rid not in seen]
     for rid in withdrawn:
-        RESOURCES.pop(rid, None)
-    event("resources.pulled", client_id=client_id, owner=body.get("owner"),
+        left = [s for s in RESOURCES[(owner, rid)]["sources"] if s != client_id]
+        if left:
+            RESOURCES[(owner, rid)]["sources"] = left
+        else:
+            RESOURCES.pop((owner, rid), None)
+    event("resources.pulled", client_id=client_id, owner=owner,
           count=count, withdrawn=withdrawn or None, endpoint=endpoint)
     return count
 
@@ -1125,6 +1186,7 @@ async def pull_at_startup() -> None:
             pairs = [(o, cid, rs) for o in owners
                      for cid, rs in (await st(o).resource_servers()).items()
                      if rs.get("status", "active") == "active"]
+            pulled = 0
             for owner, client_id, rs in pairs:
                 try:
                     # Off the event loop: the RS authenticates this AS's
@@ -1138,11 +1200,16 @@ async def pull_at_startup() -> None:
                     # loop's progress: under an orchestrator that gates
                     # traffic on readiness, the back-call would have nowhere
                     # to land and the loop could never finish.
-                    await asyncio.to_thread(pull_registrations, client_id, rs)
-                    return
+                    await asyncio.to_thread(pull_registrations, client_id, rs, owner)
+                    pulled += 1
                 except Exception as exc:
                     event("resources.pull_retry", client_id=client_id,
                           error=str(exc)[:200])
+            # Every server she approved, not the first that answered: one
+            # resource may be served by several, and a replica that read only
+            # one of them would refuse the others' tickets.
+            if pairs and pulled == len(pairs):
+                return
             await asyncio.sleep(2)
         event("resources.pull_failed", note="lazy pull on first /perm remains")
 
@@ -1159,8 +1226,10 @@ async def register_permission(request: Request) -> JSONResponse:
     rid = body.get("resource_id")
     # FedAuthz §4.1: the AS only issues tickets against its own registry.
     registered = resources_for(owner).get(rid)
-    if registered is None:
-        # An unknown id means our pulled copy may be stale, so re-read what
+    asking = getattr(request.state, "pat_client", None)
+    if registered is None or asking not in registered.get("sources", [asking]):
+        # An unknown id, or one not yet known to be served by the server
+        # asking, means our pulled copy may be stale, so re-read what
         # the RS publishes. Staleness is the price of declarative
         # registration, and repairing it is this side's job — the mirror of
         # the RS-side re-push that classic RReg required.
@@ -1170,16 +1239,20 @@ async def register_permission(request: Request) -> JSONResponse:
             if rs.get("status", "active") != "active":
                 continue
             try:
-                await asyncio.to_thread(pull_registrations, client_id, rs)
+                await asyncio.to_thread(pull_registrations, client_id, rs, owner)
             except Exception as exc:
                 event("resources.pull_retry", client_id=client_id,
                       error=str(exc)[:200])
         registered = resources_for(owner).get(rid)
-    if registered is None:
+    if registered is None or ("sources" in registered and getattr(
+            request.state, "pat_client", None) not in registered["sources"]):
+        # Not registered, or not by this resource server: a ticket is asked
+        # for by a server that serves the resource, and no other.
         event("permission.rejected", resource_id=rid, reason="invalid_resource_id")
         return JSONResponse(
             {"error": "invalid_resource_id",
-             "error_description": "resource is not registered at this AS"},
+             "error_description": "resource is not registered at this AS "
+                                  "by this resource server"},
             status_code=400,
         )
     scopes = body.get("resource_scopes") or []
@@ -1264,7 +1337,9 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
     # every introspection, which the enforcement point performs on every
     # call, so it takes effect at once and needs no token machinery of its
     # own.
-    if rec.get("handle") and await org_blocks_agent(owner, rec["handle"]):
+    if rec.get("handle") and await org_blocks_agent(
+            owner, rec["handle"],
+            ((await st(owner).connection(rec["handle"])) or {}).get("identity")):
         org_env, _ = await org_scope(owner)
         if any(org.reaches(p.get("resource_id") or "", org_env)
                for p in claims.get("permissions") or []):
@@ -1297,6 +1372,7 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
         "single_use": claims.get("single_use", False),
         "operation": claims.get("operation"),
         "consequence": claims.get("consequence"),
+        **({"clearance": claims["clearance"]} if claims.get("clearance") else {}),
     }
 
 
@@ -1414,10 +1490,31 @@ async def org_client(owner: str) -> org.OrgClient | None:
             return None
         client = _ORG[owner] = org.OrgClient(
             record["issuer"], record["token"], record.get("envelope") or {})
-    if not client.stale():
+    elif not client.stale():
+        # A notice reaches one replica, which re-reads the envelope and
+        # writes it to the shared store. The others would go on applying the
+        # charter and role they last read until their own refresh fell due;
+        # adopting what is stored — always the latest any replica read —
+        # closes that window for the price of one store read.
+        record = await org_record(owner)
+        if record is None:
+            _ORG.pop(owner, None)
+            return None
+        if record.get("token") != client.token:
+            # She enrolled again, through another replica: this one's
+            # credential is from a membership that has ended.
+            _ORG.pop(owner, None)
+            return await org_client(owner)
+        if (stored := record.get("envelope")) and stored != client.envelope:
+            client.envelope = stored
+    if not client.stale() or client.backing_off():
         return client
-
-    envelope, error = await client.refresh()
+    async with client._refreshing:
+        # Another request may have refreshed while this one waited: one
+        # attempt answers all of them, and a failed one starts the back-off.
+        if not client.stale() or client.backing_off():
+            return client
+        envelope, error = await client.refresh()
     if error == "membership_ended":
         # The organization refused this membership token. Before concluding
         # that she is no longer a member, check that the token this process
@@ -1520,7 +1617,7 @@ async def pull_registrations_now(owner: str) -> None:
         if rs.get("status", "active") != "active":
             continue
         try:
-            await asyncio.to_thread(pull_registrations, client_id, rs)
+            await asyncio.to_thread(pull_registrations, client_id, rs, owner)
         except Exception as exc:                                # noqa: BLE001
             event("resources.pull_retry", client_id=client_id,
                   error=str(exc)[:200])
@@ -1545,32 +1642,20 @@ async def resync_shared(owner: str, envelope: dict | None,
         if rs.get("status", "active") != "active":
             continue
         try:
-            await asyncio.to_thread(pull_registrations, client_id, rs)
+            await asyncio.to_thread(pull_registrations, client_id, rs, owner)
         except Exception as exc:                                # noqa: BLE001
             event("resources.pull_retry", client_id=client_id,
                   error=str(exc)[:200])
     claims = claims if claims is not None else (envelope or {}).get("claims") or []
     grants = (envelope or {}).get("grants") or []
-    excluded = await jointly_held(owner)
-    stale = [r for r in list(RESOURCES)
-             if r not in excluded and org.claims_match(r, claims)
-             and not org.claims_match(r, grants)]
-    if not stale:
-        return
-    if SERVED_OWNER is None:
-        # This process holds more than one owner, and `RESOURCES` is its
-        # registry rather than hers: an organization's resource has the same
-        # id for every member it is shared with, so removing it here on one
-        # member's account would remove it from the others too. Left in place
-        # and said out loud. Nothing is granted by its presence — her policy
-        # is what grants, the organization's decision point is asked on every
-        # request over its resources, and the enforcement point refuses a
-        # member it is no longer sharing with.
-        event("resources.unshared_skipped", owner=owner, resources=stale,
-              why="this process serves more than one owner")
-        return
+    excluded = sorted(await jointly_held(owner))
+    stale = [rid for (o, rid) in list(RESOURCES) if o == owner
+             and not org.claims_match(rid, excluded) and org.claims_match(rid, claims)
+             and not org.claims_match(rid, grants)]
+    # Hers only: the registry keeps an entry per owner, so dropping what the
+    # organization stopped sharing with her leaves every other member's alone.
     for rid in stale:
-        RESOURCES.pop(rid, None)
+        RESOURCES.pop((owner, rid), None)
         event("resources.unshared", owner=owner, resource_id=rid)
 
 
@@ -1618,7 +1703,17 @@ async def org_envelope(owner: str) -> dict | None:
     client = await org_client(owner)
     if client is None:
         return None
-    return {**client.envelope, "excluded": sorted(await jointly_held(owner))}
+    shares = client.envelope.get("grants") or []
+    # Joint holding takes a resource out of an organization's reach to protect
+    # a co-owner the organization never met. It cannot take out what the
+    # organization itself shares with her: a member who joined a mandate
+    # naming the firm's own book, from any tally at all, would otherwise lift
+    # the firm's ceiling off it by her own act. What it shares, not what its
+    # charter claims: a claim is the organization's say-so, and one over a
+    # namespace it does not serve must not reach an account she holds with
+    # somebody it never met.
+    return {**client.envelope, "excluded": sorted(
+        r for r in await jointly_held(owner) if not org.claims_match(r, shares))}
 
 
 async def clearance_unmet(owner: str, tier: dict,
@@ -1796,6 +1891,10 @@ def issuer_keys(issuer: str, fresh: bool = False) -> list:
     cached = _ORG_JWKS.get(issuer)
     if cached and cached[0] > now() and not fresh:
         return cached[1]
+    # A fresh read is what a key the cache lacks asks for, and anyone can
+    # present a token naming one. At most once a minute per issuer.
+    if fresh and cached and now() - (cached[0] - 300) < KEY_REFETCH_FLOOR_S:
+        return cached[1]
     import httpx
 
     with httpx.Client(verify=org.CA_BUNDLE or True, timeout=5.0) as client:
@@ -1806,8 +1905,23 @@ def issuer_keys(issuer: str, fresh: bool = False) -> list:
     return keys
 
 
-# jti -> exp of organization notices already acted on.
-_ORG_NOTICES_SEEN: dict[str, float] = {}
+def verified_by(issuer: str, token: str, **decode) -> dict | None:
+    """`token`'s claims if a key `issuer` publishes signed it, or None.
+
+    Against the cached keys, then once against a fresh read: a key the
+    issuer has just rotated in is indistinguishable from a forgery when all
+    there is is a stale copy, and the two deserve different answers.
+    """
+    for fresh in (False, True):
+        for jwk_dict in issuer_keys(issuer, fresh=fresh):
+            try:
+                return jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                  algorithms=["EdDSA"], issuer=issuer, **decode)
+            except jwt.InvalidTokenError:
+                continue
+    return None
+
+
 
 
 @app.post("/org/notice")
@@ -1836,17 +1950,9 @@ async def org_notice(request: Request) -> dict:
     if record is None:
         raise HTTPException(status_code=403, detail="not enrolled")
     issuer = record["issuer"]
-    claims = None
-    for jwk_dict in issuer_keys(issuer):
-        try:
-            claims = jwt.decode(body["notice"],
-                                OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
-                                algorithms=["EdDSA"], issuer=issuer,
-                                options={"verify_aud": False,
-                                         "require": ["exp", "iat", "jti"]})
-            break
-        except jwt.InvalidTokenError:
-            continue
+    claims = verified_by(issuer, body["notice"],
+                         options={"verify_aud": False,
+                                  "require": ["exp", "iat", "jti"]})
     if claims is None or claims.get("sub") != owner:
         raise HTTPException(status_code=401,
                             detail="that notice is not signed by this owner's "
@@ -1855,13 +1961,10 @@ async def org_notice(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="that is not an organization notice")
     # Each notice acts once. A captured one posted again would add a second
     # break-glass entry to her record, or end a membership twice.
-    seen = _ORG_NOTICES_SEEN
-    cutoff = now()
-    for j in [j for j, e in seen.items() if e < cutoff]:
-        seen.pop(j, None)
-    if claims["jti"] in seen:
+    # Spent in the shared store, so a replica that has not seen it cannot act
+    # on it a second time.
+    if not await st(owner).spend_once(f"notice:{claims['jti']}", float(claims["exp"])):
         raise HTTPException(status_code=409, detail="that notice was already received")
-    seen[claims["jti"]] = float(claims["exp"])
 
     kind = claims.get("kind")
     event("org.notice", owner=owner, kind=kind)
@@ -2002,15 +2105,11 @@ async def org_block(owner: str, *, handle: str = None, operator: str = None,
     record = await org_record(owner)
     if record is None:
         raise HTTPException(status_code=403, detail="not enrolled")
-    blocked = _org_blocked(record)
     key, value = ("handles", handle) if handle else ("operators", operator)
-    if remove:
-        blocked[key] = [x for x in blocked[key] if x != value]
-    elif value not in blocked[key]:
-        blocked[key].append(value)
-    record["blocked"] = blocked
-    await st(owner).update_organization({"blocked": blocked})
-    return blocked
+    changed = await st(owner).change_org_block(key, value, remove)
+    if changed is None:
+        raise HTTPException(status_code=403, detail="not enrolled")
+    return _org_blocked({"blocked": changed})
 
 
 async def require_org_admin(request: Request, owner: str) -> dict:
@@ -2038,15 +2137,7 @@ async def require_org_admin(request: Request, owner: str) -> dict:
         raise HTTPException(status_code=401,
                             detail=f"an administration token has typ {ORG_ADMIN_TYP}")
     issuer = record["issuer"]
-    claims = None
-    for jwk_dict in issuer_keys(issuer):
-        try:
-            claims = jwt.decode(token, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
-                                algorithms=["EdDSA"], issuer=issuer,
-                                options={"verify_aud": False})
-            break
-        except jwt.InvalidTokenError:
-            continue
+    claims = verified_by(issuer, token, options={"verify_aud": False})
     if claims is None or claims.get("sub") != owner:
         raise HTTPException(
             status_code=401,
@@ -2067,7 +2158,10 @@ async def org_admin_pending(owner: str, request: Request) -> list:
     """
     await require_org_admin(request, owner)
     envelope, _ = await org_scope(owner)
-    return [p for p in await pending_view(owner)
+    # Without her own rules' reasons: why her policy asked is hers, and the
+    # organization is shown what the agent asked and its own reasons only.
+    return [{k: v for k, v in p.items() if k != "because"}
+            for p in await pending_view(owner)
             if org.reaches(p.get("resource_id") or "", envelope)]
 
 
@@ -2120,8 +2214,12 @@ async def org_related_connections(owner: str) -> list:
         touched = (set(conn.get("tiers_granted") or []) |
                    set(conn.get("tiers_approved") or [])) & governed
         if touched or conn["handle"] in pending_handles:
+            # Named fields, not her record: which other tiers she admitted it
+            # at, how often she has revoked it, and the rest of her own
+            # arrangement with it are hers, not the organization's.
             out.append({
-                **conn,
+                **{k: conn.get(k) for k in ("handle", "label", "identity", "status",
+                                            "first_seen", "last_access")},
                 "org_tiers": sorted(touched),
                 # Whether the organization has shut this one out of *its*
                 # resources — which is not the same as her `status`, and the
@@ -2193,7 +2291,16 @@ async def org_admin_operators(owner: str, request: Request) -> list:
     blocked = _org_blocked(await org_record(owner))["operators"]
     rows = [o for o in await operators_view(owner)
             if o["origin"] in origins or o["origin"] in blocked]
-    return [{**o, "blocked_for_organization": o["origin"] in blocked}
+    # Counted over the agents that touch the organization's resources, and
+    # without her own blocks or the origins she claims as hers: those are
+    # her arrangements, not the organization's.
+    def mine(origin: str, active_only: bool) -> int:
+        return sum(1 for c in conns
+                   if operator_origin(c.get("identity") or {}) == origin
+                   and (not active_only or c.get("status") == "active"))
+    return [{"origin": o["origin"], "name": o["name"],
+             "agents": mine(o["origin"], False), "active": mine(o["origin"], True),
+             "blocked_for_organization": o["origin"] in blocked}
             for o in rows]
 
 
@@ -2227,12 +2334,27 @@ async def org_admin_ledger(owner: str, request: Request) -> list:
     changed. Her negotiations about her own accounts are not in here.
     """
     await require_org_admin(request, owner)
-    _, tiers = await org_scope(owner)
+    envelope, tiers = await org_scope(owner)
     org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
                  "org_role", "org_acted", "break_glass"}
+    # By resource where an entry names one; by tier only where every
+    # resource the tier governs is the organization's. A tier over the
+    # firm's book and her own account is not the organization's business
+    # in the half that is hers.
+    all_tiers = await st(owner).tiers()
+    wholly = {t for t in tiers
+              if all(org.reaches(r, envelope) for r in all_tiers.get(t, {}).get("resources") or [])}
     handle = request.query_params.get("handle") or None
-    return [e for e in await st(owner).ledger(handle)
-            if e.get("kind") in org_kinds or e.get("tier") in tiers]
+    out = []
+    for e in await st(owner).ledger(handle):
+        if e.get("kind") in org_kinds:
+            out.append(e)
+        elif e.get("resource_id"):
+            if org.reaches(e["resource_id"], envelope):
+                out.append(e)
+        elif e.get("tier") in wholly:
+            out.append(e)
+    return out
 
 
 # --- Grant API (agent-facing, UMA 2.0 Grant shape) ---------------------------
@@ -2474,11 +2596,8 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
     jti = claims.get("jti") or ""
     if not jti:
         raise ValueError("the assertion has no jti and cannot be spent once")
-    for spent, expires in list(_ID_JAG_SPENT.items()):
-        if expires < now():
-            _ID_JAG_SPENT.pop(spent, None)
-    if jti in _ID_JAG_SPENT:
-        raise ValueError("that assertion has already been used")
+    # Spent once by the caller, in the shared store, after everything here
+    # has passed: an assertion that fails a check is not used up by it.
 
     # Whose agent it is has to be whose authority this is. The audience check
     # above says the assertion was meant for this server; this says it was
@@ -2525,7 +2644,6 @@ def verify_id_jag(assertion: str, idp: dict, owner: str, resource_id: str) -> di
             f"{claims.get('iss')} did not approve this application for "
             f"{operation!r} — it carries {granted or ['nothing']}")
 
-    _ID_JAG_SPENT[jti] = float(claims.get("exp") or (now() + 300))
     return claims
 
 
@@ -3357,6 +3475,10 @@ def verify_contract(claim_token_b64: str, rec: dict) -> tuple[dict, dict]:
     # make the signed record say something the grant does not.
     if not set(contract["scope"]) <= set(template.get("scope") or []):
         raise ValueError("scope was widened beyond the proffered terms")
+    # And never to nothing: an agreement naming no scope over terms that
+    # offer some agrees to no access, and must not be read as agreeing to all.
+    if template.get("scope") and not contract["scope"]:
+        raise ValueError("the agreement names no scope of those offered")
     # Checked in full here, before she is asked, because issuance relies on
     # it after she has answered.
     if template.get("per_operation"):
@@ -3402,14 +3524,19 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
     lifetime = tier["terms"]["expires_in"]
     if (agreed := int((rec.get("contract") or {}).get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
-    exp = int(now()) + min(RPT_MAX_LIFETIME_S, lifetime)
+    # As long as was agreed, and no longer. The terms she published say how
+    # long access lasts, and the grant says the same thing: a grant capped
+    # below them would make her document promise what the grant does not
+    # deliver. Withdrawal does not wait for it either way, because the
+    # enforcement point asks this server about the grant on every call.
+    exp = int(now()) + lifetime
     # The grant carries what was asked for, narrowed to what she offered and
     # what the agent agreed to. The ticket's scopes alone were whatever the
     # resource registered for the attempt, which can be more than either.
     offered = set(tier["terms"].get("scope") or [])
     agreed = set((rec.get("contract") or {}).get("scope") or [])
     scopes = [s for s in rec["resource_scopes"]
-              if (not offered or s in offered) and (not agreed or s in agreed)]
+              if not offered or (s in offered and s in agreed)]
     if not scopes:
         raise HTTPException(status_code=403, detail={
             "error": "request_denied",
@@ -3507,17 +3634,11 @@ async def issue_rpt(rec: dict, contract_hash: str, signer_jwk: dict,
 #     against her own terms when it claims to have folded faithfully.
 
 
-# The longest any grant this authority's answers back may last. One hour,
-# whatever the terms allow: a grant is re-negotiated past it.
-RPT_MAX_LIFETIME_S = 3600
-
-
 def verdict_exp(contract: dict) -> int:
     """When an allow verdict stops counting: when the agreement it is about
     would end, as a grant built on it may last. A shorter life would let an
     honest grant fail before its own expiry, read as a forgery at the door."""
-    lifetime = int(contract.get("expires_in") or 0) or RPT_MAX_LIFETIME_S
-    return int(now()) + min(RPT_MAX_LIFETIME_S, lifetime)
+    return int(now()) + int(contract.get("expires_in") or 0)
 
 
 def joint_verdict_jws(claims: dict) -> str:
@@ -3526,7 +3647,8 @@ def joint_verdict_jws(claims: dict) -> str:
                       headers={"typ": "u4a-verdict+jwt", "kid": KID})
 
 
-def joint_binding(contract: dict, signer_jwk: dict, mandate: dict) -> dict:
+def joint_binding(contract: dict, signer_jwk: dict, mandate: dict,
+                  consequence: str | None = None) -> dict:
     """What an allow verdict commits this holder to, beyond "yes".
 
     A verdict that named only the agreement's digest could be carried inside
@@ -3543,6 +3665,11 @@ def joint_binding(contract: dict, signer_jwk: dict, mandate: dict) -> dict:
         "expires_in": int(contract.get("expires_in") or 0),
         "mandate_s256": uma4a_joint.mandate_digest(mandate),
     }
+    # What the operation was declared to leave behind when she answered, so
+    # a grant built on her answer carries it and the enforcement point's
+    # check that it has not since been raised applies here as everywhere.
+    if consequence:
+        out["consequence"] = consequence
     if op := contract.get("operation"):
         out["operation"] = {
             "tool": op["tool"],
@@ -3564,6 +3691,11 @@ def tally_claims(jws: str, issuer: str) -> dict:
     # that fails. A key the other party has rotated is indistinguishable from
     # a forgery when all you have is a stale copy of its JWKS, and the two
     # deserve very different answers.
+    try:
+        if jwt.get_unverified_header(jws).get("typ") != "u4a-tally-req+jwt":
+            raise HTTPException(status_code=401, detail="that is not a tally request")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="that is not a tally request")
     for fresh in (False, True):
         for jwk_dict in issuer_keys(issuer, fresh=fresh):
             try:
@@ -3709,6 +3841,13 @@ async def joint_verdict(request: Request) -> dict:
             event("joint.verdict", owner=owner, negotiation=negotiation,
                   effect="refuse", why="owner-denied")
             return refuse("this holder declined")
+        if why := await withdrawn_since_asked({**pended, "owner": owner}):
+            event("joint.verdict", owner=owner, negotiation=negotiation,
+                  effect="refuse", why="withdrawn-after-approval")
+            await ledger_add(owner, "joint_refused", negotiation,
+                             {"account": account, "because": [why]},
+                             handle=pended.get("handle"))
+            return refuse(why)
         event("joint.verdict", owner=owner, negotiation=negotiation,
               effect="allow", why="owner-approved")
         await ledger_add(owner, "joint_allowed", negotiation,
@@ -3718,7 +3857,8 @@ async def joint_verdict(request: Request) -> dict:
             "holder": owner, "account": account, "negotiation": negotiation,
             "resource_id": resource_id, "contract": claims.get("contract"),
             "effect": "allow", "exp": verdict_exp(pended["contract"]),
-            **joint_binding(pended["contract"], pended["signer_jwk"], mandate)})}
+            **joint_binding(pended["contract"], pended["signer_jwk"], mandate,
+                            consequence_of(owner, resource_id))})}
     if pended is not None:
         return {"pending": True, "family": negotiation}
 
@@ -3741,18 +3881,21 @@ async def joint_verdict(request: Request) -> dict:
             agreement + "=" * (-len(agreement) % 4))) != claims.get("contract"):
         return refuse("the agreement does not match the digest it was sent under")
 
+    handle = connection_handle(identity, signer_jwk)
     if problems := joint.verdict_problems(contract, tier, resource_id):
         event("joint.fold_rejected", owner=owner, negotiation=negotiation,
               because=problems)
         await ledger_add(owner, "joint_refused", negotiation,
-                         {"account": account, "because": problems})
+                         {"account": account, "because": problems}, handle=handle)
         return refuse(*problems)
 
-    handle = connection_handle(identity, signer_jwk)
     conn = await st(owner).connection(handle)
     if origin := operator_origin(identity):
         if origin in await st(owner).blocked_operators():
-            return refuse("this holder does not accept agents from that operator")
+            why = "this holder does not accept agents from that operator"
+            await ledger_add(owner, "joint_refused", negotiation,
+                             {"account": account, "because": [why]}, handle=handle)
+            return refuse(why)
     axes = assurance.assess(identity)
     facts = {
         "assurance": axes,
@@ -3774,6 +3917,28 @@ async def joint_verdict(request: Request) -> dict:
         return refuse(*(reasons or ["this holder's terms refuse it"]))
 
     needs_connection = conn is None or conn["status"] != "active"
+    if needs_connection:
+        # A stranger asking through a jointly held account spends the same
+        # attention as one asking her directly, in the same lane. Without
+        # this, the joint path is an unbounded way into her queue.
+        lane = policy.pend_lane(axes)
+        waiting = 0
+        for p in await st(owner).pending_negotiations():
+            if (p["family"] == negotiation
+                    or p.get("pending_kind") not in ("connection", "joint")
+                    or policy.pend_lane(p.get("assurance") or {}) != lane):
+                continue
+            if p.get("pending_kind") == "joint" and (
+                    (await st(owner).connection(p.get("handle") or "")) or {}
+            ).get("status") == "active":
+                continue
+            waiting += 1
+        if waiting >= policy.pend_budget(lane):
+            why = "this holder is not accepting new agent requests at the moment"
+            await ledger_add(owner, "joint_refused", negotiation,
+                             {"account": account, "because": [why],
+                              "lane": lane, "waiting": waiting}, handle=handle)
+            return refuse(why)
     if needs_connection or requirement == policy.ASK:
         # Her decision, in her own portal, alongside every other request
         # waiting on her. A joint resource does not get its own queue: the
@@ -3809,6 +3974,7 @@ async def joint_verdict(request: Request) -> dict:
             "joint": {"account": account, "tally": record["tally"],
                       "holders": [h["owner"] for h in mandate.get("holders") or []],
                       "rule": (mandate.get("rule") or {}).get("kind")},
+            "revocations_seen": int((conn or {}).get("revocations", 0)),
         }
         await st(owner).save_negotiation(rec)
         event("joint.pending", owner=owner, negotiation=negotiation,
@@ -3835,7 +4001,28 @@ async def joint_verdict(request: Request) -> dict:
         "holder": owner, "account": account, "negotiation": negotiation,
         "resource_id": resource_id, "contract": claims.get("contract"),
         "effect": "allow", "exp": verdict_exp(contract),
-        **joint_binding(contract, signer_jwk, mandate)})}
+        **joint_binding(contract, signer_jwk, mandate,
+                        consequence_of(owner, resource_id))})}
+
+
+async def provisioned_secret(owner: str, client_id: str, rs: dict) -> dict:
+    """The registration, holding the secret this deployment provisions now.
+
+    A provisioned secret is the deployment's to set, and the registration
+    seeded from it is written once. Without this, rotating the secret the
+    resource server and this authority are configured with would leave the
+    stored copy behind and lock the resource server out. Only the configured
+    client's secret follows the configuration, and only the secret: a
+    registration she revoked stays revoked.
+    """
+    configured = os.environ.get("UMA_AS_RS_CLIENT_SECRET")
+    if (not configured or client_id != os.environ.get("UMA_AS_RS_CLIENT_ID", "meridian-gateway")
+            or secrets.compare_digest(configured, rs["secret"])):
+        return rs
+    rs = {**rs, "secret": configured}
+    await st(owner).put_resource_server(client_id, rs)
+    event("rs.secret_reprovisioned", owner=owner, client_id=client_id)
+    return rs
 
 
 @app.post("/token")
@@ -3863,9 +4050,8 @@ async def token(request: Request) -> JSONResponse:
         # has to say which. Defaulted rather than required, because a
         # single-owner deployment has nothing to disambiguate.
         pat_owner = owner or DEFAULT_OWNER
-        if not serves(pat_owner):
+        if not await known_owner(pat_owner):
             return JSONResponse({"error": "invalid_client"}, status_code=401)
-        await st(pat_owner).seed()
         rs = await st(pat_owner).resource_server(client_id or "")
         if rs is None:
             return JSONResponse({"error": "invalid_client"}, status_code=401)
@@ -3877,6 +4063,7 @@ async def token(request: Request) -> JSONResponse:
         # compare_digest("", "") is true, and a record with no secret must
         # never be openable by sending none.
         if rs.get("secret"):
+            rs = await provisioned_secret(pat_owner, client_id, rs)
             if not secrets.compare_digest(client_secret or "", rs["secret"]):
                 return JSONResponse({"error": "invalid_client"}, status_code=401)
         elif await verify_resource_server_signature(
@@ -3907,7 +4094,21 @@ async def token(request: Request) -> JSONResponse:
 
     ticket_owner, raw_ticket = split_ticket(ticket)
     ticket_owner = ticket_owner or DEFAULT_OWNER
+    if not await known_owner(ticket_owner):
+        return JSONResponse({"error": "invalid_grant"}, status_code=400)
     await st(ticket_owner).reap_expired()
+    # A request still waiting on her is polled, not spent. Spending the
+    # ticket and issuing a new one in the reply would make a single lost
+    # response cost the agent its only handle on her decision, and her
+    # answer would be recorded and never collected. Whatever is issued in
+    # the end is bound to the agent's key, so reusing the ticket while she
+    # decides gives a thief nothing.
+    waiting = await st(ticket_owner).peek_ticket(raw_ticket)
+    if (waiting and waiting.get("state") == "awaiting-owner"
+            and waiting.get("decision") is None):
+        event("ticket.presented", corr=waiting["family"], state="awaiting-owner")
+        return JSONResponse({"error": "request_submitted", "ticket": ticket,
+                             "interval": POLL_INTERVAL}, status_code=403)
     rec = await st(ticket_owner).consume_ticket(raw_ticket)
     if rec is None:
         event("ticket.presented", corr=None, result="invalid_grant")
@@ -4002,14 +4203,9 @@ async def token(request: Request) -> JSONResponse:
                 # Spent once across every replica, in the shared store rather
                 # than this process's memory: a second insert of the same key,
                 # or a second burn of it, is a replay.
-                spent_key = f"id-jag:{asserted.get('jti', '')}"
-                if await st(rec["owner"]).rpt(spent_key) is not None:
-                    raise ValueError("that assertion has already been used")
-                try:
-                    await st(rec["owner"]).record_rpt(spent_key, family, "", None)
-                except Exception as exc:                        # noqa: BLE001
-                    raise ValueError("that assertion has already been used") from exc
-                if await st(rec["owner"]).consume_rpt(spent_key) is None:
+                if not await st(rec["owner"]).spend_once(
+                        f"id-jag:{asserted.get('jti', '')}",
+                        float(asserted.get("exp") or (now() + 300))):
                     raise ValueError("that assertion has already been used")
             except ValueError as exc:
                 event("identity.rejected", corr=family, reason=str(exc))
@@ -4043,6 +4239,14 @@ async def token(request: Request) -> JSONResponse:
         return JSONResponse({"error": "invalid_claim_token_format"}, status_code=400)
     if rec["state"] != "need_info":
         return JSONResponse({"error": "invalid_grant"}, status_code=400)
+    # The agreement is to the terms as they were dictated. If the tier that
+    # governs this resource, or the terms it publishes, changed since, what
+    # was signed is an offer she no longer makes: dictate the current one.
+    if (tier_id != rec.get("tier")
+            or tier["terms"].get("template_id")
+            != (rec.get("template") or {}).get("template_id")):
+        event("need_info.terms_changed", corr=family, was=rec.get("tier"), now=tier_id)
+        return await need_info_response(rec, tier_id, tier)
     try:
         # In a thread: verifying reads documents the agent names (its client
         # metadata, its operator's key directory, its token's issuer), and a
@@ -4251,8 +4455,12 @@ async def token(request: Request) -> JSONResponse:
     # discipline — without this, one approved agent could put an unbounded
     # number of questions in front of her, because the only thing that ever
     # bounded them was the connection pend it no longer makes.
-    if needs_connection or introduced_conn is not None:
-        counted = (("connection", "operation") if introduced_conn is not None
+    # Introduced on this request, or on an earlier one: its later requests
+    # are bounded the same way, every time they would reach her.
+    introduced = introduced_conn is not None or bool((conn or {}).get("parent_handle"))
+    if needs_connection or introduced_conn is not None or (
+            introduced and needs_operation_approval):
+        counted = (("connection", "operation") if introduced
                    else ("connection",))
         lane = policy.pend_lane(axes)
         budget = policy.pend_budget(lane)
@@ -4306,6 +4514,18 @@ async def token(request: Request) -> JSONResponse:
                                  "error_description": "the agent that introduced "
                                  "this one is no longer connected"}, status_code=403)
         await st(rec["owner"]).put_connection(introduced_conn)
+        # Read once more, after the write. A revocation landing between the
+        # read above and the write is one the cascade did not see this child
+        # in; undoing the write here closes that, whichever ran first.
+        parent = await st(rec["owner"]).connection(introduced_by) if introduced_by else None
+        if (parent or {}).get("status") != "active":
+            await st(rec["owner"]).revoke_connection(handle)
+            event("connection.introduction_refused", corr=family, handle=handle,
+                  because="the introducing connection was revoked as it was admitted")
+            await close_negotiation(rec)
+            return JSONResponse({"error": "request_denied",
+                                 "error_description": "the agent that introduced "
+                                 "this one is no longer connected"}, status_code=403)
         await ledger_add(rec["owner"], "connected", family,
                          {"identity": contract["_identity"],
                           "introduced_by": introduced_by}, handle=handle)
@@ -4316,6 +4536,10 @@ async def token(request: Request) -> JSONResponse:
         rec["decision"] = None
         rec["pending_kind"] = kind
         rec["handle"] = handle
+        # How many times she had revoked this agent when it asked. A revocation
+        # after this point is one her answer did not know about.
+        rec["revocations_seen"] = int(
+            ((await st(rec["owner"]).connection(handle)) or {}).get("revocations", 0))
         # Persisted on the negotiation, not only pushed over SSE: her portal
         # lists pending requests with a plain GET after a reload, and a dialog
         # that shows what was checked only to whoever was watching live is not
@@ -4384,19 +4608,55 @@ async def token(request: Request) -> JSONResponse:
     return JSONResponse(granted)
 
 
+async def withdrawn_since_asked(rec: dict) -> str | None:
+    """What she, or her organization, has withdrawn since this request was
+    put to her, if anything.
+
+    An approval waits until the agent polls, and a yes she gave before she
+    revoked the agent, blocked its operator, or lost a clearance is not a yes
+    to what she has since refused. Everything that could have stopped the
+    request on its first pass and can change while it waits is read again
+    here, from the same sources, before anything is issued.
+    """
+    owner = rec["owner"]
+    identity = (rec.get("contract") or {}).get("_identity") or {}
+    origin = operator_origin(identity)
+    if origin and origin in await st(owner).blocked_operators():
+        return "the operator behind this agent has been blocked"
+    handle = rec.get("handle")
+    if handle:
+        conn = await st(owner).connection(handle) or {}
+        if int(conn.get("revocations", 0)) > int(rec.get("revocations_seen", 0)):
+            return "this agent was revoked after it asked"
+        # An operation request comes from an agent she had already admitted;
+        # a first contact, or a joint request, may come from one with no
+        # connection yet, and only a revocation since is news.
+        if rec.get("pending_kind") == "operation" and conn.get("status") != "active":
+            return "this agent is no longer connected"
+        if await org_blocks_agent(owner, handle, identity):
+            return "the organization has shut this agent out of its resources"
+    tier = (await st(owner).tiers()).get(rec.get("tier") or "")
+    if tier is not None and rec.get("resource_id"):
+        unmet, attested = await clearance_unmet(owner, tier, rec["resource_id"])
+        if unmet:
+            return "; ".join(unmet)
+        rec["clearance"] = attested
+    return None
+
+
 async def pending_poll(rec: dict) -> JSONResponse:
     family = rec["family"]
     if rec.get("decision") == "approved":
-        # An approval waits here until the agent polls. If she has shut out the
-        # agent's operator since, the approval does not outlive the block:
-        # blocking is meant to end what that operator's agents can reach, and a
-        # yes she gave before it is not a yes to what she has now refused.
-        origin = operator_origin((rec.get("contract") or {}).get("_identity") or {})
-        if origin and origin in await st(rec["owner"]).blocked_operators():
-            event("access.denied", corr=family, reason="operator-blocked-after-approval")
+        if why := await withdrawn_since_asked(rec):
+            event("access.denied", corr=family, reason="withdrawn-after-approval",
+                  detail=why)
+            await ledger_add(rec["owner"], "refused", family,
+                             {"tier": rec.get("tier"), "because": [why],
+                              "resource_id": rec.get("resource_id")},
+                             handle=rec.get("handle"))
+            await close_negotiation(rec)
             return JSONResponse({"error": "request_denied",
-                                 "error_description": "the operator behind this "
-                                 "agent has been blocked"}, status_code=403)
+                                 "error_description": why}, status_code=403)
         if rec.get("pending_kind") == "connection":
             handle = rec["handle"]
             identity = rec["contract"]["_identity"]
@@ -4474,10 +4734,18 @@ async def pending_view(owner: str) -> list:
     administrator who saw a different set of pending requests from the person
     they are co-administering with would be looking at a different system.
     """
+    connected = {c["handle"] for c in await st(owner).connections()
+                 if c.get("status") == "active"}
     return [
         {
             "family": rec["family"],
             "kind": rec.get("pending_kind", "operation"),
+            # Whether answering this admits an agent she has no standing
+            # connection with. Said outright because a joint request can come
+            # from a stranger too, and nothing that answers for her may treat
+            # meeting one as routine.
+            "first_contact": (rec.get("pending_kind") == "connection"
+                              or rec.get("handle") not in connected),
             "tier": rec["tier"],
             "purpose": rec["contract"]["purpose"],
             "operation": rec["contract"].get("operation"),
@@ -4992,9 +5260,22 @@ async def owner_create_policy(request: Request) -> dict:
     # telling her about it afterwards is right; a *new* document quietly
     # altered between asking for it and getting it is her being told she
     # wrote something she did not.
+    changes: list[dict] = []
     if envelope := await org_envelope(owner):
         if problems := org.would_exceed(spec, tier["resources"], envelope):
             raise HTTPException(status_code=400, detail="; ".join(problems))
+        # Clamped before it is written or published, so the first document
+        # served under this id is already the one an agent will be held to.
+        tier, changes = org.clamp(tier, envelope)
+    # A tier deleted and written again under the same id continues its
+    # numbering. Every version stays dereferenceable, so starting again at v1
+    # would put a second, different document behind an id agreements cite.
+    prefix = f"{owner}/{tier_id}/v"
+    earlier = [int(d["template_id"][len(prefix):]) for d in await st(owner).terms_docs()
+               if d.get("template_id", "").startswith(prefix)
+               and d["template_id"][len(prefix):].isdigit()]
+    if earlier:
+        tier["terms"]["template_id"] = f"{prefix}{max(earlier) + 1}"
     try:
         created = await st(owner).create_tier(tier_id, tier)
     except KeyError:
@@ -5003,22 +5284,10 @@ async def owner_create_policy(request: Request) -> dict:
     event("policy.created", tier=tier_id, template_id=created["terms"]["template_id"],
           resources=created["resources"])
     await publish_terms(owner, tier_id, created)
-    # The rest of the ceiling, applied rather than refused.
-    #
-    # `would_exceed` above refuses the two fields where she asked for
-    # something wider than the organization allows — a longer expiry, a scope
-    # it does not permit — because those are her intent and she should be
-    # told. Mandatory prohibitions and always-ask are the other kind: she did
-    # not ask for anything, the charter is adding to what she wrote, and
-    # refusing a document over an addition would be pedantry.
-    if envelope := await org_envelope(owner):
-        patch, changes = org.patch_for(created, envelope)
-        if patch is not None:
-            created = await st(owner).update_tier(tier_id, patch)
-            await publish_terms(owner, tier_id, created)
-            event("org.clamped", owner=owner, tier=tier_id,
-                  fields=[c["field"] for c in changes])
-            created = {**created, "clamped": [c["text"] for c in changes]}
+    if changes:
+        event("org.clamped", owner=owner, tier=tier_id,
+              fields=[c["field"] for c in changes])
+        created = {**created, "clamped": [c["text"] for c in changes]}
     return created
 
 
@@ -5058,6 +5327,26 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
                 detail=f"{', '.join(sorted(mixed))} is held jointly, and terms "
                        f"over it cannot share a tier with anything else. Give "
                        f"it a tier of its own.")
+    # Her edit and the organization's narrowing of it are one write, and one
+    # published version. Publishing her edit first and clamping it after
+    # would serve, for a moment, a document no agent may be held to — and,
+    # if the second step failed, leave it served.
+    changes: list[dict] = []
+    envelope = await org_envelope(owner)
+    if envelope:
+        current = (await st(owner).tiers()).get(tier_id)
+        if current is None:
+            raise HTTPException(status_code=404, detail="unknown tier")
+        try:
+            proposed = policy.apply_patch(copy.deepcopy(current), patch)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        narrowing, changes = org.patch_for(proposed, envelope)
+        for key, value in (narrowing or {}).items():
+            if key == "terms":
+                patch = {**patch, "terms": {**(patch.get("terms") or {}), **value}}
+            else:
+                patch = {**patch, key: value}
     try:
         updated = await st(owner).update_tier(tier_id, patch)
     except KeyError:
@@ -5068,25 +5357,17 @@ async def owner_update_policy(tier_id: str, request: Request) -> dict:
         # has to say what is wrong rather than that something is.
         raise HTTPException(status_code=400, detail=str(exc))
     event("policy.updated", tier=tier_id, template_id=updated["terms"]["template_id"])
-    # Publish the new version immediately so its terms URI dereferences from
-    # the moment it exists; earlier versions remain served (persistent record).
+    # Published at once, so its terms URI dereferences from the moment it
+    # exists; earlier versions remain served (persistent record).
     await publish_terms(owner, tier_id, updated)
-    # Then the ceiling, if there is one. Clamping after rather than refusing
-    # before: she edited terms that already existed, and the honest outcome
-    # is the strictest reading of both documents plus a record saying which
-    # of her fields the organization moved.
-    if envelope := await org_envelope(owner):
-        patch, changes = org.patch_for(updated, envelope)
-        if patch is not None:
-            updated = await st(owner).update_tier(tier_id, patch)
-            await publish_terms(owner, tier_id, updated)
-            event("org.clamped", owner=owner, tier=tier_id,
-                  fields=[c["field"] for c in changes])
-            await ledger_add(owner, "org_clamped", "-", {
-                "tier": tier_id, "organization": envelope.get("name"),
-                "charter_version": envelope.get("charter_version"),
-                "changes": [c["text"] for c in changes]})
-            updated = {**updated, "clamped": [c["text"] for c in changes]}
+    if changes:
+        event("org.clamped", owner=owner, tier=tier_id,
+              fields=[c["field"] for c in changes])
+        await ledger_add(owner, "org_clamped", "-", {
+            "tier": tier_id, "organization": envelope.get("name"),
+            "charter_version": envelope.get("charter_version"),
+            "changes": [c["text"] for c in changes]})
+        updated = {**updated, "clamped": [c["text"] for c in changes]}
     return updated
 
 
@@ -5136,11 +5417,13 @@ async def owner_organization(request: Request) -> dict:
 
 
 async def pending_invitation(owner: str) -> dict | None:
-    """An invitation waiting for her, if there is one.
+    """An invitation waiting for her, if there is one, or `{"unknown": ...}`
+    when the organization could not be asked.
 
-    Failure is `None` with a note rather than an exception: this is read on
-    the way past on an ordinary page load, and an organization being down is
-    not a reason her own portal should fail to render.
+    Not an exception: this is read on the way past on an ordinary page load,
+    and an organization being down is not a reason her own portal should fail
+    to render. Not `None` either, because "nobody has invited you" and "the
+    organization could not be reached" are different things to be told.
     """
     if not ORG_ISSUER:
         return None
@@ -5148,7 +5431,7 @@ async def pending_invitation(owner: str) -> dict | None:
         found = await org.invitation(ORG_ISSUER, owner)
     except Exception as exc:                                    # noqa: BLE001
         event("org.invitation_unreadable", owner=owner, error=str(exc))
-        return None
+        return {"unknown": "the organization could not be reached to check"}
     return found if found.get("invited") else None
 
 
@@ -5164,17 +5447,25 @@ async def owner_decline_invitation(request: Request) -> dict:
     found = await pending_invitation(owner)
     if found is None:
         raise HTTPException(status_code=404, detail="nothing is waiting on you")
+    if found.get("unknown"):
+        raise HTTPException(status_code=503, detail=found["unknown"])
     # The code she was given. The organization does not serve it to anyone,
     # her authority included, so a decline carries it the way a join does.
     try:
         code = ((await request.json()) or {}).get("code") or ""
     except ValueError:
         code = ""
+    import httpx
+
     try:
         await org.decline(ORG_ISSUER, owner, code)
-    except Exception as exc:                                    # noqa: BLE001
+    except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=403,
                             detail="that is not the code the invitation came with") from exc
+    except Exception as exc:                                    # noqa: BLE001
+        raise HTTPException(status_code=503,
+                            detail=f"the organization could not be reached: {_org_error(exc)}"
+                            ) from exc
     event("org.invitation_declined", owner=owner, org=found.get("org"))
     await ledger_add(owner, "org_declined", "-", {
         "organization": found.get("name"), "by": found.get("by")})
@@ -5400,6 +5691,15 @@ async def owner_joint_join(request: Request) -> dict:
     # and one with a single owner. Her co-owners' say would then reach her
     # own resources, or hers would not reach the account.
     shared = mandate.get("resources") or []
+    # Nothing her organization claims can be held jointly through her: the
+    # co-owners would be holding the firm's resource, and the firm's ceiling
+    # would stop applying to it.
+    org_claims = ((await org_envelope(owner)) or {}).get("claims") or []
+    if overlap := [r for r in shared if org.claims_match(r, org_claims)]:
+        raise HTTPException(
+            status_code=409,
+            detail=f"your organization claims {', '.join(overlap)}; a resource "
+                   "it owns cannot be held jointly through you")
     for tier_id, tier in (await st(owner).tiers()).items():
         patterns = tier.get("resources") or []
         joint_side = [r for r in patterns if org.claims_match(r, shared)]

@@ -21,6 +21,7 @@ author:
     name: Eve Maler
     organization: Venn Factory
 normative:
+  RFC8785:
   RFC7515:
   RFC7519:
   RFC9068:
@@ -70,6 +71,17 @@ normative:
     seriesinfo:
       Internet-Draft: draft-gamb-uma4agents-fedauthz-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html
+  U4AOwner:
+    title: "The Resource Owner's API for User-Managed Access (UMA) 2.0"
+    author:
+      - ins: N. Gamb
+        name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-gamb-uma4agents-owner-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-owner-00.html
   U4APolicy:
     title: "Owner Policy, Assurance and Attention for User-Managed Access (UMA) 2.0"
     author:
@@ -203,9 +215,13 @@ decision_endpoint:
 : REQUIRED. Where a member's authorization server asks about a request
   ({{decision}}).
 
-introspection_endpoint:
+introspection_endpoint, consumption_endpoint:
 : REQUIRED where the charter enables break-glass. Where an enforcement point
-  introspects a grant the organization signed ({{break-glass}}).
+  introspects, and spends, a grant the organization signed ({{break-glass}}).
+
+enrolment_preview_endpoint, invitation_endpoint, leave_endpoint,
+clearance_endpoint, compliance_endpoint, membership_endpoint, audit_endpoint:
+: REQUIRED. The remaining exchanges of {{wire}}.
 
 claims:
 : REQUIRED. The charter's claims.
@@ -302,6 +318,12 @@ force over its resources, in its `organization` member ({{U4ATerms}}
 Section 2): an agent reads the document before it signs anything,
 and that is the only moment at which "these terms are not hers alone" is
 information it can act on.
+
+An enforcement point MAY also check a grant over a claimed resource against the
+ceiling, as a second line behind the clamp. One that does refuses a grant that
+exceeds it with the refusal value `organization_envelope_exceeded`, status 403,
+which is terminal: the authority that answered is issuing more than the
+organization permits, and negotiating again reproduces that exactly.
 
 ## The Decision {#decision}
 
@@ -429,7 +451,10 @@ naming the `org`, the stated `reason`, what `authorised_by` it — a voucher an
 administrator opened, or an operator the charter lists — and the
 `charter_version` it was issued under. The enforcement point introspects it at
 the organization's `introspection_endpoint`, whose answers are those of
-{{U4AFedAuthz}} Section 5 with the grant's `owner` added.
+{{U4AFedAuthz}} Section 5 with the grant's `owner` added, and spends it at the
+organization's `consumption_endpoint`, as the last step of {{U4ACore}} Section
+8.2. Both are authenticated with the credential the organization provisioned
+for that enforcement point ({{wire}}).
 
 The member MUST be notified at the moment the window opens, before any data
 moves. Break-glass cannot be a flag on an ordinary grant: it has to be a grant
@@ -515,6 +540,10 @@ account:
 negotiation:
 : REQUIRED. The negotiation identifier this verdict answers.
 
+resource_id:
+: REQUIRED. The resource the negotiation is over, as the tally named it when it
+  asked.
+
 contract:
 : REQUIRED. The digest of the agreement the agent signed, as {{U4ATerms}}.
 
@@ -526,8 +555,7 @@ because:
 
 exp:
 : REQUIRED. No earlier than the agreement the verdict is about would end, so
-  that a grant within that lifetime can carry it, and no later than the
-  longest lifetime the holder's authorization server gives a grant.
+  that a grant within that lifetime can carry it.
 
 cnf_jkt:
 : REQUIRED in an `allow`. `jkt(k)`, as {{U4ACore}} defines it, of the key `k`
@@ -547,8 +575,15 @@ mandate_s256:
 : REQUIRED in an `allow`. The digest of the mandate the holder agreed to, as
   {{mandate-digest}}.
 
+consequence:
+: REQUIRED in an `allow` where the resource declares one for the operation.
+  The consequence class of {{U4ACore}} the holder's authorization server read
+  when it answered.
+
 An `allow` verdict MUST carry `cnf_jkt`, `scope`, `expires_in` and
-`mandate_s256`, and MUST carry `operation` where the agreement names one. A
+`mandate_s256`, and MUST carry `operation` where the agreement names one and
+`consequence` where the resource declares one. The tally's grant MUST carry the
+most severe `consequence` any `allow` verdict it carries names. A
 verdict that said only "yes, to this agreement" could be carried inside any grant
 the tally chose to issue beside it, because the enforcement point checks
 verdicts against the grant and never sees the agreement. Stating the grant's
@@ -590,9 +625,9 @@ folding party be untrusted.
 
 ## The Mandate Digest {#mandate-digest}
 
-The digest of a mandate is `s256:` followed by the base64url encoding, without
-padding, of the SHA-256 hash of the JSON serialization — members sorted by name,
-no insignificant whitespace — of an object with exactly three members:
+The digest of a mandate is `s256` as {{U4ACore}} defines it: `s256:` followed by
+the base64url encoding, without padding, of the SHA-256 hash of the {{RFC8785}}
+serialization of an object with exactly three members:
 
 holders:
 : Each holder reduced to `owner`, `issuer` with any trailing slash removed, and
@@ -688,13 +723,19 @@ call under such a grant:
    authorization server the enforcement point is itself configured to know
    speaks for that holder, and refuse where the published mandate names a
    holder it knows no authorization server for, or names a different one;
-3. establish that each verdict names this negotiation and this agreement;
+3. establish that each verdict names this negotiation, this agreement and the
+   resource being accessed;
 4. establish, for each `allow` verdict, that its `mandate_s256` is the digest of
    the published mandate, and that the grant is bound to the key `cnf_jkt`
    names, carries no scope beyond `scope`, lasts no longer than `expires_in`,
-   and, where the verdict names an `operation`, is single-use and bound to that
-   operation;
+   declares no lighter `consequence` than the verdict names, and, where the
+   verdict names an `operation`, is single-use and bound to that operation;
 5. re-run the count of {{count}} and refuse unless it allows.
+
+A refusal under this list carries the refusal value `joint_mandate_unsatisfied`,
+status 403, which is terminal. Where the mandate or a holder's keys cannot be
+fetched, the enforcement point answers `temporarily_unavailable` instead: that
+is a party it could not ask, not a decision anybody made.
 
 The `tally` member of the grant is for display and MUST NOT be trusted.
 
@@ -726,10 +767,152 @@ A charter claim MUST NOT match a jointly held resource, and a holder's
 authorization server MUST refuse to apply an organization's envelope or decision
 to one regardless. A jointly held resource MUST NOT share a policy unit with any
 other resource, since a ceiling applies to a whole unit once it reaches any
-resource in it.
+resource in it. A holder's authorization server MUST compare a resource against
+the mandate's resources as patterns, as it compares charter claims.
+
+The protection runs one way. A holder's authorization server MUST refuse to agree
+to a mandate covering a resource an organization she belongs to claims, and MUST
+NOT treat such a mandate as taking that resource out of the organization's reach:
+otherwise a member could lift her organization's ceiling off its own resource by
+joining a mandate any party could publish.
 
 Peers compose horizontally; an authority above them clamps vertically. The two
 are orthogonal rather than rival, and this document keeps them apart.
+
+# The Wire Between Parties {#wire}
+
+This section fixes the messages the sections above name. Every exchange is
+HTTPS with JSON bodies unless stated. Each endpoint is at the path shown,
+relative to the receiving party's issuer identifier, and is advertised in that
+party's metadata under the member shown, so that a party configured with an
+issuer can reach it, and one that reads metadata finds the same URL.
+
+Three credentials are used, and each authenticates exactly one direction:
+
+membership credential:
+: A JWT with `typ` of `u4a-membership+jwt`, issued by the organization at
+  enrolment and carrying `iss`, `sub` (the member), `org`, `iat` and `jti`. A
+  member's authorization server presents it as a bearer token on every
+  organization endpoint marked *member* below. The organization MUST refuse one
+  whose `jti` is not the one it recorded when that member last enrolled, so that
+  a credential from before she left, or before she rejoined, opens nothing.
+
+signed message:
+: A JWT signed with a key at the sender's `jwks_uri` and verified by the
+  receiver against the keys of the party its own records name: the organization
+  the owner enrolled with, or the tally the mandate names. It MUST carry `iss`,
+  `iat`, `exp` and the `typ` stated for the exchange, and the receiver MUST
+  refuse one of another `typ`.
+
+enforcement point credential:
+: A credential the organization or tally provisioned for an enforcement point,
+  presented as a bearer token. Both run as infrastructure for the same
+  deployment, so a provisioned credential is the honest shape; a member's
+  authorization server is never reached this way.
+
+## Member's Authorization Server to Organization {#wire-member}
+
+| Exchange | Request | Metadata member, path | Authentication |
+|---|---|---|---|
+| Preview | `POST`, `{"code"}` | `enrolment_preview_endpoint`, `/member/preview` | the enrolment code |
+| Invitation | `GET`, `?owner=` | `invitation_endpoint`, `/member/invitation` | none |
+| Decline | `POST`, `{"owner", "code"}` | `invitation_endpoint` + `/decline` | the invitation's code |
+| Enrol | `POST`, see below | `enrolment_endpoint`, `/member/join` | a code, an invitation or an assertion ({{enrolment}}) |
+| Envelope | `GET` | `envelope_endpoint`, `/member/envelope` | member |
+| Decision | `POST`, the request facts | `decision_endpoint`, `/decision` | member |
+| Clearance | `GET` | `clearance_endpoint`, `/member/clearance` | member |
+| Compliance | `POST`, see below | `compliance_endpoint`, `/member/compliance` | member |
+| Leave | `POST` | `leave_endpoint`, `/member/leave` | member |
+{: title="Exchanges a member's authorization server initiates."}
+
+The enrolment request carries `owner` (REQUIRED), `as_uri` (REQUIRED, the
+member's authorization server, to which notices and administrator actions will
+be sent), `charter_version` (REQUIRED, {{enrolment}}), and whichever of `code`
+and `assertion` the organization's enrolment path requires. The response
+carries `membership_token`, the membership credential, beside the members of an
+envelope document.
+
+An envelope document carries `org`, `name`, `issuer`, `charter_version`,
+`published_at`, the envelope fields of {{envelope}} in force for this member,
+and her role as `role`, `role_name`, `grants` and `delegation`. The preview and
+envelope exchanges answer with one.
+
+A decision request carries the facts of {{decision}}, at least `resource_id`.
+The answer carries `effect` (`allow`, `ask` or `refuse`), `because` (an array of
+sentences the member is shown), `governed` (whether the charter claims the
+resource) and `charter_version`.
+
+A clearance answer carries `clearance`, a JWT with `typ` of `u4a-clearance+jwt`
+({{U4APolicy}}), and `expires_in`. Where the organization holds no attestation
+for the member it MUST answer `404`, which her authority treats as unmet rather
+than as an error.
+
+A compliance report carries `charter_version`, `resources_governed`,
+`tiers_governed`, `clamped_fields` (the names of the envelope fields that
+narrowed her terms) and `within`. It MUST NOT carry any value from her policy.
+
+## Organization to Member's Authorization Server {#wire-org}
+
+A notice is `POST`ed to the member's authorization server's
+`org_notice_endpoint` (`/org/notice`) as `{"notice": <JWT>}`, a signed message
+with `typ` of `u4a-org-notice+jwt` carrying `sub` (the member), `org`, `jti`, an
+`exp` no more than five minutes after `iat`, and `kind`:
+
+| Kind | Further members | The member's authorization server |
+|---|---|---|
+| `charter_changed` | `charter_version` | re-reads the envelope and re-applies it |
+| `role_changed` | `role`, `by` | re-reads the envelope and records the change |
+| `membership_ended` | `by` | ends the enrolment as {{enrolment}} |
+| `break_glass_opened`, `break_glass`, `break_glass_used` | `reason`, `resource_id`, `authorised_by` or `by`, the operation's `tool`, as applicable | records it and tells the member ({{break-glass}}) |
+{: title="Notice kinds."}
+
+The member's authorization server MUST act on a notice's `jti` once until its
+`exp`, across every replica, and MUST answer `409` to a second presentation.
+A `kind` it does not recognise it MUST accept without acting on it.
+
+An administrator's action ({{org-acting}}) is sent to
+`org_admin_endpoint` (`/org/admin`) followed by `/{owner}/` and one of
+`pending`, `pending/{family}/decision`, `connections`, `connections/revoke`,
+`connections/restore`, `operators`, `operators/{action}` or `ledger`, with a
+signed message of `typ` `u4a-org-admin+jwt` as the bearer token. It carries
+`sub` (the member), `org`, `admin` and an `exp` no more than two minutes after
+`iat`. The bodies and answers are those of the owner's own API for the same
+operation ({{U4AOwner}}), narrowed to what {{org-visibility}} allows.
+
+## Enforcement Point to Organization {#wire-ep}
+
+| Exchange | Request | Metadata member, path |
+|---|---|---|
+| Membership | `GET` | `membership_endpoint` + `/{owner}`, `/membership/{owner}` |
+| Introspection | `POST`, form `token=` | `introspection_endpoint`, `/introspect` |
+| Consumption | `POST`, form `token=` | `consumption_endpoint`, `/consume` |
+| Access report | `POST` | `audit_endpoint`, `/audit/access` |
+{: title="Exchanges an enforcement point initiates with an organization."}
+
+Each is authenticated with the enforcement point credential. A membership answer
+is `{"member": false}`, or `"member": true` with `since` and the members of an
+envelope document. A consumption answer carries `consumed` and, where `false`,
+`error` from the vocabulary of {{U4AFedAuthz}} Section 5.
+
+## Tally to Holder's Authorization Server {#wire-tally}
+
+The tally asks with a signed message of `typ` `u4a-tally-req+jwt`, `POST`ed as
+`{"request": <JWT>}`. Every request carries `owner` (the holder, as her
+authorization server names her) and `account`.
+
+A quote, at `joint_quote_endpoint` (`/joint/quote`), adds `resource_id`. The
+answer carries `owner`, `tier_id` and `tier` (her terms over the resource as
+{{fold}} reads them), or `tier` of `null` with `because` where she has written
+none.
+
+A verdict request, at `joint_verdict_endpoint` (`/joint/verdict`), adds
+`negotiation`, `resource_id`, `contract` (the agreement's digest) and
+`agreement` (the agreement JWS, so that her authority verifies it itself). The
+answer carries `verdict`, a verdict as {{verdict}}, or `pending` of `true` with
+`family` while she has not answered.
+
+A holder's authorization server MUST refuse a request from a tally other than the
+one the mandate she agreed to names, and MUST answer about her alone.
 
 # Security Considerations
 
@@ -807,7 +990,9 @@ requests no registration.
 | `family` | JWT claim {{RFC7519}} | {{joint-grant}} |
 | `break_glass` | JWT claim {{RFC7519}} | {{break-glass}} |
 | `/.well-known/u4a-organization` | Well-known URI | {{org-discovery}} |
-| `enrolment_endpoint`, `envelope_endpoint`, `decision_endpoint` | Organization metadata member | {{org-discovery}} |
+| `enrolment_endpoint`, `envelope_endpoint`, `decision_endpoint`, `enrolment_preview_endpoint`, `invitation_endpoint`, `leave_endpoint`, `clearance_endpoint`, `compliance_endpoint`, `membership_endpoint`, `introspection_endpoint`, `consumption_endpoint`, `audit_endpoint` | Organization metadata member | {{org-discovery}}, {{wire}} |
+| `org_notice_endpoint`, `org_admin_endpoint`, `joint_quote_endpoint`, `joint_verdict_endpoint` | Authorization server metadata member | {{wire}} |
+| `application/u4a-tally-req+jwt` | Media type | {{wire-tally}} |
 | `u4a_mandate_endpoint` | Authorization server metadata member | {{mandate}} |
 | `org` | JWT claim {{RFC7519}} | {{enrolment}}, {{org-acting}} |
 | `kind` | JWT claim {{RFC7519}} | {{enrolment}} |

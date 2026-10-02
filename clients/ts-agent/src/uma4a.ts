@@ -137,7 +137,9 @@ export async function runGrant(fetchFn: typeof fetch, ch: Challenge, keys: Agent
   };
   say("presenting the ticket");
   let body = await post({ grant_type: GRANT_TYPE, ticket: ch.ticket });
-  if (body.error === "need_info") {
+  // Terms that changed between proffer and commit are dictated again; the agent
+  // agrees to what is in force or to nothing, a bounded number of times.
+  for (let i = 0; i < 3 && body.error === "need_info"; i++) {
     const template = body.required_claims[0].terms_template as TermsTemplate;
     say(`terms proffered: ${template.purpose} (expires ${template.expires_in}s)`);
     if (!approve(template)) {

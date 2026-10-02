@@ -36,6 +36,7 @@ normative:
   RFC9396:
   RFC9421:
   RFC9530:
+  RFC9864:
   RFC9728:
   UMAGrant:
     title: "User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"
@@ -309,6 +310,24 @@ will. This requirement establishes an accurate source of truth for an agent
 making first contact with the authorization server, and enables clean
 interoperability failures in the absence of human intervention.
 
+Its metadata also carries two members this document defines:
+
+signing_alg_values_supported:
+: The JWS `alg` values {{RFC7515}} it verifies on an agreement or other signed
+  claim token, which MUST include `EdDSA` and `Ed25519` {{RFC9864}}.
+
+http_message_signature_alg_values_supported:
+: The {{RFC9421}} algorithms it verifies on a signed request, which MUST include
+  `ed25519`.
+
+Ed25519 is mandatory to implement for every signature this set defines: the
+client's agreement, the client's and resource server's signed requests, the
+owner's signed request, and the requesting party token. A client that signs with
+another algorithm MAY be supported and MUST be refused by an authorization server
+that has not advertised it, with an `error_description` naming the algorithm. Without
+one algorithm every party holds, two conformant implementations need not be able
+to talk to each other at all.
+
 # The Challenge {#the-challenge}
 
 ## Parameters, Not a Header {#challenge-parameters}
@@ -388,6 +407,14 @@ enforcement point refusing for such a reason MUST NOT include a challenge, and
 over HTTP MUST answer with the status below and a JSON object whose `error`
 member is the value below and which MAY carry `error_description`:
 
+invalid_token:
+: 401. The token was not presented as a proof-of-possession token, or proof of
+  possession failed ({{signature-profile}}).
+
+consequence_changed:
+: 403. The operation now declares a consequence the grant was not issued against
+  ({{consequence}}).
+
 access_revoked:
 : 403. Introspection gave a terminal reason ({{U4AFedAuthz}} Section 5); the
   owner, or a layer above her, has settled it, and renegotiating cannot change
@@ -411,8 +438,15 @@ temporarily_unavailable:
 : 503. The authorization server could not be asked; the client MAY retry the
   same request.
 
-A binding defines how these travel where there is no status line, and MAY add
-values for refusals of its own.
+Every value above except `temporarily_unavailable` is terminal for the token
+presented: the same request with the same token will be refused the same way.
+
+A binding defines how these travel where there is no status line, and an
+extension or binding MAY add values for refusals of its own. A document that adds
+a value MUST say whether it is terminal. A client that receives a value it does
+not recognise MUST treat it as terminal and MUST NOT send the same request with
+the same token again. Treating an unknown value as retryable turns every value a
+client predates into a loop.
 
 ## Structured Remediation {#remediation}
 
@@ -470,10 +504,17 @@ parsing the details.
 
 ## Corroborating the Authorization Server {#corroboration}
 
-A client MUST fetch the document named by `resource_metadata`, MUST
-verify that its `resource` member identifies the resource being accessed as
-required by {{RFC9728}} Section 3.3, and MUST refuse a challenge whose `as_uri`
-does not appear in that document's `authorization_servers` array.
+A client MUST fetch the resource's metadata from the URL {{RFC9728}} Section 3
+forms from the resource it called, and MUST refuse a challenge whose
+`resource_metadata` names any other URL. It MUST verify that the document's
+`resource` member identifies the resource being accessed as required by
+{{RFC9728}} Section 3.3, and MUST refuse a challenge whose `as_uri` does not
+appear in that document's `authorization_servers` array.
+
+The URL is formed rather than followed because the challenge is the thing being
+checked. A forged challenge can name a document on the forger's own host that
+lists the forger's authorization server, and a client that fetched it would
+corroborate the forgery against itself.
 
 Without this, the only statement of which authorization server decides is an
 unauthenticated header on a refused request. With it, the challenge gains a
@@ -488,6 +529,12 @@ endpoint using the `urn:ietf:params:oauth:grant-type:uma-ticket` grant type, as
 {{UMAGrant}} Section 3.3.1. This profile does not change the grant type, the
 ticket's single-use rotation, or the meaning of `need_info`,
 `request_submitted`, `request_denied` or `invalid_grant`.
+
+While a request waits on the owner, an authorization server MAY answer each
+poll with the ticket it was presented, and spend that ticket only once the
+request is decided. A grant issued from it is bound to the client's key, so the
+ticket confers nothing on anyone else, and a poll whose response is lost does
+not cost the client the only handle it has on the owner's decision.
 
 ## Claim Token Formats
 
@@ -601,8 +648,15 @@ owner who has never met it can be told something true about it:
   authorization server MUST resolve and MUST reject unless the document's own
   `client_id` matches the URL it was fetched from;
 - a `Signature-Agent` {{I-D.meunier-webbotauth-registry}} naming a directory of
-  keys the operator publishes, which MUST be covered by the request signature
-  where it is present.
+  keys the operator publishes.
+
+Both travel in the protected header of the agreement ({{U4ATerms}}), as the
+members `client_id` and `signature_agent`, so the agreement's signature covers
+them. A client that also sends a `Signature-Agent` header on a request to the
+resource MUST cover it with that request's signature ({{signature-profile}}). The
+operator is the origin of the client identifier; a `signature_agent` directory at
+any other origin attests to nothing, since a client could otherwise name a
+directory it controls and vouch for itself.
 
 Neither is an authorization input. The key that verifies a request is always the
 one confirmed by the grant, the connection handle is unchanged by the presence or
@@ -652,6 +706,28 @@ reason nothing in its logs names.
 
 A verifier MUST echo the received `@signature-params` value verbatim when
 reconstructing the base, rather than re-serializing it from parsed components.
+
+The algorithm is the one the verifying key is registered for, never the one the
+signature parameters or a header name. A signature whose `alg` parameter, where
+present, disagrees with its key MUST be refused.
+
+A signature MUST carry the `created` parameter, and a verifier MUST refuse one
+whose `created` is further from its own clock than a window it is configured
+with, in either direction. The window SHOULD NOT exceed five minutes; the
+reference uses sixty seconds. Where `expires` is present the verifier MUST
+refuse a signature past it. A signature without `created` is refused rather than
+treated as fresh, since otherwise a captured request is valid for as long as
+the key is.
+
+A signed request that changes the owner's state — any owner request other than
+a read — MUST NOT be accepted twice. The authorization server keeps each such
+signature it accepts for at least twice the window and refuses a second
+presentation. The signer of such a request SHOULD include a fresh `nonce` parameter:
+Ed25519 is deterministic and `created` counts seconds, so the same request sent
+twice within a second would otherwise carry the same signature and the second
+would be refused as a replay. A request to the protected resource is not held to this: a client
+that needs an operation performed at most once asks for a single-use grant
+({{operation-binding}}), whose consumption is the replay control.
 
 ## Covering the Body {#content-digest}
 
@@ -819,19 +895,29 @@ An enforcement point MUST perform the following steps in this order, and the
 order is normative:
 
 1. Introspect the presented token, without consuming it, and establish that it is
-   active and that the relationship behind it still stands.
+   active and that the relationship behind it still stands. An inactive token is
+   answered as {{U4AFedAuthz}} Section 5 says for its reason.
 2. Establish that the resource being accessed appears in `permissions` with a
    scope that covers the attempted access, and that the permission's own `exp`
-   and `nbf`, where present, admit the present time.
+   and `nbf`, where present, admit the present time. Where they do not, answer
+   with a challenge: negotiating again can succeed. Checks an extension places
+   on the grant itself, such as {{U4AMultiParty}}'s ceiling and joint mandate,
+   run here, after this step and before the next.
 3. Verify proof of possession against the key named by `cnf` in the introspection
-   response.
+   response, and refuse with `invalid_token` where it fails. Then apply
+   {{consequence}}, refusing with `consequence_changed`.
 4. Where the token carries `single_use`, or the enforcement point treats the
    attempted operation as single-use, establish that the attempted operation
    matches `operation.tool` and that `s256` over the received parameters equals
    `operation.params_s256`.
 5. Consume the token.
 
-An enforcement point MUST NOT consume a single-use token before step 5.
+An enforcement point MUST NOT consume a single-use token before step 5, and a
+refusal at any earlier step leaves it unspent.
+
+A binding MUST define how the operation and its parameters are read from a
+request. Where a request carries no parameters, they are the empty JSON object
+`{}`, and `params_s256` is computed over that.
 
 An enforcement point that treats an operation as single-use MUST refuse a token
 for it that carries no `operation`. An enforcement point MUST consume a token
@@ -882,8 +968,8 @@ the agent's time and puts a request in front of the owner that she has already
 answered.
 
 An introspection response for an active token MUST carry `cnf` and
-`permissions`, and `single_use`, `operation`, `contract` and `consequence` where
-the token carries them, with the token's values. The steps of {{ordering}} read
+`permissions`, and `single_use`, `operation`, `contract`, `consequence` and
+`clearance` where the token carries them, with the token's values. The steps of {{ordering}} read
 them from the introspection response and not from the token, so that what an
 enforcement point acts on comes from the same answer that said the token is
 active, and it never needs to verify the authorization server's signature

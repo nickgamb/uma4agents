@@ -46,8 +46,9 @@ asking.
 ## 2. Hold the negotiation, do not hold the call
 
 When a request pends, the authority holds the rotated ticket and refuses with a
-"submitted" status. The agent re-presents after an interval, and each poll
-rotates the ticket again.
+"submitted" status. The agent re-presents after an interval, and while she
+decides each poll hands back the same ticket, so a reply lost on the way costs
+the agent nothing. The ticket is spent when there is an outcome.
 
 On the agent's side, the pend is **a state to render, not a call to hold open**.
 An agent that can express waiting to its own user should hand the wait up rather
@@ -120,11 +121,14 @@ that operation only.
 
 Deny ends the negotiation with a refusal the agent can distinguish from an error.
 
-Expiry ends it too. If she does not answer within the negotiation's lifetime, the
-agent gets an invalid-grant response and can start again later. This is correct
-behaviour rather than a failure — the lab's ask-me demo ends with `grant denied:
-timed out waiting for the owner` when nobody taps, and that is the system
-working.
+Two clocks run, and they belong to different parties. The negotiation's
+lifetime is her authority's: a pend it has not heard her answer within
+(`UMA_AS_PENDING_TTL`, an hour by default) expires, and the agent's next poll
+gets an invalid-grant response; it can start again later. How long the agent
+keeps polling is the agent's own choice. The lab's driver waits fifteen minutes
+(`UMA4A_OWNER_WAIT_S`) and then gives up with `grant denied: timed out waiting
+for the owner` — while the request is still waiting for her at her authority.
+Either ending is correct behaviour rather than a failure.
 
 ## 6. Give her the undo
 

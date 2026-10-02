@@ -137,27 +137,31 @@ data:
         return len(seen) == 1, f"{len(seen)} distinct signing keys behind one Service"
     check("every replica of the authorization server signs with one key", one_key)
 
-    def boundary():
-        # Bob's side may not touch Alice's authorization server except
-        # through the front door. This pod is in sterling-vance.
+    def refused(url):
+        # Only the mesh refusing counts: a 403, or ztunnel resetting the
+        # connection at L4. A 405 is the vault itself answering, a timeout or
+        # an unresolvable name is nothing answering, and a connection accepted
+        # then closed is a server — none of those is the boundary holding.
+        import http.client
         try:
-            get("http://uma-as.alice.svc.cluster.local:9000/health")
+            get(url)
             return False, "reached it directly — the mesh policy is not holding"
         except urllib.error.HTTPError as exc:
             return exc.code == 403, f"status {exc.code}"
-        except Exception:
-            return True, ""
-    check("the requesting party cannot reach the owner's AS directly", boundary)
+        except Exception as exc:                                  # noqa: BLE001
+            reason = getattr(exc, "reason", exc)
+            if isinstance(reason, ConnectionResetError):
+                return True, ""
+            if isinstance(reason, http.client.RemoteDisconnected):
+                return False, f"the connection was accepted and closed: {reason!r}"
+            return False, f"transport error, not a refusal: {reason!r}"
 
-    def vault_boundary():
-        try:
-            get("http://alice-vault.meridian.svc.cluster.local:9020/mcp")
-            return False, "reached the vault directly — the mesh policy is not holding"
-        except urllib.error.HTTPError as exc:
-            return exc.code in (403, 405), f"status {exc.code}"
-        except Exception:
-            return True, ""
-    check("the requesting party cannot reach the vault directly", vault_boundary)
+    # Bob's side may not touch Alice's authorization server or the vault
+    # except through the front door. This pod is in sterling-vance.
+    check("the requesting party cannot reach the owner's AS directly",
+          lambda: refused("http://uma-as.alice.svc.cluster.local:9000/health"))
+    check("the requesting party cannot reach the vault directly",
+          lambda: refused("http://alice-vault.meridian.svc.cluster.local:9020/mcp"))
 
     print(f"\nk8s-smoke-test: {len(passed)} passed, {len(failed)} failed")
     sys.exit(1 if failed else 0)

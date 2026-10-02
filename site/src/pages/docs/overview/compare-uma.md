@@ -74,9 +74,11 @@ and which is invisible until there are two replicas.
 
 Worth saying, because it cuts both ways. UMA anticipates multiple authorization
 servers per resource server, and RFC 9728 makes `authorization_servers` an
-array. The lab configures exactly one. Owners who each brought their own
-authorization server is the general case, and this deployment does not
-demonstrate it.
+array. Each resource here publishes exactly one: the authority of the owner it
+belongs to. One resource server serves two owners with two authorities — Alice's
+and Carol's — through a separate resource, and metadata document, per owner,
+which is how owners who each brought their own authorization server are
+demonstrated without one document naming several.
 
 ## Where the changes are specified
 

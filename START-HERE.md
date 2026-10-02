@@ -124,8 +124,8 @@ her policy can do is require her to look when there is no reason at all.
 ## 6. Check the boundary holds
 
 ```bash
-make k8s-smoke-test     # expect 15 passed, 0 failed
-make k8s-policy-test    # expect 23 passed, 0 failed
+make k8s-smoke-test     # expect 14 passed, 0 failed
+make k8s-policy-test    # expect 24 passed, then 7 passed
 make k8s-intent-check   # whose intent the grant carries
 ```
 
@@ -318,7 +318,7 @@ and Carol are — and the firm shares parts of that book with them under a role.
 make org-check
 ```
 
-Eighty assertions across six processes. The two beats to watch for:
+Six processes, and the two beats to watch for:
 
 **Joining grants something.** Alice enrols with a code, Carol accepts an
 invitation addressed to her, and the firm's book appears in each of their

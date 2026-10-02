@@ -54,7 +54,7 @@ spec:
             - { name: OIDC_CLIENT_ID, value: "meridian-org-console" }
             - { name: CONSOLE_PUBLIC_URL, value: "https://org-console.uma.lab" }
             - name: CONSOLE_SESSION_SECRET
-              valueFrom: { secretKeyRef: { name: org-config, key: session-secret } }
+              valueFrom: { secretKeyRef: { name: console-session, key: token } }
             - { name: SSL_CERT_FILE, value: /certs/rootCA.pem }
           volumeMounts:
             - { name: ca, mountPath: /certs, readOnly: true }

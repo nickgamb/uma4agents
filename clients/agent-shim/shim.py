@@ -9,10 +9,7 @@ via MCP elicitation when the client supports it (Claude Code ≥ 2.1.76);
 otherwise Bob's standing config decides (Claude Code renders elicitation;
 some clients don't yet, hence the fallback).
 
-Connect from Claude Code:
-
-  claude mcp add alice-vault -- \
-      uv run --project /path/to/uma4agents/clients/agent-shim shim
+Connecting it to Claude Code is in README.md, "A concrete example".
 
 Environment:
   UMA4A_GATEWAY     https://gateway.uma.lab/mcp
@@ -58,6 +55,7 @@ from uma4a_grant import (
     TermsRejected,
     jsonrpc_challenge,
     parse_challenge,
+    refusal,
     receipt_filename,
     run_grant_async,
     signed_headers,
@@ -332,15 +330,14 @@ class Upstream:
                 data={"grant_type": GRANT_TYPE, "ticket": held["ticket"]})
             body = r.json()
         except Exception as exc:                                # noqa: BLE001
-            # A poll that did not arrive says nothing about the ticket. The AS
-            # spends the ticket on a poll it answers, so dropping it here and
-            # negotiating again would put a second request in front of her.
+            # A poll that did not arrive says nothing about the ticket, which
+            # is not spent while she decides. Dropping it here and negotiating
+            # again would put a second request in front of her.
             log(f"could not poll the held ticket: {type(exc).__name__}; "
                 "still waiting")
             return "waiting", None
         if body.get("error") == "request_submitted":
-            # The AS rotates the ticket on every poll; keep the current one or
-            # the next check is presenting something already spent.
+            # Whatever ticket the answer names is the one to present next.
             held["ticket"] = body.get("ticket", held["ticket"])
             log("still waiting on her — the same request, not a new one")
             return "waiting", None
@@ -349,6 +346,12 @@ class Upstream:
             if body.get("receipt"):
                 store_receipt(body["receipt"])
             return "granted", body["access_token"]
+        if body.get("error") == "request_denied":
+            # Her answer, not a ticket that lapsed. Reported as hers rather
+            # than negotiated around: asking again would put the question she
+            # just answered back in front of her.
+            log("she declined the request that was waiting")
+            return "denied", body.get("error_description") or "the owner declined"
         log(f"the held request ended: {body.get('error', 'unknown')}")
         return "gone", None
 
@@ -405,6 +408,9 @@ class Upstream:
             state, resumed = await self.resume(held)
             if state == "waiting":
                 raise PendingHandback(held["as_uri"], held["ticket"])
+            if state == "denied":
+                OUTSTANDING.pop(key, None)
+                raise GrantDenied(resumed or "the owner declined")
             if state == "granted" and resumed is not None:
                 OUTSTANDING.pop(key, None)
                 r, payload = await self.request("tools/call", params,
@@ -414,6 +420,11 @@ class Upstream:
                         return payload["result"]["content"][0]["text"]
                     except (KeyError, IndexError, TypeError):
                         return json.dumps(payload)
+                # She said yes and the call under it did not go through. Not a
+                # reason to ask her again: the operation may already have run.
+                raise RuntimeError(
+                    "the owner approved this, and the call made under her "
+                    f"approval failed ({r.status_code}); not asking her again")
             else:
                 # The ticket died rather than being decided. Fall through and
                 # negotiate again — that does cost her a slot, and it is the
@@ -423,12 +434,9 @@ class Upstream:
 
         if challenge is not None:
             as_uri, ticket = challenge
-            # Deliberately *not* re-presenting the ticket the last attempt
-            # was holding: the AS rotates it per poll and rejects a stale one
-            # with invalid_grant. The fresh challenge is the right way back in
-            # — the request is identified by this agent's key and the
-            # operation it is asking for, so a retry rejoins the decision
-            # already in front of her rather than starting a second one.
+            # A fresh negotiation. A request still waiting on her is resumed
+            # above, from the ticket held for it; reaching this line means
+            # there is none, so this asks her anew.
             log(f"challenged by {as_uri}; negotiating")
             prm = await self.resource_metadata()
             if prm is None:
@@ -440,7 +448,8 @@ class Upstream:
                                    f"authorization server {as_uri} is "
                                    "uncorroborated")
             try:
-                validate_resource_metadata(prm, GATEWAY, as_uri)
+                validate_resource_metadata(prm, GATEWAY, as_uri,
+                                           getattr(challenge, "resource_metadata", None))
                 log("challenge corroborated against the resource's "
                     "published metadata")
             except DiscoveryMismatch as exc:
@@ -475,10 +484,15 @@ class Upstream:
             OUTSTANDING.pop(key, None)
             r, payload = await self.request("tools/call", params, sign=(rpt, keys))
 
-        if r.status_code != 200:
-            raise RuntimeError(f"call failed: {r.status_code} {r.text[:300]}")
-        if err := (payload or {}).get("error"):
-            raise RuntimeError(f"call refused: {err.get('message')}")
+        if r.status_code != 200 or (payload or {}).get("error"):
+            # Not retried here either way. A terminal value is final for this
+            # grant; the one that is not is reported as such, so whoever is
+            # driving the agent can send the call again.
+            value, terminal = refusal(r.status_code, payload)
+            if not terminal:
+                raise RuntimeError(f"{value}: the authorization server could not be "
+                                   "reached; the same call may be sent again")
+            raise RuntimeError(f"call refused ({value}): {r.text[:300]}")
         try:
             return payload["result"]["content"][0]["text"]
         except (KeyError, IndexError, TypeError):
@@ -546,9 +560,13 @@ async def approve_terms(ctx: Context, tool: str, template: dict) -> bool:
     try:
         result = await ctx.elicit(message=message, schema=TermsDecision)
     except MCPError as exc:
-        # Only "this client cannot elicit" falls back to standing config.
-        # Catching everything here would turn a real failure into a silent
-        # auto-accept, which is the wrong way for this to break.
+        # Only "this client cannot elicit" falls back to standing config: the
+        # SDK's client answers an elicitation it has no handler for with
+        # INVALID_REQUEST, and an older one may not know the method at all.
+        # Anything else is a real failure, and turning it into a silent
+        # auto-accept would be the wrong way for this to break.
+        if exc.code not in (-32600, -32601):
+            raise
         ok = template["expires_in"] <= STANDING_MAX_EXPIRES
         log(f"elicitation unavailable ({type(exc).__name__}); standing config "
             f"{'accepts' if ok else 'refuses'} (max_expires={STANDING_MAX_EXPIRES})")
@@ -625,16 +643,19 @@ async def execute_trade(ctx: Context, symbol: str, side: str, quantity: int,
         return "You declined Alice's terms; the trade was not submitted."
 
 
-if __name__ == "__main__":
+def main() -> None:
     log(f"proxying {GATEWAY} (authority {AUTHORITY}); keystore {KEYSTORE}")
     if TRANSPORT == "stdio":
         mcp.run(transport="stdio")
     else:
-        # Stateless, because there is no session state worth keeping: the
-        # negotiation's continuity lives in the permission ticket at Alice's
-        # authorization server, not in this process. That is what lets the
-        # shim be replicated, restarted, or scaled to zero between calls
-        # without an agent noticing.
+        # Stateless as far as MCP is concerned: no session is kept. A request
+        # waiting on Alice is the exception — its ticket is held in this
+        # process (`OUTSTANDING`), so a shim restarted while she decides
+        # negotiates afresh on the next call and she is asked again.
         log(f"listening on {SHIM_HOST}:{SHIM_PORT} ({TRANSPORT})")
         mcp.run(transport=TRANSPORT, host=SHIM_HOST, port=SHIM_PORT,
                 stateless_http=True)
+
+
+if __name__ == "__main__":
+    main()

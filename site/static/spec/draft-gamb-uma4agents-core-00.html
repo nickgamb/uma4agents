@@ -1685,6 +1685,28 @@ will not accept, and <span class="bcp14">MUST</span> advertise every grant type 
 will. This requirement establishes an accurate source of truth for an agent
 making first contact with the authorization server, and enables clean
 interoperability failures in the absence of human intervention.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">Its metadata also carries two members this document defines:<a href="#section-2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-5">
+        <dt id="section-2-5.1">signing_alg_values_supported:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-5.2">
+          <p id="section-2-5.2.1">The JWS <code>alg</code> values <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> it verifies on an agreement or other signed
+claim token, which <span class="bcp14">MUST</span> include <code>EdDSA</code> and <code>Ed25519</code> <span>[<a href="#RFC9864" class="cite xref">RFC9864</a>]</span>.<a href="#section-2-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-5.3">http_message_signature_alg_values_supported:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-5.4">
+          <p id="section-2-5.4.1">The <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> algorithms it verifies on a signed request, which <span class="bcp14">MUST</span> include
+<code>ed25519</code>.<a href="#section-2-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-6">Ed25519 is mandatory to implement for every signature this set defines: the
+client's agreement, the client's and resource server's signed requests, the
+owner's signed request, and the requesting party token. A client that signs with
+another algorithm <span class="bcp14">MAY</span> be supported and <span class="bcp14">MUST</span> be refused by an authorization server
+that has not advertised it, with an <code>error_description</code> naming the algorithm. Without
+one algorithm every party holds, two conformant implementations need not be able
+to talk to each other at all.<a href="#section-2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-challenge">
@@ -1797,68 +1819,94 @@ enforcement point refusing for such a reason <span class="bcp14">MUST NOT</span>
 over HTTP <span class="bcp14">MUST</span> answer with the status below and a JSON object whose <code>error</code>
 member is the value below and which <span class="bcp14">MAY</span> carry <code>error_description</code>:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.3-2">
-          <dt id="section-3.3-2.1">access_revoked:</dt>
+          <dt id="section-3.3-2.1">invalid_token:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.2">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.2.1">
 <li id="section-3.3-2.2.1.1">
-                <p id="section-3.3-2.2.1.1.1">Introspection gave a terminal reason (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5); the
-owner, or a layer above her, has settled it, and renegotiating cannot change
-it.<a href="#section-3.3-2.2.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.2.1.1.1">The token was not presented as a proof-of-possession token, or proof of
+possession failed (<a href="#signature-profile" class="auto internal xref">Section 6.1</a>).<a href="#section-3.3-2.2.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.3">already_consumed:</dt>
+<dt id="section-3.3-2.3">consequence_changed:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.4">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.4.1">
 <li id="section-3.3-2.4.1.1">
-                <p id="section-3.3-2.4.1.1.1">A single-use grant was spent by another request (<a href="#indivisibility" class="auto internal xref">Section 8.3</a>).<a href="#section-3.3-2.4.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.4.1.1.1">The operation now declares a consequence the grant was not issued against
+(<a href="#consequence" class="auto internal xref">Section 7.2</a>).<a href="#section-3.3-2.4.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.5">operation_required, operation_mismatch:</dt>
+<dt id="section-3.3-2.5">access_revoked:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.6">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.6.1">
 <li id="section-3.3-2.6.1.1">
-                <p id="section-3.3-2.6.1.1.1">The grant is bound to no operation, or to a different one
-(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-3.3-2.6.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.6.1.1.1">Introspection gave a terminal reason (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5); the
+owner, or a layer above her, has settled it, and renegotiating cannot change
+it.<a href="#section-3.3-2.6.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.7">invalid_origin:</dt>
+<dt id="section-3.3-2.7">already_consumed:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.8">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.8.1">
 <li id="section-3.3-2.8.1.1">
-                <p id="section-3.3-2.8.1.1.1">The request came from an origin the enforcement point does not serve.<a href="#section-3.3-2.8.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.8.1.1.1">A single-use grant was spent by another request (<a href="#indivisibility" class="auto internal xref">Section 8.3</a>).<a href="#section-3.3-2.8.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.9">request_body_too_large:</dt>
+<dt id="section-3.3-2.9">operation_required, operation_mismatch:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.10">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.10.1">
 <li id="section-3.3-2.10.1.1">
-                <p id="section-3.3-2.10.1.1.1">The body was, or may have been, cut short before the enforcement point
-read it.<a href="#section-3.3-2.10.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.10.1.1.1">The grant is bound to no operation, or to a different one
+(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-3.3-2.10.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.11">temporarily_unavailable:</dt>
+<dt id="section-3.3-2.11">invalid_origin:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.12">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.12.1">
 <li id="section-3.3-2.12.1.1">
-                <p id="section-3.3-2.12.1.1.1">The authorization server could not be asked; the client <span class="bcp14">MAY</span> retry the
-same request.<a href="#section-3.3-2.12.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.12.1.1.1">The request came from an origin the enforcement point does not serve.<a href="#section-3.3-2.12.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.13">request_body_too_large:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.14">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.14.1">
+<li id="section-3.3-2.14.1.1">
+                <p id="section-3.3-2.14.1.1.1">The body was, or may have been, cut short before the enforcement point
+read it.<a href="#section-3.3-2.14.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.15">temporarily_unavailable:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.16">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.16.1">
+<li id="section-3.3-2.16.1.1">
+                <p id="section-3.3-2.16.1.1.1">The authorization server could not be asked; the client <span class="bcp14">MAY</span> retry the
+same request.<a href="#section-3.3-2.16.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-3.3-3">A binding defines how these travel where there is no status line, and <span class="bcp14">MAY</span> add
-values for refusals of its own.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">Every value above except <code>temporarily_unavailable</code> is terminal for the token
+presented: the same request with the same token will be refused the same way.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">A binding defines how these travel where there is no status line, and an
+extension or binding <span class="bcp14">MAY</span> add values for refusals of its own. A document that adds
+a value <span class="bcp14">MUST</span> say whether it is terminal. A client that receives a value it does
+not recognise <span class="bcp14">MUST</span> treat it as terminal and <span class="bcp14">MUST NOT</span> send the same request with
+the same token again. Treating an unknown value as retryable turns every value a
+client predates into a loop.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="remediation">
@@ -1936,15 +1984,21 @@ parsing the details.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
         <h3 id="name-corroborating-the-authoriza">
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-corroborating-the-authoriza" class="section-name selfRef">Corroborating the Authorization Server</a>
         </h3>
-<p id="section-3.5-1">A client <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
-verify that its <code>resource</code> member identifies the resource being accessed as
-required by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code>
-does not appear in that document's <code>authorization_servers</code> array.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">Without this, the only statement of which authorization server decides is an
+<p id="section-3.5-1">A client <span class="bcp14">MUST</span> fetch the resource's metadata from the URL <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3
+forms from the resource it called, and <span class="bcp14">MUST</span> refuse a challenge whose
+<code>resource_metadata</code> names any other URL. It <span class="bcp14">MUST</span> verify that the document's
+<code>resource</code> member identifies the resource being accessed as required by
+<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code> does not
+appear in that document's <code>authorization_servers</code> array.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">The URL is formed rather than followed because the challenge is the thing being
+checked. A forged challenge can name a document on the forger's own host that
+lists the forger's authorization server, and a client that fetched it would
+corroborate the forgery against itself.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<p id="section-3.5-3">Without this, the only statement of which authorization server decides is an
 unauthenticated header on a refused request. With it, the challenge gains a
 second witness anchored in the resource's own TLS-protected origin. The challenge
 remains authoritative for the ticket, which is the one value the metadata
-document cannot carry.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+document cannot carry.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1959,6 +2013,11 @@ endpoint using the <code>urn:ietf:params:oauth:grant-type:uma-ticket</code> gran
 <span>[<a href="#UMAGrant" class="cite xref">UMAGrant</a>]</span> Section 3.3.1. This profile does not change the grant type, the
 ticket's single-use rotation, or the meaning of <code>need_info</code>,
 <code>request_submitted</code>, <code>request_denied</code> or <code>invalid_grant</code>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">While a request waits on the owner, an authorization server <span class="bcp14">MAY</span> answer each
+poll with the ticket it was presented, and spend that ticket only once the
+request is decided. A grant issued from it is bound to the client's key, so the
+ticket confers nothing on anyone else, and a poll whose response is lost does
+not cost the client the only handle it has on the owner's decision.<a href="#section-4-2" class="pilcrow">¶</a></p>
 <div id="claim-token-formats">
 <section id="section-4.1">
         <h3 id="name-claim-token-formats">
@@ -2101,20 +2160,26 @@ authorization server <span class="bcp14">MUST</span> resolve and <span class="bc
 </li>
           <li class="normal" id="section-5.2-2.2">
             <p id="section-5.2-2.2.1">a <code>Signature-Agent</code> <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> naming a directory of
-keys the operator publishes, which <span class="bcp14">MUST</span> be covered by the request signature
-where it is present.<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+keys the operator publishes.<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-3">Neither is an authorization input. The key that verifies a request is always the
+<p id="section-5.2-3">Both travel in the protected header of the agreement (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>), as the
+members <code>client_id</code> and <code>signature_agent</code>, so the agreement's signature covers
+them. A client that also sends a <code>Signature-Agent</code> header on a request to the
+resource <span class="bcp14">MUST</span> cover it with that request's signature (<a href="#signature-profile" class="auto internal xref">Section 6.1</a>). The
+operator is the origin of the client identifier; a <code>signature_agent</code> directory at
+any other origin attests to nothing, since a client could otherwise name a
+directory it controls and vouch for itself.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-4">Neither is an authorization input. The key that verifies a request is always the
 one confirmed by the grant, the connection handle is unchanged by the presence or
 absence of either, and an authorization server <span class="bcp14">MUST NOT</span> admit a request it would
 otherwise refuse on the strength of descriptive metadata alone. Failure to
 resolve descriptive metadata <span class="bcp14">MUST</span> leave the request where it was rather than
-refusing it; an operator's outage is not evidence about a client.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
-<p id="section-5.2-4">A metadata document proves only that it claims its own URL. Anyone can publish
+refusing it; an operator's outage is not evidence about a client.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+<p id="section-5.2-5">A metadata document proves only that it claims its own URL. Anyone can publish
 one, so resolving it establishes a name to display and nothing more. What raises
 the metadata above a name is the operator directory, which the client does not
-control — see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+control — see <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span>.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2155,6 +2220,25 @@ silently when the routing layer changes, with signatures failing to verify for a
 reason nothing in its logs names.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
 <p id="section-6.1-6">A verifier <span class="bcp14">MUST</span> echo the received <code>@signature-params</code> value verbatim when
 reconstructing the base, rather than re-serializing it from parsed components.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+<p id="section-6.1-7">The algorithm is the one the verifying key is registered for, never the one the
+signature parameters or a header name. A signature whose <code>alg</code> parameter, where
+present, disagrees with its key <span class="bcp14">MUST</span> be refused.<a href="#section-6.1-7" class="pilcrow">¶</a></p>
+<p id="section-6.1-8">A signature <span class="bcp14">MUST</span> carry the <code>created</code> parameter, and a verifier <span class="bcp14">MUST</span> refuse one
+whose <code>created</code> is further from its own clock than a window it is configured
+with, in either direction. The window <span class="bcp14">SHOULD NOT</span> exceed five minutes; the
+reference uses sixty seconds. Where <code>expires</code> is present the verifier <span class="bcp14">MUST</span>
+refuse a signature past it. A signature without <code>created</code> is refused rather than
+treated as fresh, since otherwise a captured request is valid for as long as
+the key is.<a href="#section-6.1-8" class="pilcrow">¶</a></p>
+<p id="section-6.1-9">A signed request that changes the owner's state — any owner request other than
+a read — <span class="bcp14">MUST NOT</span> be accepted twice. The authorization server keeps each such
+signature it accepts for at least twice the window and refuses a second
+presentation. The signer of such a request <span class="bcp14">SHOULD</span> include a fresh <code>nonce</code> parameter:
+Ed25519 is deterministic and <code>created</code> counts seconds, so the same request sent
+twice within a second would otherwise carry the same signature and the second
+would be refused as a replay. A request to the protected resource is not held to this: a client
+that needs an operation performed at most once asks for a single-use grant
+(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>), whose consumption is the replay control.<a href="#section-6.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="content-digest">
@@ -2372,16 +2456,21 @@ order is normative:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8.2-2">
 <li id="section-8.2-2.1">
             <p id="section-8.2-2.1.1">Introspect the presented token, without consuming it, and establish that it is
-active and that the relationship behind it still stands.<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+active and that the relationship behind it still stands. An inactive token is
+answered as <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5 says for its reason.<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.2">
             <p id="section-8.2-2.2.1">Establish that the resource being accessed appears in <code>permissions</code> with a
 scope that covers the attempted access, and that the permission's own <code>exp</code>
-and <code>nbf</code>, where present, admit the present time.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+and <code>nbf</code>, where present, admit the present time. Where they do not, answer
+with a challenge: negotiating again can succeed. Checks an extension places
+on the grant itself, such as <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>'s ceiling and joint mandate,
+run here, after this step and before the next.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.3">
             <p id="section-8.2-2.3.1">Verify proof of possession against the key named by <code>cnf</code> in the introspection
-response.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
+response, and refuse with <code>invalid_token</code> where it fails. Then apply
+<a href="#consequence" class="auto internal xref">Section 7.2</a>, refusing with <code>consequence_changed</code>.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.4">
             <p id="section-8.2-2.4.1">Where the token carries <code>single_use</code>, or the enforcement point treats the
@@ -2393,21 +2482,25 @@ matches <code>operation.tool</code> and that <code>s256</code> over the received
             <p id="section-8.2-2.5.1">Consume the token.<a href="#section-8.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-8.2-3">An enforcement point <span class="bcp14">MUST NOT</span> consume a single-use token before step 5.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
-<p id="section-8.2-4">An enforcement point that treats an operation as single-use <span class="bcp14">MUST</span> refuse a token
+<p id="section-8.2-3">An enforcement point <span class="bcp14">MUST NOT</span> consume a single-use token before step 5, and a
+refusal at any earlier step leaves it unspent.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">A binding <span class="bcp14">MUST</span> define how the operation and its parameters are read from a
+request. Where a request carries no parameters, they are the empty JSON object
+<code>{}</code>, and <code>params_s256</code> is computed over that.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">An enforcement point that treats an operation as single-use <span class="bcp14">MUST</span> refuse a token
 for it that carries no <code>operation</code>. An enforcement point <span class="bcp14">MUST</span> consume a token
 that carries <code>single_use</code> wherever it is presented, whether or not it treats the
 operation as single-use. The grant says what it was issued for; an enforcement
 point that reads single-use from its own configuration alone lets a grant issued
-for one act serve as standing authority wherever that configuration is absent.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<p id="section-8.2-5">Consuming at step 1 is the intuitive placement and it is a denial of service.
+for one act serve as standing authority wherever that configuration is absent.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">Consuming at step 1 is the intuitive placement and it is a denial of service.
 Anyone who observes the token can replay it with a garbage signature: the replay
 is correctly refused, and the grant is already spent, so the one legitimate call
 — the operation the owner personally approved seconds earlier — then fails. An
-attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
-<p id="section-8.2-6">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
+attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<p id="section-8.2-7">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
 introspection rather than the key carried inside the token, so that a token
-accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="indivisibility">
@@ -2445,8 +2538,8 @@ around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
 <p id="section-8.4-3">An introspection response for an active token <span class="bcp14">MUST</span> carry <code>cnf</code> and
-<code>permissions</code>, and <code>single_use</code>, <code>operation</code>, <code>contract</code> and <code>consequence</code> where
-the token carries them, with the token's values. The steps of <a href="#ordering" class="auto internal xref">Section 8.2</a> read
+<code>permissions</code>, and <code>single_use</code>, <code>operation</code>, <code>contract</code>, <code>consequence</code> and
+<code>clearance</code> where the token carries them, with the token's values. The steps of <a href="#ordering" class="auto internal xref">Section 8.2</a> read
 them from the introspection response and not from the token, so that what an
 enforcement point acts on comes from the same answer that said the token is
 active, and it never needs to verify the authorization server's signature
@@ -3080,6 +3173,10 @@ decision, which makes the same request answerable two ways. See <span>[<a href="
 <dt id="RFC9728">[RFC9728]</dt>
         <dd>
 <span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9864">[RFC9864]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span> and <span class="refAuthor">O. Steele</span>, <span class="refTitle">"Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)"</span>, <span class="seriesInfo">RFC 9864</span>, <span class="seriesInfo">DOI 10.17487/RFC9864</span>, <time datetime="2025-10" class="refDate">October 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9864">https://www.rfc-editor.org/rfc/rfc9864</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4AFedAuthz">[U4AFedAuthz]</dt>
         <dd>

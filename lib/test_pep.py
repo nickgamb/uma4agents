@@ -178,8 +178,15 @@ def grant(rid="alice-vault/get_positions", scopes=("positions:read",), **over) -
 
 
 print("\n== what a grant has to cover ==")
-d = present(granting(grant()))
+honouring = granting(grant())
+d = present(honouring)
 check("a grant covering the tool's resource and scope is honoured", d.outcome == "allow", d.error)
+check("and the call is reported to her authority, for her record of what was touched",
+      honouring.report_access.await_count == 1, str(honouring.report_access.await_count))
+
+d = present(granting(grant()), key=INTRUDER)
+check("a signature by any key but the one introspection returns is refused",
+      d.outcome == "deny" and d.error == "invalid_token", d.error)
 
 d = present(granting(grant(scopes=())))
 check("a grant over the resource without the tool's scope is not",
@@ -206,6 +213,13 @@ check("a grant does not survive the operation being re-declared worse",
 d = present(granting(grant(consequence="irreversible"),
                      consequence={"get_positions": "irreversible"}))
 check("the class it was issued against is honoured", d.outcome == "allow", d.error)
+
+e = granting(grant(consequence="reversible", single_use=True,
+                   operation={"tool": "get_positions", "params_s256": s256(b"{}")}),
+             consequence={"get_positions": "irreversible"})
+d = present(e)
+check("and a single-use grant refused for it is not spent",
+      d.error == "consequence_changed" and e.consume.await_count == 0, d.error)
 
 d = present(granting(grant(consequence="irreversible"),
                      consequence={"get_positions": "reversible"}))
@@ -425,6 +439,22 @@ d = present(overriding({**book, "operation": None}, here=True))
 check("a grant calling itself single-use and naming no operation is refused",
       d.outcome == "deny" and d.error == "operation_required", d.error)
 
+unread = jointly(joint_grant())
+unread.published_mandate = AsyncMock(return_value=None)
+d = present(unread, tool="read")
+check("a mandate that cannot be read is a 503 to retry, not a terminal refusal",
+      d.outcome == "deny" and d.status == 503 and d.error == "temporarily_unavailable",
+      f"{d.status} {d.error}")
+
+print("\n== what a joint grant says an operation leaves behind ==")
+heavy = [verdict("alice", consequence="irreversible"), verdict("carol")]
+d = present(jointly(joint_grant(verdicts=heavy)), tool="read")
+check("a joint grant lighter than a holder's answer is refused",
+      refused_jointly(d) and "lighter consequence" in d.description, d.description)
+d = present(jointly(joint_grant(verdicts=heavy, consequence="irreversible")), tool="read")
+check("and one carrying it is honoured, so the re-check applies to it",
+      d.outcome == "allow", d.error)
+
 print("\n== a tally that invents its electorate ==")
 MALLORY = Ed25519PrivateKey.generate()
 invented = {**MANDATE, "rule": {"kind": "any"},
@@ -453,6 +483,25 @@ moved = {**MANDATE, "holders": [{"owner": "alice", "issuer": "https://mallory.ex
 d = present(jointly(joint_grant(), published=moved), tool="read")
 check("and a mandate naming another authority for a known holder is refused",
       refused_jointly(d) and "knows them by" in d.description, d.description)
+
+print("\n== a resource server she withdrew introduces itself again ==")
+import httpx  # noqa: E402
+
+from uma4a_pep import Pending  # noqa: E402
+
+withdrawn = Enforcer(**{**CONFIG, "signing_key": AGENT})
+answers = iter([httpx.Response(403, json={"error": "access_denied"}),
+                httpx.Response(403, json={"error": "authorization_pending"})])
+withdrawn._token_request = AsyncMock(side_effect=lambda client, form: next(answers))
+withdrawn.establish = AsyncMock()
+withdrawn._establish_after = time.time() + 600
+try:
+    asyncio.run(withdrawn.pat(None, force=True))
+    check("at once, even from a replica still throttled, and is told she has been asked",
+          False, "a PAT was issued")
+except Pending:
+    check("at once, even from a replica still throttled, and is told she has been asked",
+          withdrawn.establish.await_count == 1, str(withdrawn.establish.await_count))
 
 print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
 if FAILED:

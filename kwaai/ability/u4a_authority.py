@@ -69,12 +69,13 @@ class Request:
     """One thing waiting on her, as a person would need it described."""
 
     family: str
-    kind: str                  # "connection" (first contact) or "operation"
+    kind: str                  # "connection", "operation" or "joint"
     tier: str
     purpose: str
     agent: str
     operation: dict | None     # tool + the exact arguments, for ask-me tiers
     prohibited: list[str]
+    first_contact: bool = False  # admits an agent she has never connected
 
     @classmethod
     def from_pending(cls, p: dict) -> "Request":
@@ -86,11 +87,13 @@ class Request:
             agent=str(p.get("identity", "")),
             operation=p.get("operation"),
             prohibited=p.get("prohibited", []) or [],
+            # Older authorities do not say; read it from the kind, as before.
+            first_contact=bool(p.get("first_contact", p.get("kind") == "connection")),
         )
 
     def summary(self) -> str:
         """One line a person can act on, without knowing any of the protocol."""
-        if self.kind == "connection":
+        if self.first_contact:
             return f"An agent you have not met wants access: {self.purpose}"
         if self.operation:
             args = json.dumps(self.operation.get("params", {}))
@@ -232,7 +235,7 @@ class OwnerAuthority:
                     # A standing answer covers operations at a tier, never an
                     # agent's first contact: meeting a stranger is hers to
                     # decide, whatever the tier would otherwise allow.
-                    if req.tier in self.auto and req.kind != "connection":
+                    if req.tier in self.auto and not req.first_contact:
                         send(req.family, True, "decided.standing",
                              {"family": req.family, "tier": req.tier})
                         continue

@@ -105,9 +105,16 @@ k8s-apply:
 		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@# Credentials the public edge can reach are generated per cluster, never
-	@# committed: the person server's admin token, and the token Alice's operator
-	@# directory requires to publish a key. Created once; re-applying keeps them.
-	@for pair in "ps-admin:aauth sterling-vance" "operator-register:alice sterling-vance"; do \
+	@# committed: the agent provider's admin token, the token Alice's operator
+	@# directory requires to publish a key, what a resource server presents for
+	@# a PAT at her authority, at the tally and at the organization, and each
+	@# portal's session key. One value per pair, held in each namespace named,
+	@# because the two ends of a provisioned credential are two parties.
+	@# Created once; re-applying keeps them.
+	@for pair in "ps-admin:aauth sterling-vance" "operator-register:alice sterling-vance" \
+			"rs-client:alice meridian" "tally-rs:tally meridian" "org-rs:northwind meridian" \
+			"xaa-agent:northwind sterling-vance" \
+			"portal-session:alice" "portal-session:carol" "console-session:northwind"; do \
 		name=$${pair%%:*}; nss=$${pair#*:}; tok=""; \
 		for ns in $$nss; do \
 			[ -n "$$tok" ] || tok=$$(kubectl -n $$ns get secret $$name -o jsonpath='{.data.token}' 2>/dev/null | base64 -d); \
@@ -118,6 +125,14 @@ k8s-apply:
 			kubectl -n $$ns create secret generic $$name --from-literal=token=$$tok >/dev/null; \
 		done; \
 	done
+	@# The broker's client table, from the same value the research agent holds.
+	@kubectl -n northwind get secret xaa-clients >/dev/null 2>&1 || \
+		kubectl -n northwind create secret generic xaa-clients \
+			--from-literal=json="{\"northwind-research-agent\": \"$$(kubectl -n northwind get secret xaa-agent -o jsonpath='{.data.token}' | base64 -d)\"}" >/dev/null
+	@# The gateway's per-owner table, from the same value Alice's authority holds.
+	@kubectl -n meridian get secret rs-secrets >/dev/null 2>&1 || \
+		kubectl -n meridian create secret generic rs-secrets \
+			--from-literal=json="{\"alice\": \"$$(kubectl -n meridian get secret rs-client -o jsonpath='{.data.token}' | base64 -d)\"}" >/dev/null
 	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
 		--from-file=carol-realm.json=keycloak/carol-realm.json \
@@ -239,12 +254,14 @@ k8s-smoke-test:
 ##
 ## SIM=0 leaves her taps to you: the ask-me act then pends in her portal
 ## until you approve it there, which is the whole point of the shape and
-## cannot be seen while something else is tapping for her.
+## cannot be seen while something else is tapping for her. The log is then
+## followed rather than waited on, so the run lasts as long as the agent's own
+## wait (UMA4A_OWNER_WAIT_S, fifteen minutes) and shows its outcome.
 .PHONY: k8s-demo-all
 k8s-demo-all: ACT ?= all
 k8s-demo-all: SIM ?= 1
 k8s-demo-all:
-	$(call run_job,demo,sed -e 's|--act all|--act $(ACT)|' \
+	$(call $(if $(filter 0,$(SIM)),run_live_job,run_job),demo,sed -e 's|--act all|--act $(ACT)|' \
 		$(if $(filter 0,$(SIM)),-e 's| --simulate-alice||',) \
 		$(K8S)/base/jobs/demo.yaml,600s)
 
@@ -267,6 +284,20 @@ k8s-demo:
 .PHONY: k8s-policy-test
 k8s-policy-test:
 	$(call run_job,policy-test,cat $(K8S)/base/jobs/policy-test.yaml,300s)
+	@# The second half runs as the enforcement point's own identity, in its
+	@# own namespace, because the rules it asserts name that identity.
+	@kubectl -n meridian delete job policy-test-pep --ignore-not-found >/dev/null 2>&1
+	@kubectl apply -f $(K8S)/base/jobs/policy-test-pep.yaml >/dev/null
+	@end=$$(( $$(date +%s) + 300 )); \
+	while [ $$(date +%s) -lt $$end ]; do \
+		case "$$(kubectl -n meridian get job policy-test-pep \
+			-o jsonpath='{.status.conditions[*].type}' 2>/dev/null)" in \
+			*Complete*|*Failed*) break ;; \
+		esac; \
+		sleep 3; \
+	done
+	@kubectl -n meridian logs job/policy-test-pep 2>/dev/null
+	@test "$$(kubectl -n meridian get job policy-test-pep -o jsonpath='{.status.succeeded}')" = "1"
 
 ## k8s-assurance-check: agent assurance and the owner's attention budget,
 ## proved through the edge from the requesting party's namespace.
@@ -460,22 +491,25 @@ k8s-rotation-check:
 	@kubectl apply -f $(K8S)/base/jobs/rotation-check.yaml >/dev/null
 	@kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null
 	@kubectl -n $(NS_AGENT) logs job/rotation-check
-	@echo
-	@echo "==> Rotating the key all three replicas mount"
-	@$(K8S)/scripts/rotate-as-key.sh stage
-	@echo
-	@echo "==> After the rotation"
+	@# From the first change to the cluster on, every exit runs the restore,
+	@# and a restore that fails fails the check: a run that leaves the
+	@# authority rotated has not passed, whatever the job said.
 	@# The second phase reads what the first kept, from the same volume: the
 	@# PersistentVolume binds to one node and every later pod mounting it is
 	@# scheduled there, which is what carries the grant across the rollout.
-	@kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1
-	@sed 's|value: before|value: after|' $(K8S)/base/jobs/rotation-check.yaml \
-		| kubectl apply -f - >/dev/null
-	@set +e; kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null 2>&1; \
-	kubectl -n $(NS_AGENT) logs job/rotation-check; \
-	ok=$$(kubectl -n $(NS_AGENT) get job rotation-check -o jsonpath='{.status.succeeded}'); \
+	@set +e; ok=0; \
+	echo; echo "==> Rotating the key all three replicas mount"; \
+	if $(K8S)/scripts/rotate-as-key.sh stage; then \
+		echo; echo "==> After the rotation"; \
+		kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1; \
+		sed 's|value: before|value: after|' $(K8S)/base/jobs/rotation-check.yaml \
+			| kubectl apply -f - >/dev/null; \
+		kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null 2>&1; \
+		kubectl -n $(NS_AGENT) logs job/rotation-check; \
+		test "$$(kubectl -n $(NS_AGENT) get job rotation-check -o jsonpath='{.status.succeeded}')" = "1" && ok=1; \
+	fi; \
 	echo; echo "==> Restoring the original key"; \
-	$(K8S)/scripts/rotate-as-key.sh restore; \
+	$(K8S)/scripts/rotate-as-key.sh restore || { echo "  restore FAILED: the authority may still be rotated"; exit 1; }; \
 	test "$$ok" = "1"
 
 ## k8s-xaa-check: Cross App Access beside UMA. An enterprise identity provider
@@ -620,11 +654,12 @@ k8s-paios-check: k8s-paios
 	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py; \
 		status=$$?; kubectl -n alice scale deployment/paios --replicas=0 >/dev/null; exit $$status
 
-## k8s-check-all: every suite the requirements register cites, against the
-## cluster — the unit half, the register itself, and the cluster twin of every
-## live check, including the rows (the trust boundary, the published metadata)
-## that only the cluster proves. The order is the one that leaves the lab in a
-## state each next check expects.
+## k8s-check-all: the unit half, the register itself, and the cluster twin of
+## each live check that has one, including the rows (the trust boundary, the
+## published metadata) that only the cluster proves. k8s-smoke-test is the
+## cluster's own smoke suite, not a copy of compose's: rows that cite compose
+## smoke-test assertions are proved by `make check-live`. The order is the one
+## that leaves the lab in a state each next check expects.
 .PHONY: k8s-check-all
 k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
 	k8s-flow-check k8s-first-party-check k8s-multi-owner-check \
@@ -632,7 +667,8 @@ k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
 	k8s-consequence-check k8s-clearance-check k8s-subagent-check k8s-org-check \
 	k8s-joint-check k8s-xaa-check k8s-adapter-check k8s-shim-test \
 	k8s-embedded-check k8s-kwaai-check k8s-rotation-check k8s-ts-agent-check fixture
-	@echo "k8s-check-all: every suite the register cites has run against the cluster"
+	@echo "k8s-check-all: the unit suites, the register and every cluster check passed;"
+	@echo "rows citing compose's smoke-test are proved by make check-live"
 
 ## k8s-reset: rewind the story without rebuilding the cluster
 .PHONY: k8s-reset

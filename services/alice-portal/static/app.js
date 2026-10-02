@@ -326,7 +326,7 @@ async function agentAuthView(body) {
      tab, not only the one it is about. Cheap, and failure is silent — an
      organization being unreachable must not stop her own portal rendering. */
   const orgNow = await orgState(true).catch(() => null);
-  if (orgNow && orgNow.invitation) {
+  if (orgNow && orgNow.invitation && !orgNow.invitation.unknown) {
     body.querySelector(".subtabs").insertAdjacentHTML("beforebegin",
       invitationBanner(orgNow));
     const dot = $("#orgDot"); if (dot) dot.classList.add("on");
@@ -1126,6 +1126,12 @@ window.declineInvitation = async () => {
 };
 
 function renderJoinOrganization(target, org) {
+  // Could not be checked is not the same as none: say so, then offer the
+  // ordinary way in below it.
+  const unknown = org.invitation && org.invitation.unknown;
+  if (unknown) org = { ...org, invitation: null };
+  const note = unknown ? `<div class="note warn" style="margin-bottom:12px">Whether
+    anyone has invited you could not be checked: ${esc(unknown)}.</div>` : "";
   if (org.invitation) {
     target.innerHTML = `
       <div class="card pad-lg">
@@ -1154,7 +1160,7 @@ function renderJoinOrganization(target, org) {
       behalf of an employer, its policy would sit above your own terms here.</div>`;
     return;
   }
-  target.innerHTML = `
+  target.innerHTML = note + `
     <div class="card pad-lg">
       <div class="section-head"><h2>Join an organization</h2></div>
       <div class="muted" style="font-size:12.5px;max-width:70ch">If you administer these accounts for

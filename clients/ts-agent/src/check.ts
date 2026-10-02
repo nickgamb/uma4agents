@@ -65,6 +65,16 @@ async function main(): Promise<number> {
   console.log("\n== Beat 0: corroborate the authority ==");
   try { await corroborate(fetchLab, GATEWAY, ch); check("the resource's metadata names the authorization server the challenge did", true); }
   catch (e) { check("the resource's metadata names the authorization server the challenge did", false, String(e)); return 1; }
+  // And the refusals, against the same resource's real metadata: a check that
+  // only proves the accept would pass a corroborate that accepted everything.
+  const refuses = async (name: string, forged: typeof ch) => {
+    try { await corroborate(fetchLab, GATEWAY, forged); check(name, false, "corroborated"); }
+    catch { check(name, true); }
+  };
+  await refuses("a challenge naming an authority the resource never published is refused",
+    { ...ch, asUri: "https://evil.example" });
+  await refuses("a challenge pointing at metadata anywhere but the resource called is refused",
+    { ...ch, resourceMetadata: "https://evil.example/.well-known/oauth-protected-resource/mcp" });
 
   console.log("\n== Beats 2–4: terms, agreement, the owner, the grant ==");
   approveInBackground();

@@ -78,19 +78,19 @@ Table of Contents
      3.2.  Deciding  . . . . . . . . . . . . . . . . . . . . . . . .   5
    4.  Relationships . . . . . . . . . . . . . . . . . . . . . . . .   5
      4.1.  Agents  . . . . . . . . . . . . . . . . . . . . . . . . .   5
-     4.2.  Operators . . . . . . . . . . . . . . . . . . . . . . . .   5
+     4.2.  Operators . . . . . . . . . . . . . . . . . . . . . . . .   6
      4.3.  Resource Servers  . . . . . . . . . . . . . . . . . . . .   6
    5.  Policy  . . . . . . . . . . . . . . . . . . . . . . . . . . .   6
      5.1.  Resources . . . . . . . . . . . . . . . . . . . . . . . .   6
-     5.2.  Units and Terms . . . . . . . . . . . . . . . . . . . . .   6
+     5.2.  Units and Terms . . . . . . . . . . . . . . . . . . . . .   7
      5.3.  Vocabulary  . . . . . . . . . . . . . . . . . . . . . . .   7
    6.  The Record  . . . . . . . . . . . . . . . . . . . . . . . . .   7
-   7.  Arrangements  . . . . . . . . . . . . . . . . . . . . . . . .   7
+   7.  Arrangements  . . . . . . . . . . . . . . . . . . . . . . . .   8
    8.  Security Considerations . . . . . . . . . . . . . . . . . . .   8
-     8.1.  The Credential Proves the Owner . . . . . . . . . . . . .   8
-     8.2.  Bodies Are Covered  . . . . . . . . . . . . . . . . . . .   8
-     8.3.  The Queue Is Read by Whoever Is Entitled to Decide  . . .   8
-     8.4.  Revocation Reports Its Reach  . . . . . . . . . . . . . .   8
+     8.1.  The Credential Proves the Owner . . . . . . . . . . . . .   9
+     8.2.  Bodies Are Covered  . . . . . . . . . . . . . . . . . . .   9
+     8.3.  The Queue Is Read by Whoever Is Entitled to Decide  . . .   9
+     8.4.  Revocation Reports Its Reach  . . . . . . . . . . . . . .   9
    9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .   9
    10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
    11. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
@@ -98,8 +98,8 @@ Table of Contents
      11.2.  Informative References . . . . . . . . . . . . . . . . .  10
    Appendix A.  Identifiers Used by This Document  . . . . . . . . .  11
    Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  11
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  11
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  12
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  12
 
 
 
@@ -215,8 +215,8 @@ Internet-Draft              Owner API for UMA             September 2026
    handle:  The client's connection handle, or null before first
       contact.
 
-   organization:  Where a layer above the owner had a say
-      ([U4AMultiParty]), what it said, separately from her own rules.
+   first_contact:  true where answering admits a client she has no
+
 
 
 
@@ -225,6 +225,18 @@ Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft              Owner API for UMA             September 2026
 
+
+      standing connection with — a connection request, or a request of
+      another kind from a client she has not met.  Nothing that answers
+      on her behalf (Section 7) may approve one.
+
+   resource_id:  The resource the request is over.
+
+   enforced:  For each prohibition the resource server enforces itself,
+      the mechanism that enforces it; the rest are undertakings.
+
+   organization:  Where a layer above the owner had a say
+      ([U4AMultiParty]), what it said, separately from her own rules.
 
 3.2.  Deciding
 
@@ -239,7 +251,7 @@ Internet-Draft              Owner API for UMA             September 2026
    second decision.
 
    Where the credential proves someone acting for the owner rather than
-   the owner ([U4AMultiParty] Section 2.7), the decision MUST be
+   the owner ([U4AMultiParty] Section 2.8), the decision MUST be
    recorded as theirs.
 
 4.  Relationships
@@ -247,10 +259,11 @@ Internet-Draft              Owner API for UMA             September 2026
 4.1.  Agents
 
    GET /connections returns every standing connection ([U4ACore]
-   Section 9), each carrying its handle, identity, label, status,
-   first_seen, last_access, the policy units the owner personally
-   approved it at, the units it has been granted at, its revocation
-   count, and where another agent introduced it, that agent's handle.
+   Section 9), each carrying handle, identity, label, status (active or
+   revoked), first_seen, last_access, tiers_approved (the policy units
+   the owner personally approved it at), tiers_granted (the units it has
+   been granted at), revocations (how many times she has revoked it),
+   and, where another agent introduced it, parent_handle.
 
    POST /connections/revoke with a body {"handle": …} ends one.  The
    handle travels in the body for the reason client_id does below: an
@@ -260,6 +273,14 @@ Internet-Draft              Owner API for UMA             September 2026
    how many connections the revoked one had introduced and which ended
    with it.  Both numbers are the owner's evidence that the revocation
    reached everything it should have.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 5]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
 4.2.  Operators
 
@@ -273,14 +294,6 @@ Internet-Draft              Owner API for UMA             September 2026
    POST /operators/block and POST /operators/unblock, with a body
    {"origin": "https://…"}, are the operations of [U4APolicy] Section 7.
    The block response carries connections_revoked and rpts_deactivated.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 5]
-
-Internet-Draft              Owner API for UMA             September 2026
-
 
    POST /operators/claim and POST /operators/disclaim, with the same
    body, are the operations of [U4APolicy] Section 5.  An origin MUST
@@ -313,19 +326,6 @@ Internet-Draft              Owner API for UMA             September 2026
    organization, since the two are not the same thing and the difference
    decides what happens when she leaves.
 
-5.2.  Units and Terms
-
-   GET /policies returns the owner's policy units keyed by identifier,
-   each in the shape [U4APolicy] Section 2 describes, with the terms
-   document currently proffered for it ([U4ATerms] Section 2).
-
-   POST /policies creates a unit from a body carrying id, name,
-   resources, ask_me, rules and terms.  The server MUST refuse a unit
-   over a resource it does not protect, over a resource another unit
-   already governs, or whose rules fail the validation of [U4APolicy]
-   Section 3, and MUST say which in detail.
-
-
 
 
 
@@ -338,13 +338,25 @@ Gamb & Maler              Expires 19 March 2027                 [Page 6]
 Internet-Draft              Owner API for UMA             September 2026
 
 
+5.2.  Units and Terms
+
+   GET /policies returns the owner's policy units keyed by identifier,
+   each in the shape [U4APolicy] Section 2 describes, with the terms
+   document currently proffered for it ([U4ATerms] Section 2).
+
+   POST /policies creates a unit from a body carrying id, name,
+   resources, ask_me, rules and terms.  The server MUST refuse a unit
+   over a resource it does not protect, over a resource another unit
+   already governs, or whose rules fail the validation of [U4APolicy]
+   Section 3, and MUST say which in detail.
+
    PUT /policies/{id} edits one: ask_me, rules, and the purpose,
    expires_in, prohibited and scope of its terms.  Resources are fixed
    by registration and MUST NOT be editable here.  Every edit MUST
    produce a new terms version ([U4ATerms] Section 2.1); the response
    carries the unit as stored, and where a layer above the owner
    narrowed what she wrote, a clamped array of sentences saying what
-   moved ([U4AMultiParty] Section 2.4).
+   moved ([U4AMultiParty] Section 2.5).
 
    DELETE /policies/{id} removes one.  Its resources become ungoverned,
    which is denied ([U4APolicy] Section 2); the response names them.
@@ -356,25 +368,47 @@ Internet-Draft              Owner API for UMA             September 2026
    array of objects each carrying condition (the name, with its level
    where the condition is one sentence per level), takes (duration,
    count or null), label (the sentence shown to the owner), and
-   may_relax.  This is the publication [U4APolicy] Section 3.4 requires;
+   may_relax.  This is the publication [U4APolicy] Section 3.6 requires;
    a surface that offers the owner a condition it does not list will
    compose a rule the server refuses.
 
 6.  The Record
 
    GET /ledger returns the record of [U4APolicy] Section 8, oldest
-   first.  With ?handle= it returns one agent's part of it: every
-   promise that agent made, every decision about it, and everything it
-   touched, in order.
+   first, as an array of entries each carrying kind, family, ts and
+   handle (null where no agent can be named), with members particular to
+   the kind beside them.  The kinds are: promised, approved, denied,
+   refused, relaxed, connected, revoked, touched, identity_refused,
+   claimed, disclaimed; for an organization, org_joined, org_left,
+   org_declined, org_clamped, org_refused, org_role, org_acted and
+   break_glass; and for a jointly held resource, joint_joined,
+   joint_left, joint_moved, joint_allowed and joint_refused.  A surface
+   SHOULD tolerate a kind it does not know, showing it as an entry
+   rather than failing on it.  With ?handle= it returns one agent's part
+   of the record: every promise that agent made, every decision about
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft              Owner API for UMA             September 2026
+
+
+   it, and everything it touched, in order.
 
    GET /events is a server-sent event stream [SSE] carrying a message
    for each thing that happens that the owner may want to act on: a
    request arriving to wait on her, a decision landing, a resource
    server introducing itself, an organization or a co-holder changing
-   something.  The event name is the message's type.  On a replicated
-   authorization server the subscription MUST be a property of the
-   shared state rather than of the process serving the stream, since the
-   decision the owner is waiting for may be produced by any replica.
+   something.  The event name is the message's type, one of pending,
+   decided, resource_server_pending, resource_server_decided,
+   organization, joint and break_glass; a surface SHOULD ignore a type
+   it does not know, and SHOULD re-read the state the stream concerns
+   when it reconnects, since a message sent while it was disconnected is
+   not replayed.  On a replicated authorization server the subscription
+   MUST be a property of the shared state rather than of the process
+   serving the stream, since the decision the owner is waiting for may
+   be produced by any replica.
 
 7.  Arrangements
 
@@ -386,14 +420,6 @@ Internet-Draft              Owner API for UMA             September 2026
    binds each of her units — and, where she is not a member, whether an
    invitation is waiting on her.  POST /organization/preview with
    {"code": …} returns what a code would commit her to and what it would
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
    change about terms she has already written, without doing it.  POST
    /organization enrols her and MUST be refused without "agreed": true
    and the charter_version she was shown in the body.  POST
@@ -411,6 +437,18 @@ Internet-Draft              Owner API for UMA             September 2026
    to say no.
 
 8.  Security Considerations
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
 8.1.  The Credential Proves the Owner
 
@@ -439,17 +477,6 @@ Internet-Draft              Owner API for UMA             September 2026
    reports rpts_deactivated: 0 against an agent the owner believes is
    active is information she needs, and a bare 200 would have hidden it.
 
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
 9.  Privacy Considerations
 
    This surface exposes, to the owner and to nobody else, everything her
@@ -459,7 +486,7 @@ Internet-Draft              Owner API for UMA             September 2026
    this surface that the counterparty authored.
 
    An organization's view of the same data is not this surface; it is
-   the scoped view of [U4AMultiParty] Section 2.6, and the scoping is
+   the scoped view of [U4AMultiParty] Section 2.7, and the scoping is
    applied by the owner's server before it answers.
 
 10.  IANA Considerations
@@ -470,6 +497,14 @@ Internet-Draft              Owner API for UMA             September 2026
 11.  References
 
 11.1.  Normative References
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -498,14 +533,6 @@ Internet-Draft              Owner API for UMA             September 2026
               Internet-Draft, draft-gamb-uma4agents-core-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html>.
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
    [U4APolicy]
               Gamb, N. and E. Maler, "Owner Policy, Assurance and
               Attention for User-Managed Access (UMA) 2.0", Work in
@@ -525,6 +552,15 @@ Internet-Draft              Owner API for UMA             September 2026
               grant-2.0.html>.
 
 11.2.  Informative References
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
@@ -553,15 +589,6 @@ Internet-Draft              Owner API for UMA             September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 10]
-
-Internet-Draft              Owner API for UMA             September 2026
-
-
 Appendix A.  Identifiers Used by This Document
 
    This appendix lists the identifiers this document defines.  It is
@@ -582,6 +609,14 @@ Appendix B.  Implementation Status
 
    This section records the status of known implementations in the sense
    of [RFC7942], and is to be removed before publication as an RFC.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft              Owner API for UMA             September 2026
+
 
    The reference implementation [U4ALAB] serves this surface from its
    authorization server and has three clients of it: a browser portal
@@ -613,4 +648,25 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]

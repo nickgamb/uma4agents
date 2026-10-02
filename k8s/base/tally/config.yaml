@@ -1,5 +1,5 @@
-# The mandates this tally counts for, and the secret the enforcement point
-# presents.
+# The mandates this tally counts for. The secret the enforcement point
+# presents (`tally-rs`) is generated per cluster by `make k8s-up`.
 #
 # Two accounts, because the interesting comparison is between them: the same
 # machinery, the same holders, and a different rule. `meridian-joint` needs
@@ -35,16 +35,3 @@ data:
         "rule": {"kind": "any"}
       }
     }
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: tally-config
-  namespace: tally
-type: Opaque
-stringData:
-  # What the enforcement point presents to mint tickets and introspect. A
-  # provisioned secret is honest here: the gateway and this service are both
-  # infrastructure, unlike a member's authority, which nobody is in a
-  # position to configure both ends of.
-  rs-secret: tally-rs-dev-secret

@@ -58,6 +58,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
+import uma4a_consequence
 import uma4a_joint as J
 import uma4a_profiles
 
@@ -269,9 +270,16 @@ async def quotes_for(account: str, doc: dict,
                 "owner": h["owner"], "account": account,
                 "resource_id": resource_id})
         except httpx.HTTPError as exc:
+            # Not folded around. A holder who could not be asked has terms
+            # nobody has read, and a document folded without them could carry
+            # a grant under the other holders' terms alone — without her
+            # prohibitions, under a rule one of them can satisfy.
             event("quote.unreachable", account=account, holder=h["owner"],
                   error=str(exc)[:160])
-            continue
+            raise HTTPException(
+                status_code=503,
+                detail=f"{h['owner']}'s authority could not be asked for her "
+                       "terms; try again") from exc
         if answer.get("tier"):
             out.append((h["owner"], answer["tier"]))
         else:
@@ -283,9 +291,14 @@ async def quotes_for(account: str, doc: dict,
 _HOLDER_JWKS: dict[str, tuple[float, list]] = {}
 
 
-def holder_keys(issuer: str) -> list:
+def holder_keys(issuer: str, fresh: bool = False) -> list:
     cached = _HOLDER_JWKS.get(issuer)
-    if cached and cached[0] > now():
+    if cached and cached[0] > now() and not fresh:
+        return cached[1]
+    # A fresh read, for a verdict no cached key verifies, at most once a
+    # minute: a holder's rotation is noticed, and a forger cannot make this
+    # service fetch on every verdict it sends.
+    if fresh and cached and now() - (cached[0] - 300) < 60:
         return cached[1]
     with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
         r = c.get(f"{issuer.rstrip('/')}/jwks")
@@ -305,7 +318,12 @@ def verify_verdict(jws: str, holder: dict, rec: dict) -> dict | None:
     would appear nowhere. Catching it here makes the failure legible where it
     happens.
     """
-    for jwk_dict in holder_keys(holder["issuer"]):
+    def candidates():
+        # Lazily: the fresh read is made only once the cached keys are spent.
+        yield from holder_keys(holder["issuer"])
+        yield from holder_keys(holder["issuer"], fresh=True)
+
+    for jwk_dict in candidates():
         try:
             claims = jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
                                 algorithms=["EdDSA"], issuer=holder["issuer"],
@@ -334,9 +352,18 @@ def verify_verdict(jws: str, holder: dict, rec: dict) -> dict | None:
 
 
 async def collect(rec: dict, doc: dict) -> dict:
-    """Ask every holder who has not answered, and report where it stands."""
+    """Ask the holders who have not answered, until the count is settled,
+    and report where it stands.
+
+    Stopping once it is settled is the point of refusing early: a holder
+    asked after an earlier refusal already decided it would be answering a
+    question nobody needs answered, and would be shown a request in her portal
+    that can no longer go anywhere.
+    """
     for h in doc.get("holders") or []:
         owner = h["owner"]
+        if J.tally(doc, rec["verdicts"])["effect"] != "pending":
+            break
         if owner in rec["verdicts"]:
             continue
         try:
@@ -431,6 +458,12 @@ def sweep() -> None:
     for template_id, doc in list(TERMS.items()):
         if not doc.get("signed") and doc.get("family") not in NEGOTIATIONS:
             TERMS.pop(template_id, None)
+    # A grant past its expiry answers nothing any more: introspection says it
+    # is inactive whether or not it is held. Its signed terms stay, being the
+    # record an agreement cites.
+    for jti, held in list(RPTS.items()):
+        if held["claims"].get("exp", 0) < t:
+            RPTS.pop(jti, None)
 
 
 def account_for(resource_id: str) -> tuple[str | None, dict]:
@@ -457,9 +490,17 @@ async def perm(request: Request) -> dict:
     if account is None:
         raise HTTPException(status_code=400, detail="no mandate covers that resource")
     sweep()
-    if sum(1 for r in NEGOTIATIONS.values()
-           if r["account"] == account and r["state"] in ("new", "need_info")) >= MAX_OPEN:
-        event("ticket.refused", account=account, open=MAX_OPEN)
+    # Counted in two lanes: requests nobody has signed for, which cost a
+    # caller nothing, and those an agent has committed to and holders are
+    # being asked about. A flood of the first cannot crowd out the second,
+    # and each is bounded, so neither can grow this service without limit.
+    open_by_lane = {"unsigned": 0, "committed": 0}
+    for r in NEGOTIATIONS.values():
+        if r["account"] == account:
+            lane = "unsigned" if r["state"] in ("new", "need_info") else "committed"
+            open_by_lane[lane] += 1
+    if open_by_lane["unsigned"] >= MAX_OPEN or open_by_lane["committed"] >= MAX_OPEN:
+        event("ticket.refused", account=account, open=open_by_lane, cap=MAX_OPEN)
         raise HTTPException(status_code=503,
                             detail="too many negotiations are open over this account")
     family = f"jnt_{uuid.uuid4().hex[:12]}"
@@ -664,14 +705,23 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
     lifetime = int(rec["template"]["expires_in"] or 900)
     if (agreed := int(rec["contract"].get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
-    exp = int(now()) + min(3600, lifetime)
+    exp = int(now()) + lifetime
     # And no later than the first of the verdicts it carries: a grant that
     # outlived one would be refused at the door from that moment on.
+    # And it declares the heaviest consequence any holder answered under, so
+    # the enforcement point's check that an operation has not since been
+    # declared heavier applies to it as to any grant.
+    consequence = None
     for o, jws in (rec.get("signed") or {}).items():
         if rec["verdicts"].get(o) == "allow":
-            ends = jwt.decode(jws, options={"verify_signature": False}).get("exp")
+            said = jwt.decode(jws, options={"verify_signature": False})
+            ends = said.get("exp")
             if isinstance(ends, (int, float)):
                 exp = min(exp, int(ends))
+            heavier = uma4a_consequence.rank(said.get("consequence"))
+            if heavier is not None and (consequence is None
+                                        or heavier > uma4a_consequence.rank(consequence)):
+                consequence = uma4a_consequence.normalise(said.get("consequence"))
     offered = list(rec["template"]["scope"] or [])
     scopes = [s for s in (rec["contract"].get("scope") or offered) if s in offered]
     handle = J.key_thumbprint(rec["signer"])
@@ -703,6 +753,8 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
             "tally": result,
         },
     }
+    if consequence:
+        claims["consequence"] = consequence
     if rec["contract"].get("operation"):
         claims["single_use"] = True
         claims["operation"] = {

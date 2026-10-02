@@ -179,6 +179,12 @@ which is standing consent she configured rather than a judgement the process
 made. A personal AI that cannot reach its person can hold a standing policy;
 it cannot hold her attention.
 
+Standing consent covers operations at a tier, never meeting an agent. Her
+authority marks every request that would admit an agent she has no connection
+with as `first_contact` — a first contact, and equally a request over a jointly
+held account from a stranger — and the ability never answers one of those on
+her behalf, whatever `U4A_AUTO_TIERS` says.
+
 ## Open questions for Kwaai
 
 1. **A channel to the person.** This is the one that matters. An ability has

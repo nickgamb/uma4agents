@@ -54,7 +54,7 @@ spec:
               value: meridian-portal
             - name: PORTAL_SESSION_SECRET
               valueFrom:
-                secretKeyRef: { name: portal-config, key: session-secret }
+                secretKeyRef: { name: portal-session, key: token }
             - name: VAULT_MCP_URL
               # Alice reads and trades her own vault directly — she owns it.
               # Other people's agents reach the same vault only through the

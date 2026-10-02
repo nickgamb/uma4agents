@@ -17,10 +17,7 @@ metadata:
   name: org-config
   namespace: northwind
 stringData:
-  # What an enforcement point presents to read membership and to check the
-  # grants this organization signs itself. The firm's own gateway, so a
-  # provisioned secret is the honest shape — unlike a member's authority,
-  # which nobody was in a position to configure both ends of.
-  rs-token: org-rs-dev-token
+  # The opt-in shared enrolment code the demo hands a member. What an
+  # enforcement point presents to this organization (`org-rs`) and the
+  # console's session key are generated per cluster by `make k8s-up`.
   join-code: NW-7K2F-QX
-  session-secret: dev-session-secret

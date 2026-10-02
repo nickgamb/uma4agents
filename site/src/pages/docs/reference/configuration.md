@@ -21,7 +21,7 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_ISSUER` | `https://alice-as.uma.lab` | The issuer this authority claims in tokens it mints |
 | `UMA_AS_SIGNING_KEY` | `/keys/uma-as-ed25519.pem` | Signing key for RPTs, receipts and PATs |
 | `UMA_AS_KID` | `uma-as-1` | The key identifier every token this authority signs carries |
-| `UMA_AS_PREVIOUS_KEYS` | unset | Comma-separated PEM paths of keys this authority no longer signs with and still publishes, so grants they signed stay verifiable. Rotation is: the new key becomes `UMA_AS_SIGNING_KEY` under a new `UMA_AS_KID`, and the old one moves here |
+| `UMA_AS_PREVIOUS_KEYS` | unset | Comma-separated PEM paths of keys this authority no longer signs with and still publishes, so grants they signed stay verifiable. With more than one replica, rotation is two rollouts: first the new key goes here, so every replica accepts it before any signs with it; then it becomes `UMA_AS_SIGNING_KEY` under a new `UMA_AS_KID` and the old one moves here. One step would leave replicas not yet rolled refusing grants signed under a kid they have never seen |
 | `UMA_AS_PREVIOUS_KIDS` | unset | The kids of those keys, in order. A key without one is identified by its thumbprint |
 | `UMA_AS_OWNER_AUTH` | `oidc` | Comma-separated: `oidc`, `local-key`, or both. Each accepted credential is independently sufficient |
 | `UMA_AS_OWNER_KEY` | `/keys/owner-ed25519.pub` | Her enrolled device key, for `local-key`. Public half only |
@@ -62,7 +62,7 @@ rather than holding a call open across it.
 | `UMA_AS_PUBLIC` | `https://alice-as.uma.lab` | The authority's public identifier, put in challenges |
 | `UMA_AS_INTERNAL` | `http://uma-as:9000` | Where to reach it for protection API calls |
 | `UMA_AS_RS_CLIENT_ID` | `meridian-gateway` | This resource server's client id, for PAT issuance. Read only where there is a secret — an authority nobody provisioned this pair against is one this resource server has no name at, so it registers under its own origin instead and this is ignored |
-| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret, where one authority was provisioned alongside it. Setting it empty is a decision rather than an omission: it selects the other identity, where the credential is a key published at the resource's own origin and the owner approves it once |
+| `UMA_AS_RS_CLIENT_SECRET` | `gateway-dev-secret` | Its secret, where one authority was provisioned alongside it. Changing it takes effect on the next PAT request; the stored registration follows it and keeps its status. Setting it empty is a decision rather than an omission: it selects the other identity, where the credential is a key published at the resource's own origin and the owner approves it once |
 | `UMA_PEP_RS_SECRETS` | `{"<owner>": "<secret>"}` | Per owner, and the interesting part is who is missing. An owner named here is one whose authority this resource server holds a credential for. Any other owner it serves is one it must introduce itself to, by signing with the key it publishes at its own origin |
 | `UMA_EXTRA_OWNERS` | — | Comma-separated. Every owner named gets `/mcp/<owner>`, with her own tool namespace, her own PAT and her own RFC 9728 metadata |
 | `UMA_OWNER_AUTHORITIES` | — | JSON, owner → `{public, internal}`. Which authority governs which owner. This is the one thing that stays configuration: which server speaks for a person is a fact only that person holds, so she tells the resource server, the way she tells it an address |
@@ -158,6 +158,7 @@ invitation, none of it does anything.
 | `UMA_AS_ORG_STALE_MAX_S` | `600` | How long a copy that could not be refreshed still stands. Past it, requests over the organization's resources are refused: a ceiling nobody can read is not a ceiling |
 | `UMA_AS_RESOURCE_REFRESH_S` | `15` | How often her own resource listing re-reads what the resource server publishes, while she is enrolled. What an organization shares with her changes elsewhere, and on a replicated authority only one replica is notified — so the listing repairs itself on a clock rather than waiting for a miss |
 | `UMA_AS_ORG_TIMEOUT_S` | `5` | Per-request timeout when talking to the organization. A refusal, not a hang: her own resources are unaffected either way |
+| `UMA_AS_ORG_RETRY_S` | `15` | After a refresh of the ceiling fails, how long before it is tried again. Meanwhile the copy she has stands, within `UMA_AS_ORG_STALE_MAX_S`, and a request over her own resources does not wait on an organization that is down |
 
 ## The enforcement point's side of it
 
@@ -184,10 +185,10 @@ none of it set, no account is jointly held and the whole layer is inert.
 |---|---|---|
 | `TALLY_ISSUER` | `https://joint-tally.uma.lab` | Its own origin. Holders' authorities verify its requests, and enforcement points verify its grants, against the keys published here |
 | `TALLY_MANDATES` / `TALLY_MANDATES_FILE` | unset | The mandates it counts for. Configuration rather than an API, because a mandate names the electorate and a coordinator that could edit it would be deciding who gets a say |
-| `TALLY_THRESHOLD_FLOOR` | `0` | A minimum the holders may not vote themselves below. A mandate under it is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
+| `TALLY_THRESHOLD_FLOOR` | `0` | The fewest holders who must agree to release anything, which the holders may not vote themselves below. It counts people, not weight: a mandate under which fewer holders than this could release a resource together is refused at startup, by name. This is what an account agreement or a regulator supplies in the world, and the only answer to what quorum sets the quorum |
 | `TALLY_RS_SECRET` | `tally-rs-dev-secret` | What an enforcement point presents to mint tickets and introspect. It buys nothing that matters: the verdicts inside a grant are checked against the holders' published keys, not against this |
 | `TALLY_SIGNING_KEY` | `/keys/tally-ed25519.pem` | Persisted, not generated per process — both holders' authorities cache what this service publishes, and a key that changed on restart reads as a broken mandate |
-| `TALLY_MAX_OPEN_NEGOTIATIONS` | `200` | Negotiations not yet agreed to, per account. Any caller the enforcement point challenges starts one, and each costs a quote from every holder's authority; past the cap a new one is refused with `503`. Abandoned ones are swept once their ticket has lapsed |
+| `TALLY_MAX_OPEN_NEGOTIATIONS` | `200` | Open negotiations per account, in two lanes counted apart: those nobody has signed for yet, and those an agent committed to while the holders are asked. Any caller the enforcement point challenges starts one, and each costs a quote from every holder's authority; past the cap in either lane a new one is refused with `503`. Abandoned ones are swept once their ticket has lapsed, and grants once they expire |
 
 And on the enforcement point:
 

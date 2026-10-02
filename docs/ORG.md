@@ -19,7 +19,7 @@ mechanism.
 Run it:
 
 ```bash
-make org-check        # 90 assertions across six processes
+make org-check        # six processes; prints its own total
 make org-test         # the ceiling algebra and the charter validator, no stack
 ```
 
@@ -281,13 +281,20 @@ make a request easier than the member's own policy already makes it.
 ### Which layer a rule belongs in
 
 The charter and the rules are not two ways of saying the same thing, and the
-line between them is not a matter of taste. **The test is whether a member
-would have to agree to it again.**
+line between them is not a matter of taste. **The test is whether a member is
+shown it, and agrees to it, when she joins.**
 
 The charter is the bargain. It is versioned, it is shown to her in full before
-she joins, and she agrees to it by name — the organization's counterpart to the
-terms she proffers her own agents. What it may say is deliberately small,
-because it is a document people read.
+she joins, and she agrees to that version by name — the organization's
+counterpart to the terms she proffers her own agents. What it may say is
+deliberately small, because it is a document people read.
+
+A later version takes effect when it is published; she is not asked again. Her
+authority is told, re-applies the ceiling to her terms at once, and records the
+version it now applies. Nothing a version can say widens what the organization
+may do with her own accounts — a charter only claims the firm's resources and
+only narrows her terms over them — and she can leave at any time, which ends
+all of it.
 
 The rules are the organization's operating controls. She is told they exist
 and is shown the sentence of any rule that stops her; she is not shown them

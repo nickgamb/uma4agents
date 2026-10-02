@@ -228,6 +228,17 @@ async def publish_charter(doc: dict, by: str, base_version: int | None = None) -
                        f"v{base_version} this change was made against; reload "
                        "and make it again")
         validated = charter_mod.validate(doc)
+        # A group somebody is in cannot disappear in a charter edit any more
+        # than by deleting it: either way its members would fail closed on
+        # everything, an access change nobody would see happen.
+        kept = set((validated.get("roles") or {}).keys())
+        orphaned = sorted({m.get("role") for m in MEMBERS.values()
+                           if m.get("role") and m.get("role") not in kept})
+        if orphaned:
+            raise HTTPException(
+                status_code=409,
+                detail=f"{', '.join(orphaned)} still has members; move them to "
+                       "another group before removing it")
         await load_custom_rego(validated.get("rego") or "")
         entry = {
             "version": len(CHARTERS) + 1,
@@ -422,9 +433,13 @@ def _bearer(request: Request) -> str:
 _ADMIN_JWKS: tuple[float, list] = (0.0, [])
 
 
-def admin_issuer_keys() -> list:
+def admin_issuer_keys(fresh: bool = False) -> list:
     global _ADMIN_JWKS
-    if _ADMIN_JWKS[0] > now():
+    if _ADMIN_JWKS[0] > now() and not fresh:
+        return _ADMIN_JWKS[1]
+    # A token naming a key not yet cached earns one fresh read — the realm
+    # rotated — at most once a minute, since any caller can send one.
+    if fresh and _ADMIN_JWKS[1] and now() - (_ADMIN_JWKS[0] - 300) < 60:
         return _ADMIN_JWKS[1]
     with httpx.Client(verify=CA_BUNDLE or True, timeout=5.0) as c:
         meta = c.get(ADMIN_METADATA_URL)
@@ -449,7 +464,10 @@ def require_admin(request: Request) -> str:
 
     try:
         header = jwt.get_unverified_header(token)
-        for jwk_dict in admin_issuer_keys():
+        keys = admin_issuer_keys()
+        if header.get("kid") and not any(k.get("kid") == header["kid"] for k in keys):
+            keys = admin_issuer_keys(fresh=True)
+        for jwk_dict in keys:
             if jwk_dict.get("use") == "enc":
                 continue
             if header.get("kid") and jwk_dict.get("kid") != header["kid"]:
@@ -565,7 +583,15 @@ async def discovery() -> dict:
         "envelope_endpoint": f"{ISSUER}/member/envelope",
         "decision_endpoint": f"{ISSUER}/decision",
         "enrolment_endpoint": f"{ISSUER}/member/join",
+        "enrolment_preview_endpoint": f"{ISSUER}/member/preview",
+        "invitation_endpoint": f"{ISSUER}/member/invitation",
+        "leave_endpoint": f"{ISSUER}/member/leave",
+        "clearance_endpoint": f"{ISSUER}/member/clearance",
+        "compliance_endpoint": f"{ISSUER}/member/compliance",
+        "membership_endpoint": f"{ISSUER}/membership",
         "introspection_endpoint": f"{ISSUER}/introspect",
+        "consumption_endpoint": f"{ISSUER}/consume",
+        "audit_endpoint": f"{ISSUER}/audit/access",
         "charter_version": current()["version"],
         "break_glass": bool(glass.get("enabled")),
         # Public, because an authority whose owner is *not* a member has to be
@@ -1200,8 +1226,11 @@ async def break_glass(request: Request) -> JSONResponse:
                    "{tool, params}, for the tool the resource is")
 
     signature = request.headers.get("signature", "")
+    # Kept for twice the window: a signature is accepted while its `created`
+    # is within the window either side of now, so one dated ahead is still
+    # valid a full window after it was spent, and must still be refused.
     for spent, when in list(_SPENT_SIGNATURES.items()):
-        if when < now() - SIGNATURE_WINDOW_S:
+        if when < now() - 2 * SIGNATURE_WINDOW_S:
             _SPENT_SIGNATURES.pop(spent, None)
     if signature in _SPENT_SIGNATURES:
         event("break_glass.replay_refused")
@@ -1218,12 +1247,14 @@ async def break_glass(request: Request) -> JSONResponse:
     authorised_by = None
     voucher_id = req.get("voucher") or ""
     voucher = VOUCHERS.get(voucher_id)
-    if voucher and voucher["expires"] > now() and voucher["owner"] == owner:
+    if (voucher and voucher["expires"] > now() and voucher["owner"] == owner
+            and voucher.get("membership") == (MEMBERS.get(owner) or {}).get("token_jti")):
         authorised_by = f"voucher from {voucher['admin']}"
     else:
         voucher_id = ""
         for origin in glass.get("invokers") or []:
-            if invoker_published_key(origin, thumb):
+            # Off the event loop: it reads the operator's key directory.
+            if await asyncio.to_thread(invoker_published_key, origin, thumb):
                 authorised_by = f"operator {origin}"
                 break
     if authorised_by is None:
@@ -1291,6 +1322,10 @@ async def break_glass(request: Request) -> JSONResponse:
                        headers={"typ": "at+jwt", "kid": KID})
     GLASS[jti] = {"claims": claims, "spent": False, "issued": utcstamp(),
                   "member": owner, "resource_id": resource_id,
+                  # The membership it was issued under, not only the name: a
+                  # member who leaves and rejoins is a new membership, and an
+                  # override from the old one must not come back with her.
+                  "membership": MEMBERS[owner].get("token_jti"),
                   "reason": reason, "authorised_by": authorised_by}
     note("break_glass.granted", member=owner, resource=resource_id, jti=jti,
          authorised_by=authorised_by, expires_in=ttl)
@@ -1366,7 +1401,9 @@ async def introspect(request: Request, token: str = Form(...)) -> dict:
         return {"active": False, "error": err}
     if GLASS[claims["jti"]]["spent"]:
         return {"active": False, "error": "already_consumed"}
-    if claims["owner"] not in MEMBERS:
+    if claims["owner"] not in MEMBERS or (
+            MEMBERS[claims["owner"]].get("token_jti")
+            != GLASS[claims["jti"]].get("membership")):
         # She left. An override rests entirely on membership, so it stops the
         # moment membership does — including for a token already issued. The
         # relationship it was issued under has ended: `revoked`.
@@ -1398,6 +1435,8 @@ async def consume(request: Request, token: str = Form(...)) -> dict:
     rec = GLASS[claims["jti"]]
     if rec["spent"]:
         return {"consumed": False, "error": "already_consumed"}
+    if (MEMBERS.get(rec["member"]) or {}).get("token_jti") != rec.get("membership"):
+        return {"consumed": False, "error": "revoked"}
     rec["spent"] = True
     note("break_glass.spent", member=rec["member"], jti=claims["jti"],
          resource=rec["resource_id"])
@@ -1952,12 +1991,20 @@ async def admin_open_voucher(request: Request) -> dict:
                             detail="the charter requires a stated reason")
     ttl = min(int(body.get("window_s") or 300), 3600)
     code = f"bgv_{secrets.token_urlsafe(9)}"
+    # Told first, opened only if she was. A window she was not told about is
+    # the quiet override this whole clause exists to make impossible, and a
+    # console saying "announced" over one that was not would be worse.
+    told = await notify_member(owner, {"kind": "break_glass_opened", "by": admin,
+                                       "reason": reason, "window_s": ttl,
+                                       "resources": glass.get("resources") or []})
+    if not told:
+        raise HTTPException(status_code=503,
+                            detail="her authority could not be told, so no window "
+                                   "was opened; try again")
     VOUCHERS[code] = {"owner": owner, "admin": admin, "reason": reason,
-                      "opened": utcstamp(), "expires": now() + ttl}
+                      "opened": utcstamp(), "expires": now() + ttl,
+                      "membership": MEMBERS[owner].get("token_jti")}
     note("break_glass.opened", member=owner, by=admin, window_s=ttl)
-    await notify_member(owner, {"kind": "break_glass_opened", "by": admin,
-                                "reason": reason, "window_s": ttl,
-                                "resources": glass.get("resources") or []})
     return {"voucher": code, "expires_in": ttl, "owner": owner,
             "resources": glass.get("resources") or [],
             "max_expires_in": glass.get("max_expires_in")}

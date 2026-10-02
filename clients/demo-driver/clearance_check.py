@@ -356,13 +356,14 @@ def main() -> int:                                             # noqa: C901
         # Under compose there is no provisioned directory and this registers
         # at runtime, as every other check there does.
         keys = attested_agent(c, "attested")
+        mark = len(ledger(c))
         rpt, why = negotiate(c, keys)
         check("an agent that would otherwise be granted is refused",
               rpt is None, "it was granted")
         check("and told which claim is missing, rather than 'denied'",
               "licence_active" in why or "clearance" in why, why[:200])
         say(f"refusal: {why[:160]}")
-        refusals = [e for e in ledger(c) if e.get("kind") == "refused"
+        refusals = [e for e in ledger(c)[mark:] if e.get("kind") == "refused"
                     and any("clearance" in str(b) or "licence" in str(b)
                             for b in e.get("because") or [])]
         check("her record says why, in the same words she would be shown",
@@ -372,6 +373,7 @@ def main() -> int:                                             # noqa: C901
         r = set_clearance(c, ATTESTED)
         check("an administrator records what the organization will attest",
               r.status_code == 200, f"HTTP {r.status_code} {r.text[:160]}")
+        granted_mark = len(ledger(c))
         rpt, why = negotiate(c, keys)
         check("the agent is granted, with nothing about it changed",
               bool(rpt), why[:200])
@@ -422,7 +424,7 @@ def main() -> int:                                             # noqa: C901
                   and "invalid_claim_token_format" in offered.text,
                   f"HTTP {offered.status_code} {offered.text[:160]}")
 
-        promised = [e for e in ledger(c) if e.get("kind") == "promised"
+        promised = [e for e in ledger(c)[granted_mark:] if e.get("kind") == "promised"
                     and e.get("clearance")]
         check("her record keeps what was vouched for",
               bool(promised) and promised[-1]["clearance"].get("jurisdiction")

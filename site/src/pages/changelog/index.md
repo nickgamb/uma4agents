@@ -22,6 +22,58 @@ release within that month. One entry per release.
 
 ## October 1 2026
 
+### v2026.10.2
+
+#### New
+
+- **Specification:** Multi-Party Authorization §4 specifies every message between a member's authorization server, the organization, an enforcement point and a joint tally: endpoints, metadata members, bodies, and the three credentials they use. Break-glass grants are spent at the organization's `consumption_endpoint`.
+- **Specification:** Federated Authorization for Agents defines the owner-resources request and listing, `rs_registration_endpoint`, and the PAT request's `owner` parameter. Owner Policy defines the clearance attestation and what the grant's `clearance` digest is computed over.
+- **Specification:** Core names Ed25519 as mandatory for every signature in the set, requires `created` on a signed request, says where `client_id` and `signature_agent` travel and that the operator is the origin of `client_id`, and requires a client to form a resource's metadata URL itself and refuse a challenge pointing elsewhere.
+- **Specification:** Core says which refusal values are terminal, that a value a client does not recognise is terminal, where the consequence, proof-of-possession and expired-permission refusals sit in the enforcement order, and that a call with no parameters binds to `{}`. It names `invalid_token` and `consequence_changed` as refusal values.
+- **Authorization server:** metadata advertises `signing_alg_values_supported`, `http_message_signature_alg_values_supported`, `rs_registration_endpoint`, `org_notice_endpoint`, `org_admin_endpoint`, `joint_quote_endpoint` and `joint_verdict_endpoint`. Introspection carries a grant's `clearance` digest.
+- **Organization:** metadata advertises every endpoint a member's authority or an enforcement point calls.
+- **Kubernetes:** `k8s-policy-test` also runs as the enforcement point's own identity and asserts what that identity can and cannot reach on her authority.
+
+#### Enhancements
+
+- **Authorization server:** an approved request is re-checked for revocation, operator and organization blocks and clearance before anything is issued, in the single-owner and joint paths. Grants and joint verdicts last as long as the agreement says.
+- **Authorization server:** the resource registry is keyed by owner and resource, a listing for another owner is refused, and `/perm` answers only a resource server that publishes the resource. A resource may be served by more than one resource server she approved, such as her vault behind a gateway and the same vault enforcing in process.
+- **Authorization server:** a request waiting on the owner is polled without spending its ticket.
+- **Authorization server:** an owner's signed request that changes anything is accepted once; a second presentation is refused.
+- **HTTP signatures:** a signature without `created` is refused, and the signer adds a fresh `nonce`, so the same request sent twice in a second is not mistaken for a replay.
+- **Enforcement point:** a resource server whose owner withdrew it re-registers on the next call from every replica, not only from one that had not introduced itself recently.
+- **Enforcement point:** every Protection API call is retried on a 401, failed access reports are recorded, and a party it could not ask is answered `temporarily_unavailable`.
+- **Joint tally:** the threshold floor counts holders rather than weight, the tally stops asking once the count is settled, refuses to fold terms around a holder it could not ask, caps open negotiations in two lanes, and drops expired grants.
+- **Organization:** break-glass overrides and vouchers are bound to the membership they were issued under, and a window opens only once the member has been told.
+- **Agent shim:** standing-config acceptance applies only when the client cannot elicit; any other error is reported.
+- **Agent shim, demo driver, TypeScript client:** a refusal is read through one rule; only `temporarily_unavailable` may be retried.
+- **Client:** terms dictated again at commit, because the tier or its ceiling changed since they were proffered, are put to the agent's approval and signed again, up to three times.
+- **Kubernetes:** every credential the public edge can reach is generated per cluster: the PAT secrets at Alice's authority, the tally and the organization, the research agent's broker secret, and each portal's session key.
+- **Kubernetes:** the authorization server's signing key rotates in two rollouts, so no replica meets a key it cannot verify. Both rotation checks restore on every exit and fail when a restore fails.
+- **Kubernetes:** the resource server's identity reaches only the protection API and keys on her authority, not the organization's or the tally's surfaces.
+- **Kubernetes:** the TypeScript client is built from source for the cluster check, not committed.
+- **Codespaces:** the portal's redirect is written into the realm Keycloak imports, so it survives a Keycloak restart.
+
+#### Bug fixes
+
+- **Authorization server:** an approval recorded before the owner revoked the agent, blocked its operator or lost a clearance was still honoured.
+- **Authorization server:** an agreement naming no scope was granted every scope the ticket asked for.
+- **Authorization server:** unauthenticated requests could create owners.
+- **Authorization server:** a provisioned resource-server secret that the deployment changed was never picked up by the registration seeded from it, locking the resource server out.
+- **Authorization server:** an organization's operator block was not applied at introspection.
+- **Authorization server:** an organization's notice reached one replica, and the others applied the previous charter and role until their own refresh fell due. Each replica now adopts the envelope another has stored, and a replica holding the credential of a membership she has since renewed uses the current one.
+- **Authorization server:** a replica rebuilt its resource registry from the first approved resource server that answered, and could refuse another's tickets for a resource both serve.
+- **Authorization server:** an introduced agent's later requests and joint pends from strangers did not count against her attention budget.
+- **Authorization server:** an organization notice or identity assertion replayed to another replica was acted on again.
+- **Joint tally:** a mandate written as a pattern could take a jointly held resource out of an organization's reach, or lift the organization's ceiling off its own resource. A jointly held resource stays in an organization's reach only where the organization shares it with her, not wherever its charter claims.
+- **Organization console:** saving settings dropped charter fields the form does not show, and the charter and Rego tabs could revert a concurrent change. A charter edit could remove a group with members.
+- **Checks:** several checks could pass without the property they assert, or leave the lab changed after a failure. Each now fails when its property does not hold, restores what it changed, and fails when the restore does not take.
+- **Kubernetes:** the cluster smoke test counted any transport error, and a 405 from the vault, as the mesh refusing.
+- **Kubernetes:** the embedded vault rolled out a second copy, with a second key, before stopping the first.
+- **Kubernetes:** the embedded vault's path policy was bound by selector, where the caller and the path are not visible.
+- **Conformance tool:** it read the challenge's metadata pointer and the origin's root document, and certified endpoints both reference clients refuse.
+- **Docs:** the MCP binding page restated the binding without its refusal code; the n8n run was described as never done; the deviations register lacked entries 23 and 24; the client's wait was described as the negotiation expiring; a new charter version was described as needing re-agreement.
+
 ### v2026.10.1
 
 #### New

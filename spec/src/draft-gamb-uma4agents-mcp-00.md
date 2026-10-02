@@ -244,8 +244,9 @@ party token in an `Authorization` header with the `PoP` scheme and signed as
 {{U4ACore}} Section 6. Where the enforcement point is in process, the signature
 components are the HTTP request that carried the JSON-RPC message.
 
-For a single-use grant ({{U4ACore}} Section 7.2), the operation is the call's
-`params.name` and its parameters are `params.arguments`.
+For a single-use grant ({{U4ACore}} Section 7.3), the operation is the call's
+`params.name` and its parameters are `params.arguments`. A call with no
+`arguments` member has the parameters `{}`.
 
 # Waiting {#waiting}
 
@@ -327,7 +328,8 @@ This document makes no request of IANA. The JSON-RPC error codes `-32001` and
 server errors, and the extension identifier `dev.uma4agents/uma-enforcement`
 follows {{MCP}}'s convention for vendor-prefixed extension identifiers. The
 refusal values `missing_routing_headers` and `header_body_mismatch` are this
-binding's, carried in `data` beside those of {{U4ACore}} Section 3.3.
+binding's, carried in `data` beside those of {{U4ACore}} Section 3.3; both are
+terminal.
 
 --- back
 

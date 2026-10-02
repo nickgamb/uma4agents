@@ -1538,10 +1538,57 @@ the resource to clients while leaving the party that decides unable to read
 it.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 <p id="section-2.2-3">The signature profile is that of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 6.1, with <code>@authority</code> taken
 from the resource server's configuration.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
-<p id="section-2.2-4">This is the privacy split. The public document says what the resource is; whose
+<p id="section-2.2-4">The listing is selected by the URL, not by a parameter. A resource server that
+serves several owners publishes a resource, and a metadata document, per owner,
+each naming that owner's authorization server and its own
+<code>owner_resources_endpoint</code>; the endpoint read from one owner's document is the
+listing for that owner. The authorization server requests it with <code>GET</code>, signed
+with a key at its own <code>jwks_uri</code> and covering <code>authorization</code> as the empty
+string. The resource server verifies the signature against the keys of the
+authorization server its configuration names for that owner, and <span class="bcp14">MUST NOT</span> take
+the signer from the request.<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+<p id="section-2.2-5">A successful response is a JSON object with these members:<a href="#section-2.2-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2.2-6">
+          <dt id="section-2.2-6.1">owner:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-6.2">
+            <p id="section-2.2-6.2.1"><span class="bcp14">OPTIONAL</span>. The owner the listing is for. Where present, the authorization
+server <span class="bcp14">MUST</span> refuse a listing that names an owner other than the one it pulled
+for.<a href="#section-2.2-6.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-6.3">resources:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-6.4">
+            <p id="section-2.2-6.4.1"><span class="bcp14">REQUIRED</span>. An array of resource descriptions. Each carries <code>_id</code> (<span class="bcp14">REQUIRED</span>, the
+resource identifier), <code>resource_scopes</code> (<span class="bcp14">REQUIRED</span>, an array of scope names),
+and <span class="bcp14">MAY</span> carry <code>name</code>, <code>type</code> and <code>consequence</code>, with the meanings of the
+corresponding members of a resource description in <span>[<a href="#UMAFedAuthz" class="cite xref">UMAFedAuthz</a>]</span> Section 3.1
+and of <a href="#public-layer" class="auto internal xref">Section 2.1</a>.<a href="#section-2.2-6.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<span id="name-an-owner-resources-listing"></span><figure id="figure-1">
+          <div class="lang-json sourcecode" id="section-2.2-7.1">
+<pre>
+{
+  "owner": "alice",
+  "resources": [
+    {"_id": "alice-vault/get_positions", "name": "Positions",
+     "resource_scopes": ["positions:read"],
+     "consequence": "disclosing"},
+    {"_id": "alice-vault/execute_trade", "name": "Trade",
+     "resource_scopes": ["trades:execute"],
+     "consequence": "irreversible"}
+  ]
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-an-owner-resources-listing" class="selfRef">An owner-resources listing.</a>
+          </figcaption></figure>
+<p id="section-2.2-8">This is the privacy split. The public document says what the resource is; whose
 things sit behind it is served only to the party the owner's own consent already
 connected. Publishing the second at an unauthenticated URI is a disclosure that
-push registration, for all its other costs, never made.<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+push registration, for all its other costs, never made.<a href="#section-2.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1576,6 +1623,11 @@ carries.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
       </ol>
 <p id="section-3-4">One fetch replaces N registration calls, and there is one registry with one
 writer.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">A resource may be registered for one owner from more than one resource server
+she has approved: the same account behind a gateway and enforcing in process is
+one resource under two enforcement points. The authorization server <span class="bcp14">MUST</span> answer
+a permission request for a resource only from a resource server whose listing
+carries it, and a resource stays registered while any of them does.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <div id="staleness">
 <section id="section-3.1">
         <h3 id="name-staleness">
@@ -1629,9 +1681,15 @@ ends.<a href="#section-4-1" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-4.1-1">A resource server <span class="bcp14">MAY</span> introduce itself to an owner's authorization server by
 sending a request naming the owner and the resource it serves, signed with
-<span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> using a key published at the origin of that resource.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> using a key published at the origin of that resource. The request
+is a <code>POST</code> of a JSON object to the authorization server's
+<code>rs_registration_endpoint</code>, carrying <code>owner</code> (<span class="bcp14">REQUIRED</span>, the owner as the
+authorization server names her), <code>resource_uri</code> (<span class="bcp14">REQUIRED</span>, the resource's
+identifier as its protected resource metadata states it) and <code>name</code> (<span class="bcp14">OPTIONAL</span>,
+a display name). An authorization server offering this <span class="bcp14">MUST</span> advertise
+<code>rs_registration_endpoint</code> in its metadata.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <p id="section-4.1-2">The request <span class="bcp14">MUST</span> carry a <code>Content-Digest</code> <span>[<a href="#RFC9530" class="cite xref">RFC9530</a>]</span> covered by the signature.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<span id="name-a-resource-server-registeri"></span><figure id="figure-1">
+<span id="name-a-resource-server-registeri"></span><figure id="figure-2">
           <div class="alignLeft art-text artwork" id="section-4.1-3.1">
 <pre>
 POST /rs/register HTTP/1.1
@@ -1651,7 +1709,7 @@ Signature: sig1=:bbN8ISG...:
 }
 </pre>
 </div>
-<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
 <a href="#name-a-resource-server-registeri" class="selfRef">A resource server registering by origin signature. Line breaks are for display only.</a>
           </figcaption></figure>
 <p id="section-4.1-4">The authorization server <span class="bcp14">MUST</span> verify the signature by:<a href="#section-4.1-4" class="pilcrow">¶</a></p>
@@ -1718,9 +1776,14 @@ origin it registered as. Which authentication applies — a provisioned secret o
 an origin signature — is a property of the stored registration, so that a
 resource server registered by signature cannot later fall back to guessing a
 secret.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<p id="section-4.3-2">While the owner has not answered, the token endpoint <span class="bcp14">MUST</span> respond <code>403</code> with
+<p id="section-4.3-2">A resource server holds a PAT issued in each owner's name (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 8.1), so the token
+request names the owner in an <code>owner</code> parameter. An authorization server that
+serves more than one owner <span class="bcp14">MUST</span> refuse a PAT request that names none, unless it
+has a deployment-configured default; it <span class="bcp14">MUST</span> refuse one naming an owner it does
+not serve, and <span class="bcp14">MUST NOT</span> create an owner on the strength of the request.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">While the owner has not answered, the token endpoint <span class="bcp14">MUST</span> respond <code>403</code> with
 <code>error</code> of <code>authorization_pending</code>. After the owner has revoked the resource
-server, it <span class="bcp14">MUST</span> respond <code>403</code> with <code>error</code> of <code>access_denied</code>.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+server, it <span class="bcp14">MUST</span> respond <code>403</code> with <code>error</code> of <code>access_denied</code>.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="withdrawal">
@@ -2038,6 +2101,27 @@ requests no registration.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">URL of the operation that spends a single-use requesting party token</td>
             <td class="text-left" rowspan="1" colspan="1">
               <a href="#non-consuming" class="auto internal xref">Section 5.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>rs_registration_endpoint</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">URL at which a resource server registers by origin signature</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#rs-register" class="auto internal xref">Section 4.1</a>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>owner</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Token request parameter</td>
+            <td class="text-left" rowspan="1" colspan="1">The owner a PAT is requested for</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <a href="#pat" class="auto internal xref">Section 4.3</a>
 </td>
           </tr>
           <tr>

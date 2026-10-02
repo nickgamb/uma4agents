@@ -155,10 +155,11 @@ the agent's `Authorization`.
 The n8n workflow template imports into n8n 2.38.6 and round-trips back out with
 every node resolving at its current version.
 
-What has not been run is the two halves joined: a live n8n behind a live
-sidecar. The sidecar speaks HTTP to an HTTP upstream and parses MCP from the
-body, so that join is configuration rather than code — but it is worth saying
-which part was tested and which was reasoned.
+The two halves joined — a live n8n behind a live sidecar, with an agent
+negotiating through them — run in one pod against the lab; the steps are in
+[integrations/n8n](https://github.com/nickgamb/uma4agents/tree/main/integrations/n8n#run-it-yourself-against-the-lab).
+The call is challenged, the grant is negotiated, n8n answers, and n8n refuses a
+call that did not come through the sidecar.
 
 ## Files
 

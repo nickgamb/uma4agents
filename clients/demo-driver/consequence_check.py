@@ -221,6 +221,10 @@ def main() -> int:
     check("and says that none of them may relax a requirement",
           all(not vocab[c]["may_relax"] for c in offered))
 
+    # Taken before anything here writes to her tiers, including the writes
+    # that are meant to be refused: if one is not, the copy restored at the
+    # end must still be hers.
+    original = {t: dict(v) for t, v in tiers(client).items()}
     r = put_tier(client, "tier1", {"rules": [{"when": [ASK_ON_IRREVERSIBLE["when"][0]],
                                              "then": "auto"}]})
     check("a rule that would grant automatically because an act is "
@@ -233,7 +237,6 @@ def main() -> int:
 
     print("\n== 4 · the rule she writes names no tool ==")
     try:
-        original = {t: dict(v) for t, v in tiers(client).items()}
         # Her holdings tier normally asks about an agent nobody is accountable
         # for; replaced here so the only rule in play is the one under test.
         put_tier(client, "tier1", {"rules": [ASK_ON_IRREVERSIBLE]})
@@ -322,11 +325,12 @@ def main() -> int:
               json.dumps(read_row)[:200])
     finally:
         # Her policy is not this check's to leave edited.
-        for tier_id, tier in original.items():
-            put_tier(client, tier_id, {"ask_me": tier.get("ask_me", False),
-                                       "rules": tier.get("rules") or []})
-        if original:
-            say("her tiers are back as they were")
+        failed = [tier_id for tier_id, tier in original.items()
+                  if put_tier(client, tier_id, {"ask_me": tier.get("ask_me", False),
+                                                "rules": tier.get("rules") or []}
+                              ).status_code >= 300]
+        check("her tiers are put back as they were", not failed,
+              f"could not restore {failed}")
         for p in pending(client):
             decide(client, p["family"], "denied")
 

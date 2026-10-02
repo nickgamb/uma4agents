@@ -52,12 +52,12 @@ spec:
             - { name: UMA4A_NORTHWIND_IDP, value: "https://northwind-idp.uma.lab/realms/employees" }
             - { name: UMA4A_AGENT_OPERATOR, value: "https://agent.uma.lab" }
             - { name: UMA4A_ALICE_OPERATOR, value: "https://alice-agent.uma.lab" }
-            # The same values the organization and the broker are configured
-            # with. Plain here for the same reason org-check's are: these are
-            # lab credentials, and inventing a Secret the cluster does not
-            # provision would fail the job before it ran a line.
+            # The organization's opt-in enrolment code, plain for the same
+            # reason org-check's is: it is the code the demo hands a member.
+            # The agent's client secret is the one this cluster generated.
             - { name: ORG_JOIN_CODE, value: NW-7K2F-QX }
-            - { name: XAA_AGENT_SECRET, value: northwind-agent-secret }
+            - name: XAA_AGENT_SECRET
+              valueFrom: { secretKeyRef: { name: xaa-agent, key: token } }
             # Read from the same values the enforcement point is configured
             # with, so a wait here cannot drift into a false failure. Both
             # are caches it owns: how long it may describe the organization

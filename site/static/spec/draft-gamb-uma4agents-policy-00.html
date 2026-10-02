@@ -1692,20 +1692,30 @@ works when the requesting party is the only one who holds the fact, and fails
 when the fact may be adverse to it. A licence is adverse-capable — its holder
 has every reason to say it is current — so the attestation travels from the
 attesting party to the authorization server directly.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
-<p id="section-3.4-4">An authorization server <span class="bcp14">MUST</span> verify the attestation's signature against keys the
+<p id="section-3.4-4">Where the attesting party is the organization the owner enrolled with, her
+authorization server fetches the attestation from the organization's
+<code>clearance_endpoint</code> with her membership credential (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>). It is a
+JWT with <code>typ</code> of <code>u4a-clearance+jwt</code>, signed with a key at the attesting
+party's <code>jwks_uri</code>, carrying <code>iss</code>, <code>sub</code> (the owner, as her authorization server
+names her), <code>aud</code> (her authorization server's issuer identifier), <code>iat</code>, <code>exp</code>,
+<code>jti</code>, and <code>clearance</code>: an object whose members are the attested claims and whose
+values are the attested values.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<p id="section-3.4-5">An authorization server <span class="bcp14">MUST</span> verify the attestation's signature against keys the
 attesting party publishes, and <span class="bcp14">MUST</span> refuse it unless it names the subject the
 negotiation is about and names that authorization server as its audience. An
 attestation about one member, issued to one authority, is not evidence about
-another member or at another authority.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
-<p id="section-3.4-5">Where a required clearance is unmet, an authorization server <span class="bcp14">MUST</span> refuse the
+another member or at another authority.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
+<p id="section-3.4-6">The digest a grant carries (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 7.1) is <code>s256</code> over the
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serialization of that <code>clearance</code> object, as verified.<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+<p id="section-3.4-7">Where a required clearance is unmet, an authorization server <span class="bcp14">MUST</span> refuse the
 negotiation before it dictates terms, and <span class="bcp14">MUST</span> record the reason. An agent that
 signed an agreement it was never going to be allowed to act under would hold a
 record of a bargain that never existed, and the owner's record would carry an
-undertaking that decided nothing.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
-<p id="section-3.4-6">An authorization server that cannot reach the attesting party has no
+undertaking that decided nothing.<a href="#section-3.4-7" class="pilcrow">¶</a></p>
+<p id="section-3.4-8">An authorization server that cannot reach the attesting party has no
 attestation, and so refuses under the rule above. A party that cannot be
 reached has not attested to anything, and the direction to fail in is the one
-the ceiling of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> already fails in.<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+the ceiling of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> already fails in.<a href="#section-3.4-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evaluation">
@@ -1780,8 +1790,9 @@ fetched. Level 0: the agent is pseudonymous. Level 1: an issuer vouched for it.<
             <p id="section-4.1-2.6.1">Whether anyone named and reachable stands behind the agent. Level 0: nobody.
 Level 1: the agent named a client metadata document
 <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span> that resolved and claims its
-own URL. Level 2: the operator that document names publishes, in a key
-directory <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> at the same origin, the JWK
+own URL. Level 2: the operator — the origin of that document's <code>client_id</code> —
+publishes, in the key directory named by the agreement's <code>signature_agent</code>
+header member <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> at that same origin, the JWK
 thumbprint <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the key that signed the agreement.<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1839,7 +1850,7 @@ party model is wrong. Terms, grant and enforcement are byte-identical; what the
 case needs is one policy condition.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">An authorization server <span class="bcp14">MUST</span> let the owner claim an operator origin as her own,
 and <span class="bcp14">MUST</span> class an agent as the owner's own only where both hold: the operator it
-names is one she has claimed, and that operator's key directory publishes the
+names, the origin of its <code>client_id</code>, is one she has claimed, and that operator's key directory publishes the
 key that signed. The first half is her decision; the second is a check her
 authority ran on material only the operator controls. Neither is anything the
 requesting side can assert.<a href="#section-5-2" class="pilcrow">¶</a></p>
@@ -2125,6 +2136,10 @@ records one such vocabulary without registering it.<a href="#section-11-1" class
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+        <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="U4ACore">[U4ACore]</dt>
         <dd>

@@ -216,15 +216,22 @@ def _main() -> int:
     return 1 if FAIL else 0
 
 
+UNRESTORED: list[str] = []
+
+
 def _restore() -> None:
     """Put the charter back, however the run ended."""
     try:
         with httpx.Client(verify=CA, timeout=30.0) as c:
             base = c.get(f"{ORG}/admin/charter/versions/1", headers=ADMIN,
                          timeout=15.0).json()["charter"]
-            c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN, timeout=20.0)
-    except Exception:                                           # noqa: BLE001
-        pass
+            c.put(f"{ORG}/admin/charter", json=base, headers=ADMIN,
+                  timeout=20.0).raise_for_status()
+    except Exception as exc:                                    # noqa: BLE001
+        # Said, and failed on: a run that cannot put the lab back has left
+        # every later run negotiating against what it changed.
+        print(f"   FAIL could not put the lab back: {exc}", flush=True)
+        UNRESTORED.append(str(exc))
 
 
 def main() -> int:
@@ -237,4 +244,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main() or (1 if UNRESTORED else 0))

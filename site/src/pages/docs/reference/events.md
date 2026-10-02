@@ -162,7 +162,7 @@ worth anything:
 | `handle` | The agent it is about. A column rather than a field inside `entry`, so one agent's whole trajectory is an index lookup. `NULL` where there is no agent — a resource server's registration being revoked, or a decision taken before an agent was named |
 | `entry` | The rest, as JSON. Its shape depends on the kind |
 
-Twenty-three kinds are written. Grouped by what they are about:
+The kinds written, grouped by what they are about:
 
 **The grant loop**
 

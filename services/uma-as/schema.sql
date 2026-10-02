@@ -213,6 +213,17 @@ CREATE TABLE IF NOT EXISTS mandates (
     PRIMARY KEY (owner, account)
 );
 
+-- Things that may be used once: an identity assertion's jti, an
+-- organization notice's jti. Spent by one INSERT, so two replicas receiving
+-- the same one cannot both act on it. Kept apart from rpts, which answers
+-- "which grant does this negotiation hold" and must hold only grants.
+CREATE TABLE IF NOT EXISTS spent (
+    owner   text NOT NULL,
+    key     text NOT NULL,
+    expires timestamptz NOT NULL,
+    PRIMARY KEY (owner, key)
+);
+
 -- The owner's event feed. Rows exist so NOTIFY can carry an id instead of a
 -- payload: Postgres caps NOTIFY payloads at 8000 bytes and a pending event
 -- carries the purpose, the prohibitions and the agent's identity. Every

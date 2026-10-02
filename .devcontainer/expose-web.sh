@@ -62,6 +62,27 @@ log "Pointing Keycloak and the portal at the forwarded origins"
 # would advertise the github.dev address for the token endpoint too, and the
 # portal cannot follow it: that address is authenticated at GitHub's edge and
 # served with a public certificate, while this pod trusts only the lab CA.
+# The forwarded portal, as a redirect target in the realm Keycloak imports.
+# Keycloak keeps nothing between starts — the realm is read from this
+# ConfigMap on every boot — so a redirect added only through the admin API
+# (step 2) is gone the next time the pod restarts. Written here, before the
+# rollout below, it is in the realm the new pod imports and in every one after.
+REALM_DIR="$(cd "$(dirname "$0")/.." && pwd)/keycloak"
+python3 - "$REALM_DIR/alice-realm.json" "$PORTAL_URL" >/tmp/alice-realm.json <<'PY'
+import json, sys
+realm = json.load(open(sys.argv[1]))
+for client in realm.get("clients", []):
+    if client.get("clientId") == "meridian-portal":
+        client["redirectUris"] = sorted(set(client.get("redirectUris", [])) | {sys.argv[2] + "/*"})
+        client["webOrigins"] = sorted(set(client.get("webOrigins", [])) | {sys.argv[2]})
+json.dump(realm, sys.stdout)
+PY
+kubectl -n idp create configmap realms \
+  --from-file=alice-realm.json=/tmp/alice-realm.json \
+  --from-file=carol-realm.json="$REALM_DIR/carol-realm.json" \
+  --from-file=northwind-realm.json="$REALM_DIR/northwind-realm.json" \
+  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+
 kubectl -n idp set env deploy/keycloak \
   "KC_HOSTNAME=${KEYCLOAK_URL}" \
   "KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true" >/dev/null
@@ -86,9 +107,31 @@ kubectl -n alice set env deploy/uma-as \
   "UMA_AS_OWNER_METADATA_URL=http://keycloak.idp.svc.cluster.local:8080/realms/alice/.well-known/openid-configuration" \
   >/dev/null
 
+# One Keycloak serves every realm, and KC_HOSTNAME changes the issuer it
+# stamps on all of them — so every service that checks a token from it has to
+# expect the new one, not only Alice's. Carol's portal and authority, and the
+# organization's authority and console, are repointed the same way.
+INTERNAL="http://keycloak.idp.svc.cluster.local:8080/realms"
+kubectl -n carol set env deploy/portal \
+  "OIDC_ISSUER=${KEYCLOAK_URL}/realms/carol" \
+  "OIDC_METADATA_URL=${INTERNAL}/carol/.well-known/openid-configuration" >/dev/null
+kubectl -n carol set env deploy/uma-as \
+  "UMA_AS_OWNER_ISSUER=${KEYCLOAK_URL}/realms/carol" \
+  "UMA_AS_OWNER_METADATA_URL=${INTERNAL}/carol/.well-known/openid-configuration" >/dev/null
+kubectl -n northwind set env deploy/org-authority \
+  "ORG_ADMIN_ISSUER=${KEYCLOAK_URL}/realms/northwind" \
+  "ORG_ADMIN_METADATA_URL=${INTERNAL}/northwind/.well-known/openid-configuration" >/dev/null
+kubectl -n northwind set env deploy/org-console \
+  "OIDC_ISSUER=${KEYCLOAK_URL}/realms/northwind" \
+  "OIDC_METADATA_URL=${INTERNAL}/northwind/.well-known/openid-configuration" >/dev/null
+
 kubectl -n idp rollout status deploy/keycloak --timeout=180s
 kubectl -n alice rollout status deploy/portal --timeout=180s
 kubectl -n alice rollout status deploy/uma-as --timeout=240s
+kubectl -n carol rollout status deploy/portal --timeout=180s
+kubectl -n carol rollout status deploy/uma-as --timeout=240s
+kubectl -n northwind rollout status deploy/org-authority --timeout=180s
+kubectl -n northwind rollout status deploy/org-console --timeout=180s
 
 # --- 2. let the realm redirect back to the forwarded portal -----------------
 # Patched through the admin API rather than the realm ConfigMap: the import
@@ -113,6 +156,9 @@ kubectl -n idp exec deploy/keycloak -- sh -c "
     -s 'redirectUris=[\"${PORTAL_URL}/*\",\"https://portal.uma.lab/*\"]' \
     -s 'webOrigins=[\"${PORTAL_URL}\",\"https://portal.uma.lab\"]'
 " || warn "Realm patch failed — sign-in will bounce. See the note in docs/KUBERNETES.md."
+# The same redirect is in the imported realm (step 1), so a Keycloak restart
+# keeps it; this patch only covers a pod that imported before the ConfigMap
+# changed.
 
 # --- 3. forward the ports ---------------------------------------------------
 # Under setsid and in a restart loop, deliberately. `kubectl port-forward`

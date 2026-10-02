@@ -16,8 +16,9 @@ MCP carries the challenge and the eventual call. It does not carry the grant —
 beats two through four happen at the owner's authorization server over HTTP,
 unchanged. That separation is what lets one grant serve multiple bindings.
 
-The repository's draft is
-[`docs/MCP-BINDING.md`](https://github.com/nickgamb/uma4agents/blob/main/docs/MCP-BINDING.md).
+The normative text is the
+[MCP binding draft](/spec/draft-gamb-uma4agents-mcp-00.html); this page
+explains it against the running implementation.
 
 ## Discovery: two channels, one registry
 
@@ -90,6 +91,17 @@ shows the payload survives a transport with no status line.
 > the body is discarded; only non-2xx bodies reach the client. Any design where
 > a gateway-hosted enforcement point returns a typed result rather than an error
 > is impossible, which is why the challenge is an error in both encodings.
+
+## Refusals that are not challenges
+
+A refusal that negotiating cannot fix is not a challenge. In process it is the
+JSON-RPC error `-32002`, whose `data` carries the `error` value and the HTTP
+`status` core gives it — `access_revoked`, `already_consumed`,
+`operation_required`, `consequence_changed` and the rest. The binding adds two
+of its own, both status 400 and both terminal: `missing_routing_headers`, where
+a request omits the `Mcp-Method`/`Mcp-Name` headers, and `header_body_mismatch`,
+where they disagree with the body. Behind a gateway the same values arrive as
+the HTTP status with a JSON body.
 
 ## The pend
 

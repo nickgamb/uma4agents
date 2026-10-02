@@ -299,14 +299,16 @@ def live(wait_s: int) -> int:
         try:
             return _live_body(c, wait_s)
         finally:
+            unrestored = []
             for owner in ("alice", "carol"):
                 for account in (BOTH, EITHER):
                     try:
                         leave(c, owner, account)
                         drop_terms(c, owner, account)
-                    except Exception:                          # noqa: BLE001
-                        pass
-            print("\n   (both holders have been put back)")
+                    except Exception as exc:                   # noqa: BLE001
+                        unrestored.append(f"{owner}/{account}: {exc}")
+            print(f"\n   FAIL could not put back {unrestored}" if unrestored
+                  else "\n   (both holders have been put back)")
 
 
 def _live_body(c: httpx.Client, wait_s: int) -> int:
@@ -683,6 +685,9 @@ def _main() -> int:                                           # noqa: C901
     return 0
 
 
+UNRESTORED: list[str] = []
+
+
 def _restore() -> None:
     """Leave the lab as it was found, however the run ended."""
     try:
@@ -694,8 +699,11 @@ def _restore() -> None:
                             step(c, owner, account)
                         except Exception:                       # noqa: BLE001
                             pass
-    except Exception:                                           # noqa: BLE001
-        pass
+    except Exception as exc:                                    # noqa: BLE001
+        # Said, and failed on: a run that cannot put the lab back has left
+        # every later run negotiating against what it changed.
+        print(f"   FAIL could not put the lab back: {exc}", flush=True)
+        UNRESTORED.append(str(exc))
 
 
 def main() -> int:
@@ -712,4 +720,4 @@ if __name__ == "__main__":
     # runs it; the live path is the one a room watches.
     if os.environ.get("UMA4A_SIMULATE_OWNER", "1") == "0":
         raise SystemExit(live(int(os.environ.get("UMA4A_LIVE_WAIT_S", "900"))))
-    raise SystemExit(main())
+    raise SystemExit(main() or (1 if UNRESTORED else 0))

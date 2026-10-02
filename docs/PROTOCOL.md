@@ -410,8 +410,10 @@ Then one of:
   *operation approval* (`kind=operation`).
 - **Policy failure / weakened echo / bad signature** → `request_denied`.
 
-For a held ticket the agent re-presents after `interval` (each poll rotates
-it). Alice's decision resolves it: approve → grant (and, for a connection
+For a held ticket the agent re-presents after `interval`. While she decides,
+each poll returns the same ticket — a poll whose reply is lost costs nothing,
+and whatever is issued in the end is bound to the agent's key — and the
+ticket is spent once there is an outcome. Alice's decision resolves it: approve → grant (and, for a connection
 request, the standing relationship is recorded); deny → `request_denied`;
 expiry → `invalid_grant`.
 
@@ -710,7 +712,9 @@ enforced twice. The owner API takes only her credential, which the resource
 server never holds, so a call reaching it through the public hostname is
 refused (401). And in the Kubernetes reference the mesh refuses the direct hop
 to it from any workload but her portal (403), while the same port serves her
-published keys (200). `k8s-policy-test` asserts both paths.
+published keys (200). `k8s-policy-test` asserts both paths, the second from
+the enforcement point's own identity, which also cannot reach the surfaces her
+organization and the tally use.
 
 **Agent-token issuers are named, then trusted by dereference.** An agent
 token is believed only from an issuer in `UMA_AS_AGENT_ISSUERS`; any other is

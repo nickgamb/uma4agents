@@ -207,11 +207,12 @@ can make a request easier than the member's own policy already makes it.
 ### Charter or rule?
 
 The charter and the engine are not two ways of saying the same thing. **The
-test is whether a member would have to agree to it again.**
+test is whether a member is shown it, and agrees to it, when she joins.**
 
 The charter is the bargain: versioned, shown to her in full before she joins,
-agreed to by name — the organization's counterpart to the terms she proffers
-her own agents. What it may say is deliberately small, because it is a
+its version agreed to by name — the organization's counterpart to the terms she
+proffers her own agents. A later version applies when published: her authority
+re-applies the ceiling and records it, and she can leave at any time. What it may say is deliberately small, because it is a
 document people read. The rules are the organization's operating controls. She
 is told they exist and is shown the sentence of any rule that stops her, but
 not the text, because they are not part of what she agreed to; they move on a

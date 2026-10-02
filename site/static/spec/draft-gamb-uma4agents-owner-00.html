@@ -1563,10 +1563,29 @@ was checked, so that a surface has the sentence to show beside the level.<a href
             <p id="section-3.1-2.18.1">The client's connection handle, or null before first contact.<a href="#section-3.1-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.1-2.19">organization:</dt>
+<dt id="section-3.1-2.19">first_contact:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.20">
-            <p id="section-3.1-2.20.1">Where a layer above the owner had a say (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>), what it said,
-separately from her own rules.<a href="#section-3.1-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-2.20.1"><code>true</code> where answering admits a client she has no standing connection with
+— a <code>connection</code> request, or a request of another kind from a client she
+has not met. Nothing that answers on her behalf (<a href="#arrangements" class="auto internal xref">Section 7</a>) may
+approve one.<a href="#section-3.1-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.1-2.21">resource_id:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.22">
+            <p id="section-3.1-2.22.1">The resource the request is over.<a href="#section-3.1-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.1-2.23">enforced:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.24">
+            <p id="section-3.1-2.24.1">For each prohibition the resource server enforces itself, the mechanism that
+enforces it; the rest are undertakings.<a href="#section-3.1-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.1-2.25">organization:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.26">
+            <p id="section-3.1-2.26.1">Where a layer above the owner had a say (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>), what it said,
+separately from her own rules.<a href="#section-3.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1585,7 +1604,7 @@ Section 8.3; a second answer to a decided request <span class="bcp14">MUST</span
 Two portals open on the same request are two callers, and the tap that lands
 second must not be recorded as a second decision.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
 <p id="section-3.2-3">Where the credential proves someone acting for the owner rather than the
-owner (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> Section 2.7), the decision <span class="bcp14">MUST</span> be recorded as
+owner (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> Section 2.8), the decision <span class="bcp14">MUST</span> be recorded as
 theirs.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1602,10 +1621,11 @@ theirs.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-agents" class="section-name selfRef">Agents</a>
         </h3>
 <p id="section-4.1-1"><code>GET /connections</code> returns every standing connection (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 9),
-each carrying its <code>handle</code>, <code>identity</code>, <code>label</code>, <code>status</code>, <code>first_seen</code>,
-<code>last_access</code>, the policy units the owner personally approved it at, the units
-it has been granted at, its revocation count, and where another agent
-introduced it, that agent's handle.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+each carrying <code>handle</code>, <code>identity</code>, <code>label</code>, <code>status</code> (<code>active</code> or <code>revoked</code>),
+<code>first_seen</code>, <code>last_access</code>, <code>tiers_approved</code> (the policy units the owner
+personally approved it at), <code>tiers_granted</code> (the units it has been granted
+at), <code>revocations</code> (how many times she has revoked it), and, where another
+agent introduced it, <code>parent_handle</code>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <p id="section-4.1-2"><code>POST /connections/revoke</code> with a body <code>{"handle": …}</code> ends one. The handle
 travels in the body for the reason <code>client_id</code> does below: an identified agent's
 handle carries its issuer, path included. The response carries
@@ -1689,7 +1709,7 @@ registration and <span class="bcp14">MUST NOT</span> be editable here. Every edi
 terms version (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span> Section 2.1); the response carries the unit as
 stored, and where a layer above the owner narrowed what she wrote, a
 <code>clamped</code> array of sentences saying what moved (<span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>
-Section 2.4).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+Section 2.5).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4"><code>DELETE /policies/{id}</code> removes one. Its resources become ungoverned, which
 is denied (<span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 2); the response names them. Published
 terms versions <span class="bcp14">MUST NOT</span> be deleted with it.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
@@ -1704,7 +1724,7 @@ terms versions <span class="bcp14">MUST NOT</span> be deleted with it.<a href="#
 of objects each carrying <code>condition</code> (the name, with its level where the
 condition is one sentence per level), <code>takes</code> (<code>duration</code>, <code>count</code> or null),
 <code>label</code> (the sentence shown to the owner), and <code>may_relax</code>. This is the
-publication <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 3.4 requires; a surface that offers the
+publication <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 3.6 requires; a surface that offers the
 owner a condition it does not list will compose a rule the server refuses.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1715,14 +1735,27 @@ owner a condition it does not list will compose a rule the server refuses.<a hre
       <h2 id="name-the-record">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-the-record" class="section-name selfRef">The Record</a>
       </h2>
-<p id="section-6-1"><code>GET /ledger</code> returns the record of <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 8, oldest first.
-With <code>?handle=</code> it returns one agent's part of it: every promise that agent
-made, every decision about it, and everything it touched, in order.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1"><code>GET /ledger</code> returns the record of <span>[<a href="#U4APolicy" class="cite xref">U4APolicy</a>]</span> Section 8, oldest first, as
+an array of entries each carrying <code>kind</code>, <code>family</code>, <code>ts</code> and <code>handle</code> (null
+where no agent can be named), with members particular to the kind beside them.
+The kinds are: <code>promised</code>, <code>approved</code>, <code>denied</code>, <code>refused</code>, <code>relaxed</code>,
+<code>connected</code>, <code>revoked</code>, <code>touched</code>, <code>identity_refused</code>, <code>claimed</code>,
+<code>disclaimed</code>; for an organization, <code>org_joined</code>, <code>org_left</code>, <code>org_declined</code>,
+<code>org_clamped</code>, <code>org_refused</code>, <code>org_role</code>, <code>org_acted</code> and <code>break_glass</code>; and for
+a jointly held resource, <code>joint_joined</code>, <code>joint_left</code>, <code>joint_moved</code>,
+<code>joint_allowed</code> and <code>joint_refused</code>. A surface <span class="bcp14">SHOULD</span> tolerate a kind it does not
+know, showing it as an entry rather than failing on it. With <code>?handle=</code> it
+returns one agent's part of the record: every promise that agent made, every
+decision about it, and everything it touched, in order.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2"><code>GET /events</code> is a server-sent event stream <span>[<a href="#SSE" class="cite xref">SSE</a>]</span> carrying a message for
 each thing that happens that the owner may want to act on: a request arriving
 to wait on her, a decision landing, a resource server introducing itself, an
 organization or a co-holder changing something. The event name is the
-message's <code>type</code>. On a replicated authorization server the subscription <span class="bcp14">MUST</span>
+message's <code>type</code>, one of <code>pending</code>, <code>decided</code>, <code>resource_server_pending</code>,
+<code>resource_server_decided</code>, <code>organization</code>, <code>joint</code> and <code>break_glass</code>; a surface
+<span class="bcp14">SHOULD</span> ignore a type it does not know, and <span class="bcp14">SHOULD</span> re-read the state the stream
+concerns when it reconnects, since a message sent while it was disconnected is
+not replayed. On a replicated authorization server the subscription <span class="bcp14">MUST</span>
 be a property of the shared state rather than of the process serving the
 stream, since the decision the owner is waiting for may be produced by any
 replica.<a href="#section-6-2" class="pilcrow">¶</a></p>
@@ -1812,7 +1845,7 @@ authorization server knows about the agents that have approached her. The
 requires it be rendered as text: it is the one field on this surface that the
 counterparty authored.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">An organization's view of the same data is not this surface; it is the scoped
-view of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> Section 2.6, and the scoping is applied by the
+view of <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> Section 2.7, and the scoping is applied by the
 owner's server before it answers.<a href="#section-9-2" class="pilcrow">¶</a></p>
 </section>
 </div>

@@ -95,6 +95,11 @@ REQUIRE_CONTENT_DIGEST = os.environ.get(
 class MembershipUnavailable(Exception):
     """The organization could not be read and no recent answer stands."""
 
+class CouldNotAsk(Exception):
+    """A party whose answer a check needs could not be asked. Not a refusal:
+    reported as `temporarily_unavailable`, never as a terminal code."""
+
+
 class Pending(Exception):
     """The authority knows this resource server and the owner has not yet
     said yes. Not an error in the relationship — a stage of it."""
@@ -396,10 +401,16 @@ class Enforcer:
         # introduce ourselves again and let her decide, not to retry harder.
         # Asking again cannot undo her withdrawal; it can only put the
         # question back in front of her, which is what re-registering does.
-        refused = r.status_code == 401 or (
-            r.status_code == 403 and _error_of(r) == "access_denied")
+        withdrawn = r.status_code == 403 and _error_of(r) == "access_denied"
+        refused = r.status_code == 401 or withdrawn
         if refused and self.signing_key is not None:
-            if time.time() >= self._establish_after:
+            # The throttle is for an origin her authority does not recognise,
+            # where asking again repeats the same failure. A withdrawal is
+            # answered once — the registration goes back to pending, and every
+            # later request is told that — so it is never held back: a replica
+            # still throttled from an earlier introduction would otherwise
+            # leave her withdrawal looking like an outage.
+            if withdrawn or time.time() >= self._establish_after:
                 self._establish_after = time.time() + self.establish_backoff_s
                 await self.establish(client)
                 # Ask again either way: the second answer separates "she has
@@ -426,6 +437,19 @@ class Enforcer:
     async def pat_headers(self, client: httpx.AsyncClient) -> dict[str, str]:
         return {"Authorization": f"Bearer {await self.pat(client)}"}
 
+    async def _protected(self, client: httpx.AsyncClient, path: str,
+                         **kw) -> httpx.Response:
+        """A Protection API call with this owner's PAT, retried once with a
+        fresh one on a 401: the PAT lapsed, or the authority re-keyed. One
+        place, so no call is the one that forgot."""
+        r = await client.post(f"{self.as_internal}{path}", timeout=5.0,
+                              headers=await self.pat_headers(client), **kw)
+        if r.status_code == 401:
+            await self.pat(client, force=True)
+            r = await client.post(f"{self.as_internal}{path}", timeout=5.0,
+                                  headers=await self.pat_headers(client), **kw)
+        return r
+
     async def mint_ticket(self, resource_id: str, scopes: list[str]) -> str | None:
         """Register the attempted permission and get a ticket (beat 1).
 
@@ -445,13 +469,7 @@ class Enforcer:
         body = {"resource_id": resource_id, "resource_scopes": scopes}
         try:
             async with httpx.AsyncClient() as client:
-                r = await client.post(f"{self.as_internal}/perm", json=body,
-                                      headers=await self.pat_headers(client), timeout=5.0)
-                if r.status_code == 401:
-                    await self.pat(client, force=True)
-                    r = await client.post(f"{self.as_internal}/perm", json=body,
-                                          headers=await self.pat_headers(client),
-                                          timeout=5.0)
+                r = await self._protected(client, "/perm", json=body)
                 r.raise_for_status()
                 return r.json()["ticket"]
         except httpx.HTTPStatusError as exc:
@@ -473,12 +491,8 @@ class Enforcer:
         """
         try:
             async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    f"{self.as_internal}/introspect",
-                    data={"token": token, "consume": "false"},
-                    headers=await self.pat_headers(client),
-                    timeout=5.0,
-                )
+                r = await self._protected(client, "/introspect",
+                                          data={"token": token, "consume": "false"})
                 r.raise_for_status()
                 return r.json()
         except Pending:
@@ -497,21 +511,7 @@ class Enforcer:
         grant was spent; a timeout says nothing about it either way."""
         try:
             async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    f"{self.as_internal}/consume",
-                    data={"token": token},
-                    headers=await self.pat_headers(client),
-                    timeout=5.0,
-                )
-                if r.status_code == 401:
-                    # As at beat 1: the PAT lapsed or the authority re-keyed.
-                    await self.pat(client, force=True)
-                    r = await client.post(
-                        f"{self.as_internal}/consume",
-                        data={"token": token},
-                        headers=await self.pat_headers(client),
-                        timeout=5.0,
-                    )
+                r = await self._protected(client, "/consume", data={"token": token})
                 r.raise_for_status()
                 return r.json()
         except (httpx.HTTPError, ValueError, Pending):
@@ -519,16 +519,18 @@ class Enforcer:
 
     async def report_access(self, family: str, tool: str, summary: str) -> None:
         """Ground the ledger's "touched" column in enforcement, not claims."""
+        # The call already happened; a record that could not be written does
+        # not undo it, so this never refuses. It does say so, because a
+        # "touched" column missing rows silently is a record that lies.
         try:
             async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"{self.as_internal}/audit/access",
-                    json={"family": family, "tool": tool, "summary": summary},
-                    headers=await self.pat_headers(client),
-                    timeout=5.0,
-                )
-        except (httpx.HTTPError, Pending):
-            pass
+                r = await self._protected(
+                    client, "/audit/access",
+                    json={"family": family, "tool": tool, "summary": summary})
+                r.raise_for_status()
+        except (httpx.HTTPError, Pending) as exc:
+            self.event("access.report_failed", family=family, tool=tool,
+                       error=str(exc)[:160])
 
     # --- The organization above this owner ------------------------------
 
@@ -650,8 +652,9 @@ class Enforcer:
             return None
         mandate = await self.published_mandate(joint.get("account") or "")
         if mandate is None:
-            return ("this resource is held jointly and its mandate could not "
-                    "be read, so who was entitled to a say is not known here")
+            raise CouldNotAsk("this resource is held jointly and its mandate "
+                              "could not be read, so who was entitled to a say "
+                              "is not known here")
         # Counted as the holders' authorities read it, not as published. A
         # rule left as a word with no threshold beside it would otherwise
         # count to zero, and zero is a count any single verdict clears.
@@ -748,6 +751,12 @@ class Enforcer:
         if (op := claims.get("operation")) is not None:
             if not info.get("single_use") or info.get("operation") != op:
                 return "it is not bound to the one operation that was agreed"
+        agreed_cls = uma4a_consequence.rank(claims.get("consequence"))
+        if agreed_cls is not None:
+            granted_cls = uma4a_consequence.rank(info.get("consequence"))
+            if granted_cls is None or granted_cls < agreed_cls:
+                return ("it declares a lighter consequence than the holder "
+                        "answered under")
         return None
 
     async def published_mandate(self, account: str) -> dict | None:
@@ -782,30 +791,37 @@ class Enforcer:
         return doc
 
     async def _verified_verdict(self, jws: str, holder: dict) -> dict | None:
-        """One verdict, against the issuing holder's published keys."""
+        """One verdict, against the keys the holder's authority publishes —
+        the cached set, then once a fresh read if none of those verifies it,
+        because a holder that rotated its key is otherwise read as a forger.
+        A fresh read happens at most once a minute per authority."""
         issuer = self.holder_authorities.get(holder.get("owner") or "", "")
         if not issuer:
             return None
-        cached = self._holder_jwks.get(issuer)
-        if not cached or cached[0] < time.time():
-            try:
-                async with httpx.AsyncClient(verify=CA_BUNDLE or True,
-                                             timeout=5.0) as client:
-                    r = await client.get(f"{issuer}/jwks")
-                    r.raise_for_status()
-                cached = (time.time() + HOLDER_JWKS_TTL_S, r.json()["keys"])
-                self._holder_jwks[issuer] = cached
-            except (httpx.HTTPError, KeyError, ValueError) as exc:
-                self.event("joint.jwks_unreachable", issuer=issuer,
-                           error=str(exc)[:160])
+        for fresh in (False, True):
+            cached = self._holder_jwks.get(issuer)
+            if fresh and cached and time.time() - (cached[0] - HOLDER_JWKS_TTL_S) < 60:
                 return None
-        for jwk_dict in cached[1]:
-            try:
-                return jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
-                                  algorithms=["EdDSA"], issuer=issuer,
-                                  options={"verify_aud": False})
-            except jwt.InvalidTokenError:
-                continue
+            if fresh or not cached or cached[0] < time.time():
+                try:
+                    async with httpx.AsyncClient(verify=CA_BUNDLE or True,
+                                                 timeout=5.0) as client:
+                        r = await client.get(f"{issuer}/jwks")
+                        r.raise_for_status()
+                    cached = (time.time() + HOLDER_JWKS_TTL_S, r.json()["keys"])
+                    self._holder_jwks[issuer] = cached
+                except (httpx.HTTPError, KeyError, ValueError) as exc:
+                    self.event("joint.jwks_unreachable", issuer=issuer,
+                               error=str(exc)[:160])
+                    raise CouldNotAsk(f"the keys of {holder.get('owner')}'s "
+                                      "authority could not be read") from exc
+            for jwk_dict in cached[1]:
+                try:
+                    return jwt.decode(jws, OKPAlgorithm.from_jwk(json.dumps(jwk_dict)),
+                                      algorithms=["EdDSA"], issuer=issuer,
+                                      options={"verify_aud": False})
+                except jwt.InvalidTokenError:
+                    continue
         return None
 
     def issued_by_organization(self, rpt: str) -> bool:
@@ -836,8 +852,8 @@ class Enforcer:
         try:
             doc = await self.membership()
         except MembershipUnavailable:
-            return ("the organization could not be reached to establish the "
-                    "ceiling over this resource")
+            raise CouldNotAsk("the organization could not be reached to "
+                              "establish the ceiling over this resource")
         if not doc.get("member") or not claims_match(rid, doc.get("claims")):
             return None
         for permission in info.get("permissions", []):
@@ -988,7 +1004,17 @@ class Enforcer:
         #     succeed"; this says the authority that answered is issuing more
         #     than the organization permits, which negotiating again will
         #     reproduce exactly.
-        if not override and (breach := await self.ceiling_breach(info, rid)):
+        try:
+            breach = None if override else await self.ceiling_breach(info, rid)
+            joint_breach = None if breach else await self.joint_breach(info, rid)
+        except CouldNotAsk as exc:
+            # Not a refusal: a party whose answer this check needs could not
+            # be asked. Terminal codes are for decisions somebody made.
+            self.event("access.denied", reason="could-not-ask", tool=f.tool,
+                       detail=str(exc))
+            return Decision(outcome="deny", status=503, error="temporarily_unavailable",
+                            description=str(exc))
+        if breach:
             self.event("access.denied", reason="org-envelope", tool=f.tool,
                        detail=breach)
             return Decision(outcome="deny", status=403,
@@ -1003,7 +1029,7 @@ class Enforcer:
         #
         #     Not a re-challenge, for the same reason the ceiling above is
         #     not: negotiating again reproduces it exactly.
-        if breach := await self.joint_breach(info, rid):
+        if breach := joint_breach:
             self.event("access.denied", reason="joint-verdicts", tool=f.tool,
                        detail=breach)
             return Decision(outcome="deny", status=403,
@@ -1166,7 +1192,13 @@ class Enforcer:
                 as_uri=self.as_public,
                 resource_metadata=self.resource_metadata_url)
         if ticket is None:
-            return Decision(outcome="deny", status=503, error="as_unreachable")
+            # Unreachable, or it answered and refused this resource server:
+            # either way the client can only try again later, which is what
+            # core's `temporarily_unavailable` says. Which of the two it was
+            # is in the event, for whoever has to fix it.
+            return Decision(outcome="deny", status=503, error="temporarily_unavailable",
+                            description="the owner's authorization server could "
+                                        "not issue a ticket for this resource")
         details = self.authorization_details(rid, tool, scopes)
         self.event("challenge.issued", corr=None, tool=tool, resource_id=rid,
                    scopes=scopes)
@@ -1179,8 +1211,11 @@ class Enforcer:
             resource_metadata=self.resource_metadata_url,
             scopes=scopes,
             authorization_details=details,
+            # RFC 8785, as core defines s256: UTF-8, not \u escapes, so a
+            # tool or resource named outside ASCII hashes as it does elsewhere.
             authorization_reference=s256(
-                json.dumps(details, sort_keys=True, separators=(",", ":")).encode()),
+                json.dumps(details, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode()),
         )
 
     @staticmethod

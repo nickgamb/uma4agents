@@ -53,7 +53,14 @@ spec:
   # about half the time. The gateway-mode path solves this with a keygen Job
   # into a Secret; here one replica is the honest answer for a resource whose
   # whole purpose is to be the small shape.
+  #
+  # And one at a time: a rolling update starts the new pod before stopping
+  # the old, which for those seconds is two replicas with two keys. Recreate
+  # stops the old one first, trading a moment of unavailability for never
+  # serving two identities under one name.
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app.kubernetes.io/name: alice-vault-embedded }
   template:
@@ -131,14 +138,21 @@ spec:
 # Reached by the agent directly, and by Alice's authority to pull what it
 # publishes. Not by the enforcement point: there is no enforcement point in
 # this path, which is the whole demonstration.
+#
+# Bound to the Service rather than by selector, because it names paths: a
+# selector policy is ztunnel's, at L4, where a path cannot be seen and the
+# caller arriving is the waypoint rather than the original one. Bound here it
+# is the waypoint's, which sees both.
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: alice-vault-embedded-callers
   namespace: meridian
 spec:
-  selector:
-    matchLabels: { app.kubernetes.io/name: alice-vault-embedded }
+  targetRefs:
+    - kind: Service
+      group: ""
+      name: alice-vault-embedded
   action: ALLOW
   rules:
     # The agent, arriving through the edge like any other caller from outside.

@@ -109,8 +109,8 @@ by — and refuses a mandate naming an owner it does not serve, or a different
 authority for one it does. `make pep-test` asserts both.
 
 **An honest grant is not refused for lapsing answers.** A verdict lasts as
-long as the agreement it is about, within the one-hour ceiling on any grant,
-and the tally issues no grant that outlives the first verdict it carries.
+long as the agreement it is about, and the tally issues no grant that outlives
+the first verdict it carries.
 
 **And it recomputes against the mandate the tally *publishes*, never the copy
 in the grant.** That distinction is the whole difference between a check and a
@@ -224,6 +224,14 @@ cannot see a request waiting on her about the joint account, cannot answer
 one, and the organization's ceiling does not touch the terms she writes over
 it.
 
+**The protection runs one way.** A mandate's resources are matched as
+patterns, so one written as `meridian-joint/*` excludes every resource under
+it. But a mandate cannot take out what her organization itself claims: her
+authority refuses to agree to one that covers the firm's own resources, and
+ignores such a mandate when deciding what the firm may reach. Otherwise a
+member could lift the firm's ceiling off its own book by joining a mandate any
+party could publish.
+
 One consequence is visible to her: **terms over a jointly held resource
 cannot share a tier with anything else.** Partly because they are half
 somebody else's — one edit would change what his agents are held to, in a
@@ -260,8 +268,9 @@ and an agent polling for an outcome that cannot change.
 
 **And a group cannot answer what quorum sets the quorum.** A mandate carries a
 floor it may not go below, supplied by something other than the holders — an
-account agreement, or a regulator. In the lab it is `TALLY_THRESHOLD_FLOOR`;
-a mandate below it is refused at startup, by name. This is the same shape as
+account agreement, or a regulator. In the lab it is `TALLY_THRESHOLD_FLOOR`,
+and it counts people rather than weight: a mandate under which fewer holders
+than that could release anything together is refused at startup, by name. This is the same shape as
 an organization's ceiling, which is worth noticing: **peers compose
 horizontally, and an authority above them clamps vertically.** The two
 arrangements are orthogonal rather than competing.

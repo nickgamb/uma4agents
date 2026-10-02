@@ -465,6 +465,9 @@ services:
     build: ./clients/agent-operator
     environment:
       AGENT_OPERATOR_ORIGIN: https://agent.uma.lab
+      # Only the operator's own agents put keys in its directory. Without a
+      # token anyone could publish one here and be attributed to this firm.
+      AGENT_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9030/health')\""]
       interval: 3s
