@@ -504,10 +504,17 @@ parsing the details.
 
 ## Corroborating the Authorization Server {#corroboration}
 
-A client MUST fetch the document named by `resource_metadata`, MUST
-verify that its `resource` member identifies the resource being accessed as
-required by {{RFC9728}} Section 3.3, and MUST refuse a challenge whose `as_uri`
-does not appear in that document's `authorization_servers` array.
+A client MUST fetch the resource's metadata from the URL {{RFC9728}} Section 3
+forms from the resource it called, and MUST refuse a challenge whose
+`resource_metadata` names any other URL. It MUST verify that the document's
+`resource` member identifies the resource being accessed as required by
+{{RFC9728}} Section 3.3, and MUST refuse a challenge whose `as_uri` does not
+appear in that document's `authorization_servers` array.
+
+The URL is formed rather than followed because the challenge is the thing being
+checked. A forged challenge can name a document on the forger's own host that
+lists the forger's authorization server, and a client that fetched it would
+corroborate the forgery against itself.
 
 Without this, the only statement of which authorization server decides is an
 unauthenticated header on a refused request. With it, the challenge gains a

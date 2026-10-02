@@ -65,3 +65,5 @@ okta.env
 # Local peer-review scratch, never committed
 chatgpt_probe.md
 reviews/
+# Built from src by compose and by k8s/scripts/job-configmaps.sh.
+clients/ts-agent/dist/

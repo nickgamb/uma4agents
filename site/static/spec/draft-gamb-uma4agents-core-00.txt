@@ -542,18 +542,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 3.5.  Corroborating the Authorization Server
 
-   A client MUST fetch the document named by resource_metadata, MUST
-   verify that its resource member identifies the resource being
-   accessed as required by [RFC9728] Section 3.3, and MUST refuse a
-   challenge whose as_uri does not appear in that document's
+   A client MUST fetch the resource's metadata from the URL [RFC9728]
+   Section 3 forms from the resource it called, and MUST refuse a
+   challenge whose resource_metadata names any other URL.  It MUST
+   verify that the document's resource member identifies the resource
+   being accessed as required by [RFC9728] Section 3.3, and MUST refuse
+   a challenge whose as_uri does not appear in that document's
    authorization_servers array.
 
-   Without this, the only statement of which authorization server
-   decides is an unauthenticated header on a refused request.  With it,
-   the challenge gains a second witness anchored in the resource's own
-   TLS-protected origin.  The challenge remains authoritative for the
-   ticket, which is the one value the metadata document cannot carry.
-
+   The URL is formed rather than followed because the challenge is the
+   thing being checked.  A forged challenge can name a document on the
+   forger's own host that lists the forger's authorization server, and a
+   client that fetched it would corroborate the forgery against itself.
 
 
 
@@ -561,6 +561,12 @@ Gamb & Maler              Expires 19 March 2027                [Page 10]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   Without this, the only statement of which authorization server
+   decides is an unauthenticated header on a refused request.  With it,
+   the challenge gains a second witness anchored in the resource's own
+   TLS-protected origin.  The challenge remains authoritative for the
+   ticket, which is the one value the metadata document cannot carry.
 
 4.  The Negotiation
 
@@ -604,12 +610,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    Presenting the same assertion as a jwt-bearer grant would have the
    identity provider's assertion produce the access token directly,
    which makes the identity provider the deciding party over a resource
-   it does not own.  An identity assertion proves who an agent acts for
-   and carries no entitlement of its own, which is what a UMA claim is
-   for.  Where both are demanded, identity is demanded first, because
-   which terms apply follows from which party the agent acts for.
-
-
 
 
 
@@ -617,6 +617,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 11]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
+
+   it does not own.  An identity assertion proves who an agent acts for
+   and carries no entitlement of its own, which is what a UMA claim is
+   for.  Where both are demanded, identity is demanded first, because
+   which terms apply follows from which party the agent acts for.
 
 4.2.  Responses
 
@@ -662,11 +667,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    determines the shape of the standing connection handle and nothing
    else.
 
-   Pseudonymous:  The client presents a bare public JWK [RFC7517].  The
-      key is the identity.  The connection handle is jkt(k).
-
-   Identified:  The client presents a credential from an issuer
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 12]
@@ -674,6 +674,10 @@ Gamb & Maler              Expires 19 March 2027                [Page 12]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
+   Pseudonymous:  The client presents a bare public JWK [RFC7517].  The
+      key is the identity.  The connection handle is jkt(k).
+
+   Identified:  The client presents a credential from an issuer
       asserting its identity and binding it to a key — for example an
       aa-agent+jwt as defined by [I-D.hardt-oauth-aauth-protocol], whose
       cnf.jwk is the signing key, and accepted as [U4AAAuth] specifies.
@@ -715,13 +719,9 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    *  a Signature-Agent [I-D.meunier-webbotauth-registry] naming a
       directory of keys the operator publishes.
 
-
-
-
-
-
-
-
+   Both travel in the protected header of the agreement ([U4ATerms]), as
+   the members client_id and signature_agent, so the agreement's
+   signature covers them.  A client that also sends a Signature-Agent
 
 
 
@@ -730,9 +730,6 @@ Gamb & Maler              Expires 19 March 2027                [Page 13]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-   Both travel in the protected header of the agreement ([U4ATerms]), as
-   the members client_id and signature_agent, so the agreement's
-   signature covers them.  A client that also sends a Signature-Agent
    header on a request to the resource MUST cover it with that request's
    signature (Section 6.1).  The operator is the origin of the client
    identifier; a signature_agent directory at any other origin attests
@@ -775,6 +772,9 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    Section 2.5 would otherwise treat covering an absent field as an
    error; this is a departure from it, and the signer and the verifier
    apply it identically.
+
+
+
 
 
 

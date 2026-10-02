@@ -49,9 +49,7 @@ kubectl -n "$NS" create configmap agent-shim \
   --from-file=test_shim.py="$ROOT/clients/agent-shim/test_shim.py" \
   --dry-run=client -o yaml | kubectl replace --force -f - >/dev/null
 
-# The second implementation, built. `dist/` is committed for the same reason
-# the drafts' rendered output is: what the check runs has to be the artifact,
-# not a build step that could differ. Runtime needs no node_modules — the
+# The second implementation, built. Runtime needs no node_modules — the
 # agent imports node builtins and its own module, and TypeScript is a
 # development dependency only.
 # package.json comes along because it is what makes the two files ESM. The
@@ -59,6 +57,15 @@ kubectl -n "$NS" create configmap agent-shim \
 # `"type": "module"` beside them Node reads the same bytes as CommonJS and
 # refuses the first import. Compose gets this for free by running inside the
 # package directory.
+# Built here from src, on the Node version compose and the site pin, rather
+# than committed: a committed build is a second copy of the agent that can
+# fall behind the first, and the cluster would then be testing code the
+# working tree no longer contains. Rebuilt only when a source file is newer.
+TS="$ROOT/clients/ts-agent"
+if [ ! -f "$TS/dist/check.js" ] || [ -n "$(find "$TS/src" "$TS/package.json" "$TS/tsconfig.json" -newer "$TS/dist/check.js" 2>/dev/null | head -1)" ]; then
+  docker run --rm -v "$TS":/agent -w /agent node:20.15.0 \
+    sh -c "npm ci --no-audit --no-fund >/dev/null && npm run build >/dev/null"
+fi
 kubectl -n "$NS" create configmap ts-agent \
   --from-file=check.js="$ROOT/clients/ts-agent/dist/check.js" \
   --from-file=uma4a.js="$ROOT/clients/ts-agent/dist/uma4a.js" \

@@ -88,10 +88,14 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, k8s-smoke-test]
     asserts: ["gateway challenge: OK", "an unauthorized tool call is refused with a ticket"]
-  - text: "A client MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
+  - text: "A client MUST fetch the resource's metadata from the URL [RFC9728] Section 3 forms from the resource it called, and MUST refuse a challenge whose resource_metadata names any other URL."
     verified: check
-    targets: [multi-owner-check, k8s-smoke-test]
-    asserts: ["no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+    targets: [client-test, ts-agent-check]
+    asserts: ["a challenge pointing at metadata anywhere but the resource called is refused", "a challenge her resource's own metadata names is corroborated"]
+  - text: "It MUST verify that the document's resource member identifies the resource being accessed"
+    verified: check
+    targets: [client-test, multi-owner-check, k8s-smoke-test, ts-agent-check]
+    asserts: ["metadata for another resource is refused", "a challenge naming an authority the resource never published is refused", "no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
   - text: "MAY be accepted as a claim_token with claim_token_format of urn:ietf:params:oauth:token-type:id-jag, in which case the authorization server MUST treat it as a claim about identity and reach, and MUST NOT treat it as conferring access"
     verified: check
     targets: [xaa-check]
@@ -265,7 +269,7 @@ draft-gamb-uma4agents-core-00:
   - text: "An authorization server MUST NOT hold a static owner credential of its own."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot reach Alice's authorization server directly", "cannot read Alice's policy"]
+    asserts: ["cannot reach Alice's authorization server directly", "cannot read Alice's policy", "not her policy", "and through her public hostname, her credential is what refuses it"]
   - text: "Every handler MUST act on the owner the credential proved rather than on one the request named."
     verified: check
     targets: [multi-owner-check, store-test]
@@ -304,7 +308,7 @@ draft-gamb-uma4agents-core-00:
   - text: "Which resources a named person owns MUST NOT be published at an unauthenticated URI."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the resource's published metadata is readable by anyone"]
   - text: "a decision the owner did not personally take MUST NOT be"
     verified: check
     targets: [org-check]
@@ -334,7 +338,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "It MUST NOT name which owners have instances behind it."
     verified: check
     targets: [k8s-policy-test]
-    asserts: ["cannot read the owner-bound resource listing", "the resource's published metadata is readable by anyone"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the resource's published metadata is readable by anyone"]
   - text: "The document MUST carry signed_metadata as [RFC9728] Section 2.2"
     verified: check
     targets: [k8s-smoke-test]
@@ -342,7 +346,7 @@ draft-gamb-uma4agents-fedauthz-00:
   - text: "MUST serve them only to a request signed with [RFC9421] by the authorization server that owner has named"
     verified: check
     targets: [k8s-policy-test, k8s-smoke-test]
-    asserts: ["cannot read the owner-bound resource listing", "the authorization server pulled what the resource publishes"]
+    asserts: ["cannot read the owner-bound resource listing", "and on the public hostname, only her authority's signature reads it", "the authorization server pulled what the resource publishes"]
   - text: "MUST be able to learn what a resource server protects by fetching, and MUST NOT require the resource server to push resource descriptions"
     verified: check
     targets: [k8s-smoke-test, fixture]

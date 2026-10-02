@@ -42,7 +42,7 @@ WWW-Authenticate: UMA realm="alice-vault",
 | `as_uri` | UMA 2.0 | The owner's authorization server |
 | `ticket` | UMA 2.0 | The negotiation handle |
 | `scope` | RFC 6750 §3 | Scopes the call needed |
-| `resource_metadata` | RFC 9728 §5.1 | The document that lets the client corroborate `as_uri` |
+| `resource_metadata` | RFC 9728 §5.1 | The resource's metadata URL, which must equal the one RFC 9728 §3 forms from the resource called; the client reads that document to corroborate `as_uri` |
 | `error`, `authorization_remediation` | `draft-ietf-oauth-rar-metadata-remediation` | Structured remediation |
 
 `authorization_remediation` decodes to:

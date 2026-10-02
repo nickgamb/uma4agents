@@ -158,13 +158,16 @@ def call_tool(session: McpSession, keys: AgentKeys, tool: str, args: dict,
 
     # Corroborate the (unauthenticated) challenge header against the
     # resource's TLS-anchored published metadata before negotiating.
-    if resource_metadata is not None:
-        try:
-            validate_resource_metadata(resource_metadata, resource_url, as_uri)
-            say("challenge corroborated: as_uri is among the resource's "
-                "published authorization servers")
-        except DiscoveryMismatch as exc:
-            raise RuntimeError(f"refusing to negotiate: {exc}")
+    if resource_metadata is None:
+        raise RuntimeError("refusing to negotiate: no resource metadata to "
+                           f"corroborate {as_uri} against")
+    try:
+        validate_resource_metadata(resource_metadata, resource_url, as_uri,
+                                   challenge.resource_metadata)
+        say("challenge corroborated: as_uri is among the resource's "
+            "published authorization servers")
+    except DiscoveryMismatch as exc:
+        raise RuntimeError(f"refusing to negotiate: {exc}")
 
     # First contact pends as a connection request regardless of tier (the
     # day-1 handshake); ask-me tiers pend per operation. The simulated Alice

@@ -24,7 +24,7 @@ import httpx  # noqa: E402
 from u4a_authority import OwnerAuthority  # noqa: E402
 from uma4a_grant import (  # noqa: E402
     ID_JAG_CLAIM, Enterprise, GrantDenied, id_jag_request, jsonrpc_challenge,
-    receipt_filename, refusal)
+    DiscoveryMismatch, receipt_filename, refusal, validate_resource_metadata)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -99,6 +99,31 @@ emitted = {"jsonrpc": "2.0", "id": 1, "error": {
     "code": -32001, "message": "authorization required",
     "data": {"error": "insufficient_authorization", "as_uri": "https://alice-as.example",
              "ticket": "tkt-1", "resource_metadata": "https://rs.example/prm"}}}
+RES = "https://rs.example/mcp"
+PRM = {"resource": RES, "authorization_servers": ["https://as.example"]}
+check("a challenge her resource's own metadata names is corroborated",
+      validate_resource_metadata(PRM, RES, "https://as.example",
+                                 "https://rs.example/.well-known/oauth-protected-resource/mcp") is PRM)
+
+
+def mismatch(name: str, attempt, because: str) -> None:
+    try:
+        attempt()
+    except DiscoveryMismatch as exc:
+        check(name, because in str(exc), str(exc))
+        return
+    check(name, False, "corroborated")
+
+
+mismatch("a challenge naming an authority the resource never published is refused",
+         lambda: validate_resource_metadata(PRM, RES, "https://evil.example"), "does not publish")
+mismatch("a challenge pointing at metadata anywhere but the resource called is refused",
+       lambda: validate_resource_metadata(
+           PRM, RES, "https://as.example",
+           "https://evil.example/.well-known/oauth-protected-resource/mcp"), "names metadata")
+mismatch("metadata for another resource is refused",
+       lambda: validate_resource_metadata({**PRM, "resource": "https://other.example/mcp"}, RES),
+       "metadata is for")
 check("an unavailable authority is the one refusal worth sending again",
       refusal(503, {"error": "temporarily_unavailable"}) == ("temporarily_unavailable", False))
 check("a refusal value this client has never heard of is final",

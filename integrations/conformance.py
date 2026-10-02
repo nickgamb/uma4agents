@@ -55,24 +55,32 @@ def mcp_call(client: httpx.Client, url: str, tool: str,
                headers)
 
 
+def prm_url(base: str) -> str:
+    """Where RFC 9728 section 3 puts the metadata for this resource: the
+    well-known path inserted between the host and the resource's own path.
+    The only location an agent may read it from — not the origin's root
+    document, which describes a different resource, and not wherever a
+    challenge points, which a forged challenge chooses."""
+    u = urlparse(base)
+    return f"{u.scheme}://{u.netloc}/.well-known/oauth-protected-resource{u.path.rstrip('/')}"
+
+
 def fetch_prm(client: httpx.Client, base: str) -> tuple[dict, str]:
     """The resource's own metadata document, and where it was found.
 
-    Tried at the two well-known locations before any call is made, because it
-    is also where the tool surface is published — and reading it first is what
-    an agent does. `tools/list` is not a substitute: it is usually protected
-    itself, so it answers with a challenge rather than a list.
+    Read before any call is made, because it is also where the tool surface
+    is published — and reading it first is what an agent does. `tools/list`
+    is not a substitute: it is usually protected itself, so it answers with a
+    challenge rather than a list.
     """
-    for path in (f"/.well-known/oauth-protected-resource{urlparse(base).path}",
-                 "/.well-known/oauth-protected-resource"):
-        url = f"{urlparse(base).scheme}://{urlparse(base).netloc}{path}"
-        try:
-            r = client.get(url)
-            if r.status_code == 200 and isinstance(r.json(), dict):
-                return r.json(), url
-        except Exception:                                       # noqa: BLE001
-            continue
-    return {}, ""
+    url = prm_url(base)
+    try:
+        r = client.get(url)
+        if r.status_code == 200 and isinstance(r.json(), dict):
+            return r.json(), url
+    except Exception:                                           # noqa: BLE001
+        pass
+    return {}, url
 
 
 def tool_from(doc: dict) -> str | None:
@@ -129,20 +137,19 @@ def main(base: str, upstream: str | None) -> int:
                         "the resource's own document rather than trust this header")
 
         print("\n== 2 · The metadata document holds up ==")
-        # Prefer the document the challenge itself pointed at: that is the one
-        # an agent would read, and if it differs from the well-known location
-        # this is where that shows up.
+        # The challenge's pointer has to be the resource's own location. An
+        # agent that followed it anywhere else could be handed a document on
+        # the forger's host listing the forger's authority, and both
+        # reference clients refuse such a challenge outright.
         if has_prm:
             named = www.split("resource_metadata=")[1].split(",")[0].strip('" ')
-            try:
-                r_doc = client.get(named)
-                if r_doc.status_code == 200:
-                    doc, doc_url = r_doc.json(), named
-            except Exception:                                   # noqa: BLE001
-                pass
+            check("the challenge points at the resource's own metadata location",
+                  named == doc_url,
+                  f"it names {named!r}; RFC 9728 section 3 puts this resource's "
+                  f"document at {doc_url!r}, and an agent refuses a challenge "
+                  f"pointing anywhere else")
         check("a metadata document is published and fetchable", bool(doc),
-              "tried the challenge's resource_metadata and both well-known "
-              "locations")
+              f"nothing at {doc_url}")
 
         resource = doc.get("resource", "")
         check("it declares the resource it is for", bool(resource))

@@ -1984,15 +1984,21 @@ parsing the details.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
         <h3 id="name-corroborating-the-authoriza">
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-corroborating-the-authoriza" class="section-name selfRef">Corroborating the Authorization Server</a>
         </h3>
-<p id="section-3.5-1">A client <span class="bcp14">MUST</span> fetch the document named by <code>resource_metadata</code>, <span class="bcp14">MUST</span>
-verify that its <code>resource</code> member identifies the resource being accessed as
-required by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code>
-does not appear in that document's <code>authorization_servers</code> array.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">Without this, the only statement of which authorization server decides is an
+<p id="section-3.5-1">A client <span class="bcp14">MUST</span> fetch the resource's metadata from the URL <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3
+forms from the resource it called, and <span class="bcp14">MUST</span> refuse a challenge whose
+<code>resource_metadata</code> names any other URL. It <span class="bcp14">MUST</span> verify that the document's
+<code>resource</code> member identifies the resource being accessed as required by
+<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> Section 3.3, and <span class="bcp14">MUST</span> refuse a challenge whose <code>as_uri</code> does not
+appear in that document's <code>authorization_servers</code> array.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">The URL is formed rather than followed because the challenge is the thing being
+checked. A forged challenge can name a document on the forger's own host that
+lists the forger's authorization server, and a client that fetched it would
+corroborate the forgery against itself.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<p id="section-3.5-3">Without this, the only statement of which authorization server decides is an
 unauthenticated header on a refused request. With it, the challenge gains a
 second witness anchored in the resource's own TLS-protected origin. The challenge
 remains authoritative for the ticket, which is the one value the metadata
-document cannot carry.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+document cannot carry.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

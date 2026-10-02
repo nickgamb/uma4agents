@@ -88,10 +88,14 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [smoke-test, k8s-smoke-test]
     asserts: ["gateway challenge: OK", "an unauthorized tool call is refused with a ticket"]
-  - text: "A client MUST fetch the document named by resource_metadata, MUST verify that its resource member identifies the resource being accessed"
+  - text: "A client MUST fetch the resource's metadata from the URL [RFC9728] Section 3 forms from the resource it called, and MUST refuse a challenge whose resource_metadata names any other URL."
     verified: check
-    targets: [multi-owner-check, k8s-smoke-test]
-    asserts: ["no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
+    targets: [client-test, ts-agent-check]
+    asserts: ["a challenge pointing at metadata anywhere but the resource called is refused", "a challenge her resource's own metadata names is corroborated"]
+  - text: "It MUST verify that the document's resource member identifies the resource being accessed"
+    verified: check
+    targets: [client-test, multi-owner-check, k8s-smoke-test, ts-agent-check]
+    asserts: ["metadata for another resource is refused", "a challenge naming an authority the resource never published is refused", "no two owners are sent to the same authority", "each owner's resource publishes signed RFC 9728 metadata naming her own AS"]
   - text: "MAY be accepted as a claim_token with claim_token_format of urn:ietf:params:oauth:token-type:id-jag, in which case the authorization server MUST treat it as a claim about identity and reach, and MUST NOT treat it as conferring access"
     verified: check
     targets: [xaa-check]

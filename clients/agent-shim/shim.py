@@ -451,7 +451,8 @@ class Upstream:
                                    f"authorization server {as_uri} is "
                                    "uncorroborated")
             try:
-                validate_resource_metadata(prm, GATEWAY, as_uri)
+                validate_resource_metadata(prm, GATEWAY, as_uri,
+                                           getattr(challenge, "resource_metadata", None))
                 log("challenge corroborated against the resource's "
                     "published metadata")
             except DiscoveryMismatch as exc:

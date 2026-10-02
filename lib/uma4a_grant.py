@@ -269,11 +269,22 @@ class DiscoveryMismatch(Exception):
 
 
 def validate_resource_metadata(doc: dict, resource_url: str,
-                               as_uri: str | None = None) -> dict:
+                               as_uri: str | None = None,
+                               named: str | None = None) -> dict:
     """RFC 9728 §3.3 client validation: the `resource` value must identify
     the resource being accessed. When a challenge is in hand, its as_uri
     must be among the published authorization_servers — the TLS-anchored
-    metadata corroborates the (unauthenticated) challenge header."""
+    metadata corroborates the (unauthenticated) challenge header.
+
+    `doc` is the document found from the resource this client called, as
+    RFC 9728 §3 forms the URL, never from where a challenge points: a forged
+    challenge can name a document on its own host that lists its own
+    authorization server. A challenge whose `resource_metadata` (`named`)
+    points anywhere else is refused for the same reason."""
+    if named is not None and named != well_known_prm_url(resource_url):
+        raise DiscoveryMismatch(
+            f"challenge names metadata at {named}, not "
+            f"{well_known_prm_url(resource_url)}")
     if doc.get("resource") != resource_url:
         raise DiscoveryMismatch(
             f"metadata is for {doc.get('resource')!r}, not {resource_url!r}")

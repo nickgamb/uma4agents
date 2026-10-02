@@ -93,8 +93,9 @@ agent every session. That bit the build.
 **Baseline.** RFC 9728 predates this. UMA's challenge carries `as_uri` on faith.
 
 **Here.** One registry behind the published metadata, `resource_metadata` on the
-challenge, and clients corroborating `as_uri` against published
-`authorization_servers`.
+challenge, and clients corroborating `as_uri` against the published
+`authorization_servers` of the document found from the resource they called,
+never from where the challenge points.
 
 **Why.** The metadata is stock. Composing it with the UMA challenge — so the
 challenge gains a TLS-anchored second witness — and putting a protected
