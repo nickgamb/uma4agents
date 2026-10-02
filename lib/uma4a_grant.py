@@ -468,6 +468,23 @@ def jsonrpc_challenge(payload: dict | None) -> tuple[str, str] | None:
     return None
 
 
+def refusal(status: int, body: dict | None) -> tuple[str, bool]:
+    """The refusal value an enforcement point answered with, and whether it is
+    terminal.
+
+    Only `temporarily_unavailable` says the same request may be sent again.
+    Every other value, including one this client has never heard of, is
+    final for the token it was sent with: treating an unknown value as
+    retryable would turn every value added after this client was written into
+    a loop.
+    """
+    body = body or {}
+    data = (body.get("error") or {}).get("data") if isinstance(body.get("error"), dict) else None
+    value = (data or {}).get("error") if isinstance(data, dict) else body.get("error")
+    value = value if isinstance(value, str) and value else f"http_{status}"
+    return value, value != "temporarily_unavailable"
+
+
 def receipt_filename(receipt_jws: str) -> str:
     """The file a counter-signed receipt is kept under, named for its
     negotiation.

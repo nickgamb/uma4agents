@@ -82,30 +82,30 @@ Table of Contents
      3.3.  Refusals That Are Not Challenges  . . . . . . . . . . . .   8
      3.4.  Structured Remediation  . . . . . . . . . . . . . . . . .   9
      3.5.  Corroborating the Authorization Server  . . . . . . . . .  10
-   4.  The Negotiation . . . . . . . . . . . . . . . . . . . . . . .  10
-     4.1.  Claim Token Formats . . . . . . . . . . . . . . . . . . .  10
-     4.2.  Responses . . . . . . . . . . . . . . . . . . . . . . . .  11
+   4.  The Negotiation . . . . . . . . . . . . . . . . . . . . . . .  11
+     4.1.  Claim Token Formats . . . . . . . . . . . . . . . . . . .  11
+     4.2.  Responses . . . . . . . . . . . . . . . . . . . . . . . .  12
      4.3.  Waiting . . . . . . . . . . . . . . . . . . . . . . . . .  12
    5.  The Client  . . . . . . . . . . . . . . . . . . . . . . . . .  12
      5.1.  Identity Levels . . . . . . . . . . . . . . . . . . . . .  12
      5.2.  Descriptive Metadata  . . . . . . . . . . . . . . . . . .  13
-   6.  Proof of Possession . . . . . . . . . . . . . . . . . . . . .  13
+   6.  Proof of Possession . . . . . . . . . . . . . . . . . . . . .  14
      6.1.  The Message Signature Profile . . . . . . . . . . . . . .  14
-     6.2.  Covering the Body . . . . . . . . . . . . . . . . . . . .  15
+     6.2.  Covering the Body . . . . . . . . . . . . . . . . . . . .  16
    7.  The Grant . . . . . . . . . . . . . . . . . . . . . . . . . .  16
      7.1.  The Requesting Party Token  . . . . . . . . . . . . . . .  16
-     7.2.  Consequence . . . . . . . . . . . . . . . . . . . . . . .  17
-     7.3.  Operation Binding and Single Use  . . . . . . . . . . . .  17
-   8.  Enforcement . . . . . . . . . . . . . . . . . . . . . . . . .  18
-     8.1.  Obligations, Not a Topology . . . . . . . . . . . . . . .  18
-     8.2.  Ordering  . . . . . . . . . . . . . . . . . . . . . . . .  18
-     8.3.  Indivisibility  . . . . . . . . . . . . . . . . . . . . .  19
-     8.4.  Introspection Responses . . . . . . . . . . . . . . . . .  20
-   9.  Standing Connections  . . . . . . . . . . . . . . . . . . . .  20
-   10. The Owner's Own Credential  . . . . . . . . . . . . . . . . .  21
-   11. Owner-Scoped Artifacts  . . . . . . . . . . . . . . . . . . .  22
-   12. Profiles and Extensions . . . . . . . . . . . . . . . . . . .  23
-   13. Security Considerations . . . . . . . . . . . . . . . . . . .  26
+     7.2.  Consequence . . . . . . . . . . . . . . . . . . . . . . .  18
+     7.3.  Operation Binding and Single Use  . . . . . . . . . . . .  18
+   8.  Enforcement . . . . . . . . . . . . . . . . . . . . . . . . .  19
+     8.1.  Obligations, Not a Topology . . . . . . . . . . . . . . .  19
+     8.2.  Ordering  . . . . . . . . . . . . . . . . . . . . . . . .  19
+     8.3.  Indivisibility  . . . . . . . . . . . . . . . . . . . . .  20
+     8.4.  Introspection Responses . . . . . . . . . . . . . . . . .  21
+   9.  Standing Connections  . . . . . . . . . . . . . . . . . . . .  21
+   10. The Owner's Own Credential  . . . . . . . . . . . . . . . . .  22
+   11. Owner-Scoped Artifacts  . . . . . . . . . . . . . . . . . . .  23
+   12. Profiles and Extensions . . . . . . . . . . . . . . . . . . .  24
+   13. Security Considerations . . . . . . . . . . . . . . . . . . .  27
 
 
 
@@ -114,32 +114,32 @@ Gamb & Maler              Expires 19 March 2027                 [Page 2]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
-     13.1.  Authorization Inputs Never Come From the Transport . . .  26
-     13.2.  Consumption Is Ordered and Last  . . . . . . . . . . . .  26
-     13.3.  Single Use Must Survive Replication  . . . . . . . . . .  26
-     13.4.  Descriptive Metadata Is Not Authorization  . . . . . . .  27
-     13.5.  Issuers Are Trusted by Dereference . . . . . . . . . . .  27
-     13.6.  Revocation Is Atomic . . . . . . . . . . . . . . . . . .  27
-     13.7.  A Truncated Request Must Fail Closed . . . . . . . . . .  27
-     13.8.  The Resource Server Must Not Read the Owner's Policy . .  27
-     13.9.  Not Addressed  . . . . . . . . . . . . . . . . . . . . .  28
-   14. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  28
-     14.1.  Public Metadata Is Structural  . . . . . . . . . . . . .  28
-     14.2.  The Record Names a Counterparty  . . . . . . . . . . . .  28
-     14.3.  A Stated Purpose Is Not Evaluated  . . . . . . . . . . .  28
-   15. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  28
-   16. References  . . . . . . . . . . . . . . . . . . . . . . . . .  28
-     16.1.  Normative References . . . . . . . . . . . . . . . . . .  28
-     16.2.  Informative References . . . . . . . . . . . . . . . . .  31
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  33
-     A.1.  Profile Identifiers . . . . . . . . . . . . . . . . . . .  33
-     A.2.  JSON Web Token Claims . . . . . . . . . . . . . . . . . .  34
-     A.3.  Authorization Details Type  . . . . . . . . . . . . . . .  34
-     A.4.  Other Values  . . . . . . . . . . . . . . . . . . . . . .  35
-   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  35
-     B.1.  UMA for Agents Reference Implementation . . . . . . . . .  35
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  36
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  36
+     13.1.  Authorization Inputs Never Come From the Transport . . .  27
+     13.2.  Consumption Is Ordered and Last  . . . . . . . . . . . .  27
+     13.3.  Single Use Must Survive Replication  . . . . . . . . . .  27
+     13.4.  Descriptive Metadata Is Not Authorization  . . . . . . .  28
+     13.5.  Issuers Are Trusted by Dereference . . . . . . . . . . .  28
+     13.6.  Revocation Is Atomic . . . . . . . . . . . . . . . . . .  28
+     13.7.  A Truncated Request Must Fail Closed . . . . . . . . . .  28
+     13.8.  The Resource Server Must Not Read the Owner's Policy . .  28
+     13.9.  Not Addressed  . . . . . . . . . . . . . . . . . . . . .  29
+   14. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  29
+     14.1.  Public Metadata Is Structural  . . . . . . . . . . . . .  29
+     14.2.  The Record Names a Counterparty  . . . . . . . . . . . .  29
+     14.3.  A Stated Purpose Is Not Evaluated  . . . . . . . . . . .  29
+   15. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  29
+   16. References  . . . . . . . . . . . . . . . . . . . . . . . . .  29
+     16.1.  Normative References . . . . . . . . . . . . . . . . . .  29
+     16.2.  Informative References . . . . . . . . . . . . . . . . .  32
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  34
+     A.1.  Profile Identifiers . . . . . . . . . . . . . . . . . . .  34
+     A.2.  JSON Web Token Claims . . . . . . . . . . . . . . . . . .  35
+     A.3.  Authorization Details Type  . . . . . . . . . . . . . . .  35
+     A.4.  Other Values  . . . . . . . . . . . . . . . . . . . . . .  36
+   Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  36
+     B.1.  UMA for Agents Reference Implementation . . . . . . . . .  36
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  37
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  37
 
 1.  Introduction
 
@@ -422,6 +422,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    status below and a JSON object whose error member is the value below
    and which MAY carry error_description:
 
+   invalid_token:
+      1.  The token was not presented as a proof-of-possession token, or
+          proof of possession failed (Section 6.1).
+
+   consequence_changed:
+      1.  The operation now declares a consequence the grant was not
+          issued against (Section 7.2).
+
    access_revoked:
       1.  Introspection gave a terminal reason ([U4AFedAuthz]
           Section 5); the owner, or a layer above her, has settled it,
@@ -434,14 +442,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       1.  The grant is bound to no operation, or to a different one
           (Section 7.3).
 
-   invalid_origin:
-      1.  The request came from an origin the enforcement point does not
-          serve.
-
-   request_body_too_large:
-      1.  The body was, or may have been, cut short before the
-          enforcement point read it.
-
 
 
 
@@ -450,12 +450,29 @@ Gamb & Maler              Expires 19 March 2027                 [Page 8]
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
+   invalid_origin:
+      1.  The request came from an origin the enforcement point does not
+          serve.
+
+   request_body_too_large:
+      1.  The body was, or may have been, cut short before the
+          enforcement point read it.
+
    temporarily_unavailable:
       1.  The authorization server could not be asked; the client MAY
           retry the same request.
 
+   Every value above except temporarily_unavailable is terminal for the
+   token presented: the same request with the same token will be refused
+   the same way.
+
    A binding defines how these travel where there is no status line, and
-   MAY add values for refusals of its own.
+   an extension or binding MAY add values for refusals of its own.  A
+   document that adds a value MUST say whether it is terminal.  A client
+   that receives a value it does not recognise MUST treat it as terminal
+   and MUST NOT send the same request with the same token again.
+   Treating an unknown value as retryable turns every value a client
+   predates into a loop.
 
 3.4.  Structured Remediation
 
@@ -476,6 +493,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    ticket:  REQUIRED by this profile.  Same value as the ticket
       parameter.
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    {
      "authorization_details": [{
@@ -498,14 +527,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    client a template to submit to _its own_ authorization server, which
    cannot work when the resource belongs to someone else and the
    client's authorization server has no standing to grant.  Naming the
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    owner's authorization server, and handing back a ticket rather than a
    template, is the whole of the difference: the client authors nothing
    and cannot widen what it was given.
@@ -533,6 +554,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    TLS-protected origin.  The challenge remains authoritative for the
    ticket, which is the one value the metadata document cannot carry.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 4.  The Negotiation
 
    The client presents the ticket at the authorization server's token
@@ -554,13 +583,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    token _formats_, this profile additionally lets it proffer the
    claim's _content_. That extension is specified in [U4ATerms] and is
    REQUIRED to implement.
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 10]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
    An authorization server MAY accept other claim token formats
    alongside it.  One is worth naming because it is the case an
@@ -587,6 +609,15 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    for.  Where both are demanded, identity is demanded first, because
    which terms apply follows from which party the agent acts for.
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
 4.2.  Responses
 
    The authorization server's responses are those of [UMAGrant] Sections
@@ -609,14 +640,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    quota was exhausted or the operator was blocked — the authorization
    server SHOULD say so, so that a well-behaved client can distinguish a
    refusal it might overcome from one it cannot.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 11]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
 
 4.3.  Waiting
 
@@ -643,6 +666,14 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       key is the identity.  The connection handle is jkt(k).
 
    Identified:  The client presents a credential from an issuer
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 12]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
       asserting its identity and binding it to a key — for example an
       aa-agent+jwt as defined by [I-D.hardt-oauth-aauth-protocol], whose
       cnf.jwk is the signing key, and accepted as [U4AAAuth] specifies.
@@ -667,13 +698,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    tenants' agents with the same subject would be one connection,
    sharing its standing and the owner's approvals.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 12]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    Which issuers an authorization server will believe is deployment
    policy, not a wire-protocol rule.  This profile deliberately
    specifies no issuer allow-list, and a deployment MUST supply one.
@@ -690,6 +714,21 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    *  a Signature-Agent [I-D.meunier-webbotauth-registry] naming a
       directory of keys the operator publishes.
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 13]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    Both travel in the protected header of the agreement ([U4ATerms]), as
    the members client_id and signature_agent, so the agreement's
@@ -720,16 +759,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    key on every request to the protected resource, and an enforcement
    point MUST verify it.
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 13]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
 6.1.  The Message Signature Profile
 
    Proof of possession uses HTTP Message Signatures [RFC9421].
@@ -746,6 +775,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    Section 2.5 would otherwise treat covering an absent field as an
    error; this is a departure from it, and the signer and the verifier
    apply it identically.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 14]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    Requiring an exact list is the intuitive implementation and it is
    wrong.  It makes this profile and
@@ -779,13 +818,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    without created is refused rather than treated as fresh, since
    otherwise a captured request is valid for as long as the key is.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 14]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    A signed request that changes the owner's state — any owner request
    other than a read — MUST NOT be accepted twice.  The authorization
    server keeps each such signature it accepts for at least twice the
@@ -797,6 +829,18 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    resource is not held to this: a client that needs an operation
    performed at most once asks for a single-use grant (Section 7.3),
    whose consumption is the replay control.
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 15]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
 6.2.  Covering the Body
 
@@ -831,17 +875,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    that verifies the signature and never reads the body accepts that
    statement without testing it.
 
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 15]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
 7.  The Grant
 
 7.1.  The Requesting Party Token
@@ -854,6 +887,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
      "token_type": "PoP",
      "expires_in": 3600
    }
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 16]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    A client presents the token in the Authorization header as PoP
    followed by a space and the token, on a request signed as Section 6.1
@@ -891,13 +934,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       [U4ATerms]. s256 over the agreement's JWS compact serialization,
       the same value the receipt of [U4ATerms] carries as agreement.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 16]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    consequence:  REQUIRED where the resource server declared one for the
       operation ([U4AFedAuthz]) at the time the grant was issued.  The
       class the owner's authority answered against.
@@ -907,6 +943,16 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       be a digest over the attested facts and MUST NOT carry the facts
       themselves: that a clearance was checked is the enforcement
       point's business, and what it said is the subject's.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
    A bearer requesting party token is a credential that works for
    whoever picks it up, which is an unreasonable thing to hand software
@@ -944,16 +990,6 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
       parameters approved, serialized as [RFC8785]: the params member of
       the agreement's operation [U4ATerms].
 
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 17]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
-
    {
      "single_use": true,
      "operation": {
@@ -966,6 +1002,13 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
    approved this trade" and "she authorized trading" are different
    facts, and a protocol with only scopes can express the second.  This
    is the narrowest useful addition that expresses the first.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 18]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
 
 8.  Enforcement
 
@@ -994,34 +1037,43 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
    1.  Introspect the presented token, without consuming it, and
        establish that it is active and that the relationship behind it
-       still stands.
+       still stands.  An inactive token is answered as [U4AFedAuthz]
+       Section 5 says for its reason.
 
    2.  Establish that the resource being accessed appears in permissions
        with a scope that covers the attempted access, and that the
        permission's own exp and nbf, where present, admit the present
-       time.
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 18]
-
-Internet-Draft             UMA 2.0 for Agents             September 2026
-
+       time.  Where they do not, answer with a challenge: negotiating
+       again can succeed.  Checks an extension places on the grant
+       itself, such as [U4AMultiParty]'s ceiling and joint mandate, run
+       here, after this step and before the next.
 
    3.  Verify proof of possession against the key named by cnf in the
-       introspection response.
+       introspection response, and refuse with invalid_token where it
+       fails.  Then apply Section 7.2, refusing with
+       consequence_changed.
 
    4.  Where the token carries single_use, or the enforcement point
        treats the attempted operation as single-use, establish that the
        attempted operation matches operation.tool and that s256 over the
        received parameters equals operation.params_s256.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 19]
+
+Internet-Draft             UMA 2.0 for Agents             September 2026
+
+
    5.  Consume the token.
 
    An enforcement point MUST NOT consume a single-use token before step
-   5.
+   5, and a refusal at any earlier step leaves it unspent.
+
+   A binding MUST define how the operation and its parameters are read
+   from a request.  Where a request carries no parameters, they are the
+   empty JSON object {}, and params_s256 is computed over that.
 
    An enforcement point that treats an operation as single-use MUST
    refuse a token for it that carries no operation.  An enforcement
@@ -1061,7 +1113,11 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 19]
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 20]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1117,7 +1173,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 20]
+Gamb & Maler              Expires 19 March 2027                [Page 21]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1173,7 +1229,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 21]
+Gamb & Maler              Expires 19 March 2027                [Page 22]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1229,7 +1285,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 22]
+Gamb & Maler              Expires 19 March 2027                [Page 23]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1285,7 +1341,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 23]
+Gamb & Maler              Expires 19 March 2027                [Page 24]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1341,7 +1397,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 24]
+Gamb & Maler              Expires 19 March 2027                [Page 25]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1397,7 +1453,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 25]
+Gamb & Maler              Expires 19 March 2027                [Page 26]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1453,7 +1509,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 26]
+Gamb & Maler              Expires 19 March 2027                [Page 27]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1509,7 +1565,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 27]
+Gamb & Maler              Expires 19 March 2027                [Page 28]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1565,7 +1621,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 28]
+Gamb & Maler              Expires 19 March 2027                [Page 29]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1621,7 +1677,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 29]
+Gamb & Maler              Expires 19 March 2027                [Page 30]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1677,7 +1733,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 30]
+Gamb & Maler              Expires 19 March 2027                [Page 31]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1733,7 +1789,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 31]
+Gamb & Maler              Expires 19 March 2027                [Page 32]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1789,7 +1845,7 @@ Internet-Draft             UMA 2.0 for Agents             September 2026
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 32]
+Gamb & Maler              Expires 19 March 2027                [Page 33]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1845,7 +1901,7 @@ A.1.  Profile Identifiers
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 33]
+Gamb & Maler              Expires 19 March 2027                [Page 34]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1901,7 +1957,7 @@ A.3.  Authorization Details Type
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 34]
+Gamb & Maler              Expires 19 March 2027                [Page 35]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -1957,7 +2013,7 @@ B.1.  UMA for Agents Reference Implementation
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 35]
+Gamb & Maler              Expires 19 March 2027                [Page 36]
 
 Internet-Draft             UMA 2.0 for Agents             September 2026
 
@@ -2013,4 +2069,4 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 36]
+Gamb & Maler              Expires 19 March 2027                [Page 37]

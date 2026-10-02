@@ -83,13 +83,13 @@ Table of Contents
      2.3.  The Charter . . . . . . . . . . . . . . . . . . . . . . .   5
      2.4.  Delegation  . . . . . . . . . . . . . . . . . . . . . . .   5
      2.5.  The Envelope, Clamped on Write  . . . . . . . . . . . . .   6
-     2.6.  The Decision  . . . . . . . . . . . . . . . . . . . . . .   6
+     2.6.  The Decision  . . . . . . . . . . . . . . . . . . . . . .   7
      2.7.  What the Organization May See . . . . . . . . . . . . . .   7
      2.8.  Acting for a Member . . . . . . . . . . . . . . . . . . .   7
      2.9.  Enrolment and Leaving . . . . . . . . . . . . . . . . . .   8
      2.10. Break-Glass . . . . . . . . . . . . . . . . . . . . . . .   9
-   3.  Part II: Owners of Equal Standing . . . . . . . . . . . . . .   9
-     3.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .   9
+   3.  Part II: Owners of Equal Standing . . . . . . . . . . . . . .  10
+     3.1.  Parties . . . . . . . . . . . . . . . . . . . . . . . . .  10
      3.2.  The Mandate . . . . . . . . . . . . . . . . . . . . . . .  10
      3.3.  The Fold  . . . . . . . . . . . . . . . . . . . . . . . .  11
      3.4.  Verdicts  . . . . . . . . . . . . . . . . . . . . . . . .  11
@@ -114,7 +114,7 @@ Gamb & Maler              Expires 19 March 2027                 [Page 2]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
-   5.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  17
+   5.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  18
      5.1.  Members Are Not Visible to Each Other . . . . . . . . . .  18
      5.2.  The Ceiling Is Disclosed to the Agent . . . . . . . . . .  18
    6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  18
@@ -321,6 +321,23 @@ Internet-Draft          Multi-Party Authorization         September 2026
    document before it signs anything, and that is the only moment at
    which "these terms are not hers alone" is information it can act on.
 
+   An enforcement point MAY also check a grant over a claimed resource
+   against the ceiling, as a second line behind the clamp.  One that
+   does refuses a grant that exceeds it with the refusal value
+   organization_envelope_exceeded, status 403, which is terminal: the
+   authority that answered is issuing more than the organization
+   permits, and negotiating again reproduces that exactly.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 6]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
 2.6.  The Decision
 
    For each request over a resource the charter claims, the member's
@@ -330,14 +347,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    scopes attempted, the policy unit as tier, the expires_in, purpose,
    reason, mission and operation of the agreement, and the assurance and
    standing facts of [U4APolicy]; the member's authorization server
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 6]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
    presents its membership credential with them, as a POST to the
    organization's decision_endpoint.
 
@@ -376,6 +385,15 @@ Internet-Draft          Multi-Party Authorization         September 2026
    An organization MAY answer a pending request on a member's behalf,
    and MAY end an agent's reach to claimed resources.  When it does:
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 7]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    *  the record MUST name the organization's administrator, and MUST
       NOT record the decision as the member's ([U4APolicy] Section 8.4);
 
@@ -386,13 +404,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
    *  an introspection response for a grant so affected carries error of
       organization_revoked, which is terminal ([U4AFedAuthz] Section 5).
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 7]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
    The organization conveys each such action to the member's
    authorization server as a short-lived JWT with typ of u4a-org-
@@ -432,6 +443,13 @@ Internet-Draft          Multi-Party Authorization         September 2026
    whose kind is one of membership_ended, role_changed, charter_changed,
    break_glass_opened, break_glass or break_glass_used.
 
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 8]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    Each notice MUST carry its own unique jti, and a member's
    authorization server MUST act on a given jti once.  An identifier
    shared by several notices — the break-glass family of Section 2.10 is
@@ -440,15 +458,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    about one override is indistinguishable from a replay of the first,
    and the stage an owner most needs to be told about is the one that is
    silently dropped.
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 8]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
    Leaving MUST withdraw the member's access to claimed resources and
    the ceiling over her, and MUST leave every narrowing the ceiling
@@ -486,6 +495,17 @@ Internet-Draft          Multi-Party Authorization         September 2026
    answers are those of [U4AFedAuthz] Section 5 with the grant's owner
    added.
 
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                 [Page 9]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    The member MUST be notified at the moment the window opens, before
    any data moves.  Break-glass cannot be a flag on an ordinary grant:
    it has to be a grant the organization signs, checked with the
@@ -497,15 +517,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 3.1.  Parties
 
    Holder:  A resource owner under [U4ACore] who holds a resource
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                 [Page 9]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
-
       jointly with others.  Each holder has her own authorization
       server.
 
@@ -543,6 +554,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    holders, threshold or resources, and MUST refuse to count a holder
    who has written no terms over the resource.
 
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 10]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
    A deployment MAY fix a floor below which no mandate's threshold may
    go.  The interesting real-world version of this is not a group
    choosing its own quorum; it is a regulator or an account agreement
@@ -551,16 +570,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
    Authoring a mandate is where "who decides who decides" lives, and
    this document leaves it to configuration.
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 10]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
 3.3.  The Fold
 
@@ -601,6 +610,14 @@ Internet-Draft          Multi-Party Authorization         September 2026
    because:  OPTIONAL.  Reasons, for a refusal.
 
    exp:  REQUIRED.  No earlier than the agreement the verdict is about
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 11]
+
+Internet-Draft          Multi-Party Authorization         September 2026
+
+
       would end, so that a grant within that lifetime can carry it.
 
    cnf_jkt:  REQUIRED in an allow. jkt(k), as [U4ACore] defines it, of
@@ -610,13 +627,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
 
    expires_in:  REQUIRED in an allow.  The lifetime the agreement
       carries.
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 11]
-
-Internet-Draft          Multi-Party Authorization         September 2026
-
 
    operation:  REQUIRED in an allow whose agreement names an operation.
       Its tool and params_s256, as in the operation claim of [U4ACore].
@@ -654,16 +664,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    scope, a dropped prohibition.  Differences in the direction of _less_
    are expected, since another holder's terms were folded in.  This is
    what lets the folding party be untrusted.
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -842,6 +842,12 @@ Gamb & Maler              Expires 19 March 2027                [Page 15]
 Internet-Draft          Multi-Party Authorization         September 2026
 
 
+   A refusal under this list carries the refusal value
+   joint_mandate_unsatisfied, status 403, which is terminal.  Where the
+   mandate or a holder's keys cannot be fetched, the enforcement point
+   answers temporarily_unavailable instead: that is a party it could not
+   ask, not a decision anybody made.
+
    The tally member of the grant is for display and MUST NOT be trusted.
 
    An enforcement point protecting a jointly held resource MUST refuse a
@@ -885,18 +891,16 @@ Internet-Draft          Multi-Party Authorization         September 2026
    lift her organization's ceiling off its own resource by joining a
    mandate any party could publish.
 
-   Peers compose horizontally; an authority above them clamps
-   vertically.  The two are orthogonal rather than rival, and this
-   document keeps them apart.
-
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                [Page 16]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   Peers compose horizontally; an authority above them clamps
+   vertically.  The two are orthogonal rather than rival, and this
+   document keeps them apart.
 
 4.  Security Considerations
 
@@ -939,10 +943,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
    See Section 2.10.  An emergency path that can be exercised quietly is
    an ordinary path with a better name.
 
-5.  Privacy Considerations
-
-
-
 
 
 
@@ -953,6 +953,8 @@ Gamb & Maler              Expires 19 March 2027                [Page 17]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+5.  Privacy Considerations
 
 5.1.  Members Are Not Visible to Each Other
 
@@ -997,10 +999,8 @@ Internet-Draft          Multi-Party Authorization         September 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
-              Canonicalization Scheme (JCS)", RFC 8785,
-              DOI 10.17487/RFC8785, June 2020,
-              <https://www.rfc-editor.org/rfc/rfc8785>.
+
+
 
 
 
@@ -1009,6 +1009,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 18]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
 
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
@@ -1053,11 +1058,6 @@ Internet-Draft          Multi-Party Authorization         September 2026
               <https://kantara.atlassian.net/wiki/spaces/uma/
               pages/4850258/Notes+drafts+and+WIP>.
 
-   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
-              Code: The Implementation Status Section", BCP 205,
-              RFC 7942, DOI 10.17487/RFC7942, July 2016,
-              <https://www.rfc-editor.org/rfc/rfc7942>.
-
 
 
 
@@ -1065,6 +1065,11 @@ Gamb & Maler              Expires 19 March 2027                [Page 19]
 
 Internet-Draft          Multi-Party Authorization         September 2026
 
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
 
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
@@ -1079,11 +1084,6 @@ Appendix A.  Identifiers Used by This Document
 
    This appendix lists the identifiers this document defines.  It is
    informative and requests no registration.
-
-
-
-
-
 
 
 

@@ -24,7 +24,7 @@ import httpx  # noqa: E402
 from u4a_authority import OwnerAuthority  # noqa: E402
 from uma4a_grant import (  # noqa: E402
     ID_JAG_CLAIM, Enterprise, GrantDenied, id_jag_request, jsonrpc_challenge,
-    receipt_filename)
+    receipt_filename, refusal)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -99,6 +99,13 @@ emitted = {"jsonrpc": "2.0", "id": 1, "error": {
     "code": -32001, "message": "authorization required",
     "data": {"error": "insufficient_authorization", "as_uri": "https://alice-as.example",
              "ticket": "tkt-1", "resource_metadata": "https://rs.example/prm"}}}
+check("an unavailable authority is the one refusal worth sending again",
+      refusal(503, {"error": "temporarily_unavailable"}) == ("temporarily_unavailable", False))
+check("a refusal value this client has never heard of is final",
+      refusal(403, {"error": "something_added_later"}) == ("something_added_later", True))
+check("and so is one carried in a JSON-RPC error's data",
+      refusal(200, {"error": {"code": -32002, "data": {"error": "consequence_changed"}}})
+      == ("consequence_changed", True))
 check("the challenge the resource emits is recognised",
       jsonrpc_challenge(emitted) == ("https://alice-as.example", "tkt-1"))
 check("an ordinary error is not mistaken for one",

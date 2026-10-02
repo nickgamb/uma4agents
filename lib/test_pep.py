@@ -214,6 +214,13 @@ d = present(granting(grant(consequence="irreversible"),
                      consequence={"get_positions": "irreversible"}))
 check("the class it was issued against is honoured", d.outcome == "allow", d.error)
 
+e = granting(grant(consequence="reversible", single_use=True,
+                   operation={"tool": "get_positions", "params_s256": s256(b"{}")}),
+             consequence={"get_positions": "irreversible"})
+d = present(e)
+check("and a single-use grant refused for it is not spent",
+      d.error == "consequence_changed" and e.consume.await_count == 0, d.error)
+
 d = present(granting(grant(consequence="irreversible"),
                      consequence={"get_positions": "reversible"}))
 check("a resource that lowers its own claim invalidates nothing",

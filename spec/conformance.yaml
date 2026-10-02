@@ -211,10 +211,21 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [as-test]
     asserts: ["admitting the same agent again does not revive what revocation ended"]
-  - text: "An enforcement point MUST NOT consume a single-use token before step 5."
+  - text: "An enforcement point MUST NOT consume a single-use token before step 5, and a refusal at any earlier step leaves it unspent."
     verified: check
-    targets: [embedded-check]
-    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again"]
+    targets: [embedded-check, pep-test]
+    asserts: ["a forged replay of a single-use grant is refused", "and the grant is still spendable afterwards", "and spent, it cannot be spent again", "and a single-use grant refused for it is not spent"]
+  - text: "A document that adds a value MUST say whether it is terminal."
+    verified: binding
+    because: the requirement is on a binding or extension document; mcp-00 and multiparty-00 state it for each value they add
+  - text: "A client that receives a value it does not recognise MUST treat it as terminal and MUST NOT send the same request with the same token again."
+    verified: check
+    targets: [client-test]
+    asserts: ["a refusal value this client has never heard of is final", "and so is one carried in a JSON-RPC error's data", "an unavailable authority is the one refusal worth sending again"]
+  - text: "A binding MUST define how the operation and its parameters are read from a request."
+    verified: check
+    targets: [pep-test]
+    asserts: ["a grant marked single-use is spent even at a tool not listed as one"]
   - text: "An enforcement point MUST verify proof of possession against the key returned by introspection rather than the key carried inside the token"
     verified: check
     targets: [pep-test]

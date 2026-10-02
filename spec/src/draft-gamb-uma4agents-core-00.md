@@ -407,6 +407,14 @@ enforcement point refusing for such a reason MUST NOT include a challenge, and
 over HTTP MUST answer with the status below and a JSON object whose `error`
 member is the value below and which MAY carry `error_description`:
 
+invalid_token:
+: 401. The token was not presented as a proof-of-possession token, or proof of
+  possession failed ({{signature-profile}}).
+
+consequence_changed:
+: 403. The operation now declares a consequence the grant was not issued against
+  ({{consequence}}).
+
 access_revoked:
 : 403. Introspection gave a terminal reason ({{U4AFedAuthz}} Section 5); the
   owner, or a layer above her, has settled it, and renegotiating cannot change
@@ -430,8 +438,15 @@ temporarily_unavailable:
 : 503. The authorization server could not be asked; the client MAY retry the
   same request.
 
-A binding defines how these travel where there is no status line, and MAY add
-values for refusals of its own.
+Every value above except `temporarily_unavailable` is terminal for the token
+presented: the same request with the same token will be refused the same way.
+
+A binding defines how these travel where there is no status line, and an
+extension or binding MAY add values for refusals of its own. A document that adds
+a value MUST say whether it is terminal. A client that receives a value it does
+not recognise MUST treat it as terminal and MUST NOT send the same request with
+the same token again. Treating an unknown value as retryable turns every value a
+client predates into a loop.
 
 ## Structured Remediation {#remediation}
 
@@ -873,19 +888,29 @@ An enforcement point MUST perform the following steps in this order, and the
 order is normative:
 
 1. Introspect the presented token, without consuming it, and establish that it is
-   active and that the relationship behind it still stands.
+   active and that the relationship behind it still stands. An inactive token is
+   answered as {{U4AFedAuthz}} Section 5 says for its reason.
 2. Establish that the resource being accessed appears in `permissions` with a
    scope that covers the attempted access, and that the permission's own `exp`
-   and `nbf`, where present, admit the present time.
+   and `nbf`, where present, admit the present time. Where they do not, answer
+   with a challenge: negotiating again can succeed. Checks an extension places
+   on the grant itself, such as {{U4AMultiParty}}'s ceiling and joint mandate,
+   run here, after this step and before the next.
 3. Verify proof of possession against the key named by `cnf` in the introspection
-   response.
+   response, and refuse with `invalid_token` where it fails. Then apply
+   {{consequence}}, refusing with `consequence_changed`.
 4. Where the token carries `single_use`, or the enforcement point treats the
    attempted operation as single-use, establish that the attempted operation
    matches `operation.tool` and that `s256` over the received parameters equals
    `operation.params_s256`.
 5. Consume the token.
 
-An enforcement point MUST NOT consume a single-use token before step 5.
+An enforcement point MUST NOT consume a single-use token before step 5, and a
+refusal at any earlier step leaves it unspent.
+
+A binding MUST define how the operation and its parameters are read from a
+request. Where a request carries no parameters, they are the empty JSON object
+`{}`, and `params_s256` is computed over that.
 
 An enforcement point that treats an operation as single-use MUST refuse a token
 for it that carries no `operation`. An enforcement point MUST consume a token

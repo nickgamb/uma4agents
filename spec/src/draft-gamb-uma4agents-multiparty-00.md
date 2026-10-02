@@ -304,6 +304,12 @@ Section 2): an agent reads the document before it signs anything,
 and that is the only moment at which "these terms are not hers alone" is
 information it can act on.
 
+An enforcement point MAY also check a grant over a claimed resource against the
+ceiling, as a second line behind the clamp. One that does refuses a grant that
+exceeds it with the refusal value `organization_envelope_exceeded`, status 403,
+which is terminal: the authority that answered is issuing more than the
+organization permits, and negotiating again reproduces that exactly.
+
 ## The Decision {#decision}
 
 For each request over a resource the charter claims, the member's authorization
@@ -707,6 +713,11 @@ call under such a grant:
    declares no lighter `consequence` than the verdict names, and, where the
    verdict names an `operation`, is single-use and bound to that operation;
 5. re-run the count of {{count}} and refuse unless it allows.
+
+A refusal under this list carries the refusal value `joint_mandate_unsatisfied`,
+status 403, which is terminal. Where the mandate or a holder's keys cannot be
+fetched, the enforcement point answers `temporarily_unavailable` instead: that
+is a party it could not ask, not a decision anybody made.
 
 The `tally` member of the grant is for display and MUST NOT be trusted.
 

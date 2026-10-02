@@ -1738,6 +1738,11 @@ force over its resources, in its <code>organization</code> member (<span>[<a hre
 Section 2): an agent reads the document before it signs anything,
 and that is the only moment at which "these terms are not hers alone" is
 information it can act on.<a href="#section-2.5-5" class="pilcrow">¶</a></p>
+<p id="section-2.5-6">An enforcement point <span class="bcp14">MAY</span> also check a grant over a claimed resource against the
+ceiling, as a second line behind the clamp. One that does refuses a grant that
+exceeds it with the refusal value <code>organization_envelope_exceeded</code>, status 403,
+which is terminal: the authority that answered is issuing more than the
+organization permits, and negotiating again reproduces that exactly.<a href="#section-2.5-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision">
@@ -2267,16 +2272,20 @@ verdict names an <code>operation</code>, is single-use and bound to that operati
             <p id="section-3.9-2.5.1">re-run the count of <a href="#count" class="auto internal xref">Section 3.7</a> and refuse unless it allows.<a href="#section-3.9-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.9-3">The <code>tally</code> member of the grant is for display and <span class="bcp14">MUST NOT</span> be trusted.<a href="#section-3.9-3" class="pilcrow">¶</a></p>
-<p id="section-3.9-4">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span> refuse a grant that
-carries no <code>joint</code> claim.<a href="#section-3.9-4" class="pilcrow">¶</a></p>
-<p id="section-3.9-5">The holders' authorization servers come from the enforcement point's own
+<p id="section-3.9-3">A refusal under this list carries the refusal value <code>joint_mandate_unsatisfied</code>,
+status 403, which is terminal. Where the mandate or a holder's keys cannot be
+fetched, the enforcement point answers <code>temporarily_unavailable</code> instead: that
+is a party it could not ask, not a decision anybody made.<a href="#section-3.9-3" class="pilcrow">¶</a></p>
+<p id="section-3.9-4">The <code>tally</code> member of the grant is for display and <span class="bcp14">MUST NOT</span> be trusted.<a href="#section-3.9-4" class="pilcrow">¶</a></p>
+<p id="section-3.9-5">An enforcement point protecting a jointly held resource <span class="bcp14">MUST</span> refuse a grant that
+carries no <code>joint</code> claim.<a href="#section-3.9-5" class="pilcrow">¶</a></p>
+<p id="section-3.9-6">The holders' authorization servers come from the enforcement point's own
 configuration for the same reason the mandate does not come from the grant: the
 mandate is published by the tally, and a tally that could name the issuer each
 verdict is checked against could name issuers it controls, sign verdicts for
 holders it invented, and have every signature verify. The tally <span class="bcp14">MUST NOT</span> issue a
-grant that outlives any <code>allow</code> verdict it carries.<a href="#section-3.9-5" class="pilcrow">¶</a></p>
-<p id="section-3.9-6">Reading the mandate from the grant would let the party being checked supply the
+grant that outlives any <code>allow</code> verdict it carries.<a href="#section-3.9-6" class="pilcrow">¶</a></p>
+<p id="section-3.9-7">Reading the mandate from the grant would let the party being checked supply the
 standard it is checked against: a single genuine verdict beside a rewritten
 threshold would pass with every signature verifying. Reading it from where the
 tally publishes it is safe only because every verdict names the digest of the
@@ -2286,7 +2295,7 @@ bounded by the folded terms, so that an honest grant is always one step 4 can
 re-derive. Carrying the verdicts in
 the grant and re-verifying them at the resource is what makes the tally an
 ordinary service rather than a ledger — there is no ordered history here to
-agree on and no long-lived state a fork could damage.<a href="#section-3.9-6" class="pilcrow">¶</a></p>
+agree on and no long-lived state a fork could damage.<a href="#section-3.9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="no-org-joint">

@@ -1819,68 +1819,94 @@ enforcement point refusing for such a reason <span class="bcp14">MUST NOT</span>
 over HTTP <span class="bcp14">MUST</span> answer with the status below and a JSON object whose <code>error</code>
 member is the value below and which <span class="bcp14">MAY</span> carry <code>error_description</code>:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.3-2">
-          <dt id="section-3.3-2.1">access_revoked:</dt>
+          <dt id="section-3.3-2.1">invalid_token:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.2">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.2.1">
 <li id="section-3.3-2.2.1.1">
-                <p id="section-3.3-2.2.1.1.1">Introspection gave a terminal reason (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5); the
-owner, or a layer above her, has settled it, and renegotiating cannot change
-it.<a href="#section-3.3-2.2.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.2.1.1.1">The token was not presented as a proof-of-possession token, or proof of
+possession failed (<a href="#signature-profile" class="auto internal xref">Section 6.1</a>).<a href="#section-3.3-2.2.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.3">already_consumed:</dt>
+<dt id="section-3.3-2.3">consequence_changed:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.4">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.4.1">
 <li id="section-3.3-2.4.1.1">
-                <p id="section-3.3-2.4.1.1.1">A single-use grant was spent by another request (<a href="#indivisibility" class="auto internal xref">Section 8.3</a>).<a href="#section-3.3-2.4.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.4.1.1.1">The operation now declares a consequence the grant was not issued against
+(<a href="#consequence" class="auto internal xref">Section 7.2</a>).<a href="#section-3.3-2.4.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.5">operation_required, operation_mismatch:</dt>
+<dt id="section-3.3-2.5">access_revoked:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.6">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.6.1">
 <li id="section-3.3-2.6.1.1">
-                <p id="section-3.3-2.6.1.1.1">The grant is bound to no operation, or to a different one
-(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-3.3-2.6.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.6.1.1.1">Introspection gave a terminal reason (<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5); the
+owner, or a layer above her, has settled it, and renegotiating cannot change
+it.<a href="#section-3.3-2.6.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.7">invalid_origin:</dt>
+<dt id="section-3.3-2.7">already_consumed:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.8">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.8.1">
 <li id="section-3.3-2.8.1.1">
-                <p id="section-3.3-2.8.1.1.1">The request came from an origin the enforcement point does not serve.<a href="#section-3.3-2.8.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.8.1.1.1">A single-use grant was spent by another request (<a href="#indivisibility" class="auto internal xref">Section 8.3</a>).<a href="#section-3.3-2.8.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.9">request_body_too_large:</dt>
+<dt id="section-3.3-2.9">operation_required, operation_mismatch:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.10">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.10.1">
 <li id="section-3.3-2.10.1.1">
-                <p id="section-3.3-2.10.1.1.1">The body was, or may have been, cut short before the enforcement point
-read it.<a href="#section-3.3-2.10.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.10.1.1.1">The grant is bound to no operation, or to a different one
+(<a href="#operation-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-3.3-2.10.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.3-2.11">temporarily_unavailable:</dt>
+<dt id="section-3.3-2.11">invalid_origin:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.12">
             <ol start="1" type="1" class="normal type-1" id="section-3.3-2.12.1">
 <li id="section-3.3-2.12.1.1">
-                <p id="section-3.3-2.12.1.1.1">The authorization server could not be asked; the client <span class="bcp14">MAY</span> retry the
-same request.<a href="#section-3.3-2.12.1.1.1" class="pilcrow">¶</a></p>
+                <p id="section-3.3-2.12.1.1.1">The request came from an origin the enforcement point does not serve.<a href="#section-3.3-2.12.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.13">request_body_too_large:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.14">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.14.1">
+<li id="section-3.3-2.14.1.1">
+                <p id="section-3.3-2.14.1.1.1">The body was, or may have been, cut short before the enforcement point
+read it.<a href="#section-3.3-2.14.1.1.1" class="pilcrow">¶</a></p>
+</li>
+            </ol>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-2.15">temporarily_unavailable:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-2.16">
+            <ol start="1" type="1" class="normal type-1" id="section-3.3-2.16.1">
+<li id="section-3.3-2.16.1.1">
+                <p id="section-3.3-2.16.1.1.1">The authorization server could not be asked; the client <span class="bcp14">MAY</span> retry the
+same request.<a href="#section-3.3-2.16.1.1.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-3.3-3">A binding defines how these travel where there is no status line, and <span class="bcp14">MAY</span> add
-values for refusals of its own.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">Every value above except <code>temporarily_unavailable</code> is terminal for the token
+presented: the same request with the same token will be refused the same way.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">A binding defines how these travel where there is no status line, and an
+extension or binding <span class="bcp14">MAY</span> add values for refusals of its own. A document that adds
+a value <span class="bcp14">MUST</span> say whether it is terminal. A client that receives a value it does
+not recognise <span class="bcp14">MUST</span> treat it as terminal and <span class="bcp14">MUST NOT</span> send the same request with
+the same token again. Treating an unknown value as retryable turns every value a
+client predates into a loop.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="remediation">
@@ -2424,16 +2450,21 @@ order is normative:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8.2-2">
 <li id="section-8.2-2.1">
             <p id="section-8.2-2.1.1">Introspect the presented token, without consuming it, and establish that it is
-active and that the relationship behind it still stands.<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+active and that the relationship behind it still stands. An inactive token is
+answered as <span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5 says for its reason.<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.2">
             <p id="section-8.2-2.2.1">Establish that the resource being accessed appears in <code>permissions</code> with a
 scope that covers the attempted access, and that the permission's own <code>exp</code>
-and <code>nbf</code>, where present, admit the present time.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+and <code>nbf</code>, where present, admit the present time. Where they do not, answer
+with a challenge: negotiating again can succeed. Checks an extension places
+on the grant itself, such as <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span>'s ceiling and joint mandate,
+run here, after this step and before the next.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.3">
             <p id="section-8.2-2.3.1">Verify proof of possession against the key named by <code>cnf</code> in the introspection
-response.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
+response, and refuse with <code>invalid_token</code> where it fails. Then apply
+<a href="#consequence" class="auto internal xref">Section 7.2</a>, refusing with <code>consequence_changed</code>.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.2-2.4">
             <p id="section-8.2-2.4.1">Where the token carries <code>single_use</code>, or the enforcement point treats the
@@ -2445,21 +2476,25 @@ matches <code>operation.tool</code> and that <code>s256</code> over the received
             <p id="section-8.2-2.5.1">Consume the token.<a href="#section-8.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-8.2-3">An enforcement point <span class="bcp14">MUST NOT</span> consume a single-use token before step 5.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
-<p id="section-8.2-4">An enforcement point that treats an operation as single-use <span class="bcp14">MUST</span> refuse a token
+<p id="section-8.2-3">An enforcement point <span class="bcp14">MUST NOT</span> consume a single-use token before step 5, and a
+refusal at any earlier step leaves it unspent.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">A binding <span class="bcp14">MUST</span> define how the operation and its parameters are read from a
+request. Where a request carries no parameters, they are the empty JSON object
+<code>{}</code>, and <code>params_s256</code> is computed over that.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">An enforcement point that treats an operation as single-use <span class="bcp14">MUST</span> refuse a token
 for it that carries no <code>operation</code>. An enforcement point <span class="bcp14">MUST</span> consume a token
 that carries <code>single_use</code> wherever it is presented, whether or not it treats the
 operation as single-use. The grant says what it was issued for; an enforcement
 point that reads single-use from its own configuration alone lets a grant issued
-for one act serve as standing authority wherever that configuration is absent.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
-<p id="section-8.2-5">Consuming at step 1 is the intuitive placement and it is a denial of service.
+for one act serve as standing authority wherever that configuration is absent.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">Consuming at step 1 is the intuitive placement and it is a denial of service.
 Anyone who observes the token can replay it with a garbage signature: the replay
 is correctly refused, and the grant is already spent, so the one legitimate call
 — the operation the owner personally approved seconds earlier — then fails. An
-attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
-<p id="section-8.2-6">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
+attacker who cannot forge a signature can still destroy the grant.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<p id="section-8.2-7">An enforcement point <span class="bcp14">MUST</span> verify proof of possession against the key returned by
 introspection rather than the key carried inside the token, so that a token
-accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+accepted at step 1 and a key trusted at step 3 come from the same answer.<a href="#section-8.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="indivisibility">

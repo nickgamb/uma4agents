@@ -58,6 +58,7 @@ from uma4a_grant import (
     TermsRejected,
     jsonrpc_challenge,
     parse_challenge,
+    refusal,
     receipt_filename,
     run_grant_async,
     signed_headers,
@@ -485,10 +486,15 @@ class Upstream:
             OUTSTANDING.pop(key, None)
             r, payload = await self.request("tools/call", params, sign=(rpt, keys))
 
-        if r.status_code != 200:
-            raise RuntimeError(f"call failed: {r.status_code} {r.text[:300]}")
-        if err := (payload or {}).get("error"):
-            raise RuntimeError(f"call refused: {err.get('message')}")
+        if r.status_code != 200 or (payload or {}).get("error"):
+            # Not retried here either way. A terminal value is final for this
+            # grant; the one that is not is reported as such, so whoever is
+            # driving the agent can send the call again.
+            value, terminal = refusal(r.status_code, payload)
+            if not terminal:
+                raise RuntimeError(f"{value}: the authorization server could not be "
+                                   "reached; the same call may be sent again")
+            raise RuntimeError(f"call refused ({value}): {r.text[:300]}")
         try:
             return payload["result"]["content"][0]["text"]
         except (KeyError, IndexError, TypeError):

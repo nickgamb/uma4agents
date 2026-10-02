@@ -247,14 +247,24 @@ The enforcement point checks **in this order**, and the order is normative:
 
 1. `POST /introspect` — non-consuming. Is the token live, does the connection
    still stand?
-2. The tool maps to a `resource_id` present in `permissions`.
-3. The request signature verifies against the RPT's `cnf` key.
-4. For single-use grants, an exact `operation.params_s256` match.
+2. The tool maps to a `resource_id` present in `permissions`, with the scopes
+   it needs, inside the permission's own `exp`/`nbf`. If not, a challenge.
+   The organization's ceiling (`organization_envelope_exceeded`) and a joint
+   mandate (`joint_mandate_unsatisfied`) are checked here.
+3. The request signature verifies against the RPT's `cnf` key
+   (`invalid_token`, 401), and the operation has not been re-declared worse
+   than the grant's `consequence` (`consequence_changed`).
+4. For single-use grants, an exact `operation.params_s256` match. A call with
+   no `arguments` has the parameters `{}`.
 5. `POST /consume` — atomic, and only now.
 
 Consuming earlier lets an unsigned replay destroy an approval the owner
-personally gave. A caller that loses the consume race is told `consumed: false`
-and must deny.
+personally gave, and a refusal at any earlier step leaves the grant unspent. A
+caller that loses the consume race is told `consumed: false` and must deny.
+
+Every refusal value except `temporarily_unavailable` is terminal for the token
+presented. A client that receives one it does not recognise treats it as
+terminal and does not send the same call again with the same token.
 
 ## Introspection reasons
 
