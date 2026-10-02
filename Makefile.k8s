@@ -654,11 +654,12 @@ k8s-paios-check: k8s-paios
 	@kubectl -n alice exec deploy/paios -- python /opt/u4a/paios_check.py; \
 		status=$$?; kubectl -n alice scale deployment/paios --replicas=0 >/dev/null; exit $$status
 
-## k8s-check-all: every suite the requirements register cites, against the
-## cluster — the unit half, the register itself, and the cluster twin of every
-## live check, including the rows (the trust boundary, the published metadata)
-## that only the cluster proves. The order is the one that leaves the lab in a
-## state each next check expects.
+## k8s-check-all: the unit half, the register itself, and the cluster twin of
+## each live check that has one, including the rows (the trust boundary, the
+## published metadata) that only the cluster proves. k8s-smoke-test is the
+## cluster's own smoke suite, not a copy of compose's: rows that cite compose
+## smoke-test assertions are proved by `make check-live`. The order is the one
+## that leaves the lab in a state each next check expects.
 .PHONY: k8s-check-all
 k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
 	k8s-flow-check k8s-first-party-check k8s-multi-owner-check \
@@ -666,7 +667,8 @@ k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
 	k8s-consequence-check k8s-clearance-check k8s-subagent-check k8s-org-check \
 	k8s-joint-check k8s-xaa-check k8s-adapter-check k8s-shim-test \
 	k8s-embedded-check k8s-kwaai-check k8s-rotation-check k8s-ts-agent-check fixture
-	@echo "k8s-check-all: every suite the register cites has run against the cluster"
+	@echo "k8s-check-all: the unit suites, the register and every cluster check passed;"
+	@echo "rows citing compose's smoke-test are proved by make check-live"
 
 ## k8s-reset: rewind the story without rebuilding the cluster
 .PHONY: k8s-reset
