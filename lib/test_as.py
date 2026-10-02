@@ -290,12 +290,20 @@ async def a_mandate_over_the_firms_own_resource() -> None:
             check(REFUSED, False, "agreed")
         except HTTPException as exc:
             check(REFUSED, exc.status_code == 409, str(exc.detail))
-    client = SimpleNamespace(envelope=firm)
+    client = SimpleNamespace(envelope={**firm, "grants": ["northwind-vault/*"]})
     with patch.object(app, "org_client", AsyncMock(return_value=client)), \
             patch.object(app, "jointly_held",
                          AsyncMock(return_value={"northwind-vault/*", "meridian-joint/*"})):
         env = await app.org_envelope("alice")
     check("and one she holds anyway does not lift the firm's ceiling off it",
+          env["excluded"] == ["meridian-joint/*"], str(env["excluded"]))
+    greedy = SimpleNamespace(envelope={"claims": ["northwind-vault/*", "meridian-joint/*"],
+                                       "grants": ["northwind-vault/*"]})
+    with patch.object(app, "org_client", AsyncMock(return_value=greedy)), \
+            patch.object(app, "jointly_held",
+                         AsyncMock(return_value={"meridian-joint/*"})):
+        env = await app.org_envelope("alice")
+    check("but a charter claiming her joint account does not bring it into reach",
           env["excluded"] == ["meridian-joint/*"], str(env["excluded"]))
 
 
@@ -391,9 +399,41 @@ def pulled_registrations() -> None:
         except ValueError:
             check(label, True)
     pull(client_id="rs-b")
-    check("and an id another resource server registered for her is not taken over",
-          app.RESOURCES[("alice", "x/get")]["source"] == "rs-a",
-          app.RESOURCES[("alice", "x/get")]["source"])
+    check("a second resource server she approved may serve the same resource",
+          app.RESOURCES[("alice", "x/get")]["sources"] == ["rs-a", "rs-b"],
+          str(app.RESOURCES[("alice", "x/get")].get("sources")))
+
+    Client.docs = documents(rid="y/get")
+    with patch("httpx.Client", Client):
+        app.pull_registrations("rs-a", {"resource_uri": RU}, "alice")
+    check("and when one stops publishing it, it stays registered for the other",
+          app.RESOURCES[("alice", "x/get")]["sources"] == ["rs-b"],
+          str(app.RESOURCES.get(("alice", "x/get"))))
+    app.RESOURCES.clear()
+
+
+async def who_may_ask_about_a_resource() -> None:
+    print("\n== who may ask for a ticket over a resource ==")
+    from types import SimpleNamespace
+    app.RESOURCES[("alice", "x/get")] = {"resource_scopes": ["s"], "owner": "alice",
+                                         "sources": ["rs-a", "rs-b"]}
+
+    async def perm(as_client: str):
+        class Req:
+            state = SimpleNamespace(pat_client=as_client)
+
+            async def json(self):
+                return {"resource_id": "x/get", "resource_scopes": ["s"]}
+        with patch.object(app, "require_pat", AsyncMock(return_value="alice")), \
+                patch.object(app, "pull_registrations_now", AsyncMock()):
+            return await app.register_permission(Req())
+
+    check("a resource server that serves it may",
+          (await perm("rs-b")).status_code == 201, str((await perm("rs-b")).status_code))
+    refused = await perm("rs-c")
+    check("one she approved for something else may not",
+          refused.status_code == 400 and b"invalid_resource_id" in refused.body,
+          str(refused.status_code))
     app.RESOURCES.clear()
 
 
@@ -826,6 +866,7 @@ async def main() -> int:
     await what_a_terms_document_says_about_her()
     await an_introduction_by_token()
     pulled_registrations()
+    await who_may_ask_about_a_resource()
     await a_tier_written_again()
     await a_mandate_over_the_firms_own_resource()
     await whose_approval()

@@ -301,6 +301,9 @@ def validate_resource_metadata(doc: dict, resource_url: str,
 # chance to negotiate for itself.
 INTRODUCTION_TYP = "u4a-introduction-v1+jws"
 
+# How many times an agent will sign terms dictated again in one negotiation.
+MAX_DICTATIONS = 3
+
 
 def sign_introduction(keys: AgentKeys, child_jkt: str, as_uri: str,
                       ttl: int = 300) -> str:
@@ -643,7 +646,12 @@ def run_grant(
                                          "claim_token_format": ID_JAG_FORMAT})
         body = r.json()
 
-    if body.get("error") == "need_info":
+    # Bounded rather than once: terms that changed between proffer and commit
+    # — an organization's ceiling re-applied, her own edit — are dictated
+    # again, and the agent agrees to what is in force or to nothing.
+    for _ in range(MAX_DICTATIONS):
+        if body.get("error") != "need_info":
+            break
         template = body["required_claims"][0]["terms_template"]
         on_status(f"terms proffered: {template['purpose']} "
                   f"(expires {template['expires_in']}s, "
@@ -783,7 +791,9 @@ async def run_grant_async(
                                                "claim_token_format": ID_JAG_FORMAT})
         body = r.json()
 
-    if body.get("error") == "need_info":
+    for _ in range(MAX_DICTATIONS):
+        if body.get("error") != "need_info":
+            break
         template = body["required_claims"][0]["terms_template"]
         on_status(f"terms proffered: {template['purpose']} "
                   f"(expires {template['expires_in']}s, "

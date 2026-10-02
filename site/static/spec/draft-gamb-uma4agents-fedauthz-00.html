@@ -1623,6 +1623,11 @@ carries.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
       </ol>
 <p id="section-3-4">One fetch replaces N registration calls, and there is one registry with one
 writer.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">A resource may be registered for one owner from more than one resource server
+she has approved: the same account behind a gateway and enforcing in process is
+one resource under two enforcement points. The authorization server <span class="bcp14">MUST</span> answer
+a permission request for a resource only from a resource server whose listing
+carries it, and a resource stays registered while any of them does.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <div id="staleness">
 <section id="section-3.1">
         <h3 id="name-staleness">

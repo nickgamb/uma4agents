@@ -300,6 +300,13 @@ Internet-Draft             FedAuthz for Agents            September 2026
    One fetch replaces N registration calls, and there is one registry
    with one writer.
 
+   A resource may be registered for one owner from more than one
+   resource server she has approved: the same account behind a gateway
+   and enforcing in process is one resource under two enforcement
+   points.  The authorization server MUST answer a permission request
+   for a resource only from a resource server whose listing carries it,
+   and a resource stays registered while any of them does.
+
 3.1.  Staleness
 
    The registry the authorization server holds may lag what the resource
@@ -322,13 +329,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
    verifying a signed request MUST either tolerate a live back-call to
    the authorization server or verify against keys it already holds.
 
-   Gating readiness on "my registry is populated" deadlocks: the
-   authorization server will not serve its keys until it has pulled, and
-   the resource server will not serve the pull until it has the keys.
-   The general form is that in a profile where two parties authenticate
-   each other by dereference, neither party's liveness may be
-   conditioned on the exchange completing.
-
 
 
 
@@ -337,6 +337,13 @@ Gamb & Maler              Expires 19 March 2027                 [Page 6]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+   Gating readiness on "my registry is populated" deadlocks: the
+   authorization server will not serve its keys until it has pulled, and
+   the resource server will not serve the pull until it has the keys.
+   The general form is that in a profile where two parties authenticate
+   each other by dereference, neither party's liveness may be
+   conditioned on the exchange completing.
 
 4.  Establishment
 
@@ -380,19 +387,17 @@ Internet-Draft             FedAuthz for Agents            September 2026
      "name": "Meridian Vault"
    }
 
-        Figure 2: A resource server registering by origin signature.
-                     Line breaks are for display only.
-
-   The authorization server MUST verify the signature by:
-
-
-
 
 
 Gamb & Maler              Expires 19 March 2027                 [Page 7]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
+
+        Figure 2: A resource server registering by origin signature.
+                     Line breaks are for display only.
+
+   The authorization server MUST verify the signature by:
 
    1.  fetching the protected resource metadata for resource_uri from
        that resource's own origin;
@@ -436,11 +441,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
    named beside it exists.  An authorization server that seeds an owner
    on demand has turned an unauthenticated endpoint into unbounded
    state.
-
-
-
-
-
 
 
 

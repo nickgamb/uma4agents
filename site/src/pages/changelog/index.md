@@ -37,7 +37,7 @@ release within that month. One entry per release.
 #### Enhancements
 
 - **Authorization server:** an approved request is re-checked for revocation, operator and organization blocks and clearance before anything is issued, in the single-owner and joint paths. Grants and joint verdicts last as long as the agreement says.
-- **Authorization server:** the resource registry is keyed by owner and resource, a listing for another owner or an id another resource server holds is refused, and `/perm` answers only the resource server that registered the resource.
+- **Authorization server:** the resource registry is keyed by owner and resource, a listing for another owner is refused, and `/perm` answers only a resource server that publishes the resource. A resource may be served by more than one resource server she approved, such as her vault behind a gateway and the same vault enforcing in process.
 - **Authorization server:** a request waiting on the owner is polled without spending its ticket.
 - **Authorization server:** an owner's signed request that changes anything is accepted once; a second presentation is refused.
 - **HTTP signatures:** a signature without `created` is refused, and the signer adds a fresh `nonce`, so the same request sent twice in a second is not mistaken for a replay.
@@ -46,6 +46,7 @@ release within that month. One entry per release.
 - **Organization:** break-glass overrides and vouchers are bound to the membership they were issued under, and a window opens only once the member has been told.
 - **Agent shim:** standing-config acceptance applies only when the client cannot elicit; any other error is reported.
 - **Agent shim, demo driver, TypeScript client:** a refusal is read through one rule; only `temporarily_unavailable` may be retried.
+- **Client:** terms dictated again at commit, because the tier or its ceiling changed since they were proffered, are put to the agent's approval and signed again, up to three times.
 - **Kubernetes:** every credential the public edge can reach is generated per cluster: the PAT secrets at Alice's authority, the tally and the organization, the research agent's broker secret, and each portal's session key.
 - **Kubernetes:** the authorization server's signing key rotates in two rollouts, so no replica meets a key it cannot verify. Both rotation checks restore on every exit and fail when a restore fails.
 - **Kubernetes:** the resource server's identity reaches only the protection API and keys on her authority, not the organization's or the tally's surfaces.
@@ -61,7 +62,7 @@ release within that month. One entry per release.
 - **Authorization server:** an organization's operator block was not applied at introspection.
 - **Authorization server:** an introduced agent's later requests and joint pends from strangers did not count against her attention budget.
 - **Authorization server:** an organization notice or identity assertion replayed to another replica was acted on again.
-- **Joint tally:** a mandate written as a pattern could take a jointly held resource out of an organization's reach, or lift the organization's ceiling off its own resource.
+- **Joint tally:** a mandate written as a pattern could take a jointly held resource out of an organization's reach, or lift the organization's ceiling off its own resource. A jointly held resource stays in an organization's reach only where the organization shares it with her, not wherever its charter claims.
 - **Organization console:** saving settings dropped charter fields the form does not show, and the charter and Rego tabs could revert a concurrent change. A charter edit could remove a group with members.
 - **Checks:** several checks could pass without the property they assert, or leave the lab changed after a failure. Each now fails when its property does not hold, restores what it changed, and fails when the restore does not take.
 - **Kubernetes:** the cluster smoke test counted any transport error, and a 405 from the vault, as the mesh refusing.

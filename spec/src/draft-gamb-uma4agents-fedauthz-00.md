@@ -241,6 +241,12 @@ server:
 One fetch replaces N registration calls, and there is one registry with one
 writer.
 
+A resource may be registered for one owner from more than one resource server
+she has approved: the same account behind a gateway and enforcing in process is
+one resource under two enforcement points. The authorization server MUST answer
+a permission request for a resource only from a resource server whose listing
+carries it, and a resource stays registered while any of them does.
+
 ## Staleness {#staleness}
 
 The registry the authorization server holds may lag what the resource server

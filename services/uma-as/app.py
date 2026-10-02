@@ -1134,14 +1134,18 @@ def pull_registrations(client_id: str, rs: dict, owner: str = DEFAULT_OWNER) -> 
                          f"pull was made for {owner!r}")
     seen, count = set(), 0
     for res in body.get("resources", []):
-        held = RESOURCES.get((owner, res["_id"]))
-        if held and held.get("source") not in (None, client_id):
-            # Another resource server she approved registered this id first.
-            # A second one claiming it would take over the tickets, grants and
-            # record of a resource it does not serve.
-            event("resources.conflict", owner=owner, resource_id=res["_id"],
-                  held_by=held.get("source"), claimed_by=client_id)
-            continue
+        held = RESOURCES.get((owner, res["_id"])) or {}
+        # One resource may be served by more than one resource server she has
+        # approved — her vault behind a gateway and the same vault enforcing
+        # in process are one account under two enforcement points. Each is
+        # recorded as serving it, and only those may ask about it (`/perm`),
+        # so a server she approved for something else gains nothing here
+        # without publishing the id itself, and withdrawing it from one
+        # leaves it registered for the others.
+        sources = set(held.get("sources") or ()) | {client_id}
+        if held and held.get("resource_scopes") != res["resource_scopes"]:
+            event("resources.redescribed", owner=owner, resource_id=res["_id"],
+                  by=client_id, sources=sorted(sources))
         RESOURCES[(owner, res["_id"])] = {
             "resource_scopes": res["resource_scopes"],
             "name": res.get("name"),
@@ -1156,14 +1160,18 @@ def pull_registrations(client_id: str, rs: dict, owner: str = DEFAULT_OWNER) -> 
             "description": None,
             "registered_via": "pull",
             "owner": owner,
-            "source": client_id,
+            "sources": sorted(sources),
         }
         seen.add(res["_id"])
         count += 1
     withdrawn = [rid for (o, rid), d in RESOURCES.items()
-                 if o == owner and d.get("source") == client_id and rid not in seen]
+                 if o == owner and client_id in (d.get("sources") or ()) and rid not in seen]
     for rid in withdrawn:
-        RESOURCES.pop((owner, rid), None)
+        left = [s for s in RESOURCES[(owner, rid)]["sources"] if s != client_id]
+        if left:
+            RESOURCES[(owner, rid)]["sources"] = left
+        else:
+            RESOURCES.pop((owner, rid), None)
     event("resources.pulled", client_id=client_id, owner=owner,
           count=count, withdrawn=withdrawn or None, endpoint=endpoint)
     return count
@@ -1228,10 +1236,10 @@ async def register_permission(request: Request) -> JSONResponse:
                 event("resources.pull_retry", client_id=client_id,
                       error=str(exc)[:200])
         registered = resources_for(owner).get(rid)
-    if registered is None or registered.get("source") not in (
-            None, getattr(request.state, "pat_client", None)):
-        # Not registered, or registered by another resource server: a ticket
-        # is asked for by the server that serves the resource, and no other.
+    if registered is None or ("sources" in registered and getattr(
+            request.state, "pat_client", None) not in registered["sources"]):
+        # Not registered, or not by this resource server: a ticket is asked
+        # for by a server that serves the resource, and no other.
         event("permission.rejected", resource_id=rid, reason="invalid_resource_id")
         return JSONResponse(
             {"error": "invalid_resource_id",
@@ -1670,14 +1678,17 @@ async def org_envelope(owner: str) -> dict | None:
     client = await org_client(owner)
     if client is None:
         return None
-    claims = client.envelope.get("claims") or []
+    shares = client.envelope.get("grants") or []
     # Joint holding takes a resource out of an organization's reach to protect
     # a co-owner the organization never met. It cannot take out what the
-    # organization itself claims: a member who joined a mandate naming the
-    # firm's own book, from any tally at all, would otherwise lift the firm's
-    # ceiling off it by her own act.
+    # organization itself shares with her: a member who joined a mandate
+    # naming the firm's own book, from any tally at all, would otherwise lift
+    # the firm's ceiling off it by her own act. What it shares, not what its
+    # charter claims: a claim is the organization's say-so, and one over a
+    # namespace it does not serve must not reach an account she holds with
+    # somebody it never met.
     return {**client.envelope, "excluded": sorted(
-        r for r in await jointly_held(owner) if not org.claims_match(r, claims))}
+        r for r in await jointly_held(owner) if not org.claims_match(r, shares))}
 
 
 async def clearance_unmet(owner: str, tier: dict,

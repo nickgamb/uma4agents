@@ -319,6 +319,10 @@ draft-gamb-uma4agents-core-00:
     asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
 
 draft-gamb-uma4agents-fedauthz-00:
+  - text: "The authorization server MUST answer a permission request for a resource only from a resource server whose listing carries it"
+    verified: check
+    targets: [as-test]
+    asserts: ["a resource server that serves it may", "one she approved for something else may not", "a second resource server she approved may serve the same resource", "and when one stops publishing it, it stays registered for the other"]
   - text: "The resource server verifies the signature against the keys of the authorization server its configuration names for that owner, and MUST NOT take the signer from the request."
     verified: check
     targets: [gateway-test]
