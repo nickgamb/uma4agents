@@ -53,7 +53,14 @@ spec:
   # about half the time. The gateway-mode path solves this with a keygen Job
   # into a Secret; here one replica is the honest answer for a resource whose
   # whole purpose is to be the small shape.
+  #
+  # And one at a time: a rolling update starts the new pod before stopping
+  # the old, which for those seconds is two replicas with two keys. Recreate
+  # stops the old one first, trading a moment of unavailability for never
+  # serving two identities under one name.
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app.kubernetes.io/name: alice-vault-embedded }
   template:

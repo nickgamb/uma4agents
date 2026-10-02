@@ -21,7 +21,7 @@ assumes the `*.uma.lab` names the lab issues certificates for.
 | `UMA_AS_ISSUER` | `https://alice-as.uma.lab` | The issuer this authority claims in tokens it mints |
 | `UMA_AS_SIGNING_KEY` | `/keys/uma-as-ed25519.pem` | Signing key for RPTs, receipts and PATs |
 | `UMA_AS_KID` | `uma-as-1` | The key identifier every token this authority signs carries |
-| `UMA_AS_PREVIOUS_KEYS` | unset | Comma-separated PEM paths of keys this authority no longer signs with and still publishes, so grants they signed stay verifiable. Rotation is: the new key becomes `UMA_AS_SIGNING_KEY` under a new `UMA_AS_KID`, and the old one moves here |
+| `UMA_AS_PREVIOUS_KEYS` | unset | Comma-separated PEM paths of keys this authority no longer signs with and still publishes, so grants they signed stay verifiable. With more than one replica, rotation is two rollouts: first the new key goes here, so every replica accepts it before any signs with it; then it becomes `UMA_AS_SIGNING_KEY` under a new `UMA_AS_KID` and the old one moves here. One step would leave replicas not yet rolled refusing grants signed under a kid they have never seen |
 | `UMA_AS_PREVIOUS_KIDS` | unset | The kids of those keys, in order. A key without one is identified by its thumbprint |
 | `UMA_AS_OWNER_AUTH` | `oidc` | Comma-separated: `oidc`, `local-key`, or both. Each accepted credential is independently sufficient |
 | `UMA_AS_OWNER_KEY` | `/keys/owner-ed25519.pub` | Her enrolled device key, for `local-key`. Public half only |

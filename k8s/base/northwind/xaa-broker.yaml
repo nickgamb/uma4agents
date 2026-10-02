@@ -62,7 +62,7 @@ spec:
             - { name: XAA_ADMINS, value: "dana" }
             - { name: XAA_IDP_ADMIN_CLIENT, value: "northwind-idp-admin" }
             - name: XAA_CLIENTS
-              valueFrom: { secretKeyRef: { name: xaa-config, key: clients } }
+              valueFrom: { secretKeyRef: { name: xaa-clients, key: json } }
             # The edges Dana approved. Two, because Northwind's book is
             # administered by two members and each runs her own authority —
             # the assertion has to be audienced at whichever one holds the
@@ -99,16 +99,3 @@ spec:
         - { name: keys, emptyDir: {} }
         - name: ca
           configMap: { name: uma-lab-ca-bundle }
----
-# The broker's own secrets. Separate from `org-config` because they belong to
-# a different surface of the same firm: the organization's authority speaks
-# about membership, this one speaks about employees and applications, and a
-# deployment that shared one credential between them would have collapsed two
-# ceilings into one.
-apiVersion: v1
-kind: Secret
-metadata:
-  name: xaa-config
-  namespace: northwind
-stringData:
-  clients: '{"northwind-research-agent": "northwind-agent-secret"}'

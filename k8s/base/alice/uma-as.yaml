@@ -103,7 +103,7 @@ spec:
               value: meridian-gateway
             - name: UMA_AS_RS_CLIENT_SECRET
               valueFrom:
-                secretKeyRef: { name: uma-as-config, key: rs-client-secret }
+                secretKeyRef: { name: rs-client, key: token }
             # The replicated backend. Under compose this variable is unset
             # and the in-process store is used instead — same image, same
             # code, one env var apart.

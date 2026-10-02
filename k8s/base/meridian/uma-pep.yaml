@@ -79,7 +79,7 @@ spec:
               value: meridian-gateway
             - name: UMA_AS_RS_CLIENT_SECRET
               valueFrom:
-                secretKeyRef: { name: meridian-config, key: rs-client-secret }
+                secretKeyRef: { name: rs-client, key: token }
             # Only Alice's authority was provisioned with this gateway.
             # There is no secret here for Carol's and there could not be:
             # nobody was in a position to configure both ends. The enforcer
@@ -87,7 +87,7 @@ spec:
             # this origin publishes at /jwks, and waits for her.
             - name: UMA_PEP_RS_SECRETS
               valueFrom:
-                secretKeyRef: { name: meridian-config, key: rs-secrets }
+                secretKeyRef: { name: rs-secrets, key: json }
             - name: UMA_REALM
               value: alice-vault
             # Meridian holds more than one person's account. Every owner
@@ -120,7 +120,7 @@ spec:
               value: http://org-authority.northwind.svc.cluster.local:9040
             - name: UMA_PEP_ORG_TOKEN
               valueFrom:
-                secretKeyRef: { name: meridian-config, key: org-rs-token }
+                secretKeyRef: { name: org-rs, key: token }
             # How long this gateway may act on a cached answer about who is
             # a member. The window is somebody's access to the firm's book
             # after the firm withdrew it, so it is short and it is
@@ -147,7 +147,7 @@ spec:
               value: http://joint-tally.tally.svc.cluster.local:9060
             - name: UMA_PEP_JOINT_SECRET
               valueFrom:
-                secretKeyRef: { name: meridian-config, key: tally-rs-secret }
+                secretKeyRef: { name: tally-rs, key: token }
             - name: UMA_PEP_JOINT_ACCOUNTS
               value: meridian-joint,meridian-either
             # The authority the RFC 9421 signature base is rebuilt from.

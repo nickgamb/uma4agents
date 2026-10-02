@@ -105,9 +105,16 @@ k8s-apply:
 		--from-file=agent-keys.py=$(K8S)/scripts/agent-keys.py \
 		--dry-run=client -o yaml | kubectl apply -f - >/dev/null
 	@# Credentials the public edge can reach are generated per cluster, never
-	@# committed: the person server's admin token, and the token Alice's operator
-	@# directory requires to publish a key. Created once; re-applying keeps them.
-	@for pair in "ps-admin:aauth sterling-vance" "operator-register:alice sterling-vance"; do \
+	@# committed: the agent provider's admin token, the token Alice's operator
+	@# directory requires to publish a key, what a resource server presents for
+	@# a PAT at her authority, at the tally and at the organization, and each
+	@# portal's session key. One value per pair, held in each namespace named,
+	@# because the two ends of a provisioned credential are two parties.
+	@# Created once; re-applying keeps them.
+	@for pair in "ps-admin:aauth sterling-vance" "operator-register:alice sterling-vance" \
+			"rs-client:alice meridian" "tally-rs:tally meridian" "org-rs:northwind meridian" \
+			"xaa-agent:northwind sterling-vance" \
+			"portal-session:alice" "portal-session:carol" "console-session:northwind"; do \
 		name=$${pair%%:*}; nss=$${pair#*:}; tok=""; \
 		for ns in $$nss; do \
 			[ -n "$$tok" ] || tok=$$(kubectl -n $$ns get secret $$name -o jsonpath='{.data.token}' 2>/dev/null | base64 -d); \
@@ -118,6 +125,14 @@ k8s-apply:
 			kubectl -n $$ns create secret generic $$name --from-literal=token=$$tok >/dev/null; \
 		done; \
 	done
+	@# The broker's client table, from the same value the research agent holds.
+	@kubectl -n northwind get secret xaa-clients >/dev/null 2>&1 || \
+		kubectl -n northwind create secret generic xaa-clients \
+			--from-literal=json="{\"northwind-research-agent\": \"$$(kubectl -n northwind get secret xaa-agent -o jsonpath='{.data.token}' | base64 -d)\"}" >/dev/null
+	@# The gateway's per-owner table, from the same value Alice's authority holds.
+	@kubectl -n meridian get secret rs-secrets >/dev/null 2>&1 || \
+		kubectl -n meridian create secret generic rs-secrets \
+			--from-literal=json="{\"alice\": \"$$(kubectl -n meridian get secret rs-client -o jsonpath='{.data.token}' | base64 -d)\"}" >/dev/null
 	@kubectl -n idp create configmap realms \
 		--from-file=alice-realm.json=keycloak/alice-realm.json \
 		--from-file=carol-realm.json=keycloak/carol-realm.json \
@@ -460,22 +475,25 @@ k8s-rotation-check:
 	@kubectl apply -f $(K8S)/base/jobs/rotation-check.yaml >/dev/null
 	@kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null
 	@kubectl -n $(NS_AGENT) logs job/rotation-check
-	@echo
-	@echo "==> Rotating the key all three replicas mount"
-	@$(K8S)/scripts/rotate-as-key.sh stage
-	@echo
-	@echo "==> After the rotation"
+	@# From the first change to the cluster on, every exit runs the restore,
+	@# and a restore that fails fails the check: a run that leaves the
+	@# authority rotated has not passed, whatever the job said.
 	@# The second phase reads what the first kept, from the same volume: the
 	@# PersistentVolume binds to one node and every later pod mounting it is
 	@# scheduled there, which is what carries the grant across the rollout.
-	@kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1
-	@sed 's|value: before|value: after|' $(K8S)/base/jobs/rotation-check.yaml \
-		| kubectl apply -f - >/dev/null
-	@set +e; kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null 2>&1; \
-	kubectl -n $(NS_AGENT) logs job/rotation-check; \
-	ok=$$(kubectl -n $(NS_AGENT) get job rotation-check -o jsonpath='{.status.succeeded}'); \
+	@set +e; ok=0; \
+	echo; echo "==> Rotating the key all three replicas mount"; \
+	if $(K8S)/scripts/rotate-as-key.sh stage; then \
+		echo; echo "==> After the rotation"; \
+		kubectl -n $(NS_AGENT) delete job rotation-check --ignore-not-found >/dev/null 2>&1; \
+		sed 's|value: before|value: after|' $(K8S)/base/jobs/rotation-check.yaml \
+			| kubectl apply -f - >/dev/null; \
+		kubectl -n $(NS_AGENT) wait --for=condition=complete job/rotation-check --timeout=300s >/dev/null 2>&1; \
+		kubectl -n $(NS_AGENT) logs job/rotation-check; \
+		test "$$(kubectl -n $(NS_AGENT) get job rotation-check -o jsonpath='{.status.succeeded}')" = "1" && ok=1; \
+	fi; \
 	echo; echo "==> Restoring the original key"; \
-	$(K8S)/scripts/rotate-as-key.sh restore; \
+	$(K8S)/scripts/rotate-as-key.sh restore || { echo "  restore FAILED: the authority may still be rotated"; exit 1; }; \
 	test "$$ok" = "1"
 
 ## k8s-xaa-check: Cross App Access beside UMA. An enterprise identity provider

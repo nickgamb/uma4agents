@@ -319,6 +319,10 @@ token, the gateway's PAT, the agent's `aa-agent+jwt` — are all issued at
 runtime (OIDC login, `client_credentials`, and AAuth enrollment
 respectively); none of them are configured strings.
 
+The Kubernetes deployment commits none of these for anything the public edge
+can reach: `make kind-up` generates them once per cluster (see
+[docs/KUBERNETES.md](docs/KUBERNETES.md)).
+
 ## Troubleshooting
 
 | Issue | Fix |
