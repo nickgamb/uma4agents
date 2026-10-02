@@ -155,47 +155,21 @@ check("fan-out is capped",
 check("and one below the cap is allowed",
       refused(admit, live_children=2, fanout=3) == "")
 
-# --------------------------------------------- lineage in AAuth's own claim
+# ------------------------------------------ lineage in AAuth's parent_agent
 #
 # An identified agent does not need a sibling to vouch for it. Its issuer
-# already signs a credential for it, and RFC 8693's `act` claim — which AAuth
-# nests to record a delegation chain — is where that issuer names the agent
-# this one was spawned by. Nothing new is defined here; what is asserted is
-# that the claim only counts when it arrives inside a *verified* agent token.
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "services", "uma-as"))
-
-
-def identity_from(claims: dict) -> dict:
-    """The identity `contract_identity` builds from verified token claims,
-    using the same `introduction.act_of` it calls."""
-    ident = {"level": "identified", "iss": claims["iss"], "sub": claims.get("sub")}
-    if act := introduction.act_of(claims):
-        ident["act"] = act
-    return ident
-
-
-ident = identity_from({"iss": "https://ps.uma.lab", "sub": "worker-7",
-                       "act": {"sub": "lead-1"}})
-check("an act claim naming the spawning agent is carried through",
-      ident.get("act", {}).get("sub") == "lead-1")
-
-check("an act claim without a subject is ignored",
-      "act" not in identity_from({"iss": "https://ps.uma.lab", "sub": "w",
-                                  "act": {"scope": "everything"}}))
-check("a non-object act claim is ignored",
-      "act" not in identity_from({"iss": "https://ps.uma.lab", "sub": "w",
-                                  "act": "lead-1"}))
-check("an agent with no act claim carries no lineage",
-      "act" not in identity_from({"iss": "https://ps.uma.lab", "sub": "w"}))
+# already signs a credential for it, and AAuth's `parent_agent` claim is where
+# that issuer names the agent this one was spawned by. That the claim only
+# counts inside a verified agent token is test_aauth's to show; here it meets
+# the same admission rule an introduction does.
 
 # The decision is the same one, so every refusal already asserted above
 # applies to this path too. The one that matters most: an issuer naming a
 # sponsor the owner never approved buys nothing.
-check("an act claim naming an unapproved sponsor is still refused",
+check("a parent_agent naming an unapproved sponsor is still refused",
       "approved in person" in refused(admit,
                                       parent_conn={**APPROVED, "tiers_approved": []}))
-check("and an act claim cannot make a sub-agent into a sponsor",
+check("and a parent_agent cannot make a sub-agent into a sponsor",
       "may not introduce" in refused(
           admit, parent_conn={**APPROVED, "parent_handle": "jkt:lead"}))
 

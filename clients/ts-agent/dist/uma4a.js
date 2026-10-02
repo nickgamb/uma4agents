@@ -68,7 +68,14 @@ export function parseJsonRpcChallenge(error) {
 export async function corroborate(fetchFn, resourceUrl, ch) {
     if (!ch.resourceMetadata)
         throw new Error("challenge names no resource_metadata");
-    const doc = (await (await fetchFn(ch.resourceMetadata)).json());
+    // The document is found from the resource this client called, as RFC 9728 §3
+    // forms it, never from where the challenge points: a forged challenge can name
+    // a document on its own host that lists its own authorization server.
+    const r = new URL(resourceUrl);
+    const expected = `${r.origin}/.well-known/oauth-protected-resource${r.pathname === "/" ? "" : r.pathname.replace(/\/$/, "")}`;
+    if (ch.resourceMetadata !== expected)
+        throw new Error(`challenge names metadata at ${ch.resourceMetadata}, not ${expected}`);
+    const doc = (await (await fetchFn(expected)).json());
     if (doc.resource !== resourceUrl)
         throw new Error(`metadata is for ${doc.resource}, not ${resourceUrl}`);
     if (!(doc.authorization_servers ?? []).some((s) => s.replace(/\/$/, "") === ch.asUri.replace(/\/$/, "")))
@@ -131,26 +138,40 @@ export async function runGrant(fetchFn, ch, keys, approve, opts = {}) {
 }
 // ---- Beat 4: proof of possession on the call ----------------------------------
 /** RFC 9421 over @method @authority @path authorization, label sig1, alg ed25519. */
-export function signRequest(method, authority, path, authorization, keys) {
+/** With `body`, the signature also covers an RFC 9530 Content-Digest over those exact bytes. */
+export function signRequest(method, authority, path, authorization, keys, body) {
     const created = Math.floor(Date.now() / 1000);
     const covered = ['"@method"', '"@authority"', '"@path"', '"authorization"'];
+    const lines = [`"@method": ${method}`, `"@authority": ${authority}`, `"@path": ${path}`, `"authorization": ${authorization}`];
+    const digest = body === undefined ? undefined : `sha-256=:${createHash("sha256").update(body).digest("base64")}:`;
+    if (digest) {
+        covered.push('"content-digest"');
+        lines.push(`"content-digest": ${digest}`);
+    }
     const params = `(${covered.join(" ")});created=${created};keyid="${keys.keyid}";alg="ed25519"`;
-    const base = [`"@method": ${method}`, `"@authority": ${authority}`, `"@path": ${path}`,
-        `"authorization": ${authorization}`, `"@signature-params": ${params}`].join("\n");
+    const base = [...lines, `"@signature-params": ${params}`].join("\n");
     const sig = sign(null, Buffer.from(base), keys.key);
-    return { Authorization: authorization, "Signature-Input": `sig1=${params}`, Signature: `sig1=:${sig.toString("base64")}:` };
+    const out = { Authorization: authorization, "Signature-Input": `sig1=${params}`, Signature: `sig1=:${sig.toString("base64")}:` };
+    if (digest)
+        out["Content-Digest"] = digest;
+    return out;
 }
 // ---- MCP over streamable HTTP ----------------------------------------------------
 export async function mcpCall(fetchFn, url, method, params, headers = {}) {
+    const meta0 = { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+        "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "uma4a-ts-agent", version: "0.1" } };
+    const payload = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta0 } });
+    const extra = typeof headers === "function" ? headers(payload) : headers;
     const h = {
         "content-type": "application/json", accept: "application/json, text/event-stream",
-        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, "Mcp-Method": method, ...headers,
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, "Mcp-Method": method, ...extra,
     };
     if (method === "tools/call")
         h["Mcp-Name"] = String(params.name ?? "");
     const meta = { "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
         "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "uma4a-ts-agent", version: "0.1" } };
-    const r = await fetchFn(url, { method: "POST", headers: h, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta } }) });
+    void meta;
+    const r = await fetchFn(url, { method: "POST", headers: h, body: payload });
     const text = await r.text();
     const line = text.split("\n").find((l) => l.startsWith("data:"));
     let body = null;

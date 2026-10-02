@@ -24,6 +24,8 @@ import json
 import jwt
 from jwt.algorithms import OKPAlgorithm
 
+import uma4a_jose
+
 TYP = "u4a-introduction-v1+jws"
 # A compact JWS with an embedded public key. Bounded for the same reason the
 # contract's `reason` is: it is parsed and stored, and a field with no ceiling
@@ -80,7 +82,8 @@ def verify_claim(intro: str, child_jkt: str, issuer: str) -> dict:
     # `exp` is refused rather than accepted forever.
     try:
         key = OKPAlgorithm.from_jwk(json.dumps(parent_jwk))
-        claims = jwt.decode(intro, key, algorithms=["EdDSA"], audience=issuer,
+        claims = jwt.decode(intro, key, algorithms=[uma4a_jose.alg_of(parent_jwk)],
+                            audience=issuer,
                             options={"require": ["exp", "iat", "jti", "sub", "aud"]})
     except Exception as exc:
         raise Refused(f"introduction does not verify: {exc}")
@@ -164,14 +167,3 @@ def admit(parent_conn: dict | None, child_prior: dict | None,
         raise Refused(f"the introducing agent already has {live_children} "
                       f"sub-agents, which is the limit ({fanout})")
 
-
-def act_of(agent_claims: dict) -> dict | None:
-    """The spawning agent an issuer names in a verified agent token's `act`.
-
-    Only a subject that is a non-empty string counts; anything else in the
-    claim is ignored rather than guessed at.
-    """
-    act = agent_claims.get("act")
-    if isinstance(act, dict) and isinstance(act.get("sub"), str) and act["sub"]:
-        return {"sub": act["sub"]}
-    return None

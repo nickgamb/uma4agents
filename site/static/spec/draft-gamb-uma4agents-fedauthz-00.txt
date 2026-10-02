@@ -96,7 +96,7 @@ Table of Contents
    10. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
      10.1.  Normative References . . . . . . . . . . . . . . . . . .  11
      10.2.  Informative References . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  13
+   Appendix A.  Identifiers Used by This Document  . . . . . . . . .  12
    Appendix B.  Implementation Status  . . . . . . . . . . . . . . .  13
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
@@ -197,11 +197,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
    signed by a key published at the resource's own jwks_uri, so that a
    relayed copy stays attributable to the resource.
 
-   A resource server MAY publish the same structural facts in more than
-   one encoding — for example the metadata of [I-D.hardt-aauth-protocol]
-   alongside [RFC9728] — from one registry.  The instance layer beneath
-   them, and the permission ticket, do not change with the encoding.
-
 2.2.  The Protected Layer
 
    A resource server MUST serve, at owner_resources_endpoint, the owner-
@@ -217,6 +212,11 @@ Internet-Draft             FedAuthz for Agents            September 2026
    document would describe the resource to clients while leaving the
    party that decides unable to read it.
 
+   The signature profile is that of [U4ACore] Section 6.1, with
+   @authority taken from the resource server's configuration.
+
+
+
 
 
 
@@ -225,9 +225,6 @@ Gamb & Maler              Expires 19 March 2027                 [Page 4]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
-
-   The signature profile is that of [U4ACore] Section 6.1, with
-   @authority taken from the resource server's configuration.
 
    This is the privacy split.  The public document says what the
    resource is; whose things sit behind it is served only to the party
@@ -272,6 +269,9 @@ Internet-Draft             FedAuthz for Agents            September 2026
    — noticing invalid_resource_id after an authorization server restart
    and re-pushing — placed with the party that can act on it without a
    round trip.
+
+
+
 
 
 
@@ -641,12 +641,6 @@ Internet-Draft             FedAuthz for Agents            September 2026
 
 10.2.  Informative References
 
-   [I-D.hardt-aauth-protocol]
-              Hardt, D., "AAuth Protocol", Work in Progress, Internet-
-              Draft, draft-hardt-aauth-protocol-02, 28 April 2026,
-              <https://datatracker.ietf.org/doc/html/draft-hardt-aauth-
-              protocol-02>.
-
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
@@ -663,6 +657,12 @@ Internet-Draft             FedAuthz for Agents            September 2026
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
 
+Appendix A.  Identifiers Used by This Document
+
+   This appendix lists the identifiers this document defines.  It is
+   informative and requests no registration.
+
+
 
 
 
@@ -673,11 +673,6 @@ Gamb & Maler              Expires 19 March 2027                [Page 12]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
-
-Appendix A.  Identifiers Used by This Document
-
-   This appendix lists the identifiers this document defines.  It is
-   informative and requests no registration.
 
    +==========================+===============+==============+=========+
    | Name                     | Kind          | Meaning      | Defined |
@@ -722,6 +717,11 @@ Appendix B.  Implementation Status
    The reference implementation [U4ALAB] implements this document in
    full.  Both registration methods — declarative pull and the classic
    push endpoint of [UMAFedAuthz] — were built against an otherwise
+   identical stack and measured before push was retired to a preserved
+   branch.  The deadlock of Section 3.2 and the fail-open reading that
+   Section 4.1 warns against were both found by running it.
+
+
 
 
 
@@ -729,10 +729,6 @@ Gamb & Maler              Expires 19 March 2027                [Page 13]
 
 Internet-Draft             FedAuthz for Agents            September 2026
 
-
-   identical stack and measured before push was retired to a preserved
-   branch.  The deadlock of Section 3.2 and the fail-open reading that
-   Section 4.1 warns against were both found by running it.
 
 Acknowledgments
 
@@ -751,6 +747,10 @@ Authors' Addresses
 
    Eve Maler
    Venn Factory
+
+
+
+
 
 
 

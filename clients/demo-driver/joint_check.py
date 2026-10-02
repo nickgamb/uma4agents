@@ -105,6 +105,12 @@ OWNERS = {
 PASS, FAIL = [], []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def check(name: str, ok: bool, detail: str = "") -> None:
     (PASS if ok else FAIL).append(name)
     print(f"   {'ok  ' if ok else 'FAIL'} {name}"
@@ -477,7 +483,7 @@ def _main() -> int:                                           # noqa: C901
         tampered = dict(claims)
         tampered["joint"] = {**joint, "verdicts": [joint["verdicts"][0], forged]}
         bad = jwt.encode(tampered, forger, algorithm="EdDSA",
-                         headers={"typ": "aa-auth+jwt"})
+                         headers={"typ": "at+jwt"})
         r = mcp_call(c, f"{GATEWAY}/joint/{BOTH}", "tools/call",
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",
@@ -503,7 +509,7 @@ def _main() -> int:                                           # noqa: C901
                                         "rule": {"kind": "all", "threshold": 1}},
                             "verdicts": [joint["verdicts"][0]]}
         cooked = jwt.encode(lowered, forger, algorithm="EdDSA",
-                            headers={"typ": "aa-auth+jwt"})
+                            headers={"typ": "at+jwt"})
         r = mcp_call(c, f"{GATEWAY}/joint/{BOTH}", "tools/call",
                      {"name": "get_positions", "arguments": {}}, META,
                      headers=signed_headers("POST", "gateway.uma.lab",
@@ -582,7 +588,7 @@ def _main() -> int:                                           # noqa: C901
               f"{r.status_code} {r.text[:140]}")
         alice = OWNERS["alice"]["as"]
         c.post(f"{alice}/owner/organization",
-               json={"code": ORG_CODE, "agreed": True},
+               json={"code": ORG_CODE, "agreed": True, "charter_version": charter_v(c)},
                headers=hdrs(c, "alice"), timeout=20.0)
         time.sleep(1.0)
 

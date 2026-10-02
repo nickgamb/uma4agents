@@ -78,6 +78,12 @@ MEMBER = "alice"                               # who that is here
 PASS, FAIL = [], []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def check(name, ok, detail=""):
     (PASS if ok else FAIL).append(name)
     print(f"   {'ok  ' if ok else 'FAIL'} {name}" + (f" — {detail}" if detail and not ok else ""),
@@ -117,7 +123,7 @@ def _main() -> int:
                  ).json().get("enrolled"):
         c.post(f"{AS}/owner/organization", headers=alice, timeout=20.0,
                json={"code": os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX"),
-                     "agreed": True})
+                     "agreed": True, "charter_version": charter_v(c)})
     check("enrolled", c.get(f"{AS}/owner/organization", headers=alice,
                             timeout=15.0).json().get("enrolled"))
     c.post(f"{AS}/owner/operators/claim", json={"origin": OPERATOR},

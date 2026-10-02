@@ -218,13 +218,19 @@ from uma4a_http_sig import KeyDirectories, jwk_thumbprint      # noqa: E402
 _published = [pub_jwk_a := {"kty": "OKP", "crv": "Ed25519", "x": "A" * 43}]
 
 
-def _dir_get(url, timeout=None, follow_redirects=None, verify=None):
+_down: set[str] = set()
+
+
+def _dir_get(url, verify=None, **_):
     _FETCHES.append(url)
-    return types.SimpleNamespace(raise_for_status=lambda: None,
-                                 json=lambda: {"keys": list(_published)})
+    if url in _down:
+        raise ConnectionError("connection refused")
+    return {"keys": list(_published)}
 
 
-sys.modules["httpx"] = types.SimpleNamespace(get=_dir_get)
+import uma4a_fetch  # noqa: E402
+
+uma4a_fetch.get_json = _dir_get
 _FETCHES.clear()
 _dirs = KeyDirectories()
 _where = "https://operator.example/.well-known/http-message-signatures-directory"
@@ -240,6 +246,24 @@ ok("and a key it has just published is recognised at once, not after the TTL",
 ok("a directory that is not https is not consulted",
    lambda: not _dirs.publishes("http://operator.example/d", jwk_thumbprint(_new))[0]
    or (_ for _ in ()).throw(VerifyError("consulted")))
+
+_gone = "https://gone.example/.well-known/http-message-signatures-directory"
+_down.add(_gone)
+_FETCHES.clear()
+
+
+def _unreadable_twice():
+    for _ in range(3):
+        try:
+            _dirs.publishes(_gone, jwk_thumbprint(_new))
+        except Exception:                                       # noqa: BLE001
+            pass
+    if len(_FETCHES) != 1:
+        raise VerifyError(f"fetched {len(_FETCHES)} times")
+
+
+ok("a directory that could not be read is not read again inside a minute",
+   _unreadable_twice)
 
 if FAILED:
     print(f"\nhttp-sig: {PASSED} passed, {FAILED} failed")

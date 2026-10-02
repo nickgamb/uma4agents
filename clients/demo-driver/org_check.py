@@ -126,6 +126,12 @@ PASS: list[str] = []
 FAIL: list[str] = []
 
 
+
+def charter_v(c) -> int:
+    """The charter version in force, as the organization publishes it. A join
+    agrees to a version, so every one here names the one it read."""
+    return c.get(f"{ORG}/.well-known/u4a-organization", timeout=15.0).json()["charter_version"]
+
 def check(name: str, ok: bool, detail: str = "") -> None:
     (PASS if ok else FAIL).append(name)
     print(f"   {'ok  ' if ok else 'FAIL'} {name}"
@@ -214,7 +220,8 @@ def drop_book_tier(c: httpx.Client, owner: str) -> None:
 
 def join(c: httpx.Client, owner: str, code: str, agreed: bool = True) -> httpx.Response:
     return c.post(f"{OWNERS[owner]['as']}/owner/organization",
-                  json={"code": code, "agreed": agreed},
+                  json={"code": code, "agreed": agreed,
+                        "charter_version": charter_v(c)},
                   headers=hdrs(c, owner), timeout=20.0)
 
 
@@ -245,8 +252,14 @@ def write_book_terms(c: httpx.Client, owner: str, expires: int) -> httpx.Respons
 
 def negotiate(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
               tool: str = "get_positions", reason: str | None = "Desk research",
-              answer: str | bool = True) -> tuple[str | None, str]:
-    """The ordinary four beats, at one of this owner's two surfaces."""
+              answer: str | bool = True,
+              tried: list | None = None) -> tuple[str | None, str]:
+    """The ordinary four beats, at one of this owner's two surfaces.
+
+    `answer` is who answers what is waiting: her (`True`), an administrator at
+    her organization (`"org"`), or an administrator first and then her
+    (`"org-then-her"`), with the administrator's status codes put in `tried`.
+    """
     o = OWNERS[owner]
     url = f"{GATEWAY}{o[where]}"
     r = mcp_call(c, url, "tools/call", {"name": tool, "arguments": {}}, META)
@@ -261,13 +274,16 @@ def negotiate(c: httpx.Client, owner: str, keys: AgentKeys, where: str,
         if "has been asked" not in msg or answered["v"] or not answer:
             return
         answered["v"] = True
-        if answer == "org":
+        if answer in ("org", "org-then-her"):
             for p in c.get(f"{ORG}/admin/members/{owner}/pending",
                            headers=ADMIN, timeout=15.0).json():
-                c.post(f"{ORG}/admin/members/{owner}/pending/"
-                       f"{p['family']}/decision", json={"decision": "approved"},
-                       headers=ADMIN, timeout=15.0)
-            return
+                r = c.post(f"{ORG}/admin/members/{owner}/pending/"
+                           f"{p['family']}/decision", json={"decision": "approved"},
+                           headers=ADMIN, timeout=15.0)
+                if tried is not None:
+                    tried.append(r.status_code)
+            if answer == "org":
+                return
         for p in c.get(f"{o['as']}/owner/pending", headers=hdrs(c, owner),
                        timeout=15.0).json():
             c.post(f"{o['as']}/owner/pending/{p['family']}/decision",
@@ -352,6 +368,10 @@ def main() -> int:                                            # noqa: C901
               c.post(f"{alice['as']}/owner/organization",
                      json={"code": JOIN_CODE}, headers=hdrs(c, "alice"),
                      timeout=15.0).status_code == 400)
+        check("and agreeing is to a version — a join naming none is refused",
+              c.post(f"{alice['as']}/owner/organization",
+                     json={"code": JOIN_CODE, "agreed": True},
+                     headers=hdrs(c, "alice"), timeout=15.0).status_code == 400)
         r = c.post(f"{alice['as']}/owner/organization/preview",
                    json={"code": "NOPE"}, headers=hdrs(c, "alice"), timeout=15.0)
         check("a wrong code discloses nothing",
@@ -551,22 +571,35 @@ def main() -> int:                                            # noqa: C901
         # policy for every request afterwards.
         c.put(f"{alice['as']}/owner/policies/firmbook", json={"ask_me": True},
               headers=hdrs(c, "alice"), timeout=15.0)
-        known = {x["handle"] for x in
-                 c.get(f"{alice['as']}/owner/connections", headers=hdrs(c, "alice"),
-                       timeout=15.0).json()}
+        # Admission is hers. An agent she has never met, asking about the
+        # firm's book, is asking to become one of *her* connections — which
+        # would reach everything she holds, not only what the firm shares.
+        stranger = attested(c, HER_OPERATOR, "alice-stranger")
+        tried: list = []
+        rpt, why = negotiate(c, "alice", stranger, "shared", answer="org-then-her",
+                             tried=tried)
+        check("an administrator cannot admit an agent she has never met",
+              tried and all(code == 403 for code in tried), f"{tried}")
+        check("she can, and her answer is the one that admits it",
+              rpt is not None, f"{why}")
+        # An agent she has admitted is another matter: a request it makes over
+        # the firm's book, waiting on her, the firm may answer.
         fresh = attested(c, HER_OPERATOR, "alice-second")
+        rpt, why = negotiate(c, "alice", fresh, "own")
+        check("she admits a second agent, through her own account",
+              rpt is not None, f"{why}")
         rpt, why = negotiate(c, "alice", fresh, "shared", answer="org")
         check("an administrator can answer a request waiting on her",
               rpt is not None, f"{why}")
         new_conns = [x for x in
                      c.get(f"{alice['as']}/owner/connections",
                            headers=hdrs(c, "alice"), timeout=15.0).json()
-                     if x["handle"] not in known]
+                     if x["handle"] == fresh.connection_handle()]
         check("the grant is recorded against that agent",
               new_conns and "firmbook" in (new_conns[0].get("tiers_granted") or []),
               f"{[x.get('tiers_granted') for x in new_conns]}")
         check("and his approval is NOT recorded as one of hers",
-              new_conns and not (new_conns[0].get("tiers_approved") or []),
+              new_conns and "firmbook" not in (new_conns[0].get("tiers_approved") or []),
               "an administrator's decision became evidence that she decided — "
               "a fact that is allowed to relax her own rules")
         entry = [e for e in c.get(f"{alice['as']}/owner/ledger",
@@ -719,6 +752,7 @@ def main() -> int:                                            # noqa: C901
                            "resource_id": f"{BOOK}/get_positions",
                            "scopes": ["positions:read"],
                            "reason": f"Regulatory hold OPS-{RUN}",
+                           "operation": {"tool": "get_positions", "params": {}},
                            "voucher": opened.json().get("voucher"),
                            "agent_jwk": bg.public_jwk(),
                            "audience": "https://gateway.uma.lab"}).encode()
@@ -757,6 +791,7 @@ def main() -> int:                                            # noqa: C901
                         headers=ADMIN, timeout=15.0).json()
         body = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/execute_trade",
                            "scopes": ["trades:execute"], "reason": "more",
+                           "operation": {"tool": "execute_trade", "params": {}},
                            "voucher": opened.get("voucher"),
                            "agent_jwk": bg.public_jwk()}).encode()
         sig = sign("POST", ORG_AUTHORITY, "/break-glass", "", bg.key, bg.keyid,
@@ -768,6 +803,7 @@ def main() -> int:                                            # noqa: C901
                          headers=ADMIN, timeout=15.0).json()
         wide = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/get_positions",
                            "scopes": ["everything:read"], "reason": "scope probe",
+                           "operation": {"tool": "get_positions", "params": {}},
                            "voucher": opened2.get("voucher"),
                            "agent_jwk": bg.public_jwk()}).encode()
         r = c.post(f"{ORG}/break-glass", content=wide, timeout=15.0,
@@ -776,8 +812,19 @@ def main() -> int:                                            # noqa: C901
                                    bg.key, bg.keyid, body=wide)})
         check("an override cannot ask for a scope the charter never allows",
               r.status_code == 403, f"{r.status_code} {r.text[:140]}")
+        aimless = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/get_positions",
+                              "scopes": ["positions:read"], "reason": "scope probe",
+                              "voucher": opened2.get("voucher"),
+                              "agent_jwk": bg.public_jwk()}).encode()
+        r = c.post(f"{ORG}/break-glass", content=aimless, timeout=15.0,
+                   headers={"content-type": "application/json",
+                            **sign("POST", ORG_AUTHORITY, "/break-glass", "",
+                                   bg.key, bg.keyid, body=aimless)})
+        check("an override naming no operation is refused — it is for one act",
+              r.status_code == 400, f"{r.status_code} {r.text[:140]}")
         narrow = json.dumps({"owner": "alice", "resource_id": f"{BOOK}/get_positions",
                              "scopes": ["positions:read"], "reason": "scope probe",
+                             "operation": {"tool": "get_positions", "params": {}},
                              "voucher": opened2.get("voucher"),
                              "agent_jwk": bg.public_jwk()}).encode()
         r = c.post(f"{ORG}/break-glass", content=narrow, timeout=15.0,

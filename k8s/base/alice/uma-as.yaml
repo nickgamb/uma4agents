@@ -126,6 +126,10 @@ spec:
               value: https://alice-as.uma.lab
             - name: UMA4A_CA_BUNDLE
               value: /certs/rootCA.pem
+            # The agent providers whose tokens are believed; any other issuer
+            # is never fetched.
+            - name: UMA_AS_AGENT_ISSUERS
+              value: https://ps.uma.lab
           volumeMounts:
             - { name: ca, mountPath: /certs, readOnly: true }
             # Only the public half reaches the authority.

@@ -14,7 +14,7 @@
 
 <rfc ipr="trust200902" docName="draft-gamb-uma4agents-aauth-00" category="info" submissionType="IETF" tocInclude="true" sortRefs="true" symRefs="true">
   <front>
-    <title abbrev="AAuth Binding for UMA">AAuth Binding for User-Managed Access (UMA) 2.0 for Autonomous Agents</title>
+    <title abbrev="AAuth Agent Credentials for UMA">AAuth Agent Tokens as Agent Credentials for User-Managed Access (UMA) 2.0 for Autonomous Agents</title>
 
     <author initials="N." surname="Gamb" fullname="Nick Gamb">
       <organization>MindGarden LLC</organization>
@@ -32,19 +32,19 @@
 
     <area>Security</area>
     
-    <keyword>UMA</keyword> <keyword>authorization</keyword> <keyword>AAuth</keyword> <keyword>agents</keyword> <keyword>binding</keyword> <keyword>proof-of-possession</keyword>
+    <keyword>UMA</keyword> <keyword>authorization</keyword> <keyword>AAuth</keyword> <keyword>agents</keyword> <keyword>identity</keyword> <keyword>credential</keyword>
 
     <abstract>
 
 
-<?line 86?>
+<?line 71?>
 
-<t>This document binds the UMA 2.0 profile for autonomous agents to the AAuth
-protocol: the agent credential AAuth issues is the identified-agent credential
-of the profile, AAuth's HTTP message signature conventions are its proof of
-possession, the requesting party token is an AAuth authorization token, and a
-resource may publish its structure in AAuth's resource metadata beside RFC
-9728. AAuth's four-party access mode is the topology the profile runs.</t>
+<t>This document specifies how an authorization server implementing the UMA 2.0
+profile for autonomous agents accepts an AAuth agent token as the credential
+of an identified agent: how the token is verified, how the agent's standing
+connection is named from it, and how a sub-agent's parent is read from it.
+Nothing else of AAuth is used. The grant, the challenge and the enforcement of
+the profile are unchanged by an agent identifying itself this way.</t>
 
 
 
@@ -57,33 +57,35 @@ resource may publish its structure in AAuth's resource metadata beside RFC
   <middle>
 
 
-<?line 95?>
+<?line 80?>
 
 <section anchor="introduction"><name>Introduction</name>
 
-<t>This binding is written against revision 02 of <xref target="I-D.hardt-aauth-protocol"/>,
-since replaced by draft-hardt-oauth-aauth-protocol. Where this document
-describes AAuth, it describes that revision.</t>
+<t><xref target="U4ACore"/> Section 5.1 lets a client present itself at one of two levels: by
+a bare key, or by a credential from an issuer that binds an identity to a key.
+It does not say which credentials; several serve. This document specifies one
+of them, the agent token of <xref target="I-D.hardt-oauth-aauth-protocol"/>: a JWT an agent
+provider signs, binding an <spanx style="verb">aauth:local@domain</spanx> identifier to the key in its
+<spanx style="verb">cnf</spanx> claim.</t>
 
-<t><xref target="I-D.hardt-aauth-protocol"/> defines agent identity bound to a session key, a
-signature convention over HTTP requests, and four access modes, of which the
-fourth — federated, where an authorization server the resource names decides
-— is the topology of <xref target="U4ACore"/>. What AAuth leaves to the authorization
-server is how it knows the owner's policy. That is what the profile supplies.</t>
+<t>AAuth also defines access modes, tokens a resource issues, and a person server
+that federates with an access server. None of those are used here. The
+profile's grant is UMA's, decided by the owner's authorization server; what
+AAuth contributes is a way for the agent to say who it is that the
+authorization server can verify for itself.</t>
 
-<t>The two compose without either bending. AAuth's resource token and UMA's
-permission ticket are the same object minted on opposite sides — both
-produced at a refused access, both naming what was attempted, both a pointer
-to the authority that could grant it. The difference is where the state sits:
-AAuth's is minted by the resource, UMA's by the owner's authorization server
-when the resource registers the attempt. For a grant that can wait on an
-absent owner, only the second has anywhere to keep the pending request, and
-this binding uses it.</t>
+<t>Agents are in use with tokens shaped by more than one revision. This document
+accepts the token as <xref target="I-D.hardt-oauth-aauth-protocol"/> defines it and as the
+revisions of <xref target="I-D.hardt-aauth-protocol"/> before it did. The two shapes prove
+the same thing — an Ed25519 key, bound by its issuer to a subject — and differ
+in what they name: the current one names the algorithm <spanx style="verb">Ed25519</spanx> <xref target="RFC9864"/>
+and requires <spanx style="verb">dwk</spanx>, <spanx style="verb">jti</spanx> and <spanx style="verb">iat</spanx>; earlier ones name <spanx style="verb">EdDSA</spanx> and did not all
+require those claims.</t>
 
 <section anchor="relationship-to-the-set"><name>Relationship to the Set</name>
 
-<t>This document is a binding of <xref target="U4ACore"/> in the sense of its Section 1.3.
-Its identifying URI is <spanx style="verb">https://u4a.ai/spec/aauth/1.0</spanx>.</t>
+<t>This document is an <bcp14>OPTIONAL</bcp14> part of the set of <xref target="U4ACore"/> Section 1.3. Its
+identifying URI is <spanx style="verb">https://u4a.ai/spec/aauth/1.0</spanx>.</t>
 
 </section>
 <section anchor="notational-conventions"><name>Notational Conventions</name>
@@ -98,172 +100,129 @@ appear in all capitals, as shown here.</t>
 
 </section>
 </section>
-<section anchor="agent"><name>The Identified Agent</name>
+<section anchor="agent-token"><name>The Agent Token</name>
 
-<t>A client presenting itself at the identified level of <xref target="U4ACore"/>
-Section 5.1 under this binding carries an AAuth agent credential — a JWT
-<xref target="RFC7519"/> with <spanx style="verb">typ</spanx> of <spanx style="verb">aa-agent+jwt</spanx> — in the <spanx style="verb">agent_token</spanx> header of the
-agreement JWS of <xref target="U4ATerms"/> Section 4.1.</t>
+<t>A client presenting itself at the identified level with an AAuth agent token
+carries it in the <spanx style="verb">agent_token</spanx> header of the agreement JWS of <xref target="U4ATerms"/>
+Section 4.1.</t>
 
-<t>The authorization server <bcp14>MUST</bcp14>:</t>
+<section anchor="verification"><name>Verification</name>
+
+<t>The authorization server <bcp14>MUST</bcp14> verify the token against the keys its issuer
+publishes, and <bcp14>MUST</bcp14> refuse it unless:</t>
 
 <t><list style="symbols">
-  <t>refuse a credential whose <spanx style="verb">iss</spanx> does not use the <spanx style="verb">https</spanx> scheme;</t>
-  <t>resolve the issuer's keys through the agent server metadata AAuth publishes
-at <spanx style="verb">/.well-known/aauth-agent.json</spanx> under the issuer, following its
-<spanx style="verb">jwks_uri</spanx>, and verify the credential against them, selecting by <spanx style="verb">kid</spanx>
-where one is present;</t>
-  <t>refuse a credential carrying no <spanx style="verb">cnf.jwk</spanx>;</t>
-  <t>treat <spanx style="verb">cnf.jwk</spanx> as the key that signed the agreement and that the grant is
-confirmed to.</t>
+  <t>its header carries <spanx style="verb">typ</spanx> of <spanx style="verb">aa-agent+jwt</spanx> and an <spanx style="verb">alg</spanx> of <spanx style="verb">Ed25519</spanx> or
+<spanx style="verb">EdDSA</spanx>;</t>
+  <t><spanx style="verb">iss</spanx> is an <spanx style="verb">https</spanx> origin the deployment has configured it to believe, and
+<spanx style="verb">dwk</spanx>, where present, is <spanx style="verb">aauth-agent.json</spanx>;</t>
+  <t>the document at <spanx style="verb">{iss}/.well-known/aauth-agent.json</spanx> carries an <spanx style="verb">issuer</spanx>
+equal to <spanx style="verb">iss</spanx> by exact comparison, where it carries one;</t>
+  <t>the key at that document's <spanx style="verb">jwks_uri</spanx> whose <spanx style="verb">kid</spanx> is the header's — or, where
+the header names none, the only key there — is an Ed25519 key, names the
+header's <spanx style="verb">alg</spanx> or no algorithm, and verifies the token;</t>
+  <t><spanx style="verb">sub</spanx> and <spanx style="verb">exp</spanx> are present, <spanx style="verb">exp</spanx> is in the future, and a <spanx style="verb">sub</spanx> of the form
+<spanx style="verb">aauth:local@domain</spanx> has the host of <spanx style="verb">iss</spanx> as its domain;</t>
+  <t><spanx style="verb">cnf.jwk</spanx> is present and is an Ed25519 key.</t>
 </list></t>
 
-<t>The connection handle is formed from the credential's <spanx style="verb">sub</spanx> and <spanx style="verb">iss</spanx> as
-<xref target="U4ACore"/> Section 5.1 specifies, and <bcp14>MUST NOT</bcp14> be derived from the key. AAuth binds a fresh
-key per session; the subject is what persists.</t>
+<t>A token whose <spanx style="verb">alg</spanx> is <spanx style="verb">Ed25519</spanx> <bcp14>MUST</bcp14> also carry <spanx style="verb">dwk</spanx>, <spanx style="verb">jti</spanx> and <spanx style="verb">iat</spanx>, and
+both the issuer's key and <spanx style="verb">cnf.jwk</spanx> <bcp14>MUST</bcp14> name <spanx style="verb">Ed25519</spanx>, as
+<xref target="I-D.hardt-oauth-aauth-protocol"/> requires.</t>
 
-<t>Where the credential carries an <spanx style="verb">act</spanx> claim <xref target="RFC8693"/> naming another agent's
-subject, an authorization server implementing <xref target="U4ALineage"/> reads it as that
-document's Section 2.2 specifies. Nothing further is defined.</t>
+<t>The authorization server <bcp14>MUST NOT</bcp14> fetch anything from an issuer it has not
+been configured to believe. It <bcp14>MUST NOT</bcp14> fetch an issuer's key set more often
+than once a minute, and an attempt that failed counts toward that bound as one
+that succeeded does. A token naming a <spanx style="verb">kid</spanx> the set it holds does not contain
+is the occasion to fetch it again, within that bound; it is how a rotation is
+noticed.</t>
 
-</section>
-<section anchor="pop"><name>Proof of Possession</name>
-
-<t>The message signature profile of <xref target="U4ACore"/> Section 6.1 — <xref target="RFC9421"/> over
-<spanx style="verb">@method</spanx>, <spanx style="verb">@authority</spanx>, <spanx style="verb">@path</spanx> and <spanx style="verb">authorization</spanx> — is AAuth's convention
-as <xref target="I-D.hardt-httpbis-signature-key"/> describes it, with two constraints this
-binding adds.</t>
-
-<t>The signature label <bcp14>MUST</bcp14> be <spanx style="verb">sig1</spanx>. The <spanx style="verb">alg</spanx> parameter <bcp14>MUST</bcp14> be <spanx style="verb">ed25519</spanx>,
-and every key this binding mints or verifies is an Ed25519 key in OKP form;
-an implementation <bcp14>MAY</bcp14> accept other algorithms from third-party issuers whose
-keys it fetches, choosing the permitted algorithms from the key's type and
-never from the token's own header.</t>
+<t>The key in <spanx style="verb">cnf.jwk</spanx> is the key that signed the agreement, and the key the
+grant is confirmed to. The authorization server <bcp14>MUST</bcp14> verify the agreement's
+signature with the algorithm that key names, or <spanx style="verb">EdDSA</spanx> where it names none,
+and <bcp14>MUST NOT</bcp14> take the algorithm from the agreement's own header.</t>
 
 </section>
-<section anchor="grant"><name>The Grant</name>
+<section anchor="handle"><name>The Connection Handle</name>
 
-<t>The requesting party token of <xref target="U4ACore"/> Section 7.1 is issued as an AAuth
-authorization token: a JWT with <spanx style="verb">typ</spanx> of <spanx style="verb">aa-auth+jwt</spanx>, its <spanx style="verb">cnf.jwk</spanx> naming
-the agent's key, and the <spanx style="verb">permissions</spanx>, <spanx style="verb">owner</spanx> and <spanx style="verb">contract</spanx> claims the
-profile requires. <spanx style="verb">sub</spanx> is the agent credential's <spanx style="verb">sub</spanx>, or the literal
-<spanx style="verb">aauth:pseudonymous-agent</spanx> for an agent at the pseudonymous level.</t>
-
-<figure title="A requesting party token under this binding."><sourcecode type="json"><![CDATA[
-{
-  "iss": "https://alice-as.example",
-  "sub": "advisory-agent@ps.example",
-  "owner": "alice",
-  "aud": "https://rs.example",
-  "jti": "rpt_3f9c1a7e2b4d",
-  "exp": 1789433600,
-  "cnf": {"jwk": {"kty": "OKP", "crv": "Ed25519", "x": "…"}},
-  "permissions": [{
-    "resource_id": "alice-vault/get_positions",
-    "resource_scopes": ["positions:read"],
-    "exp": 1789602800
-  }],
-  "contract": "s256:RqgXOcbufB1e0ITn3oQ6fteUNc1EVRPk3VxOWsOV-0s"
-}
-]]></sourcecode></figure>
-
-<t>An enforcement point verifies possession against <spanx style="verb">cnf.jwk</spanx> as returned by
-introspection, as <xref target="U4ACore"/> Section 8.2 step 3.</t>
+<t>The connection handle is formed from <spanx style="verb">sub</spanx> and <spanx style="verb">iss</spanx> as <xref target="U4ACore"/> Section 5.1
+specifies, and <bcp14>MUST NOT</bcp14> be derived from the key. An <spanx style="verb">aauth:local@domain</spanx>
+subject from an issuer whose identifier is <spanx style="verb">https://domain</spanx> already ends in
+the suffix that rule appends, so its handle is the subject itself; from an
+issuer whose identifier carries a port or a path it does not, and the suffix
+is appended. The agent provider binds a fresh key each session; the subject is
+what persists.</t>
 
 </section>
-<section anchor="metadata"><name>Resource Metadata</name>
+<section anchor="sub-agents"><name>Sub-Agents</name>
 
-<t>A resource <bcp14>MAY</bcp14> publish, at <spanx style="verb">/.well-known/aauth-resource.json</spanx>, the same
-structural facts its <xref target="RFC9728"/> document carries, in AAuth's encoding:</t>
-
-<dl>
-  <dt>resource:</dt>
-  <dd>
-    <t>The resource identifier, as <xref target="RFC9728"/>.</t>
-  </dd>
-  <dt>access_mode:</dt>
-  <dd>
-    <t><spanx style="verb">four-party</spanx>.</t>
-  </dd>
-  <dt>access_servers:</dt>
-  <dd>
-    <t>The authorization servers the owner names; the same array as
-<spanx style="verb">authorization_servers</spanx>.</t>
-  </dd>
-  <dt>jwks_uri:</dt>
-  <dd>
-    <t>The resource's keys, as <xref target="RFC9728"/>.</t>
-  </dd>
-  <dt>r3_vocabularies:</dt>
-  <dd>
-    <t>An array of vocabularies, each with <spanx style="verb">format</spanx>, an <spanx style="verb">operations</spanx> array naming
-each operation and its <spanx style="verb">resource_scopes</spanx>, and a <spanx style="verb">digest</spanx> that is <spanx style="verb">s256</spanx> over
-<spanx style="verb">operations</spanx> serialized as <xref target="RFC8785"/>. For the <spanx style="verb">mcp</spanx> format the member
-naming an operation is <spanx style="verb">tool</spanx>, as in the <xref target="RFC9728"/> document's
-<spanx style="verb">tool_surfaces</spanx>.</t>
-  </dd>
-  <dt>owner_resources_endpoint:</dt>
-  <dd>
-    <t>The protected listing of <xref target="U4AFedAuthz"/> Section 2.2. The same URL as in
-the RFC 9728 document.</t>
-  </dd>
-  <dt>signed_metadata:</dt>
-  <dd>
-    <t>A JWT over the document with <spanx style="verb">typ</spanx> of <spanx style="verb">aauth-resource+jwt</spanx>, signed by a key
-at <spanx style="verb">jwks_uri</spanx>.</t>
-  </dd>
-</dl>
-
-<t>Both documents <bcp14>MUST</bcp14> be generated from one registry of the resource's
-operations. The instance layer beneath them, and the permission ticket, do not
-change with the encoding: <spanx style="verb">owner_resources_endpoint</spanx> points at one listing.</t>
-
-<t>The content digest gives the operation surface a stable identifier that no
-owner's instances appear in. A vocabulary describes what the resource's
-operations are; the owner's terms describe what she permits; they compose, and
-neither absorbs the other.</t>
+<t>A token carrying <spanx style="verb">parent_agent</spanx> is a sub-agent's, and the claim names its
+parent. The authorization server <bcp14>MUST</bcp14> refuse a <spanx style="verb">parent_agent</spanx> that is not an
+agent identifier under the same domain as <spanx style="verb">sub</spanx>, or that equals <spanx style="verb">sub</spanx>. An
+authorization server implementing <xref target="U4ALineage"/> reads the claim as that
+document's Section 2.2 specifies. The parent's connection handle is formed
+from <spanx style="verb">parent_agent</spanx> and <spanx style="verb">iss</spanx> as <xref target="handle"/>.</t>
 
 </section>
-<section anchor="challenge"><name>The Challenge</name>
-
-<t>This binding uses the HTTP challenge of <xref target="U4ACore"/> Section 3.2 unchanged.
-AAuth's own challenge header is not used; the permission ticket already
-carries what AAuth's resource token would, minted on the side that can hold a
-pending request.</t>
-
 </section>
 <section anchor="security-considerations"><name>Security Considerations</name>
 
-<t>The considerations of <xref target="U4ACore"/> and <xref target="I-D.hardt-aauth-protocol"/> apply.</t>
+<t>The considerations of <xref target="U4ACore"/> and <xref target="I-D.hardt-oauth-aauth-protocol"/> apply.</t>
 
 <section anchor="issuers-are-trusted-by-dereference"><name>Issuers Are Trusted by Dereference</name>
 
-<t><xref target="agent"/> resolves an issuer over TLS and believes the keys it publishes.
-<xref target="U4ACore"/> Section 5.1 requires a deployment to say which issuers it will
-believe, and this binding does not relieve it of that.</t>
+<t><xref target="verification"/> resolves an issuer over TLS and believes the keys it
+publishes, and only for an issuer the deployment named. An agent token is a
+provider vouching for an agent; a provider anyone may stand up vouches for
+nothing, and an authorization server that fetched from whatever issuer a
+token named would also be one any requester could make fetch a URL of its
+choosing. The issuer comparison is what stops a document served at one host
+from speaking for the keys of another.</t>
 
 </section>
 <section anchor="algorithms-come-from-the-key"><name>Algorithms Come From the Key</name>
 
-<t><xref target="pop"/>. A verifier that lets a token's header choose the algorithm it is
-verified with has let the token choose whether it is verified.</t>
+<t>A verifier that lets a token's header choose the algorithm it is verified with
+has let the token choose whether it is verified. The header's <spanx style="verb">alg</spanx> here is
+checked against the key, and the key against its type and curve.</t>
+
+<t><xref target="RFC9864"/> deprecated the polymorphic <spanx style="verb">EdDSA</spanx> because the name alone does not
+say which curve. That ambiguity is closed here by the key, which <bcp14>MUST</bcp14> be an
+Ed25519 key whatever it names, so accepting <spanx style="verb">EdDSA</spanx> from an earlier issuer
+admits no second operation.</t>
+
+</section>
+<section anchor="revocation-reaches-the-next-token"><name>Revocation Reaches the Next Token</name>
+
+<t>An agent provider that withdraws an agent stops issuing it tokens. A token it
+already issued stays valid at the authorization server until its <spanx style="verb">exp</spanx>, so the
+lifetime the provider gives its tokens is how long a withdrawal takes to reach
+the authorization server. The owner's standing connection with the agent is
+hers, and is not ended by the provider; she revokes it herself.</t>
+
+</section>
+<section anchor="what-a-verified-token-establishes"><name>What a Verified Token Establishes</name>
+
+<t>A verified agent token establishes that its issuer vouches for this subject
+holding this key. It establishes nothing about what the agent may do: the
+owner's terms, her policy and her approval decide that, exactly as for an agent
+presenting a bare key. The identity level changes how the connection is named
+and nothing about how it is judged.</t>
 
 </section>
 </section>
 <section anchor="privacy-considerations"><name>Privacy Considerations</name>
 
-<t>The considerations of <xref target="U4ACore"/> apply. An agent credential names its
-subject to every authorization server it is presented to, which is the
-identified level's purpose; an agent that does not wish to be named presents
-at the pseudonymous level and this binding changes nothing about that.</t>
+<t>The considerations of <xref target="U4ACore"/> apply. An agent token names its subject to
+every authorization server it is presented to, which is the identified level's
+purpose; an agent that does not wish to be named presents at the pseudonymous
+level, and this document changes nothing about that.</t>
 
 </section>
 <section anchor="iana-considerations"><name>IANA Considerations</name>
 
-<t>This document makes no request of IANA. The media types <spanx style="verb">aa-agent+jwt</spanx> and
-<spanx style="verb">aa-auth+jwt</spanx> are defined by <xref target="I-D.hardt-aauth-protocol"/>. The <spanx style="verb">typ</spanx> value
-<spanx style="verb">aauth-resource+jwt</spanx>, used here for signed resource metadata, is this binding's
-and is not an AAuth media type.</t>
+<t>This document makes no request of IANA. The media type <spanx style="verb">aa-agent+jwt</spanx> and the
+<spanx style="verb">parent_agent</spanx> claim are defined by <xref target="I-D.hardt-oauth-aauth-protocol"/>.</t>
 
 </section>
 
@@ -279,92 +238,33 @@ and is not an AAuth media type.</t>
 
 
 
-<reference anchor="RFC7519">
+<reference anchor="RFC9864">
   <front>
-    <title>JSON Web Token (JWT)</title>
-    <author fullname="M. Jones" initials="M." surname="Jones"/>
-    <author fullname="J. Bradley" initials="J." surname="Bradley"/>
-    <author fullname="N. Sakimura" initials="N." surname="Sakimura"/>
-    <date month="May" year="2015"/>
-    <abstract>
-      <t>JSON Web Token (JWT) is a compact, URL-safe means of representing claims to be transferred between two parties. The claims in a JWT are encoded as a JSON object that is used as the payload of a JSON Web Signature (JWS) structure or as the plaintext of a JSON Web Encryption (JWE) structure, enabling the claims to be digitally signed or integrity protected with a Message Authentication Code (MAC) and/or encrypted.</t>
-    </abstract>
-  </front>
-  <seriesInfo name="RFC" value="7519"/>
-  <seriesInfo name="DOI" value="10.17487/RFC7519"/>
-</reference>
-<reference anchor="RFC8693">
-  <front>
-    <title>OAuth 2.0 Token Exchange</title>
-    <author fullname="M. Jones" initials="M." surname="Jones"/>
-    <author fullname="A. Nadalin" initials="A." surname="Nadalin"/>
-    <author fullname="B. Campbell" initials="B." role="editor" surname="Campbell"/>
-    <author fullname="J. Bradley" initials="J." surname="Bradley"/>
-    <author fullname="C. Mortimore" initials="C." surname="Mortimore"/>
-    <date month="January" year="2020"/>
-    <abstract>
-      <t>This specification defines a protocol for an HTTP- and JSON-based Security Token Service (STS) by defining how to request and obtain security tokens from OAuth 2.0 authorization servers, including security tokens employing impersonation and delegation.</t>
-    </abstract>
-  </front>
-  <seriesInfo name="RFC" value="8693"/>
-  <seriesInfo name="DOI" value="10.17487/RFC8693"/>
-</reference>
-<reference anchor="RFC8785">
-  <front>
-    <title>JSON Canonicalization Scheme (JCS)</title>
-    <author fullname="A. Rundgren" initials="A." surname="Rundgren"/>
-    <author fullname="B. Jordan" initials="B." surname="Jordan"/>
-    <author fullname="S. Erdtman" initials="S." surname="Erdtman"/>
-    <date month="June" year="2020"/>
-    <abstract>
-      <t>Cryptographic operations like hashing and signing need the data to be expressed in an invariant format so that the operations are reliably repeatable. One way to address this is to create a canonical representation of the data. Canonicalization also permits data to be exchanged in its original form on the "wire" while cryptographic operations performed on the canonicalized counterpart of the data in the producer and consumer endpoints generate consistent results.</t>
-      <t>This document describes the JSON Canonicalization Scheme (JCS). This specification defines how to create a canonical representation of JSON data by building on the strict serialization methods for JSON primitives defined by ECMAScript, constraining JSON data to the Internet JSON (I-JSON) subset, and by using deterministic property sorting.</t>
-    </abstract>
-  </front>
-  <seriesInfo name="RFC" value="8785"/>
-  <seriesInfo name="DOI" value="10.17487/RFC8785"/>
-</reference>
-<reference anchor="RFC9421">
-  <front>
-    <title>HTTP Message Signatures</title>
-    <author fullname="A. Backman" initials="A." role="editor" surname="Backman"/>
-    <author fullname="J. Richer" initials="J." role="editor" surname="Richer"/>
-    <author fullname="M. Sporny" initials="M." surname="Sporny"/>
-    <date month="February" year="2024"/>
-    <abstract>
-      <t>This document describes a mechanism for creating, encoding, and verifying digital signatures or message authentication codes over components of an HTTP message. This mechanism supports use cases where the full HTTP message may not be known to the signer and where the message may be transformed (e.g., by intermediaries) before reaching the verifier. This document also describes a means for requesting that a signature be applied to a subsequent HTTP message in an ongoing HTTP exchange.</t>
-    </abstract>
-  </front>
-  <seriesInfo name="RFC" value="9421"/>
-  <seriesInfo name="DOI" value="10.17487/RFC9421"/>
-</reference>
-<reference anchor="RFC9728">
-  <front>
-    <title>OAuth 2.0 Protected Resource Metadata</title>
+    <title>Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)</title>
     <author fullname="M.B. Jones" initials="M.B." surname="Jones"/>
-    <author fullname="P. Hunt" initials="P." surname="Hunt"/>
-    <author fullname="A. Parecki" initials="A." surname="Parecki"/>
-    <date month="April" year="2025"/>
+    <author fullname="O. Steele" initials="O." surname="Steele"/>
+    <date month="October" year="2025"/>
     <abstract>
-      <t>This specification defines a metadata format that an OAuth 2.0 client or authorization server can use to obtain the information needed to interact with an OAuth 2.0 protected resource.</t>
+      <t>This specification refers to cryptographic algorithm identifiers that fully specify the cryptographic operations to be performed, including any curve, key derivation function (KDF), and hash functions, as being "fully specified". It refers to cryptographic algorithm identifiers that require additional information beyond the algorithm identifier to determine the cryptographic operations to be performed as being "polymorphic". This specification creates fully-specified algorithm identifiers for registered JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE) polymorphic algorithm identifiers, enabling applications to use only fully-specified algorithm identifiers. It deprecates those polymorphic algorithm identifiers.</t>
+      <t>This specification updates RFCs 7518, 8037, and 9053. It deprecates polymorphic algorithms defined by RFCs 8037 and 9053 and provides fully-specified replacements for them. It adds to the instructions to designated experts in RFCs 7518 and 9053.</t>
     </abstract>
   </front>
-  <seriesInfo name="RFC" value="9728"/>
-  <seriesInfo name="DOI" value="10.17487/RFC9728"/>
+  <seriesInfo name="RFC" value="9864"/>
+  <seriesInfo name="DOI" value="10.17487/RFC9864"/>
 </reference>
 
-<reference anchor="I-D.hardt-aauth-protocol">
+<reference anchor="I-D.hardt-oauth-aauth-protocol">
    <front>
       <title>AAuth Protocol</title>
       <author fullname="Dick Hardt" initials="D." surname="Hardt">
          <organization>Hellō</organization>
       </author>
-      <date day="28" month="April" year="2026"/>
+      <date day="6" month="August" year="2026"/>
       <abstract>
 	 <t>   This document defines the AAuth authorization protocol for agent-to-
    resource authorization and identity claim retrieval.  The protocol
    supports four resource access modes — identity-based, resource-
-   managed (two-party), PS-managed (three-party), and federated (four-
+   managed (two-party), PS-asserted (three-party), and federated (four-
    party) — with agent governance as an orthogonal layer.  It builds on
    the HTTP Signature Keys specification
    ([I-D.hardt-httpbis-signature-key]) for HTTP Message Signatures and
@@ -373,44 +273,7 @@ and is not an AAuth media type.</t>
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-hardt-aauth-protocol-02"/>
-   
-</reference>
-
-<reference anchor="I-D.hardt-httpbis-signature-key">
-   <front>
-      <title>HTTP Signature Keys</title>
-      <author fullname="Dick Hardt" initials="D." surname="Hardt">
-         <organization>Hellō</organization>
-      </author>
-      <author fullname="Thibault Meunier" initials="T." surname="Meunier">
-         <organization>Cloudflare</organization>
-      </author>
-      <date day="13" month="September" year="2026"/>
-      <abstract>
-	 <t>   This document defines five HTTP header fields for use with HTTP
-   Message Signatures as defined in RFC 9421.  The Signature-Key request
-   header distributes public keys used to verify signatures, with eight
-   initial key distribution schemes: pseudonymous inline keys (hwk),
-   self-issued key delegation via JWK Thumbprint JWTs (jkt-jwt),
-   identified signers with JWKS URI discovery (jwks_uri), direct JWKS
-   fetch (jwks), JWT-based delegation (jwt), self-issued JWTs (self-
-   jwt), X.509 certificate chains (x509), and references to previously
-   cached assertions (cached).  The Accept-Signature-Scheme and Accept-
-   Signature-Alg response headers state the schemes and algorithms a
-   server accepts, so a client can select both before it signs.  The
-   Signature-Error response header provides structured error information
-   when signature verification fails, and the Signature-Key-Cache
-   response header issues a cache identifier by which a caller can
-   reference a previously presented assertion instead of resending it.
-   Together, these mechanisms enable flexible trust models ranging from
-   privacy-preserving pseudonymous verification to horizontally-scalable
-   delegated authentication and PKI-based identity chains.
-
-	 </t>
-      </abstract>
-   </front>
-   <seriesInfo name="Internet-Draft" value="draft-hardt-httpbis-signature-key-09"/>
+   <seriesInfo name="Internet-Draft" value="draft-hardt-oauth-aauth-protocol-10"/>
    
 </reference>
 
@@ -439,19 +302,6 @@ and is not an AAuth media type.</t>
     <date year="2026"/>
   </front>
   <seriesInfo name="Internet-Draft" value="draft-gamb-uma4agents-terms-00"/>
-</reference>
-<reference anchor="U4AFedAuthz" target="https://u4a.ai/spec/draft-gamb-uma4agents-fedauthz-00.html">
-  <front>
-    <title>Federated Authorization for Autonomous Agents</title>
-    <author initials="N." surname="Gamb" fullname="Nick Gamb">
-      <organization></organization>
-    </author>
-    <author initials="E." surname="Maler" fullname="Eve Maler">
-      <organization></organization>
-    </author>
-    <date year="2026"/>
-  </front>
-  <seriesInfo name="Internet-Draft" value="draft-gamb-uma4agents-fedauthz-00"/>
 </reference>
 
 
@@ -487,6 +337,33 @@ and is not an AAuth media type.</t>
     </references>
 
     <references title='Informative References' anchor="sec-informative-references">
+
+
+
+
+<reference anchor="I-D.hardt-aauth-protocol">
+   <front>
+      <title>AAuth Protocol</title>
+      <author fullname="Dick Hardt" initials="D." surname="Hardt">
+         <organization>Hellō</organization>
+      </author>
+      <date day="28" month="April" year="2026"/>
+      <abstract>
+	 <t>   This document defines the AAuth authorization protocol for agent-to-
+   resource authorization and identity claim retrieval.  The protocol
+   supports four resource access modes — identity-based, resource-
+   managed (two-party), PS-managed (three-party), and federated (four-
+   party) — with agent governance as an orthogonal layer.  It builds on
+   the HTTP Signature Keys specification
+   ([I-D.hardt-httpbis-signature-key]) for HTTP Message Signatures and
+   key discovery.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-hardt-aauth-protocol-02"/>
+   
+</reference>
 
 <reference anchor="U4ALineage" target="https://u4a.ai/spec/draft-gamb-uma4agents-lineage-00.html">
   <front>
@@ -538,26 +415,28 @@ and is not an AAuth media type.</t>
 </references>
 
 
-<?line 292?>
+<?line 244?>
 
 <section anchor="implementation-status"><name>Implementation Status</name>
 
 <t>This section records the status of known implementations in the sense of
 <xref target="RFC7942"/>, and is to be removed before publication as an RFC.</t>
 
-<t>The reference implementation <xref target="U4ALAB"/> runs this binding against the AAuth
-reference person server, pinned at a fixed upstream revision, for its
-identified-agent path, and serves both metadata encodings of <xref target="metadata"/>
-from one registry. A check runs the same negotiation at both identity levels
-and asserts that the terms, the grant and the authority named are identical
-across them.</t>
+<t>The reference implementation <xref target="U4ALAB"/> verifies agent tokens as <xref target="verification"/>
+specifies, with a unit test for each refusal and for each shape, including a
+token minted by the Python <spanx style="verb">aauth</spanx> package. Its identified agents enroll with
+an independent implementation, Christian Posta's AAuth person server, pinned
+at a fixed upstream revision, which issues tokens in the earlier shape. A check
+runs the same negotiation for an agent presenting such a token and for agents
+presenting a bare key, asserts that the terms and the grant are identical
+across them, and asserts that an agent the person server has withdrawn is
+issued no fresh token.</t>
 
 </section>
 <section numbered="false" anchor="acknowledgments"><name>Acknowledgments</name>
 
-<t><xref target="I-D.hardt-aauth-protocol"/> supplied the agent identity and signature
-conventions this binding composes with, and the observation that a resource
-token and a permission ticket are one object minted on opposite sides.</t>
+<t><xref target="I-D.hardt-oauth-aauth-protocol"/> supplied the agent credential this document
+accepts.</t>
 
 </section>
 
@@ -565,101 +444,96 @@ token and a permission ticket are one object minted on opposite sides.</t>
   </back>
 
 <!-- ##markdown-source:
-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
-vvjfuSgeiv8FLXZQ+8QrAAA=
+H4sIAAAAAAAAA91a23Ijx5F9r6+o5TzMXgDwsiNbQ3otQ5yRRS/JGQ85Vjgc
+CqHQXQB62OjCdlWTwjIYsR/hD/C37Kfsl/hkZlVfQFKj0MvGriIUBAp1ycrL
+yZNZMx6PVShCaY/13nTahJWeLm0V9LW7sZXXxsfvp7XN8bcwpdcLV+uP3tbj
+C1OZpc31NMus9/ofP15M/0kfTQ54BjZzlVu7Jm7h95SZz2t7u3PSo50vpnsq
+d1ll1hAqr80ijJdmPR83a/PK8E5jY7B+fHCgchMw6ejg6Ffjg9fjwy9UhoGl
+q7fHuqgWTvlmvi68L1wVthvMPHt7/Y0qNvWxDnXjw9HBweuDI2Vqa471lc2a
+ughbdWO3d67Oj/VfIMtI01muLv7TBGwz0iw7RlmSkS5Y+LAd6ay9yPfKB1Pl
+P5jSVTh0a73aFNguuGykvatDbRdY6rdr+vC9khOOldZj/K8huj/WlxP9e1yb
+B0QXl0V20425emmqKNWxviiq/PemhgD6/PyUJ9i1KcpjXWEV6e93S/o+ydx6
+eM7bib4wpa17B729tb2x4UF/slWlvzFZgJJV5eo1xm8tyf7hm9PXX/7qFX08
+G7+ZrCBNGDu2lNhrUztowJU04+Or6amreZ3WyQF/2qne125RlPY556KNOkXS
+f+PHinxOme3kgTae00jndfwVUhfWk7+lk8+qYOvKhvEbct/nvDiDAsiJWQWm
+XlrMXIWw8cf7+80rMzHFvt/YbP8nV09WYV2KQq9tvfZDjb67q6BS0tzCwj01
+T/l8AP9f1Gagq/1ydablok86vufanT8/6cnnRWWxzVD1gm7xp/+fKi/lcr9c
+6d0GPTc+n369AwsXUwl6XnSsjQZswp2rzOpivSntGuMMT/+bSty9/bIIq2ZO
+eLufIHi/u7pS4/FYm7kPNbBUqetV4TWyXkN30aSyYgGb6JW706Ya5iCy162t
+u7sX1VKHlaXUSa6kNj2kNB1SysnawPM29LeSXCbjOlDGp4RPO3W5TLkFzZQ0
+B5FymX7MktFUWQfpIRJPGLU/8cyXXnM2hJAqc1VlM74DFpBSc72o3VoXARm1
+yuW6Gll7nNZukJwhHaYjSbezJ+rShRXd25beasgoV8G0xtt8oq9x/LI2Ffbl
++6xMWdoKgUin0IilCM9YfViuaCipDSfqpsKSigJ1vmUDsI6iFrZ0cBG8LRfY
+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
+GyBo0XZ1GHK6l/7w1HvpRP0dykEchNYpAAA=
 
 -->
 

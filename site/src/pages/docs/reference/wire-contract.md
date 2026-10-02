@@ -121,7 +121,7 @@ The agreement is the template echoed and signed by the agent's key:
 
 ```json
 {
-  "iss": "aauth:agent:<keyid>",
+  "iss": "agent:<keyid>",
   "aud": "https://alice-as.uma.lab",
   "iat": 1751900000,
   "template_id": "alice/advisor-tier1/v2",
@@ -134,7 +134,7 @@ The agreement is the template echoed and signed by the agent's key:
   "nonce": "<nonce>",
 
   "reason": "Suitability review before Thursday's client meeting.",
-  "mission": { "approver": "https://ps.uma.lab", "s256": "<content-hash>" }
+  "mission": { "approver": "https://ps.example", "s256": "<content-hash>" }
 }
 ```
 
@@ -143,10 +143,11 @@ are the only claims the requesting side authors, both optional:
 
 - `reason` — free text, capped at `UMA_AS_MAX_REASON` bytes. Recorded and shown
   to the owner; never parsed, scored, or compared to her purpose.
-- `mission` — a reference to a mandate approved at the requesting party's own
-  person server, in the `approver`/`s256` shape AAuth's own `AAuth-Mission`
-  header uses. Recorded, never dereferenced: the authorization server has
-  nothing to fetch, so it is a claim rather than an attestation.
+- `mission` — a reference to a mandate the requesting side is acting under:
+  who approved it, and the content hash of what was approved. An AAuth mission
+  is cited by its person server and its `mission_s256`. Recorded, never
+  dereferenced: the authorization server has nothing to fetch, so it is a claim
+  rather than an attestation.
 
 Neither can widen anything. Her policy may read only their absence
 (`request.reason_absent`, `request.mission_absent`), and both conditions are
@@ -185,7 +186,7 @@ A requesting side that will not accept the terms may end the negotiation with
 
 ```json
 {
-  "access_token": "<RPT: aa-auth+jwt, cnf-bound>",
+  "access_token": "<RPT: RFC 9068 at+jwt, cnf-bound>",
   "token_type": "PoP",
   "expires_in": 3600,
   "receipt": "<myterms-receipt+jws>"

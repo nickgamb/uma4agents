@@ -1,0 +1,14 @@
+<reference anchor="RFC9864" target="https://www.rfc-editor.org/info/rfc9864">
+  <front>
+    <title>Fully-Specified Algorithms for JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE)</title>
+    <author fullname="M.B. Jones" initials="M.B." surname="Jones"/>
+    <author fullname="O. Steele" initials="O." surname="Steele"/>
+    <date month="October" year="2025"/>
+    <abstract>
+      <t>This specification refers to cryptographic algorithm identifiers that fully specify the cryptographic operations to be performed, including any curve, key derivation function (KDF), and hash functions, as being "fully specified". It refers to cryptographic algorithm identifiers that require additional information beyond the algorithm identifier to determine the cryptographic operations to be performed as being "polymorphic". This specification creates fully-specified algorithm identifiers for registered JSON Object Signing and Encryption (JOSE) and CBOR Object Signing and Encryption (COSE) polymorphic algorithm identifiers, enabling applications to use only fully-specified algorithm identifiers. It deprecates those polymorphic algorithm identifiers.</t>
+      <t>This specification updates RFCs 7518, 8037, and 9053. It deprecates polymorphic algorithms defined by RFCs 8037 and 9053 and provides fully-specified replacements for them. It adds to the instructions to designated experts in RFCs 7518 and 9053.</t>
+    </abstract>
+  </front>
+  <seriesInfo name="RFC" value="9864"/>
+  <seriesInfo name="DOI" value="10.17487/RFC9864"/>
+</reference>

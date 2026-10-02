@@ -259,15 +259,24 @@ class KeyDirectories:
     """
 
     def __init__(self, ttl_s: float = 300, max_entries: int = 256, verify=True):
+        from uma4a_fetch import FailureFloor
+
         self.ttl_s, self.max_entries, self.verify = ttl_s, max_entries, verify
         self._cache: dict[str, tuple[float, list]] = {}
+        # A directory that could not be read is not read again for a minute,
+        # however many requests name it.
+        self._failed = FailureFloor(max_entries=max_entries)
 
     def _fetch(self, directory: str) -> list:
-        import httpx
+        from uma4a_fetch import get_json
 
-        r = httpx.get(directory, timeout=5.0, follow_redirects=False, verify=self.verify)
-        r.raise_for_status()
-        keys = r.json().get("keys") or []
+        self._failed.check(directory)
+        try:
+            keys = get_json(directory, verify=self.verify).get("keys") or []
+        except Exception as exc:
+            self._failed.failed(directory, f"{directory} could not be read: {exc}")
+            raise
+        self._failed.cleared(directory)
         if len(self._cache) >= self.max_entries:
             self._cache.pop(next(iter(self._cache)), None)
         self._cache[directory] = (time.time(), keys)

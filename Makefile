@@ -398,9 +398,6 @@ smoke-test:
 	@$(CURL) https://gateway.uma.lab/.well-known/oauth-protected-resource/mcp/carol \
 		| grep -q '"authorization_servers":\["https://carol-as.uma.lab"\]' \
 		&& echo "  resource metadata (carol): OK" || { echo "  resource metadata (carol): FAIL"; exit 1; }
-	@echo "==> AAuth resource metadata (R3 vocabulary, same public layer)..."
-	@$(CURL) https://gateway.uma.lab/.well-known/aauth-resource.json | grep -q r3_vocabularies \
-		&& echo "  aauth-resource: OK" || { echo "  aauth-resource: FAIL"; exit 1; }
 	@echo "==> Gateway challenges an unauthorized tool call (expect 401 + UMA ticket)..."
 	@RESP=$$($(CURL) -i https://gateway.uma.lab/mcp -X POST \
 		-H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
@@ -419,7 +416,9 @@ smoke-test:
 	import urllib.error; \
 	code, body = 0, b''; \
 	exec('try:\n    urllib.request.urlopen(req)\nexcept urllib.error.HTTPError as e:\n    code, body = e.code, e.read()'); \
-	print('  truncated body: OK' if code == 413 and b'request_body_too_large' in body else '  truncated body: FAIL (%s %s)' % (code, body[:120]))"
+	ok = code == 413 and b'request_body_too_large' in body; \
+	print('  truncated body: OK' if ok else '  truncated body: FAIL (%s %s)' % (code, body[:120])); \
+	raise SystemExit(0 if ok else 1)"
 	@echo "==> Alice's portal..."
 	@$(CURL) https://portal.uma.lab/health | grep -q ok && echo "  portal: OK" || { echo "  portal: FAIL"; exit 1; }
 	@echo "==> and the other owner's, which is the same image..."
@@ -488,13 +487,36 @@ introduction-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
 		sh -c "pip install -q 'pyjwt[crypto]' httpx && python lib/test_introduction.py"
 
+## aauth-test: an AAuth agent token accepted as an agent's identity, in the
+## current shape and the earlier one, and every reason one is refused. Includes
+## a token minted by the aauth package Posta's person server uses; needs
+## nothing running.
+.PHONY: aauth-test
+aauth-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q 'pyjwt[crypto]' 'aauth==0.3.2' && python lib/test_aauth.py"
+
+## gateway-test: which owner, member or account the enforcement point judges
+## a path under, against the way the gateway routes it.
+.PHONY: gateway-test
+gateway-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q fastapi 'pyjwt[crypto]' httpx cryptography && python lib/test_gateway.py"
+
+## tally-test: what the joint tally issues from the answers it collected.
+.PHONY: tally-test
+tally-test:
+	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
+		sh -c "pip install -q fastapi 'pyjwt[crypto]' httpx python-multipart && python lib/test_tally.py"
+
 ## org-test: the organization's ceiling — what it may do to a member's terms,
-## and what it may never touch. Unit tests over the algebra and the charter
-## validator; needs nothing running.
+## and what it may never touch — and its policy engine losing the policy it
+## was given. Unit tests over the algebra, the charter validator and the
+## decision path; needs nothing running.
 .PHONY: org-test
 org-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
-		python lib/test_org.py
+		sh -c "pip install -q fastapi 'pyjwt[crypto]' httpx python-multipart && python lib/test_org.py && python lib/test_org_engine.py"
 
 ## joint-test: the mandate validator, the fold and the count, with nothing
 ## running and nothing installed.
@@ -629,7 +651,7 @@ include Makefile.k8s
 ## stack. The register names these as what proves the drafts; a check that
 ## nobody runs is a claim, and this is how they all get run.
 .PHONY: check-all check-unit check-live
-check-unit: rules-test sig-test pep-test introduction-test org-test rego-test joint-test as-test client-test store-test
+check-unit: rules-test sig-test pep-test gateway-test introduction-test aauth-test org-test rego-test joint-test tally-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
 	establishment-check assurance-check intent-check consequence-check \
 	clearance-check \

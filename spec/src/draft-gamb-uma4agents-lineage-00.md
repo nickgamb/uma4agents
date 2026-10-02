@@ -24,7 +24,6 @@ normative:
   RFC7515:
   RFC7517:
   RFC7638:
-  RFC8693:
   U4ACore:
     title: "User-Managed Access (UMA) 2.0 Profile for Autonomous Agents"
     author:
@@ -59,7 +58,18 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-policy-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html
 informative:
-  I-D.hardt-aauth-protocol:
+  I-D.hardt-oauth-aauth-protocol:
+  U4AAAuth:
+    title: "AAuth Agent Tokens as Agent Credentials for User-Managed Access (UMA) 2.0 for Autonomous Agents"
+    author:
+      - ins: N. Gamb
+        name: Nick Gamb
+      - ins: E. Maler
+        name: Eve Maler
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-gamb-uma4agents-aauth-00
+    target: https://u4a.ai/spec/draft-gamb-uma4agents-aauth-00.html
   I-D.niyikiza-oauth-attenuating-agent-tokens:
   U4ALAB:
     title: "UMA for Agents: a reference implementation"
@@ -166,16 +176,15 @@ as a claim named `introduction`. An authorization server MUST bound the size of
 an introduction it will parse; the reference implementation refuses one over
 4096 octets.
 
-## By Issuer Attestation {#act-claim}
+## By Issuer Attestation {#issuer-claim}
 
 Where the introduced agent is an identified agent, its issuer MAY assert the
-lineage instead, by placing the introducing agent's subject identifier in an
-`act` claim {{RFC8693}} of the introduced agent's credential. No second document
-is needed; the authorization server reads the claim it already verified.
-
-{{I-D.hardt-aauth-protocol}} uses `act` on its auth token to record a delegation
-chain, not in its agent credential. Its agent token permits additional claims,
-and this document uses the same claim there.
+lineage instead, by naming the introducing agent in the introduced agent's
+credential. No second document is needed; the authorization server reads the
+claim it already verified. An AAuth agent token
+{{I-D.hardt-oauth-aauth-protocol}} does this with its `parent_agent` claim,
+which names the parent agent and which AAuth requires to share the sub-agent's
+issuer; how an authorization server reads it is specified in {{U4AAAuth}}.
 Nothing new is defined here; the claim is read.
 
 # Admission {#admission}
@@ -197,8 +206,8 @@ the following holds, and MUST check them in this order so that a refusal names
 the strongest reason:
 
 1. The introducing agent holds an active standing connection with this owner,
-   looked up by the handle derived from the header key (or, under {{act-claim}},
-   from the issuer and the `act` subject).
+   looked up by the handle derived from the header key (or, under
+   {{issuer-claim}}, from the issuer and the parent the credential names).
 2. The owner has personally approved the introducing agent at at least one
    policy unit. An agent she has never said yes to cannot vouch for another.
 3. The introducing agent was not itself introduced. Depth is capped at one by
@@ -211,7 +220,7 @@ the strongest reason:
 5. Under {{introduction-document}}, one operator has published both keys: the
    introduced agent is at accountability level 2 ({{U4APolicy}} Section 4.2),
    and the *same* directory at the *same* origin also holds the introducing
-   key. Under {{act-claim}}, the issuer's attestation satisfies this check.
+   key. Under {{issuer-claim}}, the issuer's attestation satisfies this check.
 6. The introducing agent has fewer live introduced agents than a deployment
    ceiling.
 
@@ -396,5 +405,5 @@ agent that introduced it, and the cascade of {{revocation}} against live grants.
 # Acknowledgments
 {:numbered="false"}
 
-{{RFC8693}} supplied the `act` claim and {{I-D.hardt-aauth-protocol}} the use of
-it in an agent credential that {{act-claim}} reads.
+{{I-D.hardt-oauth-aauth-protocol}} supplied the `parent_agent` claim that
+{{issuer-claim}} reads.

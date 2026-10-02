@@ -25,18 +25,16 @@ years apart suggests the shapes are forced. What MCP does *not* have is the
 thing UMA exists for — a second principal — and that gap is now expressible in
 MCP's own terms rather than as an abstract complaint.
 
-## Discovery: three channels, one registry
+## Discovery: two channels, one registry
 
 A client can learn it must negotiate a grant, and where, before its first
-call. Which channel it uses depends on the deployment, and all three are
-generated from the same tool registry.
+call. Which channel it uses depends on the deployment, and both are generated
+from the same tool registry.
 
 1. **RFC 9728 Protected Resource Metadata** — `authorization_servers`,
    `tool_surfaces`, `jwks_uri`, `signed_metadata`. Mandatory for MCP servers
    since 2025-06-18; fetched, not negotiated.
-2. **AAuth resource metadata** — the same structural facts under an R3
-   content-addressed vocabulary, for the AAuth binding.
-3. **`capabilities.extensions`** — new here. A resource enforcing in-process
+2. **`capabilities.extensions`** — new here. A resource enforcing in-process
    advertises `dev.uma4agents/uma-enforcement` in its `server/discover`
    response:
 
@@ -50,7 +48,7 @@ generated from the same tool registry.
    }
    ```
 
-   This is the only one that is *negotiated* rather than fetched — it arrives
+   This one is *negotiated* rather than fetched — it arrives
    in the handshake the client was already doing, with no extra round trip and
    no well-known URI.
 
@@ -114,7 +112,8 @@ remediation is not.
 The negotiation happens at the owner's authorization server over HTTP, exactly
 as in [PROTOCOL.md](PROTOCOL.md). MCP carries the challenge and the eventual
 call; it does not carry the grant. This is deliberate — it is what lets the
-same grant serve the AAuth and OAuth+DPoP bindings unchanged.
+same grant serve any transport, and any way an agent identifies itself,
+unchanged.
 
 ## The pend: `input_required`, and what it cannot say
 
@@ -222,7 +221,7 @@ state, and a consuming poll makes a lost response brick the negotiation.
 | Mechanism | Status |
 |---|---|
 | `server/discover`, stateless transport, `_meta` client identity | implemented |
-| RFC 9728 PRM, AAuth R3 metadata, `capabilities.extensions` | implemented |
+| RFC 9728 PRM, `capabilities.extensions` | implemented |
 | Challenge in both encodings; one client understands both | implemented |
 | MRTR pend hand-back with `request_state` | implemented |
 | `Mcp-Method`/`Mcp-Name` reconciliation, required on protected methods | implemented |

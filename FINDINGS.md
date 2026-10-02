@@ -40,7 +40,7 @@ carries the parts, but the agent-era *use* deserves normative naming:
 | Capability | Status in POC | Classic ancestry |
 |---|---|---|
 | Owner-mediated agent registration ("day-1 handshake") | Built | The RO-approves-the-relationship shape (as with PAT issuance), applied to the **requesting-agent side** rather than the RS side. Distinct from client registration: DCR-style AS↔client credentials are orthogonal (the agent's PoP key plays that role); what's new-in-use is the *owner* approving a standing RqP-agent relationship. |
-| Standing-relationship handle (identity-shaped) | Built | The PCT is the closest ancestor — persisted state for a returning requesting side. Here it is made **owner-visible and owner-revocable** (a registry with a revoke switch), which classic PCT semantics never required. The handle's shape follows the identity level: a pseudonymous agent *is* its key, so the RFC 7638 thumbprint carries; an identified agent's session keys rotate (AAuth binds a fresh key per session), so the handle must be the verified issuer-qualified subject — **the key cannot be the relationship key once real agent identity arrives**. This bit us in the build: thumbprint-keyed connections forgot an enrolled agent on every run. |
+| Standing-relationship handle (identity-shaped) | Built | The PCT is the closest ancestor — persisted state for a returning requesting side. Here it is made **owner-visible and owner-revocable** (a registry with a revoke switch), which classic PCT semantics never required. The handle's shape follows the identity level: a pseudonymous agent *is* its key, so the RFC 7638 thumbprint carries; an identified agent's session keys rotate (AAuth's agent provider binds a fresh key per session), so the handle must be the verified issuer-qualified subject — **the key cannot be the relationship key once real agent identity arrives**. This bit us in the build: thumbprint-keyed connections forgot an enrolled agent on every run. |
 
 **Outside the classic lines** — genuinely new surface:
 
@@ -65,7 +65,7 @@ Internet-Drafts in [`spec/`](spec/README.md). The map:
 | 3 | Core §4.2 and §9 |
 | 4 | Core §6 and §7.1 |
 | 5 | Federated Authorization for Agents §3 |
-| 6 | Core §1.3; the AAuth and MCP bindings are each a document |
+| 6 | Core §1.3; the MCP binding is a document, and so is accepting an AAuth agent token |
 | 7 | Core §3.1 |
 | 8 | MCP binding §5; the ask of MCP stays in docs/ext-auth-third-party-authorization.md |
 | 9 | Core §8.3 |
@@ -306,8 +306,7 @@ profile where two parties authenticate each other by dereference, neither
 party's liveness may be conditioned on the exchange completing.
 
 **6. Bindings as thin, separate documents.** Ship the core with a first
-binding to a concrete agent-identity/PoP layer (this POC binds to AAuth) and
-plan a second for the OAuth+DPoP installed base. One spec, multiple bindings,
+binding to a concrete agent-identity/PoP layer and plan a second for the OAuth+DPoP installed base. One spec, multiple bindings,
 each recruiting a different implementer community. **MCP is now the third and
 most urgent**: it has a formal, composable authorization-extension track
 (`modelcontextprotocol/ext-auth`), and its 2026-07-28 revision independently
@@ -1097,51 +1096,44 @@ Built and demonstrated: `make clearance-check`, `make org-test`, `make as-test`,
 
 ---
 
-## Binding notes (AAuth)
+## Notes on AAuth
 
-Observations from binding the grant layer onto AAuth as it exists today,
-offered as engineering notes on a foundation:
+Observations from composing AAuth into a UMA-shaped profile. From AAuth this
+profile takes one thing: an agent may identify itself with an AAuth agent token.
 
-- **This POC is already an AAuth four-party (federated) deployment — the
-  contribution is a richer AS, not a rival to one.** AAuth's four roles map
-  onto what runs here almost one-to-one: the person server is AAuth's **PS**
-  (represents Bob, the requesting person), the gateway/PEP is the
-  **Resource**, and `uma-as` is precisely AAuth's **AS** (the access server
-  that "evaluates resource policy on behalf of the resource"). The permission
-  ticket is AAuth's resource token (`aud` = the AS); the RPT is AAuth's auth
-  token. What AAuth leaves deliberately open — *how* the AS evaluates policy
-  and reaches the owner — is exactly the surface this experiment fills: the
-  dictated-terms demand loop, the ask-me hold, the MyTerms agreement. So the
-  sharper framing (correcting our own hero line, which over-broadly implied no
-  agent protocol is near the "may" question): **AAuth puts an authority in the
-  right place and specifies the cross-domain token plumbing; UMA-for-agents is
-  the negotiation grammar that authority runs.** Neither spec "answers may" on
-  its own — both slot it to the AS — and that slot is the new agent-era
-  surface.
-- **AAuth's resource token is permission-ticket-shaped, with the negotiation
-  state on the opposite side.** UMA mints the ticket at the *owner's* AS
-  (owner-authoritative from message one); AAuth mints the resource token at
-  the *resource*. For an owner holding a pending "ask-me" request, the UMA
-  direction is the one that carries. Worth a joint look at where pending state
-  should live.
-- **Discovery is binding-shaped; the split is not.** The public/structural
-  layer has a natural encoding per binding: `tool_surfaces` in the RFC 9728
-  document for the OAuth+DPoP binding, and AAuth's own
-  `/.well-known/aauth-resource.json` with an R3 vocabulary
-  (`r3_vocabularies`, content-addressed) for the AAuth binding — this POC now
-  serves both, from one tool registry. R3's content-addressing is the better
-  fit for the *type layer* and sharpens the point the pull work surfaced with
-  Eve: operations-and-scopes are universal facts, so a content digest gives
-  them a stable identifier independent of any owner. What does **not** change
-  with the binding is the layer above it: the protected owner-resources
-  listing ("protected webfinger") and the permission ticket are shared across
-  both discovery formats — both documents here point at the *same*
-  `owner_resources_endpoint`. R3 describes what the *resource's* operations
-  are (resource-authored); MyTerms describes what the *owner* permits
-  (owner-authored). They compose — R3 does not absorb the ticket or the terms.
-- **Proof-of-possession composes for free.** An AAuth auth token is already
-  key-bound; carrying UMA's permission array as a claim delivers "rich
-  introspection over a PoP token" with no new token type.
+- **The agent token composes; the flows do not.** Earlier revisions of AAuth
+  read as a four-party topology this lab could run as it stood: the person
+  server as AAuth's PS, the gateway as its resource, `uma-as` as its access
+  server, and the RPT as its auth token. The current text
+  (`draft-hardt-oauth-aauth-protocol-10`) defines the auth token as something
+  only a person server obtains, carrying the person's directed identifier and
+  no agent identifier, and defines resource metadata around AAuth's own access
+  modes. Neither describes a grant the owner's authority decides and the agent
+  negotiates for itself. So the RPT is an RFC 9068 access token, the resource
+  publishes RFC 9728 metadata only, and the agent token is accepted as one
+  identified-agent credential beside a bare key, CIMD, Web Bot Auth and an
+  ID-JAG. Nothing about the grant changed when that happened, which is what
+  `make flow-check` asserts across all four regimes.
+- **Two shapes of the same token are in use, and both are accepted.** Agents
+  built on earlier revisions sign `EdDSA`; the current text requires the
+  fully-specified `Ed25519` of RFC 9864, with `dwk`, `jti`, `iat` and keys that
+  name their algorithm. Both prove the same thing, so both are accepted, each
+  held to its own shape, and the algorithm always comes from the key, never
+  the token. What RFC 9864 fixed — `EdDSA` not saying which curve — is closed
+  by the key, which must be Ed25519 either way. The lab's identified agents
+  enroll with Christian Posta's person server, an independent implementation
+  that issues the earlier shape; `make aauth-test` covers the current shape
+  and each refusal, including a token minted by the `aauth` package itself.
+- **An issuer's withdrawal reaches the next token.** Bob revokes an agent at
+  his person server and it is issued no fresh token, which `make flow-check`
+  asserts. A token already issued stays valid until its `exp`, so the token
+  lifetime is how long a withdrawal takes to arrive. Alice's connection with
+  the agent is hers and outlives it; she revokes that herself.
+- **Sub-agents meet in the middle.** AAuth marks a sub-agent's token with
+  `parent_agent`, one level deep, under the parent's issuer. That is the
+  lineage draft's issuer-attested path as it stands: depth one, and one operator
+  vouching for both agents. The lab reads `parent_agent` where it previously
+  read an `act` claim of its own devising.
 - **Deployment reality: TLS is a protocol precondition, not hygiene.** The
   reference AAuth implementation rejects non-HTTPS agent issuers off loopback,
   so cross-host agent identity — the premise of an agent *economy* — requires
@@ -1149,9 +1141,11 @@ offered as engineering notes on a foundation:
 - **A mission reference is only worth carrying if a relying party can
   dereference it.** AAuth's mission layer is the natural counterpart to the
   owner's terms: a durable record, at the requesting party's own person server,
-  of that party setting an agent a task, referenced by content hash. This
-  profile carries a citation in AAuth's own `approver`/`s256` shape, and stops
-  there, because `GET /missions/{s256}` is served to administrators only. From
+  of that party setting an agent a task, identified by its `mission_s256`. This
+  profile carries a citation — who approved it, and the hash — and stops there,
+  because AAuth serves a mission to the agent that owns it and, through a
+  control plane it has not yet specified, to that person server's own
+  principals. From
   the owner's side an agent citing a real mandate and one inventing a hash are
   indistinguishable, so the citation cannot become an assurance axis — awarding
   a level for an assertion nobody checked is the thing rec 13 exists to

@@ -23,6 +23,7 @@ author:
 normative:
   RFC7515:
   RFC7519:
+  RFC9068:
   UMAGrant:
     title: "User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"
     author:
@@ -366,6 +367,16 @@ does not name her.
 A member's authorization server MUST NOT enrol her with an organization without
 her explicit agreement to a specific charter version, and MUST show her, before
 she agrees, what enrolling would change about terms she has already written.
+The enrolment request MUST name that version, and the organization MUST refuse
+one that names none or names a version no longer in force.
+
+How a joiner is entitled to enrol is the organization's to decide, and the
+mechanisms differ in what they establish. An invitation addressed to one person,
+or the organization's own identity provider vouching for her, establishes who is
+joining. A code shared with a group establishes only that the joiner holds it:
+whoever does may enrol under any name not already enrolled. An organization
+offering one SHOULD offer it only for onboarding a group it trusts, and SHOULD
+NOT make it the only mechanism.
 
 The organization issues a membership credential to her authorization server at
 enrolment — a JWT with `typ` of `u4a-membership+jwt`, signed by the
@@ -397,20 +408,28 @@ held to.
 
 Where the charter enables it, the organization MAY reach a claimed resource
 without the member's authorization server, by issuing a grant it signs itself.
-Such a grant MUST be single-use, bound to a key, short-lived, and over a
-resource the charter both claims and names for this purpose. The enforcement
-point MUST recognise it by issuer and MUST introspect it with the organization
-rather than with the member's authorization server.
+Such a grant MUST be single-use, bound to a key, short-lived, bound to one
+operation, and over a resource the charter both claims and names for this
+purpose. The organization MUST compute the operation's `params_s256` itself, as
+{{U4ACore}} defines it, over the tool and parameters the request names, and
+MUST refuse a request that names none. The enforcement point MUST recognise it
+by issuer and MUST introspect it with the organization rather than with the
+member's authorization server. It MUST honour it only at a resource the
+organization owns, and only for the member the introspection response names
+in `owner`; an enforcement point that also checks the organization's ceiling
+over an owner's own resources MUST NOT take that as licence to honour the
+organization's own grants there.
 
-The grant is a JWT {{RFC7519}} with `typ` of `aa-auth+jwt`, signed with a key
-at the organization's `jwks_uri`. It carries `iss` (the organization's issuer
-identifier), `owner`, `aud`, `jti`, `exp`, `cnf`, `permissions`, `single_use`
-of `true`, `operation` where one was named, and `break_glass`: an object
+The grant is a JWT access token {{RFC9068}} with `typ` of `at+jwt`, signed with
+a key at the organization's `jwks_uri`. It carries `iss` (the organization's
+issuer identifier), `sub` and `client_id` (the thumbprint handle of the key in
+`cnf`), `owner`, `aud`, `jti`, `iat`, `exp`, `cnf`, `permissions`, `single_use`
+of `true`, `operation`, and `break_glass`: an object
 naming the `org`, the stated `reason`, what `authorised_by` it — a voucher an
 administrator opened, or an operator the charter lists — and the
 `charter_version` it was issued under. The enforcement point introspects it at
 the organization's `introspection_endpoint`, whose answers are those of
-{{U4AFedAuthz}} Section 5.
+{{U4AFedAuthz}} Section 5 with the grant's `owner` added.
 
 The member MUST be notified at the moment the window opens, before any data
 moves. Break-glass cannot be a flag on an ordinary grant: it has to be a grant
@@ -506,7 +525,9 @@ because:
 : OPTIONAL. Reasons, for a refusal.
 
 exp:
-: REQUIRED. Short.
+: REQUIRED. No earlier than the agreement the verdict is about would end, so
+  that a grant within that lifetime can carry it, and no later than the
+  longest lifetime the holder's authorization server gives a grant.
 
 cnf_jkt:
 : REQUIRED in an `allow`. `jkt(k)`, as {{U4ACore}} defines it, of the key `k`
@@ -663,8 +684,10 @@ call under such a grant:
 1. fetch the mandate from where the tally publishes it, and MUST NOT use the
    copy embedded in the grant, and refuse unless it covers the resource being
    accessed;
-2. verify each verdict against the keys published by the issuer the *published*
-   mandate names for that holder;
+2. verify each verdict, including its `exp`, against the keys published by the
+   authorization server the enforcement point is itself configured to know
+   speaks for that holder, and refuse where the published mandate names a
+   holder it knows no authorization server for, or names a different one;
 3. establish that each verdict names this negotiation and this agreement;
 4. establish, for each `allow` verdict, that its `mandate_s256` is the digest of
    the published mandate, and that the grant is bound to the key `cnf_jkt`
@@ -677,6 +700,13 @@ The `tally` member of the grant is for display and MUST NOT be trusted.
 
 An enforcement point protecting a jointly held resource MUST refuse a grant that
 carries no `joint` claim.
+
+The holders' authorization servers come from the enforcement point's own
+configuration for the same reason the mandate does not come from the grant: the
+mandate is published by the tally, and a tally that could name the issuer each
+verdict is checked against could name issuers it controls, sign verdicts for
+holders it invented, and have every signature verify. The tally MUST NOT issue a
+grant that outlives any `allow` verdict it carries.
 
 Reading the mandate from the grant would let the party being checked supply the
 standard it is checked against: a single genuine verdict beside a rewritten

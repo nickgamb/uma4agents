@@ -59,7 +59,7 @@ own:
 |---|---|
 | `operation` | the exact act it proposes, on tiers that require one |
 | `reason` | free text — why it says it is asking |
-| `mission` | a reference to a mandate its operator approved, in [AAuth](https://github.com/dickhardt/AAuth)'s `approver`/`s256` shape |
+| `mission` | a reference to a mandate it is acting under: who approved it, and the hash of what was approved |
 
 ## What her authority checks
 
@@ -71,9 +71,9 @@ Her authority never reads the reason and never compares it to her purpose. That
 would put a judgement about natural language inside an authorization decision,
 and the same request would start coming out two ways.
 
-The mission is recorded and not resolved. AAuth serves missions to
-administrators, so there is nothing for a relying party in another trust domain
-to fetch — from her side, an agent citing a real mandate and an agent inventing
+The mission is recorded and not resolved. A mandate is served to the party that
+set it, so there is nothing for a relying party in another trust domain to
+fetch — from her side, an agent citing a real mandate and an agent inventing
 a hash look identical. Both the reason and the mission are therefore claims, and
 her policy may do one thing with either: notice it is missing.
 

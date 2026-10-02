@@ -665,14 +665,24 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
     if (agreed := int(rec["contract"].get("expires_in") or 0)) > 0:
         lifetime = min(lifetime, agreed)
     exp = int(now()) + min(3600, lifetime)
+    # And no later than the first of the verdicts it carries: a grant that
+    # outlived one would be refused at the door from that moment on.
+    for o, jws in (rec.get("signed") or {}).items():
+        if rec["verdicts"].get(o) == "allow":
+            ends = jwt.decode(jws, options={"verify_signature": False}).get("exp")
+            if isinstance(ends, (int, float)):
+                exp = min(exp, int(ends))
     offered = list(rec["template"]["scope"] or [])
     scopes = [s for s in (rec["contract"].get("scope") or offered) if s in offered]
+    handle = J.key_thumbprint(rec["signer"])
     claims = {
         "iss": ISSUER,
-        "sub": rec["contract"].get("sub") or "aauth:pseudonymous-agent",
+        "sub": handle,
+        "client_id": handle,
         "owner": rec["account"],
         "aud": AUDIENCE,
         "jti": jti,
+        "iat": int(now()),
         # The negotiation, as every verdict inside names it. Introspection
         # returns these claims as they are, and the enforcement point refuses
         # verdicts about a negotiation other than the grant's — so a grant
@@ -702,7 +712,7 @@ def issue(rec: dict, doc: dict, result: dict) -> dict:
                 sort_keys=True, separators=(",", ":"),
                 ensure_ascii=False).encode())}
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
-                       headers={"typ": "aa-auth+jwt", "kid": KID})
+                       headers={"typ": "at+jwt", "kid": KID})
     RPTS[jti] = {"claims": claims, "spent": False, "family": rec["family"]}
     event("rpt.issued", corr=rec["family"], jti=jti, account=rec["account"],
           holders=sorted(rec.get("signed") or {}))

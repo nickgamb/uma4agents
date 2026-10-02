@@ -271,7 +271,9 @@ signs with its own key, which never pass through her authority at all — the
 enforcement point recognises the issuer and checks them with the organization
 instead. It is the only shape in which "the organization owns this data" is a
 technical fact rather than a request. It reaches only resources the charter both claims and
-names for it, it is short and single-use, and it cannot be done quietly — she
+names for it, and only at the organization's own resource, for the member it
+was issued to. It is short, single-use and bound to one named operation, and
+it cannot be done quietly — she
 is told the moment a window opens, before any data moves, and every use lands
 in her own record.
 

@@ -45,7 +45,9 @@ def say(msg: str) -> None:
 
 
 def rpc(client: httpx.Client, method: str, params: dict, headers=None,
-        routing: bool = True) -> dict:
+        routing: bool = True, signed_by: tuple | None = None) -> dict:
+    """One JSON-RPC call. With `signed_by=(rpt, keys)` it is signed as a real
+    client signs it: over the exact bytes sent, Content-Digest included."""
     p = dict(params)
     p["_meta"] = META
     h = {"content-type": "application/json",
@@ -56,8 +58,11 @@ def rpc(client: httpx.Client, method: str, params: dict, headers=None,
         if method == "tools/call":
             h["Mcp-Name"] = params.get("name", "")
     h.update(headers or {})
-    r = client.post(VAULT, json={"jsonrpc": "2.0", "method": method, "id": 1, "params": p},
-                    headers=h, timeout=30.0)
+    content = json.dumps({"jsonrpc": "2.0", "method": method, "id": 1,
+                          "params": p}).encode()
+    if signed_by:
+        h.update(signed_headers("POST", AUTHORITY, PATH, *signed_by, body=content))
+    r = client.post(VAULT, content=content, headers=h, timeout=30.0)
     body = r.text
     for line in body.splitlines():
         if line.startswith("data:"):
@@ -163,18 +168,17 @@ def main() -> int:
         say(f"capabilities.extensions names the AS: {mine['authorization_servers']}")
         say(f"protocol negotiated: {d['result']['supportedVersions']}")
 
-        # The same registry in the AAuth binding's encoding, served by the
-        # resource itself. Built by the code the gateway uses, so the two
-        # enforcement modes publish the same document.
+        # Its RFC 9728 document, served by the resource itself. Built by the
+        # code the gateway uses, so the two enforcement modes publish the
+        # same document.
         base = VAULT.rsplit("/mcp", 1)[0]
-        aauth = client.get(f"{base}/.well-known/aauth-resource.json", timeout=15.0).json()
-        vocab = (aauth.get("r3_vocabularies") or [{}])[0]
-        if not (aauth.get("access_servers") and vocab.get("format") == "mcp"
-                and str(vocab.get("digest", "")).startswith("s256:")
-                and aauth.get("signed_metadata")):
-            print(f"FAIL: the AAuth resource document is not the binding's shape: {aauth}")
+        prm = client.get(f"{base}/.well-known/oauth-protected-resource/mcp",
+                         timeout=15.0).json()
+        if not (prm.get("authorization_servers") and prm.get("tool_surfaces")
+                and prm.get("signed_metadata")):
+            print(f"FAIL: the resource's own metadata is incomplete: {prm}")
             return 1
-        say("its AAuth resource document is the binding's shape, and signed")
+        say("it publishes its own RFC 9728 document, with its tools, and signed")
 
         print("\n== Beat 0.5: Alice admits a resource server she has never seen ==")
         # Before beat 1, because until she has admitted it there is no ticket
@@ -293,11 +297,13 @@ def main() -> int:
         say("grant issued — proof-of-possession RPT in hand")
 
         print("\n== The authorized call, enforced in-process ==")
-        hdrs = signed_headers("POST", AUTHORITY, PATH, rpt, keys)
-        r = rpc(client, "tools/call", {"name": "get_positions", "arguments": {}}, hdrs)
+        r = rpc(client, "tools/call", {"name": "get_positions", "arguments": {}},
+                signed_by=(rpt, keys))
         if "error" in r:
             print(f"FAIL: authorized call rejected: {json.dumps(r['error'])[:300]}")
             return 1
+        say("the call was signed over its body, Content-Digest included, as a "
+            "real client signs it")
         text = r["result"]["content"][0]["text"]
         say("data received: " + json.dumps(json.loads(text))[:110] + "…")
 
@@ -342,7 +348,7 @@ def main() -> int:
         say("and spent, it cannot be spent again")
 
         print("\n== And a forged signature still fails, in-process ==")
-        forged = dict(hdrs)
+        forged = signed_headers("POST", AUTHORITY, PATH, rpt, keys)
         forged["Signature"] = "sig1=:" + "A" * 86 + ":"
         r = rpc(client, "tools/call", {"name": "get_positions", "arguments": {}}, forged)
         if "error" not in r:

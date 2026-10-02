@@ -181,6 +181,12 @@ a judgement about that request, and it is made at the organization's own
 decision point against policy the member's authority never sees. That decision
 point is [OPA](https://www.openpolicyagent.org), evaluating `org.rego`.
 
+The organization authority pushes its modules into OPA when it starts and on
+every charter change. OPA holds them in memory only, so an OPA that restarts on
+its own comes back empty. The first decision that finds it empty puts the
+modules back and asks again (`engine.reloaded`); an engine that still has no
+answer, or cannot be reached, is a refusal, never an allow.
+
 ### What a charter may claim
 
 A claim has to name a concrete namespace. `northwind-vault/*` is a claim;
@@ -454,7 +460,14 @@ Three things bound it, all of them in the charter she read before she joined:
 - it reaches only resources the charter both **claims** and **names for
   break-glass**. An override outside what was disclosed is not an override, it
   is a second front door;
-- it is short, single-use and bound to the key that asked for it;
+- it is short, single-use, bound to the key that asked for it, and bound to
+  **one operation** — the redemption names the tool and its parameters, and
+  the organization computes the digest the enforcement point checks the call
+  against. An override naming no operation is refused;
+- it is honoured **only at the organization's own resource**, and only for the
+  member it was issued to. An owner's own enforcer knows the organization too,
+  to check its ceiling over her authority's grants, and that is no licence to
+  honour the organization's grants over what she holds;
 - it is **loud**. An administrator opens a window and she is told at that
   moment — before an agent has redeemed anything and before any data has
   moved — and every use lands in her own record.

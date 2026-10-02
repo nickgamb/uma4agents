@@ -19,33 +19,25 @@ is asking*, and something still has to answer *may they*.
 
 ## AAuth
 
-[AAuth](https://github.com/dickhardt/AAuth) gives an agent a verifiable identity
-and proof-of-possession, issued by a person/agent server, with the agent's
-session key bound into the token.
+[AAuth](https://github.com/dickhardt/AAuth) gives an agent a verifiable
+identity. An agent provider issues an agent token that binds an
+`aauth:local@domain` identifier to the key the agent signs with, and publishes
+the keys that verify it. Around the token, AAuth defines access modes of its
+own, in which a person server obtains authorization for the agent from a
+resource's access server.
 
-This profile **binds to it** for the identified path. AAuth's four-party mode
-puts the authority in the right place — the owner's side — and what it leaves
-open is how an offline owner actually answers. That gap is what the four beats
-fill. The lab validates an agent token against its issuer's published keys
-before believing any of it, and TLS on the issuer origin is the trust root,
-which is AAuth's own precondition.
+This profile **accepts the agent token** as one way an agent identifies
+itself, beside a bare key, a CIMD document, a Web Bot Auth directory and an
+ID-JAG. It verifies the token against the keys its issuer publishes, with TLS
+on the issuer's origin as the trust root, and files the agent under the
+token's subject rather than its key, which rotates every session. It does not
+use AAuth's access modes: the grant is UMA's, decided by the owner's
+authorization server.
 
-Of everything on this page, AAuth is the closest fit and the most complementary.
-
-The two protocols even mint the same kind of artifact. AAuth's resource token
-and UMA's permission ticket are both produced at a refused access attempt, both
-name what was attempted, and both are handed to the agent as a pointer to the
-authority that could grant it. The difference is where the state sits: AAuth's
-resource token is minted by the resource, and the authority holds nothing until
-the agent presents it. UMA's ticket is minted by the owner's authority when the
-resource registers the attempt, so her side holds the negotiation from the first
-message.
-
-For a grant that can pend — where the answer is "ask her, and she is asleep" —
-only the second arrangement has anywhere to keep the pending request. That is
-why the ticket carries through this profile unchanged, and why the challenge can
-also be expressed as an AAuth requirement so an AAuth-native agent finds the
-grant layer through its own challenge header.
+A sub-agent's token names its parent in `parent_agent`, and the profile reads
+that as a lineage the issuer has attested; see
+[sub-agent grants](/docs/overview/subagent-grants/). What the profile checks is
+specified in [its AAuth draft](/spec/draft-gamb-uma4agents-aauth-00.html).
 
 ## Web Bot Auth
 

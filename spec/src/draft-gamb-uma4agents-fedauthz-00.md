@@ -52,7 +52,6 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-core-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-core-00.html
 informative:
-  I-D.hardt-aauth-protocol:
   U4AMultiParty:
     title: "Multi-Party Authorization for User-Managed Access (UMA) 2.0"
     author:
@@ -158,11 +157,6 @@ owner_resources_endpoint:
 The document MUST carry `signed_metadata` as {{RFC9728}} Section 2.2, signed by
 a key published at the resource's own `jwks_uri`, so that a relayed copy stays
 attributable to the resource.
-
-A resource server MAY publish the same structural facts in more than one
-encoding — for example the metadata of {{I-D.hardt-aauth-protocol}} alongside
-{{RFC9728}} — from one registry. The instance layer beneath them, and the
-permission ticket, do not change with the encoding.
 
 ## The Protected Layer {#protected-layer}
 

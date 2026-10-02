@@ -29,10 +29,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [as-test, pep-test, consequence-check]
     asserts: ["and is given what enforcement reads, from the answer rather than the token", "the class it was issued against is honoured", "and the call she approved goes through"]
-  - text: "REQUIRED, as [RFC7519]. aud names the resource server the token is for"
+  - text: "REQUIRED, as [RFC9068]. aud names the resource server the token is for"
     verified: check
     targets: [as-test]
-    asserts: ["the grant carries iss, aud, jti and exp"]
+    asserts: ["the grant carries iss, aud, jti and exp", "and is an RFC 9068 access token, whose subject and client are her handle"]
   - text: "MUST include in its metadata the value https://u4a.ai/spec/core/1.0 in the uma_profiles_supported array"
     verified: check
     targets: [smoke-test, k8s-smoke-test]
@@ -127,10 +127,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [sig-test]
     asserts: ["a body without its digest is refused where one is required"]
-  - text: "The requesting party token MUST be a JWT [RFC7519] signed by the authorization server, and MUST carry:"
+  - text: "The requesting party token MUST be a JWT access token as [RFC9068] specifies, with typ of at+jwt, signed by the authorization server, and MUST carry:"
     verified: check
-    targets: [store-test, smoke-test]
-    asserts: ["rpt: exactly one of %d burns wins", "jwks: OK"]
+    targets: [as-test, store-test, smoke-test]
+    asserts: ["and is an RFC 9068 access token, whose subject and client are her handle", "rpt: exactly one of %d burns wins", "jwks: OK"]
   - text: "the authorization server MUST bind the grant to that access."
     verified: check
     targets: [shim-test, intent-check]
@@ -467,10 +467,10 @@ draft-gamb-uma4agents-lineage-00:
     asserts: ["and cannot be re-introduced by the agent that sponsored it", "a revoked agent cannot be restored by an introduction"]
 
 draft-gamb-uma4agents-mcp-00:
-  - text: "A resource MUST offer the first and MAY offer the others, and all MUST be generated from one registry of the resource's tools."
+  - text: "A resource MUST offer the first and MAY offer the second, and both MUST be generated from one registry of the resource's tools."
     verified: check
     targets: [smoke-test, embedded-check]
-    asserts: ["resource metadata (alice): OK", "aauth-resource: OK", "capabilities.extensions names the AS"]
+    asserts: ["resource metadata (alice): OK", "it publishes its own RFC 9728 document, with its tools, and signed", "capabilities.extensions names the AS"]
   - text: "it MUST corroborate the authorization server named in any later challenge against the metadata document"
     verified: check
     targets: [multi-owner-check]
@@ -605,6 +605,10 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["standing authority over her agents is not a button press", "and inviting her has made her a member of nothing"]
+  - text: "The enrolment request MUST name that version, and the organization MUST refuse one that names none or names a version no longer in force."
+    verified: check
+    targets: [org-check]
+    asserts: ["and agreeing is to a version — a join naming none is refused"]
   - text: "The organization MUST be able to end a membership and MUST notify the member's authorization server when it does"
     verified: check
     targets: [org-check]
@@ -613,10 +617,18 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [store-test, joint-check]
     asserts: ["test_tier_edits_bump_the_version", "her own terms survive leaving"]
-  - text: "Such a grant MUST be single-use, bound to a key, short-lived, and over a resource the charter both claims and names for this purpose."
+  - text: "Such a grant MUST be single-use, bound to a key, short-lived, bound to one operation, and over a resource the charter both claims and names for this purpose."
     verified: check
-    targets: [org-test, org-check]
-    asserts: ["break-glass over a resource the charter does not claim is refused", "including break-glass, when the charter has it"]
+    targets: [org-test, org-check, pep-test]
+    asserts: ["break-glass over a resource the charter does not claim is refused", "including break-glass, when the charter has it", "a grant calling itself single-use and naming no operation is refused"]
+  - text: "The organization MUST compute the operation's params_s256 itself, as [U4ACore] defines it, over the tool and parameters the request names, and MUST refuse a request that names none."
+    verified: check
+    targets: [org-check]
+    asserts: ["an override naming no operation is refused — it is for one act", "the override is honoured at the enforcement point"]
+  - text: "It MUST honour it only at a resource the organization owns, and only for the member the introspection response names in owner"
+    verified: check
+    targets: [pep-test]
+    asserts: ["is refused at an owner's own resource, whatever the charter names", "and refused at another member's administration of the book"]
   - text: "The enforcement point MUST recognise it by issuer and MUST introspect it with the organization rather than with the member's authorization server."
     verified: check
     targets: [org-check]
@@ -625,6 +637,10 @@ draft-gamb-uma4agents-multiparty-00:
     verified: check
     targets: [org-check]
     asserts: ["the member is told before any data moves"]
+  - text: "The tally MUST NOT issue a grant that outlives any allow verdict it carries."
+    verified: check
+    targets: [tally-test]
+    asserts: ["and no longer than the first verdict it carries"]
   - text: "The tally MUST publish, for each jointly held resource, a mandate, at the URI its authorization server metadata names as u4a_mandate_endpoint"
     verified: check
     targets: [joint-check, k8s-policy-test]
@@ -1064,23 +1080,35 @@ draft-gamb-uma4agents-owner-00:
     asserts: ["joining without agreeing is refused"]
 
 draft-gamb-uma4agents-aauth-00:
-  - text: "The authorization server MUST:"
+  - text: "The authorization server MUST verify the token against the keys its issuer publishes, and MUST refuse it unless:"
     verified: check
-    targets: [flow-check, k8s-smoke-test, smoke-test]
-    asserts: ["expected two identity levels", "the identity authority is discoverable", "person-server: OK"]
-  - text: "The connection handle is formed from the credential's sub and iss as [U4ACore] Section 5.1 specifies, and MUST NOT be derived from the key."
+    targets: [aauth-test, flow-check, smoke-test]
+    asserts: ["another algorithm is refused", "a metadata document naming another issuer is refused", "an EdDSA token under a key that names Ed25519 is refused", "a key that is not an Ed25519 key is refused", "an aauth: subject under another provider's domain is refused", "a token minted by the aauth package Posta's person server uses is accepted", "person-server: OK"]
+  - text: "A token whose alg is Ed25519 MUST also carry dwk, jti and iat, and both the issuer's key and cnf.jwk MUST name Ed25519"
+    verified: check
+    targets: [aauth-test]
+    asserts: ["an Ed25519 token whose cnf.jwk names no algorithm is refused", "an Ed25519 token under a key that names no algorithm is refused"]
+  - text: "The authorization server MUST NOT fetch anything from an issuer it has not been configured to believe."
+    verified: check
+    targets: [aauth-test]
+    asserts: ["an issuer the deployment did not name is refused, and never fetched", "and with no issuers named, none is believed"]
+  - text: "It MUST NOT fetch an issuer's key set more often than once a minute, and an attempt that failed counts toward that bound as one that succeeded does."
+    verified: check
+    targets: [aauth-test]
+    asserts: ["an unknown kid does not refetch inside a minute", "and after a minute it does, which is how a rotation is noticed", "is asked once, however many tokens name it inside a minute"]
+  - text: "The authorization server MUST verify the agreement's signature with the algorithm that key names, or EdDSA where it names none, and MUST NOT take the algorithm from the agreement's own header."
+    verified: check
+    targets: [as-test]
+    asserts: ["an agreement is verified with the algorithm its key names", "and not with one its header asks for instead"]
+  - text: "The connection handle is formed from sub and iss as [U4ACore] Section 5.1 specifies, and MUST NOT be derived from the key."
     verified: check
     targets: [flow-check]
     asserts: ["expected two identity levels"]
-  - text: "The signature label MUST be sig1."
+  - text: "The authorization server MUST refuse a parent_agent that is not an agent identifier under the same domain as sub, or that equals sub."
     verified: check
-    targets: [sig-test]
-    asserts: ["another signature label is rejected"]
-  - text: "The alg parameter MUST be ed25519, and every key this binding mints or verifies is an Ed25519 key in OKP form"
+    targets: [aauth-test, introduction-test]
+    asserts: ["a parent under another provider is refused", "an agent cannot name itself its parent", "a parent_agent naming an unapproved sponsor is still refused"]
+  - text: "That ambiguity is closed here by the key, which MUST be an Ed25519 key whatever it names"
     verified: check
-    targets: [sig-test, smoke-test]
-    asserts: ["baseline round trip", "a signature claiming another algorithm is refused", "jwks: OK"]
-  - text: "Both documents MUST be generated from one registry of the resource's operations."
-    verified: check
-    targets: [smoke-test, embedded-check]
-    asserts: ["resource metadata (alice): OK", "aauth-resource: OK", "its AAuth resource document is the binding's shape, and signed"]
+    targets: [aauth-test]
+    asserts: ["a key that is not an Ed25519 key is refused", "a cnf.jwk that is not an Ed25519 key is refused"]

@@ -81,6 +81,17 @@ class UmaEnforcement(Extension):
     ) -> HandlerResult:
         req = getattr(ctx, "request", None)
         headers = getattr(req, "headers", {}) or {}
+        # The body the signature covers, so a Content-Digest the client signed
+        # is checked against what arrived — the same facts the gateway hands
+        # the same enforcer. Read from the request the transport has already
+        # read; where it cannot be had, a covered digest is refused rather
+        # than taken on trust.
+        body = None
+        if req is not None:
+            try:
+                body = await req.body()
+            except Exception:                                   # noqa: BLE001
+                body = None
 
         facts = AuthzFacts(
             tool=params.name,
@@ -100,6 +111,8 @@ class UmaEnforcement(Extension):
             protocol_version=headers.get("mcp-protocol-version"),
             signature_agent=headers.get("signature-agent"),
             traceparent=headers.get("traceparent"),
+            body=body,
+            content_digest=headers.get("content-digest"),
         )
 
         d = await self.enforcer.authorize(facts)

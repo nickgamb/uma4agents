@@ -46,7 +46,9 @@ organization is a single small thing here, and `make reset` rewinds it.
 """
 
 import asyncio
+import base64
 import copy
+import hashlib
 import json
 import os
 import secrets
@@ -64,6 +66,7 @@ from jwt.algorithms import OKPAlgorithm
 import charter as charter_mod
 import uma4a_clearance as clearance_mod
 from uma4a_http_sig import DIRECTORY_PATH, KeyDirectories, VerifyError, verify
+from uma4a_http_sig import jwk_thumbprint as _thumbprint
 
 ISSUER = os.environ.get("ORG_ISSUER", "https://northwind-org.uma.lab")
 ORG_AUTHORITY = ISSUER.split("://", 1)[-1].rstrip("/")
@@ -104,7 +107,12 @@ if ADMIN_TOKEN and ADMIN_ISSUER:
 # there to configure both ends of.
 RS_TOKEN = os.environ.get("ORG_RS_TOKEN", "org-rs-dev-token")
 
-JOIN_CODE = os.environ.get("ORG_JOIN_CODE", "NW-7K2F-QX")
+# A code shared with a group admits whoever holds it, under whatever name they
+# give, which is right for onboarding a team and wrong as the only mechanism.
+# Off unless a deployment turns it on; an invitation addressed to one person,
+# or the organization's own identity provider vouching for her, is the path
+# that knows who is joining.
+JOIN_CODE = os.environ.get("ORG_JOIN_CODE", "")
 # Who a break-glass grant is *for*. Configuration rather than a field on the
 # request, and the difference is not cosmetic: an audience the caller chooses
 # is an audience the caller can point at some other resource server that also
@@ -311,6 +319,44 @@ def _compile_error(detail: dict) -> str:
     return "; ".join(lines)
 
 
+async def reload_engine() -> None:
+    """Put this service's modules back into an engine that has lost them.
+
+    They are pushed at this service's start and on every charter change, and
+    held nowhere else. An engine that restarts on its own — or a push that
+    landed on an instance on its way out — leaves nothing to evaluate, and
+    every decision after would be refused until this service restarted too.
+    It runs under the publishing lock, so what it puts back is the charter in
+    force and never one a concurrent publish has just replaced.
+    """
+    async with _PUBLISH_LOCK:
+        await load_shipped_rego()
+        await load_custom_rego(current()["charter"].get("rego") or "")
+        version = current()["version"]
+    event("engine.reloaded", charter_version=version)
+
+
+class EngineIncomplete(RuntimeError):
+    """The engine answered, without the policy it was given."""
+
+
+async def _ask_engine(payload: dict) -> dict:
+    r = await opa("POST", "/v1/data/u4a/org", json=payload)
+    r.raise_for_status()
+    return r.json().get("result") or {}
+
+
+def _engine_lacks(result: dict) -> str | None:
+    """What the engine is missing, judged against the charter in force."""
+    if not isinstance(result.get("decision"), dict):
+        return "holds none of the organization's policy"
+    wants_custom = bool((current()["charter"].get("rego") or "").strip())
+    if bool(result.get("custom_loaded")) != wants_custom:
+        return ("does not hold the organization's own rules" if wants_custom
+                else "holds rules the charter in force no longer has")
+    return None
+
+
 async def org_decision(member: str, request_facts: dict,
                        role: dict | None = None) -> dict:
     """One request, judged by the organization's engine.
@@ -331,17 +377,19 @@ async def org_decision(member: str, request_facts: dict,
                          "role": role or {}, "request": request_facts}}
     key = json.dumps(payload, sort_keys=True)
     try:
-        r = await opa("POST", "/v1/data/u4a/org/decision", json=payload)
-        r.raise_for_status()
-        body = r.json()
-        if not isinstance(body.get("result"), dict):
-            # A 200 with no result is the engine answering a query for a
-            # policy it does not hold — what OPA says after a restart that
-            # lost the pushed modules. That is the engine failing, not the
-            # organization allowing, so it takes the same path as unreachable.
-            raise RuntimeError("the policy engine returned no decision; "
-                               "its policy is not loaded")
-        decision = body["result"]
+        result = await _ask_engine(payload)
+        if _engine_lacks(result):
+            # An answer without the policy it was given — no decision at all
+            # after a restart that lost the pushed modules, or a decision made
+            # without the admin's own rules. Either is this service's to put
+            # back, so it does, and asks once more.
+            await reload_engine()
+            result = await _ask_engine(payload)
+        if lacks := _engine_lacks(result):
+            # Still incomplete. That is the engine failing, not the
+            # organization allowing, so it is refused like an outage, by name.
+            raise EngineIncomplete(lacks)
+        decision = result["decision"]
         _OPA_CACHE[key] = (now(), decision)
         del_stale = [k for k, (t, _) in _OPA_CACHE.items()
                      if t < now() - OPA_GRACE_S]
@@ -354,10 +402,11 @@ async def org_decision(member: str, request_facts: dict,
             event("engine.unreachable", result="cached", error=str(exc))
             return cached[1]
         event("engine.unreachable", result="refused", error=str(exc))
+        what = str(exc) if isinstance(exc, EngineIncomplete) else "could not be reached"
         return {"effect": "refuse",
-                "because": ["the organization's policy engine could not be "
-                            "reached, and its policy is not something this "
-                            "request may proceed without"]}
+                "because": [f"the organization's policy engine {what}, and its "
+                            "policy is not something this request may proceed "
+                            "without"]}
 
 
 # --- Identity ----------------------------------------------------------------
@@ -675,7 +724,7 @@ def _authorize_enrolment(owner: str, code: str, assertion: str = "") -> str:
     if invite and invite["state"] == "open" and secrets.compare_digest(
             given, invite["code"]):
         return "invitation"
-    if secrets.compare_digest(given.upper(), JOIN_CODE.upper()):
+    if JOIN_CODE and secrets.compare_digest(given.upper(), JOIN_CODE.upper()):
         return "code"
     raise HTTPException(status_code=403,
                         detail="that is not this organization's enrolment code, "
@@ -690,7 +739,7 @@ def _check_code(code: str) -> None:
     code. Neither reveals anything an enrolled member could not already read.
     """
     given = (code or "").strip()
-    if secrets.compare_digest(given.upper(), JOIN_CODE.upper()):
+    if JOIN_CODE and secrets.compare_digest(given.upper(), JOIN_CODE.upper()):
         return
     if any(i["state"] == "open" and secrets.compare_digest(given, i["code"])
            for i in INVITES.values()):
@@ -777,7 +826,14 @@ async def member_join(request: Request) -> dict:
                             detail="that name is already a member of this "
                                    "organization")
     agreed_to = body.get("charter_version")
-    if agreed_to is not None and str(agreed_to) != str(current()["version"]):
+    if agreed_to is None:
+        # Agreement is to a version. A join naming none would bind her to
+        # whatever is in force when it lands, which she may never have read.
+        raise HTTPException(
+            status_code=400,
+            detail="name the charter version you agreed to; joining binds you "
+                   "to that version, not to whichever is in force")
+    if str(agreed_to) != str(current()["version"]):
         # She agreed to the charter she was shown. One published since is a
         # different bargain, and she has to see it before it applies to her.
         raise HTTPException(
@@ -1037,16 +1093,6 @@ def invoker_published_key(origin: str, jwk_thumb: str) -> bool:
     return found
 
 
-def _thumbprint(jwk: dict) -> str:
-    import base64
-    import hashlib
-
-    canonical = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
-                           separators=(",", ":"), sort_keys=True)
-    return "jkt:" + base64.urlsafe_b64encode(
-        hashlib.sha256(canonical.encode()).digest()).rstrip(b"=").decode()
-
-
 async def notify_member(owner: str, payload: dict) -> bool:
     """Tell a member's authority something, signed.
 
@@ -1143,6 +1189,15 @@ async def break_glass(request: Request) -> JSONResponse:
     if glass.get("require_reason") and not reason:
         raise HTTPException(status_code=400,
                             detail="the charter requires a stated reason")
+    # One act, named. An override is the organization's exception for a
+    # single operation, and one naming none would be authority over the tool.
+    op = req.get("operation") if isinstance(req.get("operation"), dict) else {}
+    op_tool, op_params = op.get("tool"), op.get("params", {})
+    if op_tool != resource_id.rsplit("/", 1)[-1] or not isinstance(op_params, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="break-glass is for one act: name the operation as "
+                   "{tool, params}, for the tool the resource is")
 
     signature = request.headers.get("signature", "")
     for spent, when in list(_SPENT_SIGNATURES.items()):
@@ -1199,13 +1254,22 @@ async def break_glass(request: Request) -> JSONResponse:
         raise HTTPException(status_code=409, detail="that voucher has been used")
     _SPENT_SIGNATURES[signature] = now()
     jti = f"bg_{uuid.uuid4().hex[:12]}"
+    # The digest is this service's own, computed over what the caller named,
+    # in the form the drafts define; never a digest the caller supplied.
+    operation = {"tool": op_tool, "params_s256": "s256:" + base64.urlsafe_b64encode(
+        hashlib.sha256(json.dumps(op_params, sort_keys=True, separators=(",", ":"),
+                                  ensure_ascii=False).encode()).digest()
+    ).rstrip(b"=").decode()}
     exp = int(now()) + ttl
+    handle = _thumbprint(signer)
     claims = {
         "iss": ISSUER,
-        "sub": req.get("agent_sub") or "aauth:pseudonymous-agent",
+        "sub": handle,
+        "client_id": handle,
         "owner": owner,
         "aud": GLASS_AUDIENCE,
         "jti": jti,
+        "iat": int(now()),
         "exp": exp,
         "cnf": {"jwk": signer},
         "permissions": [{"resource_id": resource_id, "resource_scopes": scopes,
@@ -1222,10 +1286,9 @@ async def break_glass(request: Request) -> JSONResponse:
         },
         "single_use": True,
     }
-    if req.get("operation"):
-        claims["operation"] = req["operation"]
+    claims["operation"] = operation
     token = jwt.encode(claims, SIGNING_KEY, algorithm="EdDSA",
-                       headers={"typ": "aa-auth+jwt", "kid": KID})
+                       headers={"typ": "at+jwt", "kid": KID})
     GLASS[jti] = {"claims": claims, "spent": False, "issued": utcstamp(),
                   "member": owner, "resource_id": resource_id,
                   "reason": reason, "authorised_by": authorised_by}
@@ -1313,6 +1376,9 @@ async def introspect(request: Request, token: str = Form(...)) -> dict:
         "family": claims["jti"],
         "iss": claims["iss"],
         "sub": claims.get("sub"),
+        # The member it was issued to. An enforcement point honours it only
+        # for that member's administration of the organization's book.
+        "owner": claims["owner"],
         "exp": claims["exp"],
         "permissions": claims["permissions"],
         "cnf": claims.get("cnf"),
