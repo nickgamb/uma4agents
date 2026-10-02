@@ -536,8 +536,12 @@ def main() -> int:                                            # noqa: C901
         # about history.
         org_kinds = {"org_joined", "org_left", "org_clamped", "org_refused",
                      "org_role", "org_acted", "org_declined", "break_glass"}
+        # A tier of hers over the book is this check's `firmbook` or
+        # clearance-check's `firmbook<run>` — her ledger keeps both — and an
+        # entry about one of the book's resources names it.
         leaked = [e for e in ledger if e.get("kind") not in org_kinds
-                  and e.get("tier") != "firmbook"]
+                  and not (e.get("resource_id") or "").startswith(f"{BOOK}/")
+                  and not (e.get("tier") or "").startswith("firmbook")]
         check("and so is its view of her record",
               bool(ledger) and not leaked,
               f"{[(e.get('kind'), e.get('tier')) for e in leaked][:6]}")
