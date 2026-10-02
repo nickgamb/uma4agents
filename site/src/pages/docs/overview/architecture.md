@@ -91,8 +91,12 @@ grant.
 
 ## What is deliberately absent
 
-No shared secret between the resource server and the authorization server. No
-static owner credential. No path by which the resource server can read the
+No secret the resource server must share with an authority nobody provisioned
+it against: it introduces itself by a key published at its own origin, and the
+owner approves it once, which is how it reaches Carol's authority. A
+provisioned client secret is a deployment's option where one party did
+configure both ends, as the reference does for Alice's (`UMA_AS_RS_CLIENT_SECRET`).
+No static owner credential. No path by which the resource server can read the
 owner's policy. Those absences are the architecture; the rest is arrangement.
 
 ## How the absences are proved

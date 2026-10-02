@@ -2,7 +2,10 @@
 
 How the UMA-for-agents grant rides Model Context Protocol 2026-07-28. A
 companion to [PROTOCOL.md](PROTOCOL.md), which is the binding-independent wire
-contract; everything here is about encoding, not semantics.
+contract; everything here is about encoding, not semantics. The normative
+text is the MCP binding draft,
+[draft-gamb-uma4agents-mcp-00](https://u4a.ai/spec/draft-gamb-uma4agents-mcp-00.html);
+this page explains it against the running implementation.
 
 Written against a running implementation. Each mechanism below is marked
 implemented, proposed, or future in the summary at the end — the proposals are
@@ -106,6 +109,17 @@ remediation is not.
 > impossible, which is why the challenge is an error in both encodings and why
 > an authorization plane hosted at a gateway needs its own route rather than a
 > body trick.
+
+## Refusals that are not challenges
+
+A refusal that negotiating cannot fix is not a challenge. In process it is the
+JSON-RPC error `-32002`, whose `data` carries the `error` value and the HTTP
+`status` core gives it — `access_revoked`, `already_consumed`,
+`operation_required`, `consequence_changed` and the rest. The binding adds two
+of its own, both status 400 and both terminal: `missing_routing_headers`, where
+a request omits the `Mcp-Method`/`Mcp-Name` headers, and `header_body_mismatch`,
+where they disagree with the body. Behind a gateway the same values arrive as
+the HTTP status with a JSON body.
 
 ## Beats 2–4 are not MCP
 

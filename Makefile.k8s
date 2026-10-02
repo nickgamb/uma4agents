@@ -254,12 +254,14 @@ k8s-smoke-test:
 ##
 ## SIM=0 leaves her taps to you: the ask-me act then pends in her portal
 ## until you approve it there, which is the whole point of the shape and
-## cannot be seen while something else is tapping for her.
+## cannot be seen while something else is tapping for her. The log is then
+## followed rather than waited on, so the run lasts as long as the agent's own
+## wait (UMA4A_OWNER_WAIT_S, fifteen minutes) and shows its outcome.
 .PHONY: k8s-demo-all
 k8s-demo-all: ACT ?= all
 k8s-demo-all: SIM ?= 1
 k8s-demo-all:
-	$(call run_job,demo,sed -e 's|--act all|--act $(ACT)|' \
+	$(call $(if $(filter 0,$(SIM)),run_live_job,run_job),demo,sed -e 's|--act all|--act $(ACT)|' \
 		$(if $(filter 0,$(SIM)),-e 's| --simulate-alice||',) \
 		$(K8S)/base/jobs/demo.yaml,600s)
 

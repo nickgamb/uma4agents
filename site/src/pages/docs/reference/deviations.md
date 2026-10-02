@@ -20,7 +20,7 @@ Everything not listed here is intended to be stock UMA 2.0, and an AAuth agent
 token is verified as AAuth specifies.
 
 Each entry names where the [specification set](/docs/reference/specification/)
-states it normatively. The numbering is the one Core §12 uses; entries 1–22 are that table.
+states it normatively. The numbering is the one Core §12 uses; entries 1–24 are that table.
 
 ## 1. Terms proffered inside `required_claims`
 
@@ -423,6 +423,41 @@ three clients of one server here; a surface only one vendor's portal can reach
 is a server only that vendor operates.
 
 **Specified in.** [The Resource Owner's API](/spec/draft-gamb-uma4agents-owner-00.html)
+
+## 23. What an operation leaves behind
+
+**Baseline.** UMA 2.0 has scopes. It has no vocabulary for what an act costs —
+whether it can be undone, whether it discloses something.
+
+**Here.** The resource declares a consequence class for each operation in its
+published metadata. Her policy can name the class rather than the tool, and
+the grant carries the class it was issued against. An enforcement point refuses
+the grant with `consequence_changed` if the resource later declares the
+operation worse.
+
+**Why.** A rule written against tool names covers the tools she has seen. One
+written against what an act leaves behind covers tools she never will, and a
+resource that re-describes an operation after she answered is asking her a
+different question.
+
+**Specified in.** [Core §7.2](/spec/draft-gamb-uma4agents-core-00.html#consequence), [Federated Authorization for Agents](/spec/draft-gamb-uma4agents-fedauthz-00.html), and [Owner Policy, Assurance and Attention §3.3](/spec/draft-gamb-uma4agents-policy-00.html#consequence)
+
+## 24. Facts somebody else attests
+
+**Baseline.** In UMA 2.0 claims come from the requesting party, pushed or
+gathered.
+
+**Here.** Her policy may require facts about the person an agent acts for that
+neither the agent nor that person can assert — a licence, a jurisdiction. Her
+authority fetches them from the party that attests them, authority to
+authority, and the grant carries a digest of what was checked rather than the
+facts.
+
+**Why.** A claim the requesting side supplies about itself is only as good as
+the requesting side. Some conditions she cares about are only worth checking if
+somebody else vouches for them.
+
+**Specified in.** [Owner Policy, Assurance and Attention §3.4](/spec/draft-gamb-uma4agents-policy-00.html#clearance) and [Multi-Party Authorization](/spec/draft-gamb-uma4agents-multiparty-00.html)
 
 ## Not a deviation: an enterprise identity assertion as a claim
 

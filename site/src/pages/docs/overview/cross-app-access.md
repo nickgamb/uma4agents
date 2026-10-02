@@ -196,5 +196,5 @@ at one is the only change required — keys are found by discovery rather than a
 lab convention, permitted algorithms come from the key's type rather than the
 token's header, and the claim naming the person is not assumed.
 
-See [deviation 17](/docs/reference/deviations/) for why the assertion is
+See [the register's Cross App Access entry](/docs/reference/deviations/#not-a-deviation-an-enterprise-identity-assertion-as-a-claim) for why the assertion is
 carried as a claim rather than as a `jwt-bearer` grant.

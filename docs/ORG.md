@@ -19,7 +19,7 @@ mechanism.
 Run it:
 
 ```bash
-make org-check        # 90 assertions across six processes
+make org-check        # six processes; prints its own total
 make org-test         # the ceiling algebra and the charter validator, no stack
 ```
 

@@ -318,7 +318,7 @@ and Carol are — and the firm shares parts of that book with them under a role.
 make org-check
 ```
 
-Eighty assertions across six processes. The two beats to watch for:
+Six processes, and the two beats to watch for:
 
 **Joining grants something.** Alice enrols with a code, Carol accepts an
 invitation addressed to her, and the firm's book appears in each of their

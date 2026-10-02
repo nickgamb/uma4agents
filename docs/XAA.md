@@ -52,8 +52,8 @@ token** and it carries no entitlement — which is exactly what lets it be a
 
 The spec's own step 4 has the client present the assertion at the resource
 authorization server as `grant_type=jwt-bearer` with `assertion=…`, and get an
-access token back. This profile does not do that, deliberately. See deviation
-17 for the reasoning; the short version is that a `jwt-bearer` exchange would
+access token back. This profile does not do that, deliberately. See the
+Cross App Access entry in the deviations register for the reasoning; the short version is that a `jwt-bearer` exchange would
 have the identity provider's assertion produce the access token directly,
 which would make the provider the deciding party over somebody else's
 resource.

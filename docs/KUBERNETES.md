@@ -442,7 +442,7 @@ probe. The asymmetry is the point.
 
 ---
 
-## Six traps, each of which fails by pointing somewhere else
+## Traps, each of which fails by pointing somewhere else
 
 These cost real time. Each is commented where it bit.
 
