@@ -401,10 +401,16 @@ class Enforcer:
         # introduce ourselves again and let her decide, not to retry harder.
         # Asking again cannot undo her withdrawal; it can only put the
         # question back in front of her, which is what re-registering does.
-        refused = r.status_code == 401 or (
-            r.status_code == 403 and _error_of(r) == "access_denied")
+        withdrawn = r.status_code == 403 and _error_of(r) == "access_denied"
+        refused = r.status_code == 401 or withdrawn
         if refused and self.signing_key is not None:
-            if time.time() >= self._establish_after:
+            # The throttle is for an origin her authority does not recognise,
+            # where asking again repeats the same failure. A withdrawal is
+            # answered once — the registration goes back to pending, and every
+            # later request is told that — so it is never held back: a replica
+            # still throttled from an earlier introduction would otherwise
+            # leave her withdrawal looking like an outage.
+            if withdrawn or time.time() >= self._establish_after:
                 self._establish_after = time.time() + self.establish_backoff_s
                 await self.establish(client)
                 # Ask again either way: the second answer separates "she has

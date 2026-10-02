@@ -41,6 +41,7 @@ release within that month. One entry per release.
 - **Authorization server:** a request waiting on the owner is polled without spending its ticket.
 - **Authorization server:** an owner's signed request that changes anything is accepted once; a second presentation is refused.
 - **HTTP signatures:** a signature without `created` is refused, and the signer adds a fresh `nonce`, so the same request sent twice in a second is not mistaken for a replay.
+- **Enforcement point:** a resource server whose owner withdrew it re-registers on the next call from every replica, not only from one that had not introduced itself recently.
 - **Enforcement point:** every Protection API call is retried on a 401, failed access reports are recorded, and a party it could not ask is answered `temporarily_unavailable`.
 - **Joint tally:** the threshold floor counts holders rather than weight, the tally stops asking once the count is settled, refuses to fold terms around a holder it could not ask, caps open negotiations in two lanes, and drops expired grants.
 - **Organization:** break-glass overrides and vouchers are bound to the membership they were issued under, and a window opens only once the member has been told.

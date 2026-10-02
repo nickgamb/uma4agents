@@ -484,6 +484,25 @@ d = present(jointly(joint_grant(), published=moved), tool="read")
 check("and a mandate naming another authority for a known holder is refused",
       refused_jointly(d) and "knows them by" in d.description, d.description)
 
+print("\n== a resource server she withdrew introduces itself again ==")
+import httpx  # noqa: E402
+
+from uma4a_pep import Pending  # noqa: E402
+
+withdrawn = Enforcer(**{**CONFIG, "signing_key": AGENT})
+answers = iter([httpx.Response(403, json={"error": "access_denied"}),
+                httpx.Response(403, json={"error": "authorization_pending"})])
+withdrawn._token_request = AsyncMock(side_effect=lambda client, form: next(answers))
+withdrawn.establish = AsyncMock()
+withdrawn._establish_after = time.time() + 600
+try:
+    asyncio.run(withdrawn.pat(None, force=True))
+    check("at once, even from a replica still throttled, and is told she has been asked",
+          False, "a PAT was issued")
+except Pending:
+    check("at once, even from a replica still throttled, and is told she has been asked",
+          withdrawn.establish.await_count == 1, str(withdrawn.establish.await_count))
+
 print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
 if FAILED:
     raise SystemExit(1)
