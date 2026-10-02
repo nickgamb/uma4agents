@@ -1186,6 +1186,7 @@ async def pull_at_startup() -> None:
             pairs = [(o, cid, rs) for o in owners
                      for cid, rs in (await st(o).resource_servers()).items()
                      if rs.get("status", "active") == "active"]
+            pulled = 0
             for owner, client_id, rs in pairs:
                 try:
                     # Off the event loop: the RS authenticates this AS's
@@ -1200,10 +1201,15 @@ async def pull_at_startup() -> None:
                     # traffic on readiness, the back-call would have nowhere
                     # to land and the loop could never finish.
                     await asyncio.to_thread(pull_registrations, client_id, rs, owner)
-                    return
+                    pulled += 1
                 except Exception as exc:
                     event("resources.pull_retry", client_id=client_id,
                           error=str(exc)[:200])
+            # Every server she approved, not the first that answered: one
+            # resource may be served by several, and a replica that read only
+            # one of them would refuse the others' tickets.
+            if pairs and pulled == len(pairs):
+                return
             await asyncio.sleep(2)
         event("resources.pull_failed", note="lazy pull on first /perm remains")
 
@@ -1220,8 +1226,10 @@ async def register_permission(request: Request) -> JSONResponse:
     rid = body.get("resource_id")
     # FedAuthz §4.1: the AS only issues tickets against its own registry.
     registered = resources_for(owner).get(rid)
-    if registered is None:
-        # An unknown id means our pulled copy may be stale, so re-read what
+    asking = getattr(request.state, "pat_client", None)
+    if registered is None or asking not in registered.get("sources", [asking]):
+        # An unknown id, or one not yet known to be served by the server
+        # asking, means our pulled copy may be stale, so re-read what
         # the RS publishes. Staleness is the price of declarative
         # registration, and repairing it is this side's job — the mirror of
         # the RS-side re-push that classic RReg required.

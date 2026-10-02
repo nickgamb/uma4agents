@@ -430,10 +430,18 @@ async def who_may_ask_about_a_resource() -> None:
 
     check("a resource server that serves it may",
           (await perm("rs-b")).status_code == 201, str((await perm("rs-b")).status_code))
-    refused = await perm("rs-c")
+    with patch.object(app, "pull_registrations", lambda *a: None):
+        refused = await perm("rs-c")
     check("one she approved for something else may not",
           refused.status_code == 400 and b"invalid_resource_id" in refused.body,
           str(refused.status_code))
+
+    def now_lists_it(client_id, rs, owner):
+        app.RESOURCES[("alice", "x/get")]["sources"] = ["rs-a", "rs-b", "rs-c"]
+    with patch.object(app, "pull_registrations", now_lists_it):
+        late = await perm("rs-c")
+    check("but one this replica had not yet read it from is read again, then answered",
+          late.status_code == 201, str(late.status_code))
     app.RESOURCES.clear()
 
 
