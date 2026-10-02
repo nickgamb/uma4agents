@@ -624,33 +624,33 @@ def run_grant(
     r = client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
 
-    # Beat 1a: the server wants to know whose agent this is before it will
-    # say anything about terms. Nothing was arranged in advance — where to go
-    # and what to ask for are both in what it just said.
-    if (ask := identity_ask(body)) is not None:
-        if enterprise is None:
-            raise GrantDenied(
-                "this resource is governed by an organization that federates "
-                "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
-        on_status(f"identity required — exchanging at {endpoint}")
-        # A client of its own, trusting the provider's world as well as this
-        # deployment's — see `provider_trust`.
-        with httpx.Client(verify=provider_trust(enterprise.ca_bundle),
-                          timeout=30.0) as idp:
-            assertion = id_jag_from(idp.post(endpoint, data=payload))
-        on_status("assertion obtained, presenting it")
-        r = client.post(token_url, data={"grant_type": GRANT_TYPE,
-                                         "ticket": body["ticket"],
-                                         "claim_token": assertion,
-                                         "claim_token_format": ID_JAG_FORMAT})
-        body = r.json()
-
     # Bounded rather than once: terms that changed between proffer and commit
     # — an organization's ceiling re-applied, her own edit — are dictated
     # again, and the agent agrees to what is in force or to nothing.
     for _ in range(MAX_DICTATIONS):
-        if body.get("error") != "need_info":
+        # Beat 1a: the server wants to know whose agent this is before it will
+        # say anything about terms. Nothing was arranged in advance — where to go
+        # and what to ask for are both in what it just said.
+        if (ask := identity_ask(body)) is not None:
+            if enterprise is None:
+                raise GrantDenied(
+                    "this resource is governed by an organization that federates "
+                    "identity, and this agent carries no enterprise credentials")
+            endpoint, payload = id_jag_request(ask, enterprise, as_uri)
+            on_status(f"identity required — exchanging at {endpoint}")
+            # A client of its own, trusting the provider's world as well as this
+            # deployment's — see `provider_trust`.
+            with httpx.Client(verify=provider_trust(enterprise.ca_bundle),
+                              timeout=30.0) as idp:
+                assertion = id_jag_from(idp.post(endpoint, data=payload))
+            on_status("assertion obtained, presenting it")
+            r = client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                             "ticket": body["ticket"],
+                                             "claim_token": assertion,
+                                             "claim_token_format": ID_JAG_FORMAT})
+            body = r.json()
+        if body.get("error") != "need_info" or "terms_template" not in (
+                (body.get("required_claims") or [{}])[0]):
             break
         template = body["required_claims"][0]["terms_template"]
         on_status(f"terms proffered: {template['purpose']} "
@@ -774,25 +774,25 @@ async def run_grant_async(
     r = await client.post(token_url, data={"grant_type": GRANT_TYPE, "ticket": ticket})
     body = r.json()
 
-    if (ask := identity_ask(body)) is not None:
-        if enterprise is None:
-            raise GrantDenied(
-                "this resource is governed by an organization that federates "
-                "identity, and this agent carries no enterprise credentials")
-        endpoint, payload = id_jag_request(ask, enterprise, as_uri)
-        on_status(f"identity required — exchanging at {endpoint}")
-        async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
-                                     timeout=30.0) as idp:
-            assertion = id_jag_from(await idp.post(endpoint, data=payload))
-        on_status("assertion obtained, presenting it")
-        r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
-                                               "ticket": body["ticket"],
-                                               "claim_token": assertion,
-                                               "claim_token_format": ID_JAG_FORMAT})
-        body = r.json()
-
     for _ in range(MAX_DICTATIONS):
-        if body.get("error") != "need_info":
+        if (ask := identity_ask(body)) is not None:
+            if enterprise is None:
+                raise GrantDenied(
+                    "this resource is governed by an organization that federates "
+                    "identity, and this agent carries no enterprise credentials")
+            endpoint, payload = id_jag_request(ask, enterprise, as_uri)
+            on_status(f"identity required — exchanging at {endpoint}")
+            async with httpx.AsyncClient(verify=provider_trust(enterprise.ca_bundle),
+                                         timeout=30.0) as idp:
+                assertion = id_jag_from(await idp.post(endpoint, data=payload))
+            on_status("assertion obtained, presenting it")
+            r = await client.post(token_url, data={"grant_type": GRANT_TYPE,
+                                                   "ticket": body["ticket"],
+                                                   "claim_token": assertion,
+                                                   "claim_token_format": ID_JAG_FORMAT})
+            body = r.json()
+        if body.get("error") != "need_info" or "terms_template" not in (
+                (body.get("required_claims") or [{}])[0]):
             break
         template = body["required_claims"][0]["terms_template"]
         on_status(f"terms proffered: {template['purpose']} "
