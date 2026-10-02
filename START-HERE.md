@@ -124,7 +124,7 @@ her policy can do is require her to look when there is no reason at all.
 ## 6. Check the boundary holds
 
 ```bash
-make k8s-smoke-test     # expect 15 passed, 0 failed
+make k8s-smoke-test     # expect 14 passed, 0 failed
 make k8s-policy-test    # expect 24 passed, then 7 passed
 make k8s-intent-check   # whose intent the grant carries
 ```
