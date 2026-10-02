@@ -28,6 +28,13 @@ Grouped by the party that operates them. Authorization column says who may call.
 default, plain-language HTML on `Accept: text/html`, and JSON-LD with ODRL
 permissions and prohibitions on `?format=jsonld`.
 
+Its metadata also names where the parties beside her reach it:
+`rs_registration_endpoint` (`/rs/register`), `org_notice_endpoint`
+(`/org/notice`), `org_admin_endpoint` (`/org/admin`), `joint_quote_endpoint`
+(`/joint/quote`) and `joint_verdict_endpoint` (`/joint/verdict`). Each message on
+those paths is specified in
+[Multi-Party Authorization §4](/spec/draft-gamb-uma4agents-multiparty-00.html#wire).
+
 ### Token endpoint
 
 | Grant type | Caller | Answers |
@@ -53,7 +60,8 @@ authorization_pending` rather than a refusal.
 
 | Endpoint | Auth | Answers |
 |---|---|---|
-| `POST /rs/register` | an RFC 9421 signature from a key published at the origin of the resource being claimed | `202` with `status: pending` |
+| `POST /rs/register` | an RFC 9421 signature from a key published at the origin of the resource being claimed | `202` with `status: pending`. The body names `owner`, `resource_uri` and optionally `name` |
+| `POST /token`, `grant_type=client_credentials` | the registration's secret or origin signature | A PAT for the owner named in `owner` |
 
 How a resource server introduces itself to an authority nobody configured it
 against. The authority fetches the RFC 9728 document at the claimed resource
@@ -164,7 +172,7 @@ A party of its own, not a table inside anyone's authorization server.
 
 | Endpoint | Answers |
 |---|---|
-| `GET /.well-known/u4a-organization` | Discovery: issuer, JWKS, where to enrol, where decisions come from |
+| `GET /.well-known/u4a-organization` | Discovery: issuer, JWKS, and every endpoint below that a member's authority or an enforcement point calls, each under its own member name |
 | `GET /jwks` | Its signing keys. Members verify notices against these; enforcement points verify the grants it signs itself |
 | `POST /member/preview` | The charter in sentences, before anybody has joined |
 | `POST /member/join` | Enrol, by an invitation addressed to one person, by the organization's identity provider vouching for her, or by a shared code where one is configured. Names the charter version she agreed to, and is refused without it. Returns a membership token her authority holds |
@@ -175,7 +183,7 @@ A party of its own, not a table inside anyone's authorization server.
 | `GET /member/clearance` | What this organization will attest about her, signed and audienced at her authority. Fetched by her authorization server, never by an agent. 404 when it holds nothing, which her authority reads as unmet rather than as an error |
 | `GET /membership/{owner}` | For an enforcement point: whether this owner is governed here, what is shared with her, and the ceiling to check grants against |
 | `POST /break-glass` | An agent redeeming a window, signing with the key the grant will bind to |
-| `POST /introspect`, `/consume` | RFC 7662 over the grants this service signed, shaped exactly like a member authority's answers |
+| `POST /introspect`, `/consume` | RFC 7662 over the grants this service signed, shaped exactly like a member authority's answers, and spending one. An enforcement point authenticates with the credential this organization provisioned for it |
 | `/admin/…` | The console's backend: charter versions, members and their groups, invitations, break-glass windows, activity |
 
 Groups are charter data, so the four endpoints that manage them publish a

@@ -176,6 +176,45 @@ it.
 The signature profile is that of {{U4ACore}} Section 6.1, with `@authority` taken
 from the resource server's configuration.
 
+The listing is selected by the URL, not by a parameter. A resource server that
+serves several owners publishes a resource, and a metadata document, per owner,
+each naming that owner's authorization server and its own
+`owner_resources_endpoint`; the endpoint read from one owner's document is the
+listing for that owner. The authorization server requests it with `GET`, signed
+with a key at its own `jwks_uri` and covering `authorization` as the empty
+string. The resource server verifies the signature against the keys of the
+authorization server its configuration names for that owner, and MUST NOT take
+the signer from the request.
+
+A successful response is a JSON object with these members:
+
+owner:
+: OPTIONAL. The owner the listing is for. Where present, the authorization
+  server MUST refuse a listing that names an owner other than the one it pulled
+  for.
+
+resources:
+: REQUIRED. An array of resource descriptions. Each carries `_id` (REQUIRED, the
+  resource identifier), `resource_scopes` (REQUIRED, an array of scope names),
+  and MAY carry `name`, `type` and `consequence`, with the meanings of the
+  corresponding members of a resource description in {{UMAFedAuthz}} Section 3.1
+  and of {{public-layer}}.
+
+~~~ json
+{
+  "owner": "alice",
+  "resources": [
+    {"_id": "alice-vault/get_positions", "name": "Positions",
+     "resource_scopes": ["positions:read"],
+     "consequence": "disclosing"},
+    {"_id": "alice-vault/execute_trade", "name": "Trade",
+     "resource_scopes": ["trades:execute"],
+     "consequence": "irreversible"}
+  ]
+}
+~~~
+{: title="An owner-resources listing."}
+
 This is the privacy split. The public document says what the resource is; whose
 things sit behind it is served only to the party the owner's own consent already
 connected. Publishing the second at an unauthenticated URI is a disclosure that
@@ -242,7 +281,13 @@ ends.
 
 A resource server MAY introduce itself to an owner's authorization server by
 sending a request naming the owner and the resource it serves, signed with
-{{RFC9421}} using a key published at the origin of that resource.
+{{RFC9421}} using a key published at the origin of that resource. The request
+is a `POST` of a JSON object to the authorization server's
+`rs_registration_endpoint`, carrying `owner` (REQUIRED, the owner as the
+authorization server names her), `resource_uri` (REQUIRED, the resource's
+identifier as its protected resource metadata states it) and `name` (OPTIONAL,
+a display name). An authorization server offering this MUST advertise
+`rs_registration_endpoint` in its metadata.
 
 The request MUST carry a `Content-Digest` {{RFC9530}} covered by the signature.
 
@@ -316,6 +361,12 @@ origin it registered as. Which authentication applies — a provisioned secret o
 an origin signature — is a property of the stored registration, so that a
 resource server registered by signature cannot later fall back to guessing a
 secret.
+
+A resource server holds a PAT issued in each owner's name ({{U4ACore}} Section 8.1), so the token
+request names the owner in an `owner` parameter. An authorization server that
+serves more than one owner MUST refuse a PAT request that names none, unless it
+has a deployment-configured default; it MUST refuse one naming an owner it does
+not serve, and MUST NOT create an owner on the strength of the request.
 
 While the owner has not answered, the token endpoint MUST respond `403` with
 `error` of `authorization_pending`. After the owner has revoked the resource
@@ -466,6 +517,8 @@ requests no registration.
 | `tool_surfaces` | Protected resource metadata {{RFC9728}} | Operations the resource offers, each with the scopes it requires | {{public-layer}} |
 | `owner_resources_endpoint` | Protected resource metadata {{RFC9728}} | URL of the protected listing of owner-bound resource instances | {{protected-layer}} |
 | `consume_endpoint` | Authorization server metadata {{RFC8414}} | URL of the operation that spends a single-use requesting party token | {{non-consuming}} |
+| `rs_registration_endpoint` | Authorization server metadata {{RFC8414}} | URL at which a resource server registers by origin signature | {{rs-register}} |
+| `owner` | Token request parameter | The owner a PAT is requested for | {{pat}} |
 | `error` | Token introspection response {{RFC7662}} | Why an inactive token is inactive | {{introspection}} |
 {: title="Identifiers used by this document."}
 

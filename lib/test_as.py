@@ -174,9 +174,22 @@ async def agreements_and_grants() -> None:
                                 "first_seen": app.utcstamp()})
     token = issued["access_token"]
 
+    raw_c, cleared = agreement()
+    rec_c = negotiating()
+    contract_c, signer_c = app.verify_contract(cleared, rec_c)
+    rec_c.update(contract=contract_c, agreement_jws=raw_c, clearance={"licence": "series-7"})
+    cleared_token = (await app.issue_rpt(rec_c, app.s256(raw_c.encode()), signer_c,
+                                         None))["access_token"]
+
     print("\n== who may ask about a grant ==")
     with patch.object(app, "require_pat", AsyncMock(return_value="alice")):
         mine = await app.introspect(None, token=token, consume=None)
+        cleared_answer = await app.introspect(None, token=cleared_token, consume=None)
+    check("a grant issued under a clearance says so when introspected, as the same digest",
+          cleared_answer.get("clearance") == unverified(cleared_token).get("clearance")
+          == app.s256(json.dumps({"licence": "series-7"}, sort_keys=True,
+                                 separators=(",", ":"), ensure_ascii=False).encode()),
+          str(cleared_answer.get("clearance")))
     check("the owner's own resource server is told the grant is live",
           mine.get("active") is True, str(mine))
     check("and is given what enforcement reads, from the answer rather than the token",
@@ -691,6 +704,85 @@ async def what_it_says_it_verifies() -> None:
           {"EdDSA", "Ed25519"} <= set(meta.get("signing_alg_values_supported", [])))
     check("and ed25519 for signed requests",
           "ed25519" in meta.get("http_message_signature_alg_values_supported", []))
+    check("it advertises where the parties beside her reach it",
+          all(meta.get(k) for k in ("rs_registration_endpoint", "org_notice_endpoint",
+                                    "org_admin_endpoint", "joint_quote_endpoint",
+                                    "joint_verdict_endpoint")))
+    forged = jwt.encode({"owner": "alice", "account": "x", "iss": "https://tally.example",
+                         "exp": int(time.time()) + 60}, KEY, algorithm="EdDSA",
+                        headers={"typ": "u4a-verdict+jwt"})
+    try:
+        app.tally_claims(forged, "https://tally.example")
+        check("a tally request must be typed as one", False, "accepted")
+    except app.HTTPException as exc:
+        check("a tally request must be typed as one", exc.status_code == 401, exc.detail)
+
+
+def _request(method: str, path: str, body: bytes, ctype: str):
+    from starlette.requests import Request
+    sent = {"done": False}
+
+    async def receive():
+        if sent["done"]:
+            return {"type": "http.disconnect"}
+        sent["done"] = True
+        return {"type": "http.request", "body": body, "more_body": False}
+    return Request({"type": "http", "method": method, "path": path, "query_string": b"",
+                    "headers": [(b"content-type", ctype.encode())],
+                    "server": ("as", 443), "scheme": "https"}, receive)
+
+
+async def the_wire_from_her_organization() -> None:
+    print("\n== what the parties beside her send ==")
+    org_key = Ed25519PrivateKey.generate()
+    org_jwk = json.loads(OKPAlgorithm.to_jwk(org_key.public_key()))
+
+    def notice(kind: str, typ: str = "u4a-org-notice+jwt", jti: str = "n-1") -> object:
+        token = jwt.encode({"iss": "https://org.example", "sub": "alice", "org": "nw",
+                            "kind": kind, "iat": int(time.time()),
+                            "exp": int(time.time()) + 300, "jti": jti},
+                           org_key, algorithm="EdDSA", headers={"typ": typ})
+        return _request("POST", "/org/notice", json.dumps({"notice": token}).encode(),
+                        "application/json")
+
+    with patch.object(app, "org_record",
+                      AsyncMock(return_value={"issuer": "https://org.example", "envelope": {}})), \
+            patch.object(app, "issuer_keys", lambda issuer, fresh=False: [org_jwk]):
+        try:
+            await app.org_notice(notice("charter_changed", typ="u4a-org-admin+jwt", jti="n-0"))
+            check("a notice must be typed as one", False, "accepted")
+        except app.HTTPException as exc:
+            check("a notice must be typed as one", exc.status_code == 401, exc.detail)
+        answer = await app.org_notice(notice("something_added_later"))
+        check("a kind it does not know is accepted and nothing is done",
+              answer == {"received": "something_added_later"}, str(answer))
+        try:
+            await app.org_notice(notice("something_added_later"))
+            check("the same notice is acted on once", False, "accepted twice")
+        except app.HTTPException as exc:
+            check("the same notice is acted on once", exc.status_code == 409, exc.detail)
+
+    tally_key, elsewhere = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    asked = jwt.encode({"owner": "alice", "account": "joint", "iss": "https://tally.example",
+                        "iat": int(time.time()), "exp": int(time.time()) + 60},
+                       elsewhere, algorithm="EdDSA", headers={"typ": "u4a-tally-req+jwt"})
+    with patch.object(app, "issuer_keys", lambda issuer, fresh=False: [
+            json.loads(OKPAlgorithm.to_jwk(tally_key.public_key()))]):
+        try:
+            app.tally_claims(asked, "https://tally.example")
+            check("a question not signed by the tally her mandate names is refused",
+                  False, "answered")
+        except app.HTTPException as exc:
+            check("a question not signed by the tally her mandate names is refused",
+                  exc.status_code == 401, exc.detail)
+
+    pat = await app.token(_request(
+        "POST", "/token",
+        b"grant_type=client_credentials&scope=uma_protection&owner=mallory&client_id=rs",
+        "application/x-www-form-urlencoded"))
+    check("a PAT for an owner it does not serve is refused, and creates no owner",
+          pat.status_code == 401 and "mallory" not in await app.STORE.owners(),
+          str(pat.status_code))
 
 
 async def main() -> int:
@@ -713,6 +805,7 @@ async def main() -> int:
     await an_unreachable_organization()
     await her_signed_request_sent_twice()
     await what_it_says_it_verifies()
+    await the_wire_from_her_organization()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 

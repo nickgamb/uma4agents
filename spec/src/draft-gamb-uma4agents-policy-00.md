@@ -22,6 +22,7 @@ author:
     organization: Venn Factory
 normative:
   RFC7638:
+  RFC8785:
   I-D.meunier-webbotauth-registry:
   I-D.ietf-oauth-client-id-metadata-document:
   UMAGrant:
@@ -301,11 +302,23 @@ when the fact may be adverse to it. A licence is adverse-capable — its holder
 has every reason to say it is current — so the attestation travels from the
 attesting party to the authorization server directly.
 
+Where the attesting party is the organization the owner enrolled with, her
+authorization server fetches the attestation from the organization's
+`clearance_endpoint` with her membership credential ({{U4AMultiParty}}). It is a
+JWT with `typ` of `u4a-clearance+jwt`, signed with a key at the attesting
+party's `jwks_uri`, carrying `iss`, `sub` (the owner, as her authorization server
+names her), `aud` (her authorization server's issuer identifier), `iat`, `exp`,
+`jti`, and `clearance`: an object whose members are the attested claims and whose
+values are the attested values.
+
 An authorization server MUST verify the attestation's signature against keys the
 attesting party publishes, and MUST refuse it unless it names the subject the
 negotiation is about and names that authorization server as its audience. An
 attestation about one member, issued to one authority, is not evidence about
 another member or at another authority.
+
+The digest a grant carries ({{U4ACore}} Section 7.1) is `s256` over the
+{{RFC8785}} serialization of that `clearance` object, as verified.
 
 Where a required clearance is unmet, an authorization server MUST refuse the
 negotiation before it dictates terms, and MUST record the reason. An agent that

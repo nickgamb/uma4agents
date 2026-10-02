@@ -968,8 +968,8 @@ the agent's time and puts a request in front of the owner that she has already
 answered.
 
 An introspection response for an active token MUST carry `cnf` and
-`permissions`, and `single_use`, `operation`, `contract` and `consequence` where
-the token carries them, with the token's values. The steps of {{ordering}} read
+`permissions`, and `single_use`, `operation`, `contract`, `consequence` and
+`clearance` where the token carries them, with the token's values. The steps of {{ordering}} read
 them from the introspection response and not from the token, so that what an
 enforcement point acts on comes from the same answer that said the token is
 active, and it never needs to verify the authorization server's signature

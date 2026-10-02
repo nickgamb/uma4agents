@@ -2538,8 +2538,8 @@ around a negotiation whose outcome the owner has already settled, which wastes
 the agent's time and puts a request in front of the owner that she has already
 answered.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
 <p id="section-8.4-3">An introspection response for an active token <span class="bcp14">MUST</span> carry <code>cnf</code> and
-<code>permissions</code>, and <code>single_use</code>, <code>operation</code>, <code>contract</code> and <code>consequence</code> where
-the token carries them, with the token's values. The steps of <a href="#ordering" class="auto internal xref">Section 8.2</a> read
+<code>permissions</code>, and <code>single_use</code>, <code>operation</code>, <code>contract</code>, <code>consequence</code> and
+<code>clearance</code> where the token carries them, with the token's values. The steps of <a href="#ordering" class="auto internal xref">Section 8.2</a> read
 them from the introspection response and not from the token, so that what an
 enforcement point acts on comes from the same answer that said the token is
 active, and it never needs to verify the authorization server's signature

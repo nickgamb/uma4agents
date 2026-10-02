@@ -496,6 +496,14 @@ async def discovery() -> dict:
         "jwks_uri": f"{ISSUER}/jwks",
         "terms_endpoint": f"{ISSUER}/terms",
         "owner_endpoint": f"{ISSUER}/owner",
+        "rs_registration_endpoint": f"{ISSUER}/rs/register",
+        # Where the parties above and beside an owner reach her authority:
+        # an organization's notices and administrator actions, and a tally's
+        # questions about a jointly held resource.
+        "org_notice_endpoint": f"{ISSUER}/org/notice",
+        "org_admin_endpoint": f"{ISSUER}/org/admin",
+        "joint_quote_endpoint": f"{ISSUER}/joint/quote",
+        "joint_verdict_endpoint": f"{ISSUER}/joint/verdict",
         "response_types_supported": [],
         "grant_types_supported": [
             "urn:ietf:params:oauth:grant-type:uma-ticket",
@@ -1348,6 +1356,7 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
         "single_use": claims.get("single_use", False),
         "operation": claims.get("operation"),
         "consequence": claims.get("consequence"),
+        **({"clearance": claims["clearance"]} if claims.get("clearance") else {}),
     }
 
 
@@ -3646,6 +3655,11 @@ def tally_claims(jws: str, issuer: str) -> dict:
     # that fails. A key the other party has rotated is indistinguishable from
     # a forgery when all you have is a stale copy of its JWKS, and the two
     # deserve very different answers.
+    try:
+        if jwt.get_unverified_header(jws).get("typ") != "u4a-tally-req+jwt":
+            raise HTTPException(status_code=401, detail="that is not a tally request")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="that is not a tally request")
     for fresh in (False, True):
         for jwk_dict in issuer_keys(issuer, fresh=fresh):
             try:

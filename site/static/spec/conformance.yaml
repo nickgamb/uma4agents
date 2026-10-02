@@ -57,10 +57,10 @@ draft-gamb-uma4agents-core-00:
     verified: check
     targets: [pep-test]
     asserts: ["a grant issued before anything was declared is not refused for it"]
-  - text: "An introspection response for an active token MUST carry cnf and permissions, and single_use, operation, contract and consequence where the token carries them"
+  - text: "An introspection response for an active token MUST carry cnf and permissions, and single_use, operation, contract, consequence and clearance where the token carries them"
     verified: check
     targets: [as-test, pep-test, consequence-check]
-    asserts: ["and is given what enforcement reads, from the answer rather than the token", "the class it was issued against is honoured", "and the call she approved goes through"]
+    asserts: ["and is given what enforcement reads, from the answer rather than the token", "a grant issued under a clearance says so when introspected, as the same digest", "the class it was issued against is honoured", "and the call she approved goes through"]
   - text: "REQUIRED, as [RFC9068]. aud names the resource server the token is for"
     verified: check
     targets: [as-test]
@@ -319,6 +319,22 @@ draft-gamb-uma4agents-core-00:
     asserts: ["her purpose is still hers, not the agent's", "a stated reason costs nothing", "but it cannot buy anything either"]
 
 draft-gamb-uma4agents-fedauthz-00:
+  - text: "The resource server verifies the signature against the keys of the authorization server its configuration names for that owner, and MUST NOT take the signer from the request."
+    verified: check
+    targets: [gateway-test]
+    asserts: ["her authority's signature reads her listing", "a signature by any other key does not, whoever sent it"]
+  - text: "Where present, the authorization server MUST refuse a listing that names an owner other than the one it pulled for."
+    verified: check
+    targets: [as-test]
+    asserts: ["a listing that names another owner is refused"]
+  - text: "An authorization server offering this MUST advertise rs_registration_endpoint in its metadata."
+    verified: check
+    targets: [as-test]
+    asserts: ["it advertises where the parties beside her reach it"]
+  - text: "An authorization server that serves more than one owner MUST refuse a PAT request that names none, unless it has a deployment-configured default"
+    verified: check
+    targets: [as-test]
+    asserts: ["a PAT for an owner it does not serve is refused, and creates no owner"]
   - text: "the value MUST be one of reversible, compensatable, forward_recoverable or irreversible"
     verified: check
     targets: [consequence-check, k8s-consequence-check]
@@ -576,6 +592,34 @@ draft-gamb-uma4agents-mcp-00:
     asserts: ["truncated body: OK"]
 
 draft-gamb-uma4agents-multiparty-00:
+  - text: "The organization MUST refuse one whose jti is not the one it recorded when that member last enrolled"
+    verified: check
+    targets: [org-test]
+    asserts: ["a membership credential from an earlier enrolment opens nothing"]
+  - text: "It MUST carry iss, iat, exp and the typ stated for the exchange, and the receiver MUST refuse one of another typ."
+    verified: check
+    targets: [as-test]
+    asserts: ["a tally request must be typed as one", "a notice must be typed as one"]
+  - text: "Where the organization holds no attestation for the member it MUST answer 404"
+    verified: check
+    targets: [org-test]
+    asserts: ["no attestation is a 404, not an empty one"]
+  - text: "It MUST NOT carry any value from her policy."
+    verified: check
+    targets: [org-test]
+    asserts: ["and nothing else — no purpose, no template id, no prohibition of hers", "a compliance report keeps counts and field names, nothing from her policy"]
+  - text: "The member's authorization server MUST act on a notice's jti once until its exp, across every replica"
+    verified: check
+    targets: [as-test, store-test]
+    asserts: ["the same notice is acted on once"]
+  - text: "A kind it does not recognise it MUST accept without acting on it."
+    verified: check
+    targets: [as-test]
+    asserts: ["a kind it does not know is accepted and nothing is done"]
+  - text: "A holder's authorization server MUST refuse a request from a tally other than the one the mandate she agreed to names"
+    verified: check
+    targets: [as-test]
+    asserts: ["a question not signed by the tally her mandate names is refused"]
   - text: "Combined with any requirement the member wrote by intersection"
     verified: check
     targets: [org-test]
@@ -794,6 +838,10 @@ draft-gamb-uma4agents-multiparty-00:
     asserts: ["a holder cannot read her co-owner's queue", "and carries none of her co-owner's terms"]
 
 draft-gamb-uma4agents-policy-00:
+  - text: "The digest a grant carries ([U4ACore] Section 7.1) is s256 over the [RFC8785] serialization of that clearance object, as verified."
+    verified: check
+    targets: [as-test, clearance-check]
+    asserts: ["a grant issued under a clearance says so when introspected, as the same digest", "the grant carries that a clearance was checked, as a digest"]
   - text: "An authorization server offering such a condition MUST treat it as one that may only tighten"
     verified: check
     targets: [rules-test]
