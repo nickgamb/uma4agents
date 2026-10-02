@@ -61,6 +61,7 @@ release within that month. One entry per release.
 - **Authorization server:** unauthenticated requests could create owners.
 - **Authorization server:** a provisioned resource-server secret that the deployment changed was never picked up by the registration seeded from it, locking the resource server out.
 - **Authorization server:** an organization's operator block was not applied at introspection.
+- **Authorization server:** a replica rebuilt its resource registry from the first approved resource server that answered, and could refuse another's tickets for a resource both serve.
 - **Authorization server:** an introduced agent's later requests and joint pends from strangers did not count against her attention budget.
 - **Authorization server:** an organization notice or identity assertion replayed to another replica was acted on again.
 - **Joint tally:** a mandate written as a pattern could take a jointly held resource out of an organization's reach, or lift the organization's ceiling off its own resource. A jointly held resource stays in an organization's reach only where the organization shares it with her, not wherever its charter claims.
