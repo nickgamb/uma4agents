@@ -183,8 +183,8 @@ halves. **Groups** is what a member gets and agrees to — create one, set what
 it reaches, mark the one joiners land in, move people between them; saving
 publishes a charter version, because it changes the bargain. **Charter →
 Rules** is what the firm enforces operationally, in Rego, and can only refuse
-or interrupt. The test for which page a rule belongs on is whether a member
-would have to agree to it again. [ORG.md](ORG.md).
+or interrupt. The test for which page a rule belongs on is whether a member is
+shown it, and agrees to it, when she joins. [ORG.md](ORG.md).
 
 ## Two owners, neither above the other
 
