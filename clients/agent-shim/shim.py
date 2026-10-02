@@ -9,10 +9,7 @@ via MCP elicitation when the client supports it (Claude Code ≥ 2.1.76);
 otherwise Bob's standing config decides (Claude Code renders elicitation;
 some clients don't yet, hence the fallback).
 
-Connect from Claude Code:
-
-  claude mcp add alice-vault -- \
-      uv run --project /path/to/uma4agents/clients/agent-shim shim
+Connecting it to Claude Code is in README.md, "A concrete example".
 
 Environment:
   UMA4A_GATEWAY     https://gateway.uma.lab/mcp
@@ -563,9 +560,13 @@ async def approve_terms(ctx: Context, tool: str, template: dict) -> bool:
     try:
         result = await ctx.elicit(message=message, schema=TermsDecision)
     except MCPError as exc:
-        # Only "this client cannot elicit" falls back to standing config.
-        # Catching everything here would turn a real failure into a silent
-        # auto-accept, which is the wrong way for this to break.
+        # Only "this client cannot elicit" falls back to standing config: the
+        # SDK's client answers an elicitation it has no handler for with
+        # INVALID_REQUEST, and an older one may not know the method at all.
+        # Anything else is a real failure, and turning it into a silent
+        # auto-accept would be the wrong way for this to break.
+        if exc.code not in (-32600, -32601):
+            raise
         ok = template["expires_in"] <= STANDING_MAX_EXPIRES
         log(f"elicitation unavailable ({type(exc).__name__}); standing config "
             f"{'accepts' if ok else 'refuses'} (max_expires={STANDING_MAX_EXPIRES})")
@@ -642,7 +643,7 @@ async def execute_trade(ctx: Context, symbol: str, side: str, quantity: int,
         return "You declined Alice's terms; the trade was not submitted."
 
 
-if __name__ == "__main__":
+def main() -> None:
     log(f"proxying {GATEWAY} (authority {AUTHORITY}); keystore {KEYSTORE}")
     if TRANSPORT == "stdio":
         mcp.run(transport="stdio")
@@ -654,3 +655,7 @@ if __name__ == "__main__":
         log(f"listening on {SHIM_HOST}:{SHIM_PORT} ({TRANSPORT})")
         mcp.run(transport=TRANSPORT, host=SHIM_HOST, port=SHIM_PORT,
                 stateless_http=True)
+
+
+if __name__ == "__main__":
+    main()
