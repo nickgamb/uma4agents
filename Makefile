@@ -494,7 +494,7 @@ introduction-test:
 .PHONY: aauth-test
 aauth-test:
 	@docker run --rm -v "$(PWD)":/u4a -w /u4a python:3.12-slim \
-		sh -c "pip install -q 'pyjwt[crypto]' 'aauth==0.3.2' && python lib/test_aauth.py"
+		sh -c "pip install -q 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' && python lib/test_aauth.py"
 
 ## gateway-test: which owner, member or account the enforcement point judges
 ## a path under, against the way the gateway routes it.

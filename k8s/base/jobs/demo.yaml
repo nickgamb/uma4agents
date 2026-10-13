@@ -33,7 +33,7 @@ spec:
           command: ["/bin/sh", "-ec"]
           args:
             - |
-              pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 2>/dev/null
+              pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' 2>/dev/null
               exec python3 /driver/driver.py --cacert /certs/rootCA.pem $DEMO_ARGS
           env:
             # Which acts to walk, and whether to tap for Alice. The make

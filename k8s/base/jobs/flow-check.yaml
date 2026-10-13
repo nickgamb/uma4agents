@@ -35,7 +35,7 @@ spec:
           command: ["/bin/sh", "-ec"]
           args:
             - |
-              pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 2>/dev/null
+              pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' 2>/dev/null
               exec python3 /driver/flow_check.py
           env:
             - { name: PYTHONPATH, value: /driver/lib }

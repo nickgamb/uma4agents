@@ -20,6 +20,14 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## October 13 2026
+
+### v2026.10.3
+
+#### Bug fixes
+
+- **Lab:** `aauth-signing` is pinned to 0.1.3 beside `aauth==0.3.2` in the Makefile, compose, the cluster jobs and the agent shim. Its 0.2.0 release signs agent tokens and HTTP signatures in a different shape, which `aauth`'s open dependency range let through.
+
 ## October 1 2026
 
 ### v2026.10.2

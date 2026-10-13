@@ -763,7 +763,7 @@ services:
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' && exec python /driver/driver.py --cacert /driver/rootCA.pem "$$@"
+      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' && exec python /driver/driver.py --cacert /driver/rootCA.pem "$$@"
       - --
     environment:
       PYTHONPATH: /driver/lib
@@ -1049,7 +1049,7 @@ services:
     entrypoint:
       - /bin/bash
       - -c
-      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' && exec python /driver/flow_check.py
+      - pip install -q httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' && exec python /driver/flow_check.py
     environment:
       PYTHONPATH: /driver/lib
       UMA4A_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
