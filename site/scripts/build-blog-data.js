@@ -321,7 +321,6 @@ const llms = [
   "",
   `- [MindGarden](https://mindgardenai.com)`,
   `- [Venn Factory](https://www.vennfactory.com)`,
-  `- [Multiplier Partners](https://multiplierpartners.ai)`,
   "",
 ].join("\n");
 

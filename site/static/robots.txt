@@ -46,7 +46,6 @@ Allow: /
 #
 #   https://mindgardenai.com
 #   https://www.vennfactory.com
-#   https://multiplierpartners.ai
 
 # The whole site in one fetch.
 Sitemap: https://u4a.ai/sitemap.xml
