@@ -25,10 +25,6 @@ that is reserved — by MindGarden and Venn Factory.
 
 Nominative reference is expected. Naming yourself with it is not.
 
-MindGarden and Venn Factory intend to donate "U4A", the mark and the u4a.ai
-domain to the Kantara Initiative. That is a statement of intent — it conveys
-nothing until a signed instrument does.
-
 See the [NOTICE](../../../NOTICE) file, under "Names, marks and domain".
 
 [apache6]: https://www.apache.org/licenses/LICENSE-2.0#trademarks
