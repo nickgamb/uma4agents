@@ -1,5 +1,5 @@
 UMA for Agents
-Copyright 2026 Nick Gamb
+Copyright 2026 MindGarden
 
 This product includes software developed as a proof-of-concept exploring
 User-Managed Access (UMA) 2.0 for agentic authorization, in collaboration
@@ -79,9 +79,44 @@ documents.
       specifications is CC-BY-4.0, and contributions whose authors have not
       consented to relicensing remain MIT.
 
-Trademark: "User-Managed Access" and "UMA" originate with the Kantara
-Initiative UMA Work Group. This project is an independent implementation and
-is neither endorsed by nor a product of Kantara Initiative, Inc.
+================================================================================
+Names, marks and domain
+================================================================================
+
+The Apache License covers the code and the other copyrightable material in
+this repository. It does not grant rights in names or marks: see Section 6 of
+the License. The following are reserved and are not licensed by it.
+
+  "User-Managed Access" and "UMA"
+      Originate with the Kantara Initiative UMA Work Group and are Kantara's
+      to govern. The UMA specifications themselves are copyright Kantara
+      Initiative and the persons identified as their authors; see
+      "Specifications implemented or profiled" above. This project is an
+      independent implementation and is neither endorsed by nor a product of
+      Kantara Initiative, Inc.
+
+  "U4A", "UMA for Agents", the U4A mark, and the u4a.ai domain
+      Reserved by MindGarden and Venn Factory. Apache-2.0 permits you to use,
+      modify and redistribute this software, including any brand files it
+      contains. It does not permit you to use these names or the mark to
+      identify your own work, to name a fork or a derived product, or in any
+      way that suggests endorsement by or affiliation with this project.
+
+      Nominative reference is fine and expected: saying that your software
+      implements U4A, interoperates with it, or is derived from it needs no
+      permission. Naming yourself with it does.
+
+      Brand files under site/static/brand/ are published so this project's
+      own site and documentation can be built from source. Reusing them as
+      your own identity is a trademark question, not a copyright one, and
+      the answer is no without written permission.
+
+  Intent to donate
+      MindGarden and Venn Factory intend to donate "U4A", the mark and the
+      u4a.ai domain to the Kantara Initiative. This paragraph records that
+      intent. It is not an assignment, a grant, or a commitment to any
+      timetable, and nothing here conveys any right until a signed
+      instrument says so.
 
 ================================================================================
 Third-party software -- application stack

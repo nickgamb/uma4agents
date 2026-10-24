@@ -337,6 +337,16 @@ can reach: `make kind-up` generates them once per cluster (see
 Licensed under the [Apache License 2.0](LICENSE). A collaboration exploring
 UMA's fit for agentic authorization, with Eve Maler.
 
+The license covers the code. It does not cover the name or the mark —
+[Section 6][apache6] withholds those, and "U4A", "UMA for Agents", the U4A
+mark and the u4a.ai domain are reserved by MindGarden and Venn Factory.
+Saying your software implements or derives from U4A needs no permission;
+naming your own work with it does. "UMA" and "User-Managed Access" are
+Kantara's. See [NOTICE](NOTICE) under "Names, marks and domain", and
+[site/static/brand/](site/static/brand/) for the mark itself.
+
+[apache6]: https://www.apache.org/licenses/LICENSE-2.0#trademarks
+
 [NOTICE](NOTICE) carries the full attribution list: the specifications this
 profiles (UMA 2.0, RFC 9728, RFC 9421, RFC 9396, IEEE 7012, AAuth, MCP), the
 application stack, the Kubernetes platform, and the site's dependencies.
