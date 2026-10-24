@@ -353,15 +353,24 @@ application stack, the Kubernetes platform, and the site's dependencies.
 Nothing third-party is vendored here — `make` and `docker compose` fetch each
 piece from its own origin, under its own license.
 
-Three things worth reading there before you build on this:
+Four things worth reading there before you build on this:
 
 - **UMA 2.0** is published by the Kantara Initiative under its IPR Policy,
   Reciprocal Royalty Free with Opt-Out to RAND. That policy grants a
   royalty-free patent license to anyone implementing the specification; its
   copyright license for derivative works runs between Kantara Participants.
-  This project reproduces no specification text, so only the former is in
-  play. UMA and User-Managed Access originate with Kantara's UMA Work Group,
-  and this project is neither endorsed by nor a product of Kantara.
+  This project reproduces no Kantara specification text — UMA is cited as a
+  normative reference — so the patent grant is what is in play. UMA and
+  User-Managed Access originate with Kantara's UMA Work Group, and this
+  project is neither endorsed by nor a product of Kantara.
+- **The specification set in `spec/`** is this project's own: nine
+  Internet-Drafts profiling and extending UMA 2.0, authored by Nick Gamb
+  (MindGarden) and Eve Maler (Venn Factory). They carry `ipr: trust200902`,
+  which makes them IETF Contributions under BCP 78 and the IETF Trust Legal
+  Provisions — **not** Apache-2.0 like the rest of this repository. UMA 2.0
+  Grant Section 4 contemplates exactly this: each document has an identifying
+  URI, `https://u4a.ai/spec/<part>/1.0`, which the authorization server
+  advertises in `uma_profiles_supported`.
 - **pAI-OS** is cloned by `make fetch-upstream` rather than vendored, and
   built into an image locally — MIT. Two research-spike repositories listed in
   NOTICE publish no license at all and are not used by any `make` target here.

@@ -16,10 +16,13 @@ Specifications implemented or profiled
 ================================================================================
 
 This work implements, profiles, or extends the specifications below. They are
-cited as normative references. No specification text is reproduced in this
-repository: every occurrence of specification wording in these files is a
-citation URL, verified by ten-word phrase comparison against the published
-documents.
+cited as normative references. No third-party specification text is reproduced
+in this repository: every occurrence of specification wording in these files
+is a citation URL.
+
+This project publishes a specification set of its own, in spec/. See
+"This project's specification set" below for its licensing, which differs
+from the Apache License covering the rest of the repository.
 
   User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization
   Federated Authorization for UMA 2.0
@@ -36,9 +39,10 @@ documents.
       needed to be a Fully Compliant Implementation as that policy defines it.
       Article 3 grants a copyright licence to prepare derivative works, and
       that grant runs between Kantara Participants rather than to the public.
-      This project relies on neither: it reproduces no specification text, and
-      copyright in a specification covers the document, not the protocol it
-      describes.
+      This project relies on neither: it reproduces no Kantara specification
+      text, and copyright in a specification covers the document, not the
+      protocol it describes. The drafts in spec/ are original text that cites
+      UMA 2.0 normatively; they do not reproduce it.
 
       UMA 2.0 Grant Section 4 contemplates profiles (which restrict UMA's
       options) and extensions (which use its extensibility points), and
@@ -78,6 +82,23 @@ documents.
       specification contributions are Apache-2.0, documentation other than
       specifications is CC-BY-4.0, and contributions whose authors have not
       consented to relicensing remain MIT.
+
+================================================================================
+This project's specification set
+================================================================================
+
+spec/ holds nine Internet-Drafts profiling and extending UMA 2.0, authored by
+Nick Gamb (MindGarden LLC) and Eve Maler (Venn Factory). Rendered output is
+published at https://u4a.ai/spec/.
+
+Each draft declares "ipr: trust200902". They are therefore IETF Contributions,
+governed by BCP 78, BCP 79 and the IETF Trust Legal Provisions -- not by the
+Apache License that covers the rest of this repository. Copyright in them is
+licensed to the IETF Trust on the terms that boilerplate sets out, and reuse
+of the draft text follows those terms rather than Apache-2.0.
+
+The Apache License still covers everything else under spec/: the build
+tooling, conformance register and scripts.
 
 ================================================================================
 Names, marks and domain
