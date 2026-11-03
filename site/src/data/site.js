@@ -26,6 +26,16 @@ export const people = [
   },
 ];
 
+// Where the standard is being taken forward. U4A is a candidate update to UMA
+// in Kantara's UMA Work Group, so the group is credited here with its own
+// mark, and joining it is one click away.
+export const workGroup = {
+  name: "Kantara UMA Work Group",
+  url: "https://kantarainitiative.org/work-groups/uma/",
+  icon: "/img/orgs/kantara.png",
+  join: "https://kantarainitiative.org/gpa-signup/",
+};
+
 export const navLinks = [
   { label: "Docs", to: "/docs/overview/" },
   { label: "Changelog", to: "/changelog/" },

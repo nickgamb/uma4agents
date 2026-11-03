@@ -20,6 +20,14 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## November 3 2026
+
+### v2026.11.1
+
+#### Enhancements
+
+- **Site:** The standards page and the docs overview say that U4A is moving into the Kantara UMA Work Group as a candidate update to UMA, under the group's RAND-RF IPR policy, with a link to join. The footer credits the work group with its mark.
+
 ## October 13 2026
 
 ### v2026.10.3

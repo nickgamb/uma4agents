@@ -1,5 +1,15 @@
 [
   {
+    "date": "November 3 2026",
+    "version": "v2026.11.1",
+    "url": "/changelog/",
+    "page": "Changelog",
+    "changes": [
+      "Site: The standards page and the docs overview say that U4A is moving into the Kantara UMA Work Group as a candidate update to UMA, under the group's RAND-RF IPR policy, with a link to join. The footer credits the work group with its mark."
+    ],
+    "body": "#### Enhancements\n\n- **Site:** The standards page and the docs overview say that U4A is moving into the Kantara UMA Work Group as a candidate update to UMA, under the group's RAND-RF IPR policy, with a link to join. The footer credits the work group with its mark."
+  },
+  {
     "date": "October 13 2026",
     "version": "v2026.10.3",
     "url": "/changelog/",
