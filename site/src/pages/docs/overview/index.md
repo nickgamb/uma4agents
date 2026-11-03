@@ -22,7 +22,8 @@ UMA for Agents is a profile of [User-Managed Access
 2.0](https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html)
 for the case the specification was written before: the party asking for access
 is an autonomous agent, it belongs to somebody else, and the person who owns
-the resource is not at the keyboard.
+the resource is not at the keyboard. It is now a candidate update to UMA in
+the [Kantara UMA Work Group](/docs/overview/standards/#licensing-and-ipr).
 
 Everything described in these docs runs. The reference implementation is
 Apache-2.0 and deploys two ways — a compose stack for reading, and a

@@ -93,6 +93,14 @@ arrangement.
 
 ## Licensing and IPR
 
+U4A is moving into the [Kantara UMA Work
+Group](https://kantarainitiative.org/work-groups/uma/) as a candidate update to
+the UMA standard, starting at the group's [19 November 2026
+meeting](https://mailman.kantarainitiative.org/hyperkitty/list/wg-uma@kantarainitiative.org/thread/TEYA54AQOPRVTFIBXUZANC2AX5DLJYUJ/).
+Its technical work is done there under the work group's RAND-RF IPR policy.
+Joining is free and takes a couple of minutes:
+[kantarainitiative.org/gpa-signup](https://kantarainitiative.org/gpa-signup/).
+
 UMA 2.0 and FedAuthz are published by the Kantara Initiative under its IPR
 Policy, option "Reciprocal Royalty Free with Opt-Out to RAND". Article 4.1(a)
 of that policy grants a royalty-free patent licence to any person or entity
@@ -115,5 +123,5 @@ cited by section and is not redistributed here. Full attribution for every
 specification and component, with versions, is in
 [NOTICE](https://github.com/nickgamb/uma4agents/blob/main/NOTICE).
 
-"UMA" and "User-Managed Access" originate with Kantara's UMA Work Group. This
-is an independent implementation and not a Kantara product.
+"UMA" and "User-Managed Access" originate with Kantara's UMA Work Group. The
+reference implementation is independent and not a Kantara product.

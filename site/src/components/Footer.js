@@ -1,6 +1,13 @@
 import React from "react";
 import { Link } from "gatsby";
-import { repo, codespace, people, footerBlurb, tagline } from "../data/site";
+import {
+  repo,
+  codespace,
+  people,
+  workGroup,
+  footerBlurb,
+  tagline,
+} from "../data/site";
 import { GitHubIcon, LinkedInIcon } from "./Icons";
 
 const Footer = () => (
@@ -71,6 +78,24 @@ const Footer = () => (
                 )}
               </div>
             ))}
+          </div>
+
+          <p className="site-footer__label">Where the standard is made</p>
+          <div className="site-footer__people">
+            <a href={workGroup.url} target="_blank" rel="noopener noreferrer">
+              <img
+                className="icon-org"
+                src={workGroup.icon}
+                alt=""
+                width="16"
+                height="16"
+                loading="lazy"
+              />
+              <span>{workGroup.name}</span>
+            </a>
+            <a href={workGroup.join} target="_blank" rel="noopener noreferrer">
+              <span>Join the work group, free &rarr;</span>
+            </a>
           </div>
         </div>
 
