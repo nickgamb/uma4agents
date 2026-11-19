@@ -11,7 +11,7 @@ set -euo pipefail
 bold() { printf '\033[1m%s\033[0m' "$1"; }
 dim()  { printf '\033[2m%s\033[0m' "$1"; }
 
-section() { printf '\n'; bold "$1"; printf '  '; dim "$2"; printf '\n'; }
+section() { printf '\n'; bold "$1"; printf '\n'; }
 
 ns_line() {
   local ns="$1" desc pods
@@ -24,29 +24,28 @@ ns_line() {
   if [ -n "$pods" ]; then printf '%s\n' "$pods"; else printf '    '; dim "(nothing running)"; printf '\n'; fi
 }
 
-printf '\n'; bold "UMA for Agents — the lab, by party"; printf '\n'
-dim "Every party in its own namespace; between parties, only the edge."; printf '\n'
+printf '\n'; bold "UMA for Agents lab"; printf '\n'
 
-section "On-ramp"           "how anything from outside gets in"
+section "On-ramp"
 ns_line uma-edge
 
-section "Resource owners"   "each decides about her own things, from her own authority"
+section "Resource owners"
 ns_line alice
 ns_line carol
 ns_line northwind
 
-section "Shared by owners"  "run by neither owner"
+section "Shared by owners"
 ns_line idp
 ns_line tally
 
-section "Resource server"   "holds the assets, enforces the policy, never reads it"
+section "Resource server"
 ns_line meridian
 
-section "Requesting party"  "Bob, his firm, its agent, and who vouches for it"
+section "Requesting party"
 ns_line sterling-vance
 ns_line aauth
 ns_line kagent
 
-section "Operator plane"    "sees protocol events, never grant state"
+section "Operator plane"
 ns_line observability
 printf '\n'
