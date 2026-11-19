@@ -22,6 +22,12 @@ release within that month. One entry per release.
 
 ## November 19 2026
 
+### v2026.11.5
+
+#### Bug fixes
+
+- **Lab:** Bob's kagent adapters name their operator (`UMA4A_CLIENT_ID=https://agent.uma.lab/agent.json`), so Alice's authority scores them at accountability 1 and her holdings tier holds the first request only, instead of asking her on every one. The shim reads `UMA4A_CLIENT_ID` in either identity mode.
+
 ### v2026.11.4
 
 #### Bug fixes

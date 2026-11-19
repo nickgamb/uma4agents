@@ -1,6 +1,16 @@
 [
   {
     "date": "November 19 2026",
+    "version": "v2026.11.5",
+    "url": "/changelog/",
+    "page": "Changelog",
+    "changes": [
+      "Lab: Bob's kagent adapters name their operator (`UMA4A_CLIENT_ID=https://agent.uma.lab/agent.json`), so Alice's authority scores them at accountability 1 and her holdings tier holds the first request only, instead of asking her on every one. The shim reads `UMA4A_CLIENT_ID` in either identity mode."
+    ],
+    "body": "#### Bug fixes\n\n- **Lab:** Bob's kagent adapters name their operator (`UMA4A_CLIENT_ID=https://agent.uma.lab/agent.json`), so Alice's authority scores them at accountability 1 and her holdings tier holds the first request only, instead of asking her on every one. The shim reads `UMA4A_CLIENT_ID` in either identity mode."
+  },
+  {
+    "date": "November 19 2026",
     "version": "v2026.11.4",
     "url": "/changelog/",
     "page": "Changelog",

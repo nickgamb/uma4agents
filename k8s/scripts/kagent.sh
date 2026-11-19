@@ -220,6 +220,7 @@ agent_for() {
     keystore=/identity/agent-key.pem
     identity_env='            - { name: UMA4A_AGENT_ISSUER, value: "https://ps.uma.lab" }
             - { name: UMA4A_AGENT_NAME, value: "Sterling & Vance advisory agent (kagent)" }
+            - { name: UMA4A_CLIENT_ID, value: "https://agent.uma.lab/agent.json" }
             - name: UMA4A_PERSON_TOKEN
               valueFrom: { secretKeyRef: { name: ps-admin, key: token } }
             - { name: UMA4A_RECEIPTS, value: /keys/receipts }'

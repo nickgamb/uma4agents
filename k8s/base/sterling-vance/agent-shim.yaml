@@ -83,6 +83,11 @@ spec:
               value: https://ps.uma.lab
             - name: UMA4A_AGENT_NAME
               value: Sterling & Vance advisory agent (kagent)
+            # The firm's operator document, so Alice's authority can name who
+            # runs the agent (accountability 1). Without it her holdings tier
+            # asks her on every request.
+            - name: UMA4A_CLIENT_ID
+              value: https://agent.uma.lab/agent.json
             - name: UMA4A_PERSON_TOKEN
               valueFrom:
                 secretKeyRef: { name: ps-admin, key: token }

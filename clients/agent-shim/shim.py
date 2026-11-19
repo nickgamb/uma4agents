@@ -21,6 +21,8 @@ Environment:
                       first enrollment pends until Bob approves in the person
                       server UI. Unset: pseudonymous (bare key).
   UMA4A_AGENT_NAME    how the agent introduces itself when it enrolls
+  UMA4A_CLIENT_ID     the operator's client metadata document (CIMD) naming
+                      who runs this agent; UMA4A_PUBLISH_TO sets it as well
   UMA4A_PERSON_TOKEN  optional person-API bearer to auto-approve enrollment
                       (headless runs only — normally Bob taps in the PS UI)
   UMA4A_SHIM_TRANSPORT  stdio (default) or streamable-http
@@ -89,6 +91,10 @@ AGENT_ISSUER = os.environ.get("UMA4A_AGENT_ISSUER")
 PUBLISH_TO = os.environ.get("UMA4A_PUBLISH_TO")
 PERSON_TOKEN = os.environ.get("UMA4A_PERSON_TOKEN")
 AGENT_NAME = os.environ.get("UMA4A_AGENT_NAME", "Bob's agent via uma4agents shim")
+# Who operates this agent, as a URL the owner's authority can resolve. Without
+# it nobody is named behind the agent, and a rule like Alice's holdings tier
+# ("ask when accountability is below 1") holds every request for her.
+CLIENT_ID = os.environ.get("UMA4A_CLIENT_ID")
 # Renew the agent token this long before it expires. The person server issues
 # them for a day at most, and an adapter in a cluster outlives that.
 RENEW_BEFORE_S = 600
@@ -146,6 +152,8 @@ def bootstrap_identity() -> AgentKeys:
 
 
 keys = bootstrap_identity()
+if CLIENT_ID and not keys.client_id:
+    keys.client_id = CLIENT_ID
 
 
 def renew_identity() -> None:

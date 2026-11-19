@@ -58,7 +58,11 @@ it happens; its stable key is the `bob-agent-identity` Secret, so a restart is
 the same agent rather than a stranger. The token lasts a day at most, and the
 adapter renews it before each call that would fall inside its last ten
 minutes. Her authority verifies the token against the issuer's keys and knows
-the agent as `aauth:<agent>@ps.uma.lab`:
+the agent as `aauth:<agent>@ps.uma.lab`. It also names its operator — the
+firm's client metadata document at `https://agent.uma.lab/agent.json`
+(`UMA4A_CLIENT_ID`) — which puts it at accountability 1; without that, the
+holdings tier's rule ("ask when accountability is below 1") holds every
+holdings request for her, not just the first:
 
 ```
    the agent, as her authority knows it: aauth:900d66b9-…@ps.uma.lab
