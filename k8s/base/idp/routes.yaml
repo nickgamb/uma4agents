@@ -2,7 +2,7 @@
 #
 # It is here rather than in an owner's namespace for the same reason the
 # workload is: the party that controls a hostname is the party that publishes
-# it, and neither owner controls this one.
+# it, and this one is Meridian's provider's, not an owner's.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

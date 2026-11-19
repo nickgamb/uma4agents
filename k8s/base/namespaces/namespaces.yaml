@@ -94,7 +94,7 @@ kind: Namespace
 metadata:
   annotations:
     u4a.ai/description: >-
-      The party that counts verdicts over a jointly held resource. In neither owner's namespace for the same reason the identity provider is in neither: a resource both of them hold cannot have its decision made somewhere that belongs to one of them. It holds no policy and is not trusted — the grants it signs carry the owners' own signed verdicts, and the enforcement point re-runs the count.
+      The party that counts verdicts over a jointly held resource. In neither owner's namespace: a resource both of them hold cannot have its decision made somewhere that belongs to one of them. It holds no policy and is not trusted — the grants it signs carry the owners' own signed verdicts, and the enforcement point re-runs the count.
   name: tally
   labels:
     istio.io/dataplane-mode: ambient
@@ -106,7 +106,7 @@ kind: Namespace
 metadata:
   annotations:
     u4a.ai/description: >-
-      An identity provider, in neither owner's namespace because it is neither owner's. Each has a realm in it and neither can mint the other.
+      Meridian's identity provider, where Alice and Carol sign in to their portals. Each has a realm in it, and a token from one does not authenticate the other.
   name: idp
   labels:
     istio.io/dataplane-mode: ambient

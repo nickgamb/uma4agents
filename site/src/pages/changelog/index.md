@@ -30,6 +30,7 @@ release within that month. One entry per release.
 - **Lab:** Bob's kagent adapters run identified. They enroll at Sterling & Vance's person server under Bob's account and present its agent token, on a stable key kept in the `bob-agent-identity` Secret; Alice's authority knows the agent as `aauth:<agent>@ps.uma.lab`. The adapter renews the token before it expires.
 - **Lab:** `make kagent-check` also asserts that Alice's authority holds a connection vouched for by the person server.
 - **Lab:** The `aauth` namespace's person server is described as Sterling & Vance's, the issuer for the firm's agents, rather than a party neutral to both sides.
+- **Lab:** The `idp` namespace and its Keycloak are described as Meridian's identity provider, where Alice and Carol sign in, rather than neither owner's.
 - **Lab:** `make k8s-status` prints the lab by party — on-ramp, resource owners, what owners share, resource server, requesting party, operator plane — covering every party namespace and kagent's, with running workloads only (`k8s/scripts/status.sh`).
 
 ### v2026.11.2

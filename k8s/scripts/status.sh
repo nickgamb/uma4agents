@@ -35,11 +35,11 @@ ns_line carol
 ns_line northwind
 
 section "Shared by owners"
-ns_line idp
 ns_line tally
 
 section "Resource server"
 ns_line meridian
+ns_line idp
 
 section "Requesting party"
 ns_line sterling-vance

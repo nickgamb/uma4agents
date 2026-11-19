@@ -8,9 +8,8 @@
 # employee assertion, and the refusal is only meaningful because these are
 # genuinely two servers run by two parties rather than two realms on one.
 #
-# In Northwind's namespace rather than `idp` for the same reason. `idp` is the
-# provider both owners resolve and neither runs; this one is the enterprise's
-# own, and an enterprise that could not run its own directory would not be the
+# In Northwind's namespace rather than `idp` for the same reason. `idp` is
+# Meridian's, where its customers sign in; this one is the enterprise's own, and an enterprise that could not run its own directory would not be the
 # party the Cross App Access arrangement describes.
 #
 # start-dev with an in-memory database, like the other one: the realm is
