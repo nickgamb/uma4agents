@@ -59,7 +59,7 @@ spec:
           command: ["/bin/sh", "-ec"]
           args:
             - |
-              pip install -q 'mcp>=2,<3' httpx 'pyjwt[crypto]' 2>/dev/null
+              pip install -q 'mcp>=2,<3' httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' 2>/dev/null
               exec python3 /shim/shim.py
           env:
             - name: UMA4A_SHIM_TRANSPORT
@@ -72,8 +72,24 @@ spec:
               value: https://gateway.uma.lab/mcp
             - name: UMA4A_CACERT
               value: /certs/rootCA.pem
+            # Identified: the agent enrolls at the firm's person server (in
+            # `aauth`) under Bob's account, and runs on the agent token it
+            # issues, which Alice's authority verifies. Bob deploys it with his
+            # account's credential, which approves the enrolment.
+            # Its stable key is a Secret, not the pod's scratch space, so
+            # every restart is the same agent to the person server and to
+            # Alice. k8s/scripts/kagent.sh creates it.
+            - name: UMA4A_AGENT_ISSUER
+              value: https://ps.uma.lab
+            - name: UMA4A_AGENT_NAME
+              value: Sterling & Vance advisory agent (kagent)
+            - name: UMA4A_PERSON_TOKEN
+              valueFrom:
+                secretKeyRef: { name: ps-admin, key: token }
             - name: UMA4A_KEYSTORE
-              value: /keys/agent-key.pem
+              value: /identity/agent-key.pem
+            - name: UMA4A_RECEIPTS
+              value: /keys/receipts
             # No interactive client on the other side, so Alice's terms are
             # decided by Bob's standing configuration — bounded, and set by a
             # person in advance rather than by the agent in the moment. This
@@ -98,6 +114,7 @@ spec:
             - { name: lib, mountPath: /shim/lib, readOnly: true }
             - { name: ca, mountPath: /certs, readOnly: true }
             - { name: keys, mountPath: /keys }
+            - { name: identity, mountPath: /identity, readOnly: true }
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 384Mi }
@@ -110,6 +127,8 @@ spec:
           configMap: { name: uma-lab-ca-bundle }
         - name: keys
           emptyDir: {}
+        - name: identity
+          secret: { secretName: bob-agent-identity }
 ---
 apiVersion: v1
 kind: Service

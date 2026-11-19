@@ -1,9 +1,14 @@
-# The AAuth person/agent server.
+# The AAuth person/agent server — Sterling & Vance's.
 #
-# A third party to both sides: Bob's agent enrols here and receives a
-# verifiable agent token, and Alice's authorization server checks that token
-# against this issuer's published keys rather than taking Bob's word for it.
-# Neither of them owns it, which is why it is in its own namespace.
+# The firm vouches for its advisers' agents. Bob's agent enrols here under his
+# account and receives a verifiable agent token, and Alice's authorization
+# server checks that token against this issuer's published keys rather than
+# taking Bob's word for it. Another party that wanted identified agents —
+# Alice, or Northwind for its employees — would run its own, and her authority
+# would name it beside this one in UMA_AS_AGENT_ISSUERS.
+#
+# A namespace of its own rather than sterling-vance, so the agents it vouches
+# for share no namespace with its signing keys.
 #
 # A StatefulSet because it has real disk — a SQLite database and its own
 # signing keys. The demo's default path is pseudonymous and does not need it

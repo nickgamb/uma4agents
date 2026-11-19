@@ -307,8 +307,8 @@ make kind-down                  # delete everything
 | `carol` | `uma-as` ×1, her portal | another, at a person's scale |
 | `idp` | keycloak | an identity provider, neither owner's |
 | `meridian` | agentgateway, `uma-pep` ×2, two vaults | the resource server |
-| `sterling-vance` | agent-operator ×2, the agent | the requesting party |
-| `aauth` | person-server | a third-party identity authority |
+| `sterling-vance` | agent-operator ×2, the agent, its staff directory | the requesting party |
+| `aauth` | person-server | the requesting party's agent issuer |
 | `observability` | — | the operator plane |
 
 FedAuthz §1.4 divides responsibility between **parties**, not processes. The

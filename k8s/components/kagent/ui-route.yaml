@@ -1,6 +1,8 @@
 # kagent's own UI at https://kagent.uma.lab, so Bob's agent can be driven from
 # a browser beside Alice's portal. The edge terminates TLS with the lab's
-# wildcard certificate; the UI is kagent's, unmodified.
+# wildcard certificate and hands every request to kagent's oauth2-proxy, which
+# signs Bob in against his realm before anything reaches the UI
+# (sso-values.yaml). The UI is kagent's, unmodified.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -18,5 +20,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: kagent-ui
-          port: 8080
+        - name: kagent-oauth2-proxy
+          port: 4180

@@ -73,6 +73,21 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: kagent
+    # Sterling & Vance's staff directory, where Bob signs in to kagent.
+    - name: sv-idp
+      protocol: HTTPS
+      port: 443
+      hostname: sv-idp.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: sterling-vance
     - name: alice-agent
       protocol: HTTPS
       port: 443

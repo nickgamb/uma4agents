@@ -87,7 +87,7 @@ def enroll(
         if ar.status_code != 200:
             raise EnrollmentDenied(
                 f"person approval failed: {ar.status_code} {ar.text[:300]}")
-        on_status("[simulated-bob] approved his agent at his person server")
+        on_status("approved at the person server with the principal's credential")
     else:
         on_status(f"approve this agent in the person server UI: {issuer}/ui")
 

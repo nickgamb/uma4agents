@@ -1,0 +1,63 @@
+# kagent's own sign-in, turned on with its chart's settings and nothing else.
+#
+# The chart ships an oauth2-proxy in front of the UI and a controller mode
+# that takes the user from the OIDC token that proxy forwards. Pointed at
+# Sterling & Vance's staff directory (sterling-vance/sv-idp.yaml), every chat
+# in the UI belongs to the adviser who signed in — bob — rather than to
+# kagent's built-in admin@kagent.dev. https://kagent.uma.lab routes to the proxy, not
+# the UI (ui-route.yaml), so there is no way round it from outside.
+#
+# The client id, secret and cookie secret come from the `kagent-oauth2`
+# Secret that k8s/scripts/kagent.sh creates; the client is defined in
+# keycloak-sterling-vance/staff-realm.json.
+controller:
+  auth:
+    mode: trusted-proxy
+    userIdClaim: preferred_username
+
+oauth2-proxy:
+  enabled: true
+  config:
+    existingSecret: kagent-oauth2
+  extraArgs:
+    approval-prompt: auto
+    cookie-samesite: lax
+    cookie-secure: true
+    custom-templates-dir: /templates
+    email-domain: "*"
+    oidc-issuer-url: $(OIDC_ISSUER_URL)
+    pass-authorization-header: true
+    provider: oidc
+    redirect-url: $(OIDC_REDIRECT_URL)
+    # The chart asks for `groups` as well, which Keycloak does not define as a
+    # scope and refuses.
+    scope: openid profile email
+    set-authorization-header: true
+    skip-auth-regex: ^/(login|_next/static|_next/image|login-bg\.(jpg|png|webp)|logo-.*\.png|favicon\.ico|api/agentharnesses/.*/gateway).*$
+    skip-auth-route: ^/(health|login)$
+    skip-jwt-bearer-tokens: true
+    upstream: $(UPSTREAM_URL)
+    # The directory is reached by its public name, through the edge, with the
+    # lab's certificate.
+    provider-ca-file: /ca/rootCA.pem
+  extraEnv:
+    - name: OIDC_ISSUER_URL
+      value: https://sv-idp.uma.lab/realms/staff
+    - name: OIDC_REDIRECT_URL
+      value: https://kagent.uma.lab/oauth2/callback
+    - name: UPSTREAM_URL
+      value: http://kagent-ui:8080
+  extraVolumeMounts:
+    - name: custom-templates
+      mountPath: /templates
+      readOnly: true
+    - name: lab-ca
+      mountPath: /ca
+      readOnly: true
+  extraVolumes:
+    - name: custom-templates
+      configMap:
+        name: kagent-oauth2-proxy-templates
+    - name: lab-ca
+      configMap:
+        name: uma-lab-ca-bundle
