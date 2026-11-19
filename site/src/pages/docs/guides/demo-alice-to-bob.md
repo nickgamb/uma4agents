@@ -62,6 +62,11 @@ Then open `https://portal.uma.lab` on the right screen, log in as **alice** /
 **alice-demo**, and start the run-through. A cluster this fresh already has
 zero connections, so there is nothing to clear.
 
+To ask Bob's agent from a browser instead of the terminal, open
+`https://kagent.uma.lab`, sign in as **bob** / **bob-demo**, choose
+`sterling-vance/advisory-agent`, and put the same questions to it in a new
+chat.
+
 **In a Codespace.** Only steps 2 and 4. No resolver to edit, no CA to trust —
 `kind-up` publishes the portal for you. To republish it later:
 
@@ -88,7 +93,7 @@ make kagent MODEL=openai
 Another model:
 
 ```bash
-ANTHROPIC_MODEL=claude-sonnet-5 make kagent
+ANTHROPIC_MODEL=claude-opus-4-5 make kagent
 OPENAI_MODEL=gpt-4o make kagent MODEL=openai
 ```
 
@@ -152,7 +157,7 @@ She marked this tier ask-me, so it stops and waits for her. The agent just sees
 a slow tool call.
 
 ```bash
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 **7 · Portal — Deny.** *Refused.* She says no, and the trade does not happen.

@@ -305,10 +305,10 @@ make kind-down                  # delete everything
 | `uma-edge` | kgateway, hickory-dns | the public on-ramp |
 | `alice` | `uma-as` ×3, CNPG ×3, her portal | a resource owner |
 | `carol` | `uma-as` ×1, her portal | another, at a person's scale |
-| `idp` | keycloak | an identity provider, neither owner's |
+| `idp` | keycloak | Meridian's identity provider, a realm per owner |
 | `meridian` | agentgateway, `uma-pep` ×2, two vaults | the resource server |
-| `sterling-vance` | agent-operator ×2, the agent | the requesting party |
-| `aauth` | person-server | a third-party identity authority |
+| `sterling-vance` | agent-operator ×2, the agent, its staff directory | the requesting party |
+| `aauth` | person-server | the requesting party's agent issuer |
 | `observability` | — | the operator plane |
 
 FedAuthz §1.4 divides responsibility between **parties**, not processes. The

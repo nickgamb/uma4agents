@@ -471,7 +471,7 @@ spec:
 ---
 # ═══ idp ═════════════════════════════════════════════════════════════════
 #
-# The identity provider answers both owners and neither runs it. The rule
+# Meridian's identity provider answers both owners. The rule
 # names who may reach it rather than who may be minted by it: that boundary
 # is the realm, and it is enforced inside Keycloak — a token from `alice` does
 # not authenticate Carol, and each authority checks the issuer of what it is

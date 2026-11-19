@@ -34,8 +34,8 @@ Divide by **party**, not by process. The lab uses one namespace each:
 | The public on-ramp | the edge gateway and its DNS |
 | The resource owner | her identity provider, her authority, her database, her portal |
 | The resource server | the enforcement point and the resource behind it |
-| The requesting party | the agent and whatever operates it |
-| A third-party identity authority | the agent's issuer, if it has one |
+| The requesting party | the agent, whatever operates it, and the directory its people sign in with |
+| The requesting party's issuer | the person server that vouches for its agents, kept apart from them |
 
 The pair that carries the argument is owner and resource server. The resource
 server holds the assets and enforces the policy, and can never read it.

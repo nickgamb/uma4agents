@@ -89,7 +89,7 @@ make kagent MODEL=openai
 Another model:
 
 ```bash
-ANTHROPIC_MODEL=claude-sonnet-5 make kagent
+ANTHROPIC_MODEL=claude-opus-4-5 make kagent
 OPENAI_MODEL=gpt-4o make kagent MODEL=openai
 ```
 

@@ -88,7 +88,7 @@ make kagent MODEL=openai
 Another model:
 
 ```bash
-ANTHROPIC_MODEL=claude-sonnet-5 make kagent
+ANTHROPIC_MODEL=claude-opus-4-5 make kagent
 OPENAI_MODEL=gpt-4o make kagent MODEL=openai
 ```
 
@@ -146,7 +146,7 @@ happening.** Her portal does not move. No badge, no queue, no tap. The next step
 is the same rule and the same tier, so make them notice this one.
 
 ```bash
-make kagent-ask RESOURCE=hers Q="Sell 200 shares of my AAPL position." SIM=0
+make kagent-ask RESOURCE=hers Q="Sell 100 shares of my AAPL position." SIM=0
 ```
 
 **5 · Terminal** — *tier 3 · trade execution.* Now Bob's agent asks for exactly
@@ -155,7 +155,7 @@ request. It is simply **not hers**, so her rule does not reach it and the
 request stops.
 
 ```bash
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 **6 · Her portal — Approve or Deny.** *Held for her.* She is asked, exactly like

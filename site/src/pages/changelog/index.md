@@ -20,6 +20,31 @@ description: Release notes for the UMA for Agents reference architecture, newest
 Calendar versioning in `vYYYY.MM.N` format, where `N` is the sequential
 release within that month. One entry per release.
 
+## November 19 2026
+
+### v2026.11.3
+
+#### Enhancements
+
+- **Lab:** Bob signs in to kagent with Sterling & Vance's staff directory, a Keycloak of the firm's own (`k8s/base/sterling-vance/sv-idp.yaml`, `https://sv-idp.uma.lab`, `bob` / `bob-demo`) that `make kagent` brings up. `https://kagent.uma.lab` routes to kagent's own oauth2-proxy against it, and the controller runs in `trusted-proxy` mode (`k8s/components/kagent/sso-values.yaml`), so chats belong to `bob` rather than `admin@kagent.dev`. `make kagent-ask` signs in the same way.
+- **Lab:** Bob's kagent adapters run identified. They enroll at Sterling & Vance's person server under Bob's account and present its agent token, on a stable key kept in the `bob-agent-identity` Secret; Alice's authority knows the agent as `aauth:<agent>@ps.uma.lab`. The adapter renews the token before it expires.
+- **Lab:** `make kagent-check` also asserts that Alice's authority holds a connection vouched for by the person server.
+- **Lab:** The `aauth` namespace's person server is described as Sterling & Vance's, the issuer for the firm's agents, rather than a party neutral to both sides.
+- **Lab:** The `idp` namespace and its Keycloak are described as Meridian's identity provider, where Alice and Carol sign in, rather than neither owner's.
+- **Lab:** `make k8s-status` prints the lab by party — on-ramp, resource owners, what owners share, resource server, requesting party, operator plane — covering every party namespace and kagent's, with running workloads only (`k8s/scripts/status.sh`).
+
+### v2026.11.2
+
+#### Enhancements
+
+- **Lab:** kagent's UI is published at `https://kagent.uma.lab` through the edge gateway (`k8s/components/kagent/ui-route.yaml`, a `kagent` listener in `k8s/base/edge/gateway.yaml`), applied and removed with `make kagent` and `make kagent-down`.
+- **Lab:** The adapter in Bob's namespace holds a pending call for up to 90 seconds (`UMA4A_PEND_HANDBACK`, was 5), so a decision Alice makes while the agent waits comes back as the answer to the question asked.
+
+#### Bug fixes
+
+- **Lab:** `make kagent` defaults to `claude-sonnet-4-5`. The 5.x models return `thinking` blocks by default, which the ADK runtime in kagent 0.9 rejects with "Not supported yet."
+- **Docs:** The demo guides and cards sell 100 shares of Alice's AAPL position, which holds 150, and override the model with `claude-opus-4-5`.
+
 ## November 3 2026
 
 ### v2026.11.1

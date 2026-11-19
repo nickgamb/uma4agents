@@ -93,7 +93,7 @@ left.
 **3 · Terminal** — *tier 3 · trade execution.* Now ask it to sell something.
 
 ```bash
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 **4 · Portal — Deny.** *Refused.* It stopped because that toggle is on. **Read
@@ -117,7 +117,7 @@ make kagent-ask Q="What is in Alice's portfolio?" SIM=0
 **7 · Terminal** — *tier 3 again · held.* Ask it to sell again.
 
 ```bash
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 **8 · Portal — read the reason, then Approve.** *Held for her.* Under **Why

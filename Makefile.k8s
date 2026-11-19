@@ -585,8 +585,11 @@ kagent-ask:
 .PHONY: k8s-adapter k8s-adapter-down
 k8s-adapter:
 	@./k8s/scripts/job-configmaps.sh
+	@./k8s/scripts/kagent.sh identity
+	@kubectl apply -f $(K8S)/base/sterling-vance/agent-shim.yaml >/dev/null
 	@kubectl -n sterling-vance scale deploy/agent-shim --replicas=1 >/dev/null
 	@kubectl -n sterling-vance rollout status deploy/agent-shim --timeout=300s >/dev/null
+	@./k8s/scripts/kagent.sh enrol agent-shim
 	@echo "==> adapter up at agent-shim.sterling-vance:9030/mcp"
 
 k8s-adapter-down:
@@ -704,11 +707,7 @@ k8s-verify-extauth:
 ## k8s-status: what is running, and where the seams are
 .PHONY: k8s-status
 k8s-status:
-	@for ns in uma-edge alice meridian sterling-vance aauth; do \
-		printf '\n\033[1m%s\033[0m  %s\n' "$$ns" \
-			"$$(kubectl get ns $$ns -o jsonpath='{.metadata.annotations.u4a\.ai/description}' 2>/dev/null)"; \
-		kubectl -n $$ns get pods --no-headers 2>/dev/null | awk '{printf "  %-34s %s\n", $$1, $$3}'; \
-	done
+	@./k8s/scripts/status.sh
 
 ## codespaces-web: publish Alice's portal to a browser tab in a Codespace
 ##

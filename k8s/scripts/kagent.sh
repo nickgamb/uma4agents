@@ -60,7 +60,10 @@ model_config() {
 
     anthropic)
       require_env ANTHROPIC_API_KEY
-      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-5}"
+      # Pinned to a model that answers in text and tool_use blocks only. The
+      # ADK inside kagent 0.9 raises on a `thinking` block, and the 5.x models
+      # return one by default — the agent then answers "Not supported yet."
+      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-4-5}"
       model_secret "$ANTHROPIC_API_KEY" ;;
 
     openai)
@@ -106,6 +109,39 @@ YAML
 }
 
 # ---------------------------------------------------------------------------
+# Bob's agent, identified
+#
+# The adapter enrolls at Sterling & Vance's person server (in `aauth`), where
+# Bob has his account, and runs on the agent token it issues, so Alice's
+# authority sees an agent the firm vouches for rather than a bare key. Bob deploys it with his account's credential (the
+# `ps-admin` Secret in his namespace), which approves the enrolment as it
+# happens: the agent is his because he put it there. Its stable key is a
+# Secret created once here, so every restart is the same agent to the person
+# server and to Alice.
+# ---------------------------------------------------------------------------
+
+ensure_identity() {
+  kubectl -n sterling-vance get secret bob-agent-identity >/dev/null 2>&1 && return
+  kubectl -n sterling-vance create secret generic bob-agent-identity \
+    --from-literal=agent-key.pem="$(openssl genpkey -algorithm ed25519)" >/dev/null
+}
+
+# await_enrolment DEPLOYMENT — until the adapter is running on Bob's token.
+await_enrolment() {
+  local deploy="$1"
+  printf "  enrolling at the person server, under Bob's account"
+  for _ in $(seq 1 60); do
+    if kubectl -n sterling-vance logs "deploy/$deploy" 2>/dev/null \
+         | grep -q "running identified"; then
+      echo; echo "  identified: its agent token is issued by https://ps.uma.lab"
+      return 0
+    fi
+    printf '.'; sleep 3
+  done
+  echo; echo "  the adapter never enrolled — kubectl -n sterling-vance logs deploy/$deploy" >&2
+  return 1
+}
+
 # Pointing an agent at something other than Alice's brokerage account
 #
 # Every resource in this lab publishes RFC 9728 metadata naming its own
@@ -174,6 +210,24 @@ agent_for() {
   echo "  resource:  $url"
   echo "  decided by: $(resource_who "$r")"
 
+  # Bob's adapters run identified, on one stable key, enrolled with his
+  # credential. `hers`
+  # is Alice's own agent, attributed by the key her operator publishes, and
+  # stays as it is.
+  local keystore=/keys/agent-key.pem identity_env="" identity_mount="" identity_vol=""
+  if [ "$r" != hers ]; then
+    ensure_identity
+    keystore=/identity/agent-key.pem
+    identity_env='            - { name: UMA4A_AGENT_ISSUER, value: "https://ps.uma.lab" }
+            - { name: UMA4A_AGENT_NAME, value: "Sterling & Vance advisory agent (kagent)" }
+            - name: UMA4A_PERSON_TOKEN
+              valueFrom: { secretKeyRef: { name: ps-admin, key: token } }
+            - { name: UMA4A_RECEIPTS, value: /keys/receipts }'
+    identity_mount='            - { name: identity, mountPath: /identity, readOnly: true }'
+    identity_vol='        - name: identity
+          secret: { secretName: bob-agent-identity }'
+  fi
+
   kubectl apply -f - >/dev/null <<YAML
 apiVersion: apps/v1
 kind: Deployment
@@ -199,7 +253,7 @@ spec:
           command: ["/bin/sh", "-ec"]
           args:
             - |
-              pip install -q 'mcp>=2,<3' httpx 'pyjwt[crypto]' 2>/dev/null
+              pip install -q 'mcp>=2,<3' httpx 'pyjwt[crypto]' 'aauth==0.3.2' 'aauth-signing==0.1.3' 2>/dev/null
               exec python3 /shim/shim.py
           env:
             - { name: UMA4A_SHIM_TRANSPORT, value: streamable-http }
@@ -207,9 +261,10 @@ spec:
             - { name: UMA4A_SHIM_PORT, value: "9030" }
             - { name: UMA4A_GATEWAY, value: $url }
             - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
-            - { name: UMA4A_KEYSTORE, value: /keys/agent-key.pem }
+            - { name: UMA4A_KEYSTORE, value: $keystore }
+$identity_env
             - { name: UMA4A_STANDING_MAX_EXPIRES, value: "604800" }
-            - { name: UMA4A_PEND_HANDBACK, value: "5" }
+            - { name: UMA4A_PEND_HANDBACK, value: "90" }
             - { name: UMA4A_PUBLISH_TO, value: "$(resource_operator "$r")" }
             - { name: PYTHONPATH, value: /shim/lib }
             - { name: PYTHONUNBUFFERED, value: "1" }
@@ -220,6 +275,7 @@ spec:
             - { name: lib, mountPath: /shim/lib, readOnly: true }
             - { name: ca, mountPath: /certs, readOnly: true }
             - { name: keys, mountPath: /keys }
+$identity_mount
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 384Mi }
@@ -232,6 +288,7 @@ spec:
           configMap: { name: uma-lab-ca-bundle }
         - name: keys
           emptyDir: {}
+$identity_vol
 ---
 apiVersion: v1
 kind: Service
@@ -262,6 +319,7 @@ spec:
 YAML
 
   kubectl -n sterling-vance rollout status deploy/agent-shim-$r --timeout=300s >/dev/null
+  [ "$r" = hers ] || await_enrolment "agent-shim-$r"
   printf '  waiting for the adapter to be discovered'
   for _ in $(seq 1 60); do
     if [ -n "$(kubectl -n sterling-vance get remotemcpserver vault-via-uma-$r \
@@ -337,9 +395,34 @@ up() {
   # until it times out. We are bringing our own agent and our own model, so
   # they are off. This is the same "an Agent needs a model" cost the lab
   # avoids by making the whole path opt-in.
+  #
+  # Bob signs in to it, with his firm's directory. The chart's own
+  # oauth2-proxy sits in front of the UI against it, and the controller takes
+  # the user from the token it forwards (k8s/components/kagent/sso-values.yaml).
+  # The directory comes up first, because the proxy discovers it on start. The
+  # namespace is created first so the proxy's client secret exists before it
+  # starts, and labelled as a party so trust-manager puts the lab CA in it —
+  # the proxy reaches the directory by its public name.
+  kubectl -n sterling-vance create configmap sv-realms \
+    --from-file=staff-realm.json="$ROOT/keycloak-sterling-vance/staff-realm.json" \
+    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  kubectl apply -f "$K8S/base/sterling-vance/sv-idp.yaml" >/dev/null
+  kubectl -n sterling-vance scale deploy/sv-idp --replicas=1 >/dev/null
+  kubectl -n sterling-vance rollout status deploy/sv-idp --timeout=600s >/dev/null
+  kubectl get namespace kagent >/dev/null 2>&1 || kubectl create namespace kagent >/dev/null
+  kubectl label namespace kagent u4a.ai/party=agent-platform --overwrite >/dev/null
+  kubectl annotate namespace kagent --overwrite >/dev/null \
+    u4a.ai/description="kagent, run by Sterling & Vance for its advisers: the framework, unmodified, with its UI behind the firm's sign-in."
+  kubectl -n kagent get secret kagent-oauth2 >/dev/null 2>&1 || \
+    kubectl -n kagent create secret generic kagent-oauth2 \
+      --from-literal=client-id=kagent \
+      --from-literal=client-secret=kagent-demo-secret \
+      --from-literal=cookie-secret="$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=' | head -c 32)" \
+      >/dev/null
   helm upgrade --install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent \
     --namespace kagent --create-namespace \
     --version "$KAGENT_VERSION" \
+    -f "$K8S/components/kagent/sso-values.yaml" \
     --set k8s-agent.enabled=false \
     --set kgateway-agent.enabled=false \
     --set istio-agent.enabled=false \
@@ -366,17 +449,19 @@ up() {
   # The same shim Bob runs beside Claude Code, as a service. It holds his key
   # and runs the four beats; the agent above it sees ordinary MCP.
   "$K8S/scripts/job-configmaps.sh"
+  ensure_identity
   kubectl apply -f "$K8S/base/sterling-vance/agent-shim.yaml" >/dev/null
   # After the apply, because the manifest's own replicas: 0 is what keeps a
   # cold cluster on the portal demo.
   kubectl -n sterling-vance scale deploy/agent-shim --replicas=1 >/dev/null
   kubectl -n sterling-vance rollout status deploy/agent-shim --timeout=300s >/dev/null
-  echo "  ready"
+  await_enrolment agent-shim
 
   model_config "$model"
 
   bold "Bob's agent, as a kagent Agent"
   kubectl apply -f "$K8S/components/kagent/agent.yaml" >/dev/null
+  kubectl apply -f "$K8S/components/kagent/ui-route.yaml" >/dev/null
 
   # Order matters here, and getting it wrong fails in a way that looks like a
   # bad model. An Agent reads its tool list once at start-up, so if its pod
@@ -413,6 +498,7 @@ up() {
   fi
 
   printf '\n  Ask it something:  make kagent-ask Q="..." SIM=0\n'
+  printf '  Or in a browser:  https://kagent.uma.lab\n'
   printf '  Alice decides in her portal, as always.\n'
 }
 
@@ -439,8 +525,15 @@ ask() {
 
   # --from-literal rather than a template substitution: kubectl quotes the
   # value, so a question containing an apostrophe or a slash stays intact.
+  # Whose issuer Alice's authority should see vouching for the agent. Bob's
+  # person server for the adapter `make kagent` runs against her account; the
+  # other resources report on other owners' ledgers, which this run does not
+  # sign in to.
+  local issuer=""
+  [ "$r" = alice ] && issuer="ps.uma.lab"
   kubectl -n sterling-vance create configmap kagent-ask-input \
     --from-literal=question="$question" --from-literal=sim="$sim" \
+    --from-literal=issuer="$issuer" \
     --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
   kubectl -n sterling-vance delete job kagent-ask --ignore-not-found >/dev/null 2>&1
@@ -461,6 +554,7 @@ check() {
 
 down() {
   kubectl delete -f "$K8S/components/kagent/agent.yaml" --ignore-not-found >/dev/null 2>&1 || true
+  kubectl delete -f "$K8S/components/kagent/ui-route.yaml" --ignore-not-found >/dev/null 2>&1 || true
   kubectl -n sterling-vance scale deploy/agent-shim --replicas=0 >/dev/null 2>&1 || true
   echo "==> kagent stopped; the adapter is scaled back to zero"
 }
@@ -470,5 +564,7 @@ case "${1:-up}" in
   check) check ;;
   ask)   ask "${2:?a question is required}" "${3:-1}" "${4:-alice}" ;;
   down)  down ;;
-  *)     echo "usage: kagent.sh up|check|down [model] | ask <question> [sim]" >&2; exit 1 ;;
+  identity) ensure_identity ;;
+  enrol) await_enrolment "${2:-agent-shim}" ;;
+  *)     echo "usage: kagent.sh up|check|down [model] | ask <question> [sim] | identity | enrol [deploy]" >&2; exit 1 ;;
 esac

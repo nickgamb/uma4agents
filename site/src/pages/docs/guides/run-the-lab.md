@@ -157,7 +157,7 @@ something you did not write can be governed the same way.
 ```bash
 make kagent            # Kubernetes only; needs ANTHROPIC_API_KEY
 make kagent-check
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 [kagent](https://kagent.dev) is unmodified and has never heard of UMA. It sees

@@ -45,6 +45,9 @@ spec:
             - name: KAGENT_SIM
               valueFrom:
                 configMapKeyRef: { name: kagent-ask-input, key: sim }
+            - name: KAGENT_AGENT_ISSUER
+              valueFrom:
+                configMapKeyRef: { name: kagent-ask-input, key: issuer, optional: true }
             # Whose ledger the run reports on. Rewritten by kagent.sh when
             # the agent is pointed at a resource somebody else owns, because
             # "were her resources actually reached" is a different question

@@ -25,12 +25,17 @@ import httpx
 A2A = os.environ.get("KAGENT_A2A")
 AS_PUBLIC = os.environ.get("UMA4A_AS", "https://alice-as.uma.lab")
 KEYCLOAK = os.environ.get("UMA4A_OIDC", "https://keycloak.uma.lab")
+# Where Bob signs in: his firm's directory, not the one Alice's portal uses.
+STAFF_OIDC = os.environ.get("KAGENT_STAFF_OIDC", "https://sv-idp.uma.lab/realms/staff")
 CA = os.environ.get("UMA4A_CACERT", "/certs/rootCA.pem")
 QUESTION = os.environ.get("KAGENT_QUESTION", "What is in Alice's portfolio?")
 # Whether to answer her pending queue on her behalf. On by default, because
 # `make kagent-check` runs headless and something has to say yes. Off when a
 # person is at her portal, which is the only way to show that the wait is real.
 SIM = os.environ.get("KAGENT_SIM", "1") != "0"
+# The issuer Alice's authority should see vouching for the agent: Bob's person
+# server, when his adapter runs identified. Empty skips the assertion.
+AGENT_ISSUER = os.environ.get("KAGENT_AGENT_ISSUER", "")
 
 # How long the requesting side keeps checking, and how often. The owner may be
 # asleep, and nothing here holds a connection open while she is.
@@ -65,6 +70,24 @@ def owner_token(c: httpx.Client) -> str:
     ).json()["access_token"]
 
 
+def bob_token() -> str:
+    """Bob, signed in to his firm's directory, asking.
+
+    kagent's controller takes the user from the token in front of it
+    (`trusted-proxy`), so the question is his rather than kagent's built-in
+    admin's — the same identity the UI gets when he signs in through its
+    proxy. This side calls the controller directly, so it signs in for itself.
+    """
+    with httpx.Client(verify=CA, timeout=20.0) as c:
+        r = c.post(
+            f"{STAFF_OIDC}/protocol/openid-connect/token",
+            data={"grant_type": "password", "client_id": "kagent-cli",
+                  "username": "bob", "password": "bob-demo"},
+        )
+        r.raise_for_status()
+        return r.json()["access_token"]
+
+
 def touched_count() -> int:
     """How many times her resources have actually been reached.
 
@@ -84,6 +107,20 @@ def touched_count() -> int:
         # failed baseline read compare as "fewer before than after" and pass
         # the one assertion that proves a tool was called.
         raise RuntimeError(f"could not read her ledger: {exc}") from exc
+
+
+def connection_handles() -> list[str]:
+    """Who she has a standing connection with, as her authority names them.
+
+    An identified agent's handle carries the issuer that vouched for it —
+    `aauth:<agent>@<issuer>` — so this is where "Bob's agent" stops being a
+    name in a manifest and becomes something her side verified.
+    """
+    ca = CA if os.path.exists(CA) else True
+    with httpx.Client(verify=ca, timeout=20.0) as c:
+        h = {"Authorization": f"Bearer {owner_token(c)}"}
+        conns = c.get(f"{AS_PUBLIC}/owner/connections", headers=h).json()
+    return [x.get("handle", "") for x in conns]
 
 
 def simulate_alice(seconds: float) -> threading.Event:
@@ -141,7 +178,8 @@ def main() -> int:
             }},
         }
         with httpx.Client(timeout=420.0) as c:
-            r = c.post(A2A, json=payload)
+            r = c.post(A2A, json=payload,
+                       headers={"Authorization": f"Bearer {bob_token()}"})
             if r.status_code >= 400:
                 print(f"FAIL: the agent could not be reached: "
                       f"{r.status_code} {r.text[:200]}")
@@ -194,6 +232,13 @@ def main() -> int:
     print(f"\n== And on Alice's side ==")
     say(f"her ledger's `touched` rows: {before} before, {after} after")
 
+    vouched = []
+    if AGENT_ISSUER:
+        vouched = [h for h in connection_handles()
+                   if h.startswith("aauth:") and h.endswith(f"@{AGENT_ISSUER}")]
+        say(f"the agent, as her authority knows it: "
+            f"{vouched[0] if vouched else 'not vouched for by ' + AGENT_ISSUER}")
+
     if not SIM:
         # A person answered this one, so both outcomes are correct and neither
         # is a failure. Refusing a trade is the tier working, not the run
@@ -210,6 +255,11 @@ def main() -> int:
         print("\nFAIL: the agent answered without ever reaching her resources.")
         print("      A model that talks about a portfolio without calling a tool")
         print("      proves nothing — the grant was never issued or never spent.")
+        return 1
+
+    if AGENT_ISSUER and not vouched:
+        print(f"\nFAIL: her authority has no connection vouched for by {AGENT_ISSUER}.")
+        print("      The agent reached her as a bare key, not as Bob's agent.")
         return 1
 
     print("\nPASS: kagent asked, the adapter negotiated, Alice's policy decided,")
