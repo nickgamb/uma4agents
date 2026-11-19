@@ -15,7 +15,14 @@ spec:
   hostnames:
     - kagent.uma.lab
   rules:
-    - matches:
+    # A chat is one long response: the agent's tool call can be held while
+    # Alice decides (up to 90s at the adapter) before the model answers. The
+    # edge's default 15s would cut it mid-answer, so the route allows what
+    # kagent's own UI allows a stream (ui.streamTimeoutSeconds, 1800).
+    - timeouts:
+        request: 1800s
+        backendRequest: 1800s
+      matches:
         - path:
             type: PathPrefix
             value: /

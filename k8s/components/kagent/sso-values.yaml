@@ -37,6 +37,9 @@ oauth2-proxy:
     skip-auth-route: ^/(health|login)$
     skip-jwt-bearer-tokens: true
     upstream: $(UPSTREAM_URL)
+    # The proxy's own default is 30s, which a held tool call outlasts; match
+    # the route and kagent's stream timeout.
+    upstream-timeout: 1800s
     # The directory is reached by its public name, through the edge, with the
     # lab's certificate.
     provider-ca-file: /ca/rootCA.pem

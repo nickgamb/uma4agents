@@ -22,6 +22,12 @@ release within that month. One entry per release.
 
 ## November 19 2026
 
+### v2026.11.4
+
+#### Bug fixes
+
+- **Lab:** A chat at `https://kagent.uma.lab` no longer fails with "An error occurred" when the agent's tool call is held for Alice. The `kagent-ui` route allows 1800s (`timeouts.request`, `timeouts.backendRequest`) instead of the edge's 15s default, and kagent's oauth2-proxy `upstream-timeout` is 1800s instead of 30s, matching kagent's own stream timeout.
+
 ### v2026.11.3
 
 #### Enhancements
