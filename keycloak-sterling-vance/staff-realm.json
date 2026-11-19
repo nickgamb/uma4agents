@@ -1,0 +1,48 @@
+{
+  "realm": "staff",
+  "enabled": true,
+  "displayName": "Sterling & Vance staff directory",
+  "registrationAllowed": false,
+  "users": [
+    {
+      "username": "bob",
+      "enabled": true,
+      "firstName": "Bob",
+      "lastName": "Advisor",
+      "email": "bob@sterling-vance.uma.lab",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "bob-demo",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "kagent",
+      "name": "kagent, through its oauth2-proxy",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "kagent-demo-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://kagent.uma.lab/oauth2/callback"
+      ],
+      "webOrigins": [
+        "+"
+      ]
+    },
+    {
+      "clientId": "kagent-cli",
+      "name": "An adviser asking from a terminal (make kagent-ask)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true
+    }
+  ]
+}

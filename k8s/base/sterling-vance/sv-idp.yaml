@@ -1,0 +1,93 @@
+# Sterling & Vance's own directory. Bob is an adviser at the firm, and the
+# firm says who its advisers are.
+#
+# The same arrangement as Northwind's (northwind/northwind-idp.yaml): a firm
+# whose staff signed in through a realm on Meridian's provider would be a
+# tenant of the brokerage its agents are asking. Here it is where Bob signs in
+# to kagent, which the firm runs for him (k8s/components/kagent/).
+#
+# Off by default (replicas: 0), like the adapter beside it: it exists for the
+# kagent path, and `make kagent` scales it up. start-dev with an in-memory
+# database — the realm is imported at boot from keycloak-sterling-vance/.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sv-idp
+  namespace: sterling-vance
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sv-idp
+  namespace: sterling-vance
+spec:
+  selector: { app: sv-idp }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sv-idp
+  namespace: sterling-vance
+spec:
+  replicas: 0
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: sv-idp }
+  template:
+    metadata:
+      labels: { app: sv-idp }
+    spec:
+      serviceAccountName: sv-idp
+      containers:
+        - name: sv-idp
+          image: quay.io/keycloak/keycloak:26.4.5
+          args: ["start-dev", "--import-realm", "--health-enabled=true"]
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: mgmt, containerPort: 9000 }
+          env:
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin }
+            - { name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: sterling-vance-admin }
+            - { name: KC_HEALTH_ENABLED, value: "true" }
+            - { name: KC_HOSTNAME, value: "https://sv-idp.uma.lab" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            # The edge terminates TLS, so the forwarded scheme has to be
+            # believed or every redirect comes back as http.
+            - { name: KC_PROXY_HEADERS, value: xforwarded }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-Xms256m -Xmx512m" }
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import, readOnly: true }
+          # Realm import is slow on a laptop; the startup probe buys the time
+          # before liveness takes over.
+          startupProbe:
+            httpGet: { path: /health/started, port: 9000 }
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: 9000 }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: realm
+          configMap: { name: sv-realms }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sv-idp
+  namespace: sterling-vance
+spec:
+  parentRefs:
+    - { name: edge, namespace: uma-edge }
+  hostnames: ["sv-idp.uma.lab"]
+  rules:
+    - backendRefs:
+        - { name: sv-idp, port: 8080 }

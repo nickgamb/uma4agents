@@ -1,10 +1,7 @@
-# The identity provider. Not Alice's, not Carol's.
-#
-# It sits in its own namespace because that is what it is: a third party both
-# owners resolve and neither runs, the way most people's login already works.
-# Putting it in one owner's namespace would have said the opposite — that
-# whoever holds that namespace can mint the other, which is the one thing an
-# authority that is supposed to be hers cannot allow.
+# Meridian's identity provider: where its customers, Alice and Carol, sign in
+# to their portals, as a brokerage's customers sign in with the brokerage.
+# Not in either owner's namespace, because it is not either owner's — whoever
+# held it could mint the other.
 #
 # Each owner has her own realm and her own users inside it. The realms are
 # the boundary: a token from `alice` does not authenticate Carol to anything,

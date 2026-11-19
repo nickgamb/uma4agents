@@ -36,6 +36,44 @@ It lives in **Bob's** namespace, because it is his: his key, his configuration,
 his receipts. Alice's authority has never heard of it and treats what comes
 through it as one more agent.
 
+## Whose agent it is
+
+Two identities meet here, and neither is kagent's.
+
+**Bob, at the keyboard.** kagent's UI is behind the chart's own oauth2-proxy,
+pointed at Sterling & Vance's staff directory — the firm's own Keycloak in its
+namespace (`k8s/base/sterling-vance/sv-idp.yaml`,
+`keycloak-sterling-vance/staff-realm.json`, user `bob` / `bob-demo`), not a
+realm on Meridian's provider — and its controller runs
+in `trusted-proxy` mode, taking the user from the token the proxy forwards
+(`k8s/components/kagent/sso-values.yaml`). Every chat belongs to `bob`, not to
+kagent's built-in `admin@kagent.dev`. `make kagent-ask` signs in to the same
+directory, so a question from the terminal is his too.
+
+**The agent, at Alice's authority.** The adapter runs identified. It enrolls at
+the firm's person server (`aauth`, apart from the agents it vouches for) under
+Bob's account, and presents the agent token that server issues.
+Bob deploys it with his account's credential, which approves the enrolment as
+it happens; its stable key is the `bob-agent-identity` Secret, so a restart is
+the same agent rather than a stranger. The token lasts a day at most, and the
+adapter renews it before each call that would fall inside its last ten
+minutes. Her authority verifies the token against the issuer's keys and knows
+the agent as `aauth:<agent>@ps.uma.lab`:
+
+```
+   the agent, as her authority knows it: aauth:900d66b9-…@ps.uma.lab
+```
+
+Both belong to the firm, as Northwind's directory belongs to Northwind. Another
+party wanting identified agents runs its own person server, and Alice's
+authority names it beside this one in `UMA_AS_AGENT_ISSUERS`.
+
+The two stay separate on purpose. Bob's sign-in decides who may use the agent;
+it gives the agent nothing at Alice's authority, where only the agent token
+and her policy count. The other resources (`RESOURCE=carol`, `joint`,
+`either`, `shared`) are reached through adapters on the same identity;
+`RESOURCE=hers` is Alice's own agent and keeps the key her operator publishes.
+
 ### The claim, checked without a model in the way
 
 ```bash
@@ -118,10 +156,11 @@ rolling the agent, for exactly this reason.
    [alice] approving connection request for tier1
 
 == And on Alice's side ==
-   her ledger's `touched` rows: 2 before, 3 after
+   her ledger's `touched` rows: 0 before, 1 after
+   the agent, as her authority knows it: aauth:900d66b9-…@ps.uma.lab
 ```
 
-That last pair is the assertion that matters. "The agent replied without
+The `touched` pair is the assertion that matters most. "The agent replied without
 erroring" is not evidence — a model that talks about a portfolio without
 calling anything produces a perfectly cheerful answer and proves nothing. A new
 `touched` row means the grant was issued and spent.
@@ -129,7 +168,9 @@ calling anything produces a perfectly cheerful answer and proves nothing. A new
 The first contact is held for her, as it is for every agent she has never met —
 kagent's framework-ness earns it nothing. Her portal shows it beside Bob's
 script agent and your own MCP client, with its own terms, its own trail and its
-own revoke button.
+own revoke button. The check also fails if her authority has no connection
+vouched for by the person server — an agent that reached her as a bare key is
+not Bob's agent, however it answered.
 
 ## What this demonstrates, and what it does not
 
@@ -188,8 +229,8 @@ asking.
 ## In a browser
 
 kagent's own UI is published at `https://kagent.uma.lab`, behind the same edge
-and certificate as Alice's portal. Open `sterling-vance/advisory-agent`, start
-a new chat, and ask. Nothing answers for Alice there: every decision is made in
+and certificate as Alice's portal. Sign in as **bob** / **bob-demo**, open
+`sterling-vance/advisory-agent`, start a new chat, and ask. Nothing answers for Alice there: every decision is made in
 her portal, as with `SIM=0` below.
 
 ## Asking it something else

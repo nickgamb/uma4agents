@@ -63,8 +63,9 @@ Then open `https://portal.uma.lab` on the right screen, log in as **alice** /
 zero connections, so there is nothing to clear.
 
 To ask Bob's agent from a browser instead of the terminal, open
-`https://kagent.uma.lab`, choose `sterling-vance/advisory-agent`, and put the
-same questions to it in a new chat.
+`https://kagent.uma.lab`, sign in as **bob** / **bob-demo**, choose
+`sterling-vance/advisory-agent`, and put the same questions to it in a new
+chat.
 
 **In a Codespace.** Only steps 2 and 4. No resolver to edit, no CA to trust —
 `kind-up` publishes the portal for you. To republish it later:

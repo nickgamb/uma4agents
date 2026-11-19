@@ -424,7 +424,9 @@ revoke button. Being a framework earns it nothing.
 
 `make kagent` uses Anthropic by default and reads `ANTHROPIC_API_KEY` from your
 environment; `MODEL=openai` uses OpenAI, and `MODEL=ollama` runs a model in the
-cluster with no account. kagent's own UI is at `https://kagent.uma.lab`.
+cluster with no account. kagent's own UI is at `https://kagent.uma.lab`, where
+Bob signs in as **bob** / **bob-demo**; his agent reaches Alice identified, on
+an agent token from Sterling & Vance's person server.
 [docs/KAGENT.md](docs/KAGENT.md) has the rest.
 
 ## 11. Give Alice her own AI

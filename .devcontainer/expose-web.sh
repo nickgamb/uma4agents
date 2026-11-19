@@ -169,7 +169,7 @@ kubectl -n idp exec deploy/keycloak -- sh -c "
 # is the failure this whole script exists to avoid.
 forward() {
   # Namespaced, because the identity provider is not in an owner's namespace
-  # — it is neither owner's, and both resolve it.
+  # — it is Meridian's, and both owners sign in with it.
   local ns="$1" svc="$2" port="$3"
   setsid bash -c "
     while true; do

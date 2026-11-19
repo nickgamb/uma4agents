@@ -22,6 +22,17 @@ release within that month. One entry per release.
 
 ## November 19 2026
 
+### v2026.11.3
+
+#### Enhancements
+
+- **Lab:** Bob signs in to kagent with Sterling & Vance's staff directory, a Keycloak of the firm's own (`k8s/base/sterling-vance/sv-idp.yaml`, `https://sv-idp.uma.lab`, `bob` / `bob-demo`) that `make kagent` brings up. `https://kagent.uma.lab` routes to kagent's own oauth2-proxy against it, and the controller runs in `trusted-proxy` mode (`k8s/components/kagent/sso-values.yaml`), so chats belong to `bob` rather than `admin@kagent.dev`. `make kagent-ask` signs in the same way.
+- **Lab:** Bob's kagent adapters run identified. They enroll at Sterling & Vance's person server under Bob's account and present its agent token, on a stable key kept in the `bob-agent-identity` Secret; Alice's authority knows the agent as `aauth:<agent>@ps.uma.lab`. The adapter renews the token before it expires.
+- **Lab:** `make kagent-check` also asserts that Alice's authority holds a connection vouched for by the person server.
+- **Lab:** The `aauth` namespace's person server is described as Sterling & Vance's, the issuer for the firm's agents, rather than a party neutral to both sides.
+- **Lab:** The `idp` namespace and its Keycloak are described as Meridian's identity provider, where Alice and Carol sign in, rather than neither owner's.
+- **Lab:** `make k8s-status` prints the lab by party — on-ramp, resource owners, what owners share, resource server, requesting party, operator plane — covering every party namespace and kagent's, with running workloads only (`k8s/scripts/status.sh`).
+
 ### v2026.11.2
 
 #### Enhancements

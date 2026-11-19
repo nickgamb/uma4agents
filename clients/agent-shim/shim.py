@@ -20,6 +20,7 @@ Environment:
                       the shim enrolls and runs identified (aa-agent+jwt) —
                       first enrollment pends until Bob approves in the person
                       server UI. Unset: pseudonymous (bare key).
+  UMA4A_AGENT_NAME    how the agent introduces itself when it enrolls
   UMA4A_PERSON_TOKEN  optional person-API bearer to auto-approve enrollment
                       (headless runs only — normally Bob taps in the PS UI)
   UMA4A_SHIM_TRANSPORT  stdio (default) or streamable-http
@@ -41,8 +42,10 @@ shape, and `docs/KAGENT.md` for an agent framework using it unmodified.
 import json
 import os
 import sys
+import time
 
 import httpx
+import jwt
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.shared.exceptions import MCPError
 from pydantic import BaseModel
@@ -85,6 +88,10 @@ AGENT_ISSUER = os.environ.get("UMA4A_AGENT_ISSUER")
 # put a key in her directory.
 PUBLISH_TO = os.environ.get("UMA4A_PUBLISH_TO")
 PERSON_TOKEN = os.environ.get("UMA4A_PERSON_TOKEN")
+AGENT_NAME = os.environ.get("UMA4A_AGENT_NAME", "Bob's agent via uma4agents shim")
+# Renew the agent token this long before it expires. The person server issues
+# them for a day at most, and an adapter in a cluster outlives that.
+RENEW_BEFORE_S = 600
 AUTHORITY = httpx.URL(GATEWAY).host
 MCP_PATH = httpx.URL(GATEWAY).path
 
@@ -131,7 +138,7 @@ def bootstrap_identity() -> AgentKeys:
     with httpx.Client(verify=CACERT, timeout=30.0) as client:
         k.agent_token = enroll(
             client, AGENT_ISSUER, k.stable, k.key,
-            agent_name="Bob's agent via uma4agents shim",
+            agent_name=AGENT_NAME,
             person_token=PERSON_TOKEN, on_status=log,
         )
     log(f"enrolled with {AGENT_ISSUER}; running identified")
@@ -139,6 +146,29 @@ def bootstrap_identity() -> AgentKeys:
 
 
 keys = bootstrap_identity()
+
+
+def renew_identity() -> None:
+    """Re-register before the agent token runs out.
+
+    The stable key is one the person server already knows, so this is
+    answered at once with a fresh token for the same session key — no second
+    approval from the principal. A token that has expired is refused at Alice's
+    authority, which would turn a long-running adapter into a stranger.
+    """
+    if not AGENT_ISSUER or not keys.agent_token:
+        return
+    claims = jwt.decode(keys.agent_token, options={"verify_signature": False})
+    if claims.get("exp", 0) - time.time() > RENEW_BEFORE_S:
+        return
+    from uma4a_enroll import enroll
+
+    with httpx.Client(verify=CACERT, timeout=30.0) as client:
+        keys.agent_token = enroll(
+            client, AGENT_ISSUER, keys.stable, keys.key,
+            agent_name=AGENT_NAME, person_token=PERSON_TOKEN, on_status=log,
+        )
+    log(f"agent token renewed at {AGENT_ISSUER}")
 
 
 def store_receipt(receipt_jws: str) -> None:
@@ -385,6 +415,7 @@ class Upstream:
                         operation: dict | None = None,
                         reason: str | None = None) -> str:
         mission = MISSION
+        renew_identity()
         await self.ensure_discovered()
         params = {"name": tool, "arguments": args}
         r, payload = await self.request("tools/call", params)
