@@ -89,7 +89,7 @@ make kagent MODEL=openai
 Another model:
 
 ```bash
-ANTHROPIC_MODEL=claude-sonnet-5 make kagent
+ANTHROPIC_MODEL=claude-opus-4-5 make kagent
 OPENAI_MODEL=gpt-4o make kagent MODEL=openai
 ```
 
@@ -145,7 +145,7 @@ records *no channel to her* and stops. **Standing consent is not a stand-in for
 her.** The surface that cannot ask her is the surface that says no.
 
 ```bash
-make kagent-ask Q="Sell 200 shares of her AAPL position." SIM=0
+make kagent-ask Q="Sell 100 shares of her AAPL position." SIM=0
 ```
 
 **5 · Terminal.** Hand the decisions back. Nothing is rebuilt and nothing is

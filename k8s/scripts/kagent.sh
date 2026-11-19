@@ -60,7 +60,10 @@ model_config() {
 
     anthropic)
       require_env ANTHROPIC_API_KEY
-      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-5}"
+      # Pinned to a model that answers in text and tool_use blocks only. The
+      # ADK inside kagent 0.9 raises on a `thinking` block, and the 5.x models
+      # return one by default — the agent then answers "Not supported yet."
+      provider=Anthropic; name="${ANTHROPIC_MODEL:-claude-sonnet-4-5}"
       model_secret "$ANTHROPIC_API_KEY" ;;
 
     openai)
@@ -209,7 +212,7 @@ spec:
             - { name: UMA4A_CACERT, value: /certs/rootCA.pem }
             - { name: UMA4A_KEYSTORE, value: /keys/agent-key.pem }
             - { name: UMA4A_STANDING_MAX_EXPIRES, value: "604800" }
-            - { name: UMA4A_PEND_HANDBACK, value: "5" }
+            - { name: UMA4A_PEND_HANDBACK, value: "90" }
             - { name: UMA4A_PUBLISH_TO, value: "$(resource_operator "$r")" }
             - { name: PYTHONPATH, value: /shim/lib }
             - { name: PYTHONUNBUFFERED, value: "1" }
@@ -377,6 +380,7 @@ up() {
 
   bold "Bob's agent, as a kagent Agent"
   kubectl apply -f "$K8S/components/kagent/agent.yaml" >/dev/null
+  kubectl apply -f "$K8S/components/kagent/ui-route.yaml" >/dev/null
 
   # Order matters here, and getting it wrong fails in a way that looks like a
   # bad model. An Agent reads its tool list once at start-up, so if its pod
@@ -413,6 +417,7 @@ up() {
   fi
 
   printf '\n  Ask it something:  make kagent-ask Q="..." SIM=0\n'
+  printf '  Or in a browser:  https://kagent.uma.lab\n'
   printf '  Alice decides in her portal, as always.\n'
 }
 
@@ -461,6 +466,7 @@ check() {
 
 down() {
   kubectl delete -f "$K8S/components/kagent/agent.yaml" --ignore-not-found >/dev/null 2>&1 || true
+  kubectl delete -f "$K8S/components/kagent/ui-route.yaml" --ignore-not-found >/dev/null 2>&1 || true
   kubectl -n sterling-vance scale deploy/agent-shim --replicas=0 >/dev/null 2>&1 || true
   echo "==> kagent stopped; the adapter is scaled back to zero"
 }

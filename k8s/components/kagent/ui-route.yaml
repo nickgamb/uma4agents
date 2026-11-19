@@ -1,0 +1,22 @@
+# kagent's own UI at https://kagent.uma.lab, so Bob's agent can be driven from
+# a browser beside Alice's portal. The edge terminates TLS with the lab's
+# wildcard certificate; the UI is kagent's, unmodified.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kagent-ui
+  namespace: kagent
+spec:
+  parentRefs:
+    - name: edge
+      namespace: uma-edge
+  hostnames:
+    - kagent.uma.lab
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: kagent-ui
+          port: 8080

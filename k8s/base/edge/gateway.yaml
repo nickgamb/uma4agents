@@ -59,6 +59,20 @@ spec:
           selector:
             matchLabels:
               kubernetes.io/metadata.name: sterling-vance
+    - name: kagent
+      protocol: HTTPS
+      port: 443
+      hostname: kagent.uma.lab
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: edge-server-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: kagent
     - name: alice-agent
       protocol: HTTPS
       port: 443
