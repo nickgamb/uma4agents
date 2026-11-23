@@ -155,6 +155,9 @@ make k8s-reset      # kubernetes
 ```bash
 make assurance-check    # what her authority can verify about an agent, and
                         # the cap on how much of her attention one can spend
+make autonomy-check     # earned autonomy: the ATF ladder, kept once by the
+                        # agent's firm and once by her (docs/AUTONOMY.md)
+make fixture-autonomy   # the same, with no identity provider and no gateway
 make rules-test         # the rule engine alone; nothing need be running
 make store-test         # both storage backends, against one property suite
 ```

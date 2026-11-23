@@ -888,6 +888,117 @@ async def a_charter_another_replica_read() -> None:
           gone is None and "alice" not in app._ORG, str(gone))
 
 
+async def her_ladder() -> None:
+    print("\n== where an agent stands with her, and who may move it ==")
+    store = app.st("alice")
+
+    class Req:
+        def __init__(self, body):
+            self.body = body
+
+        async def json(self):
+            return self.body
+
+    from fastapi import HTTPException
+
+    async def move(level, expect=None, handle="jkt:laddered"):
+        body = {"handle": handle, "level": level,
+                **({"expect": expect} if expect else {})}
+        try:
+            return await app.owner_set_autonomy(Req(body))
+        except HTTPException as exc:
+            return exc
+
+    await store.put_connection({
+        "handle": "jkt:laddered", "status": "active",
+        "first_seen": app.utcstamp(), "identity": {"client_metadata": {
+            "client_id": "https://op.example/agent.json", "verified": True,
+            "atf": {"maturity_level": "principal"}}},
+        "tiers_granted": [], "tiers_approved": [], "revocations": 0})
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")):
+        listed = {c["handle"]: c for c in await app.owner_connections(Req({}))}
+        view = listed["jkt:laddered"]["autonomy_view"]
+        check("a new connection is an intern with her, whatever its operator says",
+              view["level"] == "intern" and view["operator"]["level"] == "principal",
+              str(view))
+        skipped = await move("senior")
+        check("she cannot skip a rung", isinstance(skipped, HTTPException)
+              and skipped.status_code == 400, str(skipped))
+        up = await move("junior", expect="intern")
+        check("she promotes it one rung", isinstance(up, dict)
+              and up["level"] == "junior", str(up))
+        stale = await move("senior", expect="intern")
+        check("a promotion from a view that has gone stale is refused",
+              isinstance(stale, HTTPException) and stale.status_code == 409, str(stale))
+        rows = [r for r in await store.ledger("jkt:laddered")
+                if r["kind"].startswith("autonomy_")]
+        check("her record keeps the promotion, named to the agent",
+              rows and rows[-1]["kind"] == "autonomy_promoted"
+              and rows[-1]["to"] == "junior", str(rows))
+        detail = await app.owner_connection_autonomy(Req({}), handle="jkt:laddered")
+        check("the detail view shows both ladders as two sentences",
+              len(detail["notes"]) == 2 and detail["eligibility"]["next"] == "senior",
+              str(detail["notes"]))
+
+    record = (await store.connection("jkt:laddered"))["autonomy"]
+    refused = None
+    try:
+        await app.set_autonomy_for("alice", "jkt:laddered", "senior",
+                                   by={"kind": "administrator", "admin": "dana"})
+    except HTTPException as exc:
+        refused = exc
+    check("nobody acting for her may promote",
+          refused is not None and "only the owner" in str(refused.detail),
+          str(refused and refused.detail))
+    check("and the refusal wrote nothing",
+          (await store.connection("jkt:laddered"))["autonomy"] == record)
+
+    lost = await store.set_autonomy("jkt:laddered", {"level": "principal"}, "intern")
+    check("the store will not write over a level it was not expecting", lost is False)
+
+    await store.revoke_connection("jkt:laddered")
+    conn = await store.connection("jkt:laddered")
+    facts = app.standing_facts(conn, "tier3")
+    check("a revoked agent is an intern in her standing facts",
+          facts["autonomy"] == 1, str(facts.get("autonomy")))
+    late = await store.set_autonomy("jkt:laddered", {"level": "senior"}, "junior")
+    check("and a revoked connection cannot be moved", late is False)
+    with patch.object(app, "require_owner", AsyncMock(return_value="alice")):
+        presets = await app.owner_policy_presets(Req({}))
+    check("the earned-autonomy preset is served as ordinary rules",
+          presets and presets[0]["id"] == "earned-autonomy"
+          and all("when" in r for r in presets[0]["rules"]))
+
+    # What the operator says arrives with the metadata document, and only from
+    # a document that resolved and claims its own URL.
+    declared = app.autonomy.operator_declaration(
+        {"client_metadata": {"client_id": "https://op.example/agent.json",
+                             "verified": True,
+                             "atf": {"maturity_level": "intern"}}})
+    check("the operator's declaration is read from its metadata document",
+          declared["level"] == "intern")
+
+    # An operator lowering its agent is the case a stale copy must not hide:
+    # the copy would go on reading the level from before the demotion.
+    served = {"level": "senior"}
+
+    def fetched(url, **kw):
+        return {"client_id": url, "client_name": "Op",
+                "atf": {"maturity_level": served["level"]}}
+
+    url = "https://op-ttl.example/agent.json"
+    with patch.object(app.uma4a_fetch, "get_json", fetched):
+        first = app.resolve_client_id(url)
+        served["level"] = "intern"
+        cached = app.resolve_client_id(url)
+        with patch.object(app, "_CIMD_TTL", 0.0):
+            fresh = app.resolve_client_id(url)
+    check("an operator's metadata is served from cache while its copy is fresh",
+          first["atf"]["maturity_level"] == cached["atf"]["maturity_level"] == "senior")
+    check("and read again once its copy has aged, so an operator's demotion lands",
+          fresh["atf"]["maturity_level"] == "intern", str(fresh.get("atf")))
+
+
 async def main() -> int:
     app.STORE = MemoryStore()
     await app.st("alice").seed()
@@ -911,6 +1022,7 @@ async def main() -> int:
     await what_it_says_it_verifies()
     await the_wire_from_her_organization()
     await a_charter_another_replica_read()
+    await her_ladder()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     return 1 if FAILED else 0
 

@@ -243,6 +243,22 @@ make rules-test        # the rule engine alone; nothing need be running
 Why assurance starts at nothing and can never buy access is
 [docs/ASSURANCE.md](docs/ASSURANCE.md).
 
+**Once she has met an agent**, how much it may do without asking is a ladder —
+the CSA Agentic Trust Framework's intern, junior, senior, principal — and there
+are two of them: the one its firm keeps, which can only make her rules
+stricter, and hers, which only she climbs, one rung at a time.
+
+```bash
+make k8s-autonomy-check
+```
+
+Watch for an agent its firm calls a principal having its first trade refused,
+because it is an intern *with her*; and for an agent she has promoted to
+principal staying out of her trades, because its own firm still calls it an
+intern. In her portal, Connected agents shows both ladders side by side, with
+▲ / ▼ beside hers and nothing beside the firm's. The design is
+[docs/AUTONOMY.md](docs/AUTONOMY.md).
+
 ## 9. The one where the agent is hers
 
 Everything so far has been somebody else's agent. This is the other case, and
@@ -496,6 +512,8 @@ case — what to type, what to click, and what is worth saying while it happens:
   and the adapter that makes that possible
 - **[docs/ASSURANCE.md](docs/ASSURANCE.md)** — what her authority can verify
   about an agent, and why none of it can ever buy access
+- **[docs/AUTONOMY.md](docs/AUTONOMY.md)** — earned autonomy: the CSA Agentic
+  Trust Framework's ladder, held once by the agent's firm and once by her
 - **[docs/XAA.md](docs/XAA.md)** — Cross App Access beside UMA: an
   enterprise identity provider and an owner's authority answering the two
   halves of one request.

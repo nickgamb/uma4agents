@@ -141,6 +141,18 @@ accountable one is granted quietly on its second request, the nameless one asks
 her every time. An agent whose claimed operator does not resolve gains nothing.
 And a flood of unknown agents is capped without the established agent noticing.
 
+Once she has met an agent, how much it may do without asking is a ladder she
+climbs for it, one rung at a time, beside the one its own firm keeps:
+
+```bash
+make k8s-autonomy-check      # or `make autonomy-check`, or `make fixture-autonomy`
+```
+
+An agent its firm calls a principal has its first trade refused, because it is
+an intern with her; one she has promoted to principal stays out of her trades
+while its firm still calls it an intern. [Earned autonomy](/docs/overview/autonomy/)
+is why.
+
 It also blocks an operator — one action, every agent it runs, and what is
 already connected revoked with it.
 

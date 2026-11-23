@@ -15,6 +15,7 @@ rules for how an owner edit is applied.
 import copy
 import os
 
+import autonomy
 import uma4a_clearance
 import uma4a_consequence
 
@@ -317,6 +318,14 @@ RELAXING_CONDITIONS = {
     # dropping the second would be fatal: any agent can point at a metadata
     # document she publishes, but only she can put a key in her directory.
     "standing.first_party",
+    # Where she has put this agent on her own autonomy ladder (autonomy.py),
+    # at or above a rung. Admissible for one reason, and the reason is an
+    # invariant rather than a judgement: the level rises only by her hand, one
+    # rung at a time, so whatever it reads is at or below a level she
+    # personally granted. Anyone acting for her may only lower it, and
+    # revoking the agent resets it. `:intern` is refused at save, since every
+    # agent is at least that — including one she has never met.
+    "standing.autonomy_at_least",  # :<level>
 }
 
 OBSERVED_CONDITIONS = {
@@ -348,6 +357,9 @@ OBSERVED_CONDITIONS = {
     # the requesting side can only ever cause the ask to *remain*, and the
     # rule the tier already carries is what does the asking.
     "standing.lineage_new_at_tier",
+    # The same ladder read the other way. A restriction like any other, so it
+    # needs nothing of the invariant above.
+    "standing.autonomy_below",     # :<level>
 }
 
 STANDING_CONDITIONS = RELAXING_CONDITIONS | OBSERVED_CONDITIONS
@@ -369,6 +381,14 @@ ASSURANCE_CONDITIONS = {
     # for tools she has never seen.
     "request.consequence_at_or_above",  # :<class>
     "request.consequence_unknown",      # nothing was declared about it
+    # Where the agent's *operator* says it stands on its own ATF ladder, read
+    # from the operator's metadata document (autonomy.py). The requesting
+    # side's statement about itself, so tighten-only, and an operator that
+    # declares nothing is not thereby saying its agent is low: `_below` is
+    # false for it, and an owner who wants to refuse undeclared agents has a
+    # condition of her own to say so with — the shape consequence has too.
+    "operator.autonomy_below",          # :<level>
+    "operator.autonomy_undeclared",
 }
 
 CONDITIONS = STANDING_CONDITIONS | ASSURANCE_CONDITIONS
@@ -385,7 +405,9 @@ LEVEL_ARGS = {"assurance.binding_below", "assurance.provenance_below",
 COUNT_ARGS = {"standing.denials_above", "standing.tiers_above",
               "standing.calls_above"}
 CLASS_ARGS = {"request.consequence_at_or_above"}
-TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS | CLASS_ARGS
+AUTONOMY_ARGS = {"standing.autonomy_at_least", "standing.autonomy_below",
+                 "operator.autonomy_below"}
+TAKES_ARG = DURATION_ARGS | LEVEL_ARGS | COUNT_ARGS | CLASS_ARGS | AUTONOMY_ARGS
 
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
@@ -429,6 +451,23 @@ VOCABULARY = [
      "label": "it cannot be undone at all"},
     {"condition": "request.consequence_unknown", "takes": None,
      "label": "nobody has said whether it can be undone"},
+    # The two autonomy ladders, enumerated per rung for the same reason the
+    # assurance levels are. Only the rungs that can fire are offered: nothing
+    # is below intern, and everything is at least intern.
+    {"condition": "operator.autonomy_below:junior", "takes": None,
+     "label": "its own operator says it is an intern (observe only)"},
+    {"condition": "operator.autonomy_below:senior", "takes": None,
+     "label": "its own operator does not let it act unsupervised"},
+    {"condition": "operator.autonomy_below:principal", "takes": None,
+     "label": "its own operator does not let it act autonomously"},
+    {"condition": "operator.autonomy_undeclared", "takes": None,
+     "label": "its operator declares no ATF maturity level"},
+    {"condition": "standing.autonomy_below:junior", "takes": None,
+     "label": "it is still an intern with me"},
+    {"condition": "standing.autonomy_below:senior", "takes": None,
+     "label": "I have not promoted it past junior"},
+    {"condition": "standing.autonomy_below:principal", "takes": None,
+     "label": "I have not promoted it to principal"},
     {"condition": "standing.none", "takes": None,
      "label": "I have no standing connection with this agent"},
     {"condition": "standing.first_at_tier", "takes": None,
@@ -454,6 +493,12 @@ VOCABULARY = [
      "label": "I have personally approved something at this tier"},
     {"condition": "standing.age_above", "takes": "duration",
      "label": "I have known this agent for more than"},
+    {"condition": "standing.autonomy_at_least:junior", "takes": None,
+     "label": "I have promoted it to junior or above"},
+    {"condition": "standing.autonomy_at_least:senior", "takes": None,
+     "label": "I have promoted it to senior or above"},
+    {"condition": "standing.autonomy_at_least:principal", "takes": None,
+     "label": "I have promoted it to principal"},
     {"condition": "standing.denials_above", "takes": "count",
      "label": "I have recently denied this agent more times than"},
     {"condition": "standing.tiers_above", "takes": "count",
@@ -523,6 +568,9 @@ def validate_rules(rules) -> None:
                     elif name in CLASS_ARGS:
                         if uma4a_consequence.normalise(value) is None:
                             raise ValueError("not a consequence class")
+                    elif name in AUTONOMY_ARGS:
+                        if autonomy.normalise(value) is None:
+                            raise ValueError("not a level")
                     elif int(value) < 0:
                         # A negative count would make the condition always true
                         # and the rule always fire, which reads as a working
@@ -532,15 +580,40 @@ def validate_rules(rules) -> None:
                     kind = ("duration" if name in DURATION_ARGS
                             else "count" if name in COUNT_ARGS
                             else "consequence class" if name in CLASS_ARGS
+                            else "level: " + ", ".join(autonomy.LEVELS)
+                            if name in AUTONOMY_ARGS
                             else "level")
                     raise ValueError(
                         f"{name!r} takes a {kind}, got {value!r}") from None
+                # Two rungs that read the same for every agent there is. A
+                # relaxation on "at least an intern" would relax for a
+                # stranger, because a stranger is an intern; a restriction on
+                # "below intern" would never fire, which reads as a working
+                # restriction and is really an absent one.
+                if name in AUTONOMY_ARGS:
+                    rung = autonomy.normalise(value)
+                    if name.endswith("_at_least") and rung == autonomy.INTERN:
+                        raise ValueError(
+                            f"{condition!r} holds for every agent, including "
+                            "one you have never met — every agent starts as an "
+                            "intern. Name junior or above.")
+                    if name.endswith("_below") and rung == autonomy.INTERN:
+                        raise ValueError(
+                            f"{condition!r} can never hold: nothing is below "
+                            "intern. Name junior or above.")
             elif value is not None:
                 raise ValueError(f"{name!r} takes no argument, got {value!r}")
             if then == AUTO and name not in RELAXING_CONDITIONS:
-                why = ("assurance is supplied by the requesting side, and a "
-                       "signal the counterparty influences must never widen "
-                       "access") if name not in STANDING_CONDITIONS else (
+                why = ("it is the operator's statement about its own agent. "
+                       "Its ladder may only make her rules stricter; an "
+                       "operator's promotion reaches nobody's resources"
+                       ) if name.startswith("operator.") else (
+                    "it reads her ladder downwards. A rule that relaxes on her "
+                    "ladder names standing.autonomy_at_least"
+                ) if name == "standing.autonomy_below" else (
+                    "assurance is supplied by the requesting side, and a "
+                    "signal the counterparty influences must never widen "
+                    "access") if name not in STANDING_CONDITIONS else (
                     "it records what this server did, not what Alice decided; "
                     "relaxing on it would let one automatic grant justify the "
                     "next")
@@ -590,6 +663,21 @@ def _matches(condition: str, facts: dict) -> bool:
         return len(standing.get("trajectory", {}).get("tiers", [])) > int(value)
     if name == "standing.calls_above":
         return standing.get("trajectory", {}).get("calls", 0) > int(value)
+
+    # Her ladder. A stranger is an intern, which `standing_facts` writes, and
+    # a fact assembled before this existed reads the same way: the safe
+    # reading of "no level recorded" is the bottom rung.
+    if name in ("standing.autonomy_at_least", "standing.autonomy_below"):
+        rung = standing.get("autonomy") or autonomy.INTERN
+        return (rung >= autonomy.normalise(value)
+                if name == "standing.autonomy_at_least"
+                else rung < autonomy.normalise(value))
+    # The operator's. Undeclared is unknown, not low.
+    if name == "operator.autonomy_below":
+        declared = autonomy.normalise((facts.get("operator") or {}).get("level"))
+        return declared is not None and declared < autonomy.normalise(value)
+    if name == "operator.autonomy_undeclared":
+        return autonomy.normalise((facts.get("operator") or {}).get("level")) is None
 
     if name.startswith("assurance."):
         axis = name[len("assurance."):-len("_below")]

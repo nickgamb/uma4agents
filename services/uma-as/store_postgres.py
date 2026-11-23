@@ -451,6 +451,17 @@ class PostgresOwnerStore:
             "SET conn = jsonb_set(conn, '{last_access}', to_jsonb($2::text)) "
             "WHERE handle = $1 AND owner = $3", handle, when, self._o)
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        # One statement: the check and the write cannot be separated by
+        # another replica's change. See Store.set_autonomy.
+        row = await self._pool.fetchrow(
+            "UPDATE connections SET conn = jsonb_set(conn, '{autonomy}', $2::jsonb) "
+            "WHERE handle = $1 AND owner = $4 AND conn ->> 'status' = 'active' "
+            "  AND COALESCE(conn -> 'autonomy' ->> 'level', 'intern') = $3 "
+            "RETURNING handle", handle, json.dumps(record), expect, self._o)
+        return row is not None
+
     async def lineage_approvals(self, root: str) -> list[str]:
         # The root and its live children in one statement. `jsonb_array_elements_text`
         # unnests each row's approved tiers so the union happens in the

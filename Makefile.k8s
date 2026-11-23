@@ -305,6 +305,13 @@ k8s-policy-test:
 k8s-assurance-check:
 	$(call run_job,assurance-check,cat $(K8S)/base/jobs/assurance-check.yaml,420s)
 
+## k8s-autonomy-check: earned autonomy — the operator's ATF ladder and hers,
+## proved through the edge. Her ladder is a jsonb compare-and-set here, which
+## is where the store differs from compose's.
+.PHONY: k8s-autonomy-check
+k8s-autonomy-check:
+	$(call run_job,autonomy-check,cat $(K8S)/base/jobs/autonomy-check.yaml,420s)
+
 ## k8s-subagent-check: an orchestrator's workers, each with its own key and
 ## its own grant. Admission without a second first contact, the tier ceiling
 ## she cannot configure away, and revoking the agent that introduced them.
@@ -666,7 +673,7 @@ k8s-paios-check: k8s-paios
 .PHONY: k8s-check-all
 k8s-check-all: check-unit spec-check k8s-smoke-test k8s-policy-test \
 	k8s-flow-check k8s-first-party-check k8s-multi-owner-check \
-	k8s-establishment-check k8s-assurance-check k8s-intent-check \
+	k8s-establishment-check k8s-assurance-check k8s-autonomy-check k8s-intent-check \
 	k8s-consequence-check k8s-clearance-check k8s-subagent-check k8s-org-check \
 	k8s-joint-check k8s-xaa-check k8s-adapter-check k8s-shim-test \
 	k8s-embedded-check k8s-kwaai-check k8s-rotation-check k8s-ts-agent-check fixture

@@ -4,6 +4,9 @@ seoTitle: "Agent assurance: verifying an AI agent without trusting its claims"
 title: Agent assurance
 description: What the owner's own authority can verify about an agent asking for her things — and why nothing an agent says about itself can widen access.
 next:
+  - title: Earned autonomy
+    to: /docs/overview/autonomy/
+    blurb: Once she has met it, how much it may do without asking — two ladders.
   - title: The owner's attention
     to: /docs/overview/attention/
     blurb: The other thing a stranger can spend.
@@ -107,7 +110,15 @@ faces the agent.
 **It is not an accreditation.** Nobody outside the operator has vouched for
 anything. An attestation by a regulator or a trade body would be a further step,
 it needs a trust framework that does not exist, and this deliberately does not
-invent one.
+invent one. The nearest candidate is the CSA Agentic Trust Framework's
+*Certified* tier, an independent audit of an operator's agent programme, which
+[earned autonomy](/docs/overview/autonomy/) reads as a claim and credits nothing
+for until there is somewhere her authority can ask.
+
+**It is not how much an agent may do.** Assurance is what can be known before
+she has met the agent. How far it may act without asking once she has met it is
+a separate question, with its own ladder that only she climbs:
+[earned autonomy](/docs/overview/autonomy/).
 
 Turning any of it into rules she can write is
 [the owner's policy guide](/docs/guides/owner-policy/).

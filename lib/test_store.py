@@ -540,6 +540,35 @@ async def test_revocations_survive_reconnection(store) -> None:
           f"got {conn.get('revocations')!r}")
 
 
+async def test_an_autonomy_level_moves_once(store) -> None:
+    """Her autonomy ladder is compare-and-set, and only one of a promotion
+    and a demotion racing each other may land: the other is told the level
+    moved, which is what stops a stale promotion undoing a demotion."""
+    await store.put_connection({"handle": "jkt:rung", "status": "active",
+                                "first_seen": "2026-08-11T00:00:00Z",
+                                "identity": {"level": "pseudonymous"},
+                                "label": "test", "last_access": None,
+                                "tiers_granted": [], "tiers_approved": [],
+                                "revocations": 0})
+    up = {"level": "junior", "since": "2026-08-12T00:00:00Z"}
+    results = await asyncio.gather(*[
+        store.set_autonomy("jkt:rung", {**up, "n": i}, "intern")
+        for i in range(RACERS)])
+    check("autonomy: exactly one of many writes from the same level lands",
+          sum(results) == 1, f"{sum(results)} landed")
+    conn = await store.connection("jkt:rung")
+    check("autonomy: the level is kept on the connection",
+          (conn.get("autonomy") or {}).get("level") == "junior")
+    await store.note_tier_grant("jkt:rung", "tier1")
+    conn = await store.connection("jkt:rung")
+    check("autonomy: other writes to the connection keep the level",
+          (conn.get("autonomy") or {}).get("level") == "junior"
+          and "tier1" in conn.get("tiers_granted", []))
+    await store.revoke_connection("jkt:rung")
+    check("autonomy: a revoked connection cannot be moved",
+          not await store.set_autonomy("jkt:rung", {"level": "senior"}, "junior"))
+
+
 async def test_tiers_can_be_added_and_removed(store) -> None:
     """Terms she writes herself. Creating is the uniqueness check and the write
     in one step, so two replicas cannot both believe they created it."""
@@ -738,6 +767,7 @@ TESTS = [
     test_tier_grants_and_approvals_are_kept_apart,
     test_a_lineage_pools_what_she_approved,
     test_revocations_survive_reconnection,
+    test_an_autonomy_level_moves_once,
     test_tiers_can_be_added_and_removed,
     test_blocked_operators_round_trip,
     test_expired_negotiations_are_reaped,

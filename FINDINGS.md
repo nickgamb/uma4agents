@@ -1094,6 +1094,50 @@ lapses. Three details earned their place in the running version:
 Built and demonstrated: `make clearance-check`, `make org-test`, `make as-test`,
 `docs/CLEARANCE.md`.
 
+**29. Earned autonomy is a ladder per party, and the second party is the one
+UMA adds.** The CSA Agentic Trust Framework (ATF) gives agents four maturity
+levels: intern, junior, senior and principal. An agent is promoted through them
+as the organization that deploys it comes to trust it. That is one ladder,
+because inside one enterprise the party governing the agent and the party whose
+systems it reaches are the same party. Under UMA they are not, so every agent
+stands on two ladders: the operator's, and the resource owner's.
+
+It is tempting to read ATF as the "agent assurance level" recommendation 13
+argues against. It is not one. ATF's level measures trust *earned over time*,
+which is standing in this profile's terms rather than assurance. Treating it
+that way keeps every rule this profile already has, and needs no new mechanism:
+
+- **The owner's ladder relaxes, because only she moves it up.** Every agent
+  starts as an intern with her, whatever its operator says, and ATF agrees
+  ("always Intern"). She raises it one rung at a time. Nobody acting for her
+  may raise it, and a revocation resets it. Whatever the level reads is
+  therefore at or below a level she personally granted. That is the one shape
+  of fact recommendation 13 lets relax a rule.
+- **The operator's ladder only tightens.** It is the requesting side's
+  statement about itself, published in its client metadata document beside
+  everything else it says. An operator overstating its agent gains nothing.
+  An operator understating it costs only itself. An operator that declares
+  nothing is not thereby low, for the reason an undeclared consequence is not
+  severe (recommendation 27).
+- **Whichever stands lower governs, written as rules.** Neither is folded into
+  the other. ATF's levels become eight rules over conditions the vocabulary
+  already had, plus the resource's declared consequence. The composition is
+  then something an owner reads, not something a function decides.
+
+Two consequences are worth a spec's attention. First, an operator's
+*demotion* reaches every owner on the agent's next request without any owner
+acting, which is ATF's graceful degradation working across a trust boundary.
+That is only true if a cached metadata document expires, because a stale copy
+reads the level from before the demotion. Second, ATF's *Certified* tier is
+the first concrete candidate for the third-party attestation recommendation 13
+left open above accountability level 2. It cannot be credited until a relying
+party has somewhere to ask, so today it is shown as a claim and credited with
+nothing.
+
+Built and demonstrated: `make autonomy-check`, `make fixture-autonomy`,
+`make rules-test`, `make as-test`, `make store-test`, `docs/AUTONOMY.md`, and
+§9 of the policy draft with its ATF crosswalk.
+
 ---
 
 ## Notes on AAuth

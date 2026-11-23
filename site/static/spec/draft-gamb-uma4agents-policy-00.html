@@ -14,7 +14,9 @@ the owner's attention is defended.
        Its central rule is an asymmetry: evidence supplied by the requesting side may
 only tighten a requirement, and only the owner's own prior decisions may relax
 one. Agent assurance is decomposed into three independent axes with no composite
-score. The owner's pending queue has a depth limit, in two lanes, so that a party
+score. Once the owner has met an agent, how much it may do without asking her is
+an earned level that only she raises, kept apart from the level its operator
+declares, which may only tighten. The owner's pending queue has a depth limit, in two lanes, so that a party
 who can mint keys for free cannot make &quot;the owner decides&quot; into a denial of
 service. And the owner's record of what was promised, decided and done names the
 counterparty on every row it honestly can. 
@@ -1267,7 +1269,9 @@ the owner's attention is defended.<a href="#section-abstract-1" class="pilcrow">
 <p id="section-abstract-2">Its central rule is an asymmetry: evidence supplied by the requesting side may
 only tighten a requirement, and only the owner's own prior decisions may relax
 one. Agent assurance is decomposed into three independent axes with no composite
-score. The owner's pending queue has a depth limit, in two lanes, so that a party
+score. Once the owner has met an agent, how much it may do without asking her is
+an earned level that only she raises, kept apart from the level its operator
+declares, which may only tighten. The owner's pending queue has a depth limit, in two lanes, so that a party
 who can mint keys for free cannot make "the owner decides" into a denial of
 service. And the owner's record of what was promised, decided and done names the
 counterparty on every row it honestly can.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
@@ -1417,61 +1421,90 @@ counterparty on every row it honestly can.<a href="#section-abstract-2" class="p
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-earned-autonomy" class="internal xref">Earned Autonomy</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-the-asymmetry-is-the-securi" class="internal xref">The Asymmetry Is the Security Model</a></p>
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-two-ladders" class="internal xref">Two Ladders</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-assurance-is-derived-never-" class="internal xref">Assurance Is Derived, Never Claimed</a></p>
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-the-owners-ladder" class="internal xref">The Owner's Ladder</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-trajectory-reads-are-not-at" class="internal xref">Trajectory Reads Are Not Atomic</a></p>
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-the-operators-ladder" class="internal xref">The Operator's Ladder</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
-                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-the-bound-is-a-depth-and-th" class="internal xref">The Bound Is a Depth, and the Depth Is Small</a></p>
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-acting-without-asking" class="internal xref">Acting Without Asking</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
+                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-a-profile-of-the-agentic-tr" class="internal xref">A Profile of the Agentic Trust Framework</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-the-record-is-a-per-agent-h" class="internal xref">The Record Is a Per-Agent History</a></p>
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-the-asymmetry-is-the-securi" class="internal xref">The Asymmetry Is the Security Model</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-operator-claims-are-visible" class="internal xref">Operator Claims Are Visible to the Owner</a></p>
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-assurance-is-derived-never-" class="internal xref">Assurance Is Derived, Never Claimed</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-promotion-is-a-relaxation" class="internal xref">Promotion Is a Relaxation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-trajectory-reads-are-not-at" class="internal xref">Trajectory Reads Are Not Atomic</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="auto internal xref">10.5</a>.  <a href="#name-the-bound-is-a-depth-and-th" class="internal xref">The Bound Is a Depth, and the Depth Is Small</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-the-record-is-a-per-agent-h" class="internal xref">The Record Is a Per-Agent History</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
-                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-operator-claims-are-visible" class="internal xref">Operator Claims Are Visible to the Owner</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-an-operators-level-is-shown" class="internal xref">An Operator's Level Is Shown, Not Hidden</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-a-condition-vocabulary" class="internal xref">A Condition Vocabulary</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-record-entry-kinds" class="internal xref">Record Entry Kinds</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-a-condition-vocabulary" class="internal xref">A Condition Vocabulary</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-record-entry-kinds" class="internal xref">Record Entry Kinds</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.16.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-implementation-status" class="internal xref">Implementation Status</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-E" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-D" class="auto internal xref">Appendix D</a>.  <a href="#name-mapping-to-the-agentic-trus" class="internal xref">Mapping to the Agentic Trust Framework</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-E" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-F" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1589,7 +1622,11 @@ offers it:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
             <p id="section-3.1-2.3.1">the owner's relationship with this agent is older than a stated duration;<a href="#section-3.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-2.4">
-            <p id="section-3.1-2.4.1">the agent is one the owner activated herself, as <a href="#first-party" class="auto internal xref">Section 5</a>.<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-2.4.1">the agent is one the owner activated herself, as <a href="#first-party" class="auto internal xref">Section 5</a>;<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-2.5">
+            <p id="section-3.1-2.5.1">the owner has raised this agent to at least a stated level of her own
+autonomy ladder, as <a href="#owners-ladder" class="auto internal xref">Section 9.2</a>.<a href="#section-3.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.1-3">"The owner has previously granted here" is not on the list, and the distinction
@@ -1630,7 +1667,12 @@ owner has denied it, how many policy units it has asked at, how many calls it
 has made;<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.2-2.4">
-            <p id="section-3.2-2.4.1">that the agent was introduced by another agent (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>).<a href="#section-3.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.2-2.4.1">that the agent was introduced by another agent (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>);<a href="#section-3.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.5">
+            <p id="section-3.2-2.5.1">that the agent stands below a stated level of the owner's autonomy ladder,
+or of its operator's (<a href="#operators-ladder" class="auto internal xref">Section 9.3</a>), or that its operator declares
+none.<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.2-3">A rule that tightens on the owner's own aggregate conduct — "she has denied this
@@ -2011,110 +2053,376 @@ resource server's to assert.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="security-considerations">
+<div id="autonomy">
 <section id="section-9">
+      <h2 id="name-earned-autonomy">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-earned-autonomy" class="section-name selfRef">Earned Autonomy</a>
+      </h2>
+<p id="section-9-1"><a href="#assurance" class="auto internal xref">Section 4</a> says what an authorization server may know about an agent before
+the owner has met it. This section says how much an agent she <em>has</em> met may do
+without asking her, and how the owner raises that over time.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The vocabulary is the maturity model of the Agentic Trust Framework <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>.
+Four levels, in increasing order of what an agent may do unsupervised:
+<code>intern</code> (observes and reports), <code>junior</code> (may act, every act approved
+first), <code>senior</code> (acts, and a person is told), <code>principal</code> (acts within an
+approved domain, and escalates the edge). <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> describes these as one
+ladder, climbed by an agent as the organization that deploys it comes to trust
+it. Inside one organization that is the whole picture: the party governing the
+agent and the party whose systems it reaches are the same party.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">Under this profile they are not. The agent's operator runs it on behalf of a
+requesting party; the resource owner holds what it asks for. So every agent
+stands on two ladders at once: the one its operator keeps, and the one the
+owner keeps. They answer different questions — how far does the party running
+this agent trust it, and how far does <em>this owner</em> — and an answer to the first
+is evidence about the second only in one direction.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<div id="two-ladders">
+<section id="section-9.1">
+        <h3 id="name-two-ladders">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-two-ladders" class="section-name selfRef">Two Ladders</a>
+        </h3>
+<p id="section-9.1-1">An authorization server implementing this section <span class="bcp14">MUST</span> keep the level the
+owner has given an agent and the level the agent's operator declares as two
+facts, and <span class="bcp14">MUST NOT</span> combine them into a single level. An owner's rules read
+each through its own conditions.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">The reason is the one <a href="#axes" class="auto internal xref">Section 4.1</a> gives for refusing a composite assurance score.
+A combined level is the mechanism by which an operator's confidence in its own
+agent would come to stand in for an owner's, and that is a trade no owner would
+make if asked directly. Whichever ladder stands lower is the one that governs,
+and an owner who wants that writes it as rules (<a href="#atf-profile" class="auto internal xref">Section 9.5</a>).<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="owners-ladder">
+<section id="section-9.2">
+        <h3 id="name-the-owners-ladder">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-the-owners-ladder" class="section-name selfRef">The Owner's Ladder</a>
+        </h3>
+<p id="section-9.2-1">An authorization server keeps one level per standing connection. An agent with
+no standing connection <span class="bcp14">MUST</span> be treated as at the lowest level, and a connection
+the owner admits, including one she readmits after revoking it, <span class="bcp14">MUST</span> begin
+there. A level granted by another party, an operator's included, is not
+standing with her.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2-2">An authorization server <span class="bcp14">MUST NOT</span> raise an agent's level except on the owner's
+own decision, and <span class="bcp14">MUST NOT</span> raise it on a decision taken on her behalf
+(<a href="#attribution" class="auto internal xref">Section 8.4</a>). It <span class="bcp14">MUST NOT</span> raise a level by more than one step in one
+decision: the time an agent spends at each level is the only evidence of its
+conduct there that the owner will ever have, and skipping a level discards it.
+The owner <span class="bcp14">MUST</span> be able to lower an agent's level by any number of steps in one
+decision, and revoking the agent lowers it to the bottom.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
+<p id="section-9.2-3">Together these give the property that lets the level relax a rule
+(<a href="#relaxing" class="auto internal xref">Section 3.1</a>): it can rise only by the owner's hand, one step at a time, so
+whatever it reads is at or below a level she personally granted. A condition
+that the agent stands at least at the lowest level holds for every agent,
+including one the owner has never met, and <span class="bcp14">MUST</span> be refused where the rule is
+stored (<a href="#asymmetry" class="auto internal xref">Section 3</a>).<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">Two parties may move one agent's level without seeing each other — the owner
+from a view she opened a minute ago, and a second surface or a second
+authorization server acting on something newer. An authorization server <span class="bcp14">MUST</span>
+apply a change of level only if the agent still stands at the level the person
+deciding was shown, so that a stale promotion cannot overwrite a demotion it
+never saw. It <span class="bcp14">MUST</span> record every change of level, with the level before and
+after and who decided it, in the record of <a href="#record" class="auto internal xref">Section 8</a>.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+<p id="section-9.2-5"><span>[<a href="#ATF" class="cite xref">ATF</a>]</span> sets five conditions on a promotion: performance, security validation,
+business value, incident record and governance sign-off. An authorization
+server <span class="bcp14">SHOULD</span> show the owner, beside the decision, what her own record says
+about the first and fourth — how long the agent has stood at its level, how
+often she approved what it asked there, and whether her policy refused it —
+and <span class="bcp14">SHOULD</span> say that the second and third are evidence about the operator's
+programme rather than about this agent with her. The fifth is her decision
+itself. Nothing an authorization server computes from these may promote an
+agent.<a href="#section-9.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="operators-ladder">
+<section id="section-9.3">
+        <h3 id="name-the-operators-ladder">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-the-operators-ladder" class="section-name selfRef">The Operator's Ladder</a>
+        </h3>
+<p id="section-9.3-1">An operator declares where it has put an agent on its own ladder in the client
+metadata document <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span> the agent
+names, as a member <code>atf</code> whose value is an object:<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<span id="name-an-operators-declaration-of"></span><figure id="figure-2">
+          <div class="lang-json sourcecode" id="section-9.3-2.1">
+<pre>
+{
+  "atf": {
+    "version": "0.9.0",
+    "maturity_level": "senior",
+    "conformance": "compatible",
+    "statement_uri": "https://operator.example/atf"
+  }
+}
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
+<a href="#name-an-operators-declaration-of" class="selfRef">An operator's declaration of its agent's level, in its client metadata document.</a>
+          </figcaption></figure>
+<p id="section-9.3-3"><code>maturity_level</code> is one of the four levels; <code>conformance</code> is <code>compatible</code> or
+<code>certified</code> in the sense of <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>; <code>statement_uri</code> locates the operator's
+conformance statement. A level is per client, so an operator running agents at
+different levels publishes a document per class of agent.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+<p id="section-9.3-4">An authorization server that reads the declaration <span class="bcp14">MUST</span> read it only from a
+client metadata document that resolved and claims its own URL, and <span class="bcp14">MUST NOT</span>
+read it from anything the agent itself sent. It <span class="bcp14">MUST</span> treat the operator's level
+as a condition that may only tighten, under <a href="#tightening" class="auto internal xref">Section 3.2</a>: the declaration is
+the requesting side's statement about itself, and a level it raises reaches
+nobody's resources. An operator that declares no level <span class="bcp14">MUST NOT</span> satisfy a
+condition that its level is below a stated level; an operator that has not
+heard of <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> is not saying its agent is an intern. An authorization server
+<span class="bcp14">MAY</span> offer a separate condition naming the absence.<a href="#section-9.3-4" class="pilcrow">¶</a></p>
+<p id="section-9.3-5">Because it may only tighten, the declaration needs no verification to be safe
+to read: an operator that overstates its agent gains nothing, and one that
+understates it costs only itself. It is shown to the owner with what the
+authorization server could establish about who made it — an operator at level 2
+of the accountability axis (<a href="#level-two" class="auto internal xref">Section 4.2</a>), or a document any agent could have
+named.<a href="#section-9.3-5" class="pilcrow">¶</a></p>
+<p id="section-9.3-6">An operator lowering its agent is the change that must reach the owner, since a
+stale copy of the document goes on reading the level from before. An
+authorization server <span class="bcp14">MUST</span> bound how long it relies on a copy of a client
+metadata document from which it reads a level, and <span class="bcp14">SHOULD</span> use the same bound
+as for an operator's key directory.<a href="#section-9.3-6" class="pilcrow">¶</a></p>
+<p id="section-9.3-7">A declaration of <code>certified</code> is the operator's claim that a third party audited
+its programme. An authorization server <span class="bcp14">MUST NOT</span> treat it as an attestation, and
+<span class="bcp14">MUST NOT</span> raise any axis of <a href="#assurance" class="auto internal xref">Section 4</a> on it. Third-party attestation is the
+evidence that would let somebody outside the operator stand behind its ladder,
+and it would belong on the accountability axis, above level 2; it needs a party
+a relying authorization server can ask, which <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> does not yet define.<a href="#section-9.3-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="act-notify">
+<section id="section-9.4">
+        <h3 id="name-acting-without-asking">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-acting-without-asking" class="section-name selfRef">Acting Without Asking</a>
+        </h3>
+<p id="section-9.4-1">The <code>senior</code> level of <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> is "act and notify". Where a grant is issued
+without asking the owner for an operation whose declared consequence is
+<code>compensatable</code> or worse, or because a rule relaxed a unit that would otherwise
+have asked, the authorization server <span class="bcp14">SHOULD</span> tell the owner as it happens, on
+whatever surface would otherwise have asked her. A relaxation is also recorded
+(<a href="#record" class="auto internal xref">Section 8</a>).<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="atf-profile">
+<section id="section-9.5">
+        <h3 id="name-a-profile-of-the-agentic-tr">
+<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-a-profile-of-the-agentic-tr" class="section-name selfRef">A Profile of the Agentic Trust Framework</a>
+        </h3>
+<p id="section-9.5-1">The levels of <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> map onto rules over conditions this document already
+defines, together with the consequence a resource server declares for the
+operation (<a href="#consequence" class="auto internal xref">Section 3.3</a>). Applied to a policy unit, the following reads as
+the levels do, on both ladders at once:<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+<span id="name-the-levels-of-atf-as-an-own"></span><figure id="figure-3">
+          <div class="lang-json sourcecode" id="section-9.5-2.1">
+<pre>
+{"rules": [
+  {"then": "auto",
+   "when": ["standing.autonomy_at_least:senior"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "refuse",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_unknown"]},
+  {"then": "refuse",
+   "when": ["operator.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]}
+]}
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-the-levels-of-atf-as-an-own" class="selfRef">The levels of ATF as an owner's rules, in the vocabulary of Appendix A.</a>
+          </figcaption></figure>
+<span id="name-what-the-profile-does-befor"></span><table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-what-the-profile-does-befor" class="selfRef">What the profile does, before the operator's ladder is read.</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Level, with her</th>
+              <th class="text-left" rowspan="1" colspan="1">A read</th>
+              <th class="text-left" rowspan="1" colspan="1">An act that can be compensated</th>
+              <th class="text-left" rowspan="1" colspan="1">An act that cannot be undone</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">intern</td>
+              <td class="text-left" rowspan="1" colspan="1">as the unit says</td>
+              <td class="text-left" rowspan="1" colspan="1">refused</td>
+              <td class="text-left" rowspan="1" colspan="1">refused</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">junior</td>
+              <td class="text-left" rowspan="1" colspan="1">as the unit says</td>
+              <td class="text-left" rowspan="1" colspan="1">asked</td>
+              <td class="text-left" rowspan="1" colspan="1">asked</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">senior</td>
+              <td class="text-left" rowspan="1" colspan="1">granted</td>
+              <td class="text-left" rowspan="1" colspan="1">granted, and she is told</td>
+              <td class="text-left" rowspan="1" colspan="1">asked</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">principal</td>
+              <td class="text-left" rowspan="1" colspan="1">granted</td>
+              <td class="text-left" rowspan="1" colspan="1">granted, and she is told</td>
+              <td class="text-left" rowspan="1" colspan="1">granted, and she is told</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-9.5-4">The operator's ladder is then read the same way and can only make a cell
+stricter: an agent its operator still calls an intern does not act on her
+resources however far she has promoted it. The only rule
+in the profile that relaxes anything reads the owner's own decision.<a href="#section-9.5-4" class="pilcrow">¶</a></p>
+<p id="section-9.5-5">An operation no resource server has described is put to the owner when an
+intern asks for it rather than refused, because an undescribed read is common
+and refusing it would make the profile unusable on most resources.<a href="#section-9.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
       <h2 id="name-security-considerations">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <div id="the-asymmetry-is-the-security-model">
-<section id="section-9.1">
+<section id="section-10.1">
         <h3 id="name-the-asymmetry-is-the-securi">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-the-asymmetry-is-the-securi" class="section-name selfRef">The Asymmetry Is the Security Model</a>
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-the-asymmetry-is-the-securi" class="section-name selfRef">The Asymmetry Is the Security Model</a>
         </h3>
-<p id="section-9.1-1">Everything else in this document follows from <a href="#asymmetry" class="auto internal xref">Section 3</a>. A deployment that
+<p id="section-10.1-1">Everything else in this document follows from <a href="#asymmetry" class="auto internal xref">Section 3</a>. A deployment that
 lets an observed condition relax a rule has let the party being decided about
 write the decision, and the mechanism by which it did so — a well-formed key, a
-resolvable document, an operator's name — costs that party nothing.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+resolvable document, an operator's name — costs that party nothing.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="assurance-is-derived-never-claimed">
-<section id="section-9.2">
+<section id="section-10.2">
         <h3 id="name-assurance-is-derived-never-">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-assurance-is-derived-never-" class="section-name selfRef">Assurance Is Derived, Never Claimed</a>
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-assurance-is-derived-never-" class="section-name selfRef">Assurance Is Derived, Never Claimed</a>
         </h3>
-<p id="section-9.2-1">An implementation that reads an assurance level from anything the requesting
+<p id="section-10.2-1">An implementation that reads an assurance level from anything the requesting
 side sent has reintroduced the problem <a href="#axes" class="auto internal xref">Section 4.1</a> exists to remove. Each level is
 the result of a check this authority ran, and the check either ran and passed
-or the level is zero.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+or the level is zero.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="promotion-is-a-relaxation">
+<section id="section-10.3">
+        <h3 id="name-promotion-is-a-relaxation">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-promotion-is-a-relaxation" class="section-name selfRef">Promotion Is a Relaxation</a>
+        </h3>
+<p id="section-10.3-1">Raising an agent on the owner's ladder widens what it may do at every policy
+unit that reads the ladder, from that request onward. That is why only the
+owner may do it, one step at a time, and why the write is conditional on the
+level she was shown (<a href="#owners-ladder" class="auto internal xref">Section 9.2</a>). An implementation that let an
+administrator, an operator, or an automatic process raise the level would have
+built the relaxation <a href="#asymmetry" class="auto internal xref">Section 3</a> exists to forbid, under a different name.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">Lowering needs none of this. A demotion, by anyone and by any distance, can
+only make the owner's rules stricter.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="trajectory-reads-are-not-atomic">
-<section id="section-9.3">
+<section id="section-10.4">
         <h3 id="name-trajectory-reads-are-not-at">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-trajectory-reads-are-not-at" class="section-name selfRef">Trajectory Reads Are Not Atomic</a>
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-trajectory-reads-are-not-at" class="section-name selfRef">Trajectory Reads Are Not Atomic</a>
         </h3>
-<p id="section-9.3-1">The conditions of <a href="#tightening" class="auto internal xref">Section 3.2</a> that read the owner's recent record — denials,
+<p id="section-10.4-1">The conditions of <a href="#tightening" class="auto internal xref">Section 3.2</a> that read the owner's recent record — denials,
 policy units asked at, calls made — need not be read atomically. A count that
 only ever tightens is monotone inside its window: a stale read behaves as an
 earlier arrival would have, and cannot widen access beyond what a differently
 timed arrival would have received. The test for whether a read needs the
 indivisibility of <span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span> Section 8.3 is whether staleness can widen; these
-cannot.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+cannot.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-bound-is-a-depth-and-the-depth-is-small">
-<section id="section-9.4">
+<section id="section-10.5">
         <h3 id="name-the-bound-is-a-depth-and-th">
-<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-the-bound-is-a-depth-and-th" class="section-name selfRef">The Bound Is a Depth, and the Depth Is Small</a>
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-the-bound-is-a-depth-and-th" class="section-name selfRef">The Bound Is a Depth, and the Depth Is Small</a>
         </h3>
-<p id="section-9.4-1">An implementation <span class="bcp14">SHOULD</span> default the unattributable lane to a single-digit
+<p id="section-10.5-1">An implementation <span class="bcp14">SHOULD</span> default the unattributable lane to a single-digit
 depth. The cost of a bound set too low is that a legitimate stranger is told to
 try later; the cost of one set too high is an owner who cannot find the request
-she is waiting for.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+she is waiting for.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-10">
+<section id="section-11">
       <h2 id="name-privacy-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
 <div id="the-record-is-a-per-agent-history">
-<section id="section-10.1">
+<section id="section-11.1">
         <h3 id="name-the-record-is-a-per-agent-h">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-the-record-is-a-per-agent-h" class="section-name selfRef">The Record Is a Per-Agent History</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-the-record-is-a-per-agent-h" class="section-name selfRef">The Record Is a Per-Agent History</a>
         </h3>
-<p id="section-10.1-1"><a href="#counterparty" class="auto internal xref">Section 8.3</a> makes the record queryable by agent, which is what the owner
+<p id="section-11.1-1"><a href="#counterparty" class="auto internal xref">Section 8.3</a> makes the record queryable by agent, which is what the owner
 needs and is also a history of one party's requests kept by another. Retention
 is deployment policy. An implementation <span class="bcp14">SHOULD</span> let the owner see every entry
-that names an agent, since she is the party it was kept for.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+that names an agent, since she is the party it was kept for.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="operator-claims-are-visible-to-the-owner">
-<section id="section-10.2">
+<section id="section-11.2">
         <h3 id="name-operator-claims-are-visible">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-operator-claims-are-visible" class="section-name selfRef">Operator Claims Are Visible to the Owner</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-operator-claims-are-visible" class="section-name selfRef">Operator Claims Are Visible to the Owner</a>
         </h3>
-<p id="section-10.2-1">An agent's claimed operator is shown to the owner whether or not it verifies,
+<p id="section-11.2-1">An agent's claimed operator is shown to the owner whether or not it verifies,
 with the level it reached. An implementation <span class="bcp14">MUST</span> make the difference visible —
 "named" and "published this agent's key" are different sentences — because a
 resolved name is exactly what an owner starts keying decisions on, and
-<a href="#level-two" class="auto internal xref">Section 4.2</a> is the only level that means what it appears to.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<a href="#level-two" class="auto internal xref">Section 4.2</a> is the only level that means what it appears to.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="an-operators-level-is-shown-not-hidden">
+<section id="section-11.3">
+        <h3 id="name-an-operators-level-is-shown">
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-an-operators-level-is-shown" class="section-name selfRef">An Operator's Level Is Shown, Not Hidden</a>
+        </h3>
+<p id="section-11.3-1">The operator's declared level is shown to the owner alongside her own, as two
+statements. It is information the operator chose to publish about its own
+agent; nothing about the owner is disclosed to the operator by reading it.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="iana-considerations">
-<section id="section-11">
+<section id="section-12">
       <h2 id="name-iana-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-11-1">This document makes no request of IANA. The conditions of <a href="#relaxing" class="auto internal xref">Section 3.1</a> and
+<p id="section-12-1">This document makes no request of IANA. The conditions of <a href="#relaxing" class="auto internal xref">Section 3.1</a> and
 <a href="#tightening" class="auto internal xref">Section 3.2</a> are described by kind rather than by name so that an
 implementation may name them in its own vocabulary; <a href="#shipped-vocabulary" class="auto internal xref">Appendix A</a>
-records one such vocabulary without registering it.<a href="#section-11-1" class="pilcrow">¶</a></p>
+records one such vocabulary without registering it.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-12">
+<section id="section-13">
       <h2 id="name-references">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-12.1">
+<section id="section-13.1">
         <h3 id="name-normative-references">
-<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
@@ -2161,11 +2469,15 @@ records one such vocabulary without registering it.<a href="#section-11-1" class
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-12.2">
+<section id="section-13.2">
         <h3 id="name-informative-references">
-<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="ATF">[ATF]</dt>
+        <dd>
+<span class="refAuthor">Woodruff, J.</span>, <span class="refTitle">"Agentic Trust Framework: Zero Trust Governance for AI Agents"</span>, <span class="seriesInfo">Cloud Security Alliance Public Review Draft 0.9.1</span>, <time datetime="2026-04" class="refDate">April 2026</time>, <span>&lt;<a href="https://github.com/massivescale-ai/agentic-trust-framework">https://github.com/massivescale-ai/agentic-trust-framework</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7942">https://www.rfc-editor.org/rfc/rfc7942</a>&gt;</span>. </dd>
@@ -2201,9 +2513,9 @@ implementation <span>[<a href="#U4ALAB" class="cite xref">U4ALAB</a>]</span> pub
 instance of the kinds this document requires. Names are <code>namespace.condition</code>,
 with an argument after a colon where the condition takes one. Durations are
 written <code>90d</code>, <code>12h</code>, <code>45m</code> or as seconds.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<span id="name-the-reference-implementatio"></span><table class="center" id="table-1">
+<span id="name-the-reference-implementatio"></span><table class="center" id="table-2">
         <caption>
-<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#table-2" class="selfRef">Table 2</a>:
 <a href="#name-the-reference-implementatio" class="selfRef">The reference implementation's condition vocabulary.</a>
         </caption>
 <thead>
@@ -2347,6 +2659,34 @@ written <code>90d</code>, <code>12h</code>, <code>45m</code> or as seconds.<a hr
             <td class="text-left" rowspan="1" colspan="1">observed</td>
             <td class="text-left" rowspan="1" colspan="1">cited no mandate</td>
           </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>standing.autonomy_at_least:L</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">relaxing</td>
+            <td class="text-left" rowspan="1" colspan="1">the owner has raised this agent to at least level L (<a href="#owners-ladder" class="auto internal xref">Section 9.2</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>standing.autonomy_below:L</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">observed</td>
+            <td class="text-left" rowspan="1" colspan="1">the agent stands below level L with the owner</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>operator.autonomy_below:L</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">observed</td>
+            <td class="text-left" rowspan="1" colspan="1">the agent's operator declares a level below L</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>operator.autonomy_undeclared</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">observed</td>
+            <td class="text-left" rowspan="1" colspan="1">the agent's operator declares no level</td>
+          </tr>
         </tbody>
       </table>
 </section>
@@ -2361,7 +2701,8 @@ following kinds of entry, each carrying the negotiation identifier of
 <a href="#correlation" class="auto internal xref">Section 8.1</a> and, where <a href="#counterparty" class="auto internal xref">Section 8.3</a> permits, the agent's handle.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2"><code>promised</code>, <code>approved</code>, <code>denied</code>, <code>connected</code>, <code>touched</code>, <code>relaxed</code>, <code>refused</code>,
 <code>identity_refused</code>, <code>revoked</code>; <code>claimed</code>, <code>disclaimed</code> for the owner's own
-operators; and the kinds defined by <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> for organizations and
+operators; <code>autonomy_promoted</code>, <code>autonomy_demoted</code> for her ladder
+(<a href="#owners-ladder" class="auto internal xref">Section 9.2</a>); and the kinds defined by <span>[<a href="#U4AMultiParty" class="cite xref">U4AMultiParty</a>]</span> for organizations and
 jointly held resources.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2377,29 +2718,155 @@ rule engine is tested for the properties of <a href="#evaluation" class="auto in
 that the set of relaxing conditions is exactly the set the tests expect and that
 every other condition is refused under <code>auto</code> at the moment of saving. The
 attention bound and both lanes are exercised against a running authorization
-server, as is the return of a blocked operator as an anonymous stranger.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+server, as is the return of a blocked operator as an anonymous stranger.
+<a href="#autonomy" class="auto internal xref">Section 9</a> is exercised end to end against a running authorization server
+and resource: two agents of one operator at different levels of its ladder,
+each starting at the bottom of the owner's, promoted one step at a time,
+refused while either ladder stands too low, and returned to the bottom by a
+revocation.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="atf-crosswalk">
+<section id="appendix-D">
+      <h2 id="name-mapping-to-the-agentic-trus">
+<a href="#appendix-D" class="section-number selfRef">Appendix D. </a><a href="#name-mapping-to-the-agentic-trus" class="section-name selfRef">Mapping to the Agentic Trust Framework</a>
+      </h2>
+<p id="appendix-D-1">This appendix is not normative. <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> sets 25 requirements across five
+elements for an organization deploying agents. Under this profile some fall to
+the operator, as <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> assumes, and some are met by the resource owner's
+authorization server on her side of the exchange — which is the side <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>
+does not describe. The table records where each is met in this set.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
+<span id="name-atfs-requirements-and-where"></span><table class="center" id="table-3">
+        <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-atfs-requirements-and-where" class="selfRef">ATF's requirements, and where each is met when the owner is a separate party.</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">ATF</th>
+            <th class="text-left" rowspan="1" colspan="1">Requirement</th>
+            <th class="text-left" rowspan="1" colspan="1">Where it is met under this set</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">I-1</td>
+            <td class="text-left" rowspan="1" colspan="1">Unique identifier</td>
+            <td class="text-left" rowspan="1" colspan="1">the connection handle (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">I-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Credential binding</td>
+            <td class="text-left" rowspan="1" colspan="1">the binding axis (<a href="#axes" class="auto internal xref">Section 4.1</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">I-3</td>
+            <td class="text-left" rowspan="1" colspan="1">Ownership chain</td>
+            <td class="text-left" rowspan="1" colspan="1">the accountability axis (<a href="#axes" class="auto internal xref">Section 4.1</a>); level 2 is the operator's own attestation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">I-4</td>
+            <td class="text-left" rowspan="1" colspan="1">Purpose declaration</td>
+            <td class="text-left" rowspan="1" colspan="1">the purpose and reason of the agreement (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">I-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Capability manifest</td>
+            <td class="text-left" rowspan="1" colspan="1">the operator's; outside this set</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">B-1, B-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Structured logging; action attribution</td>
+            <td class="text-left" rowspan="1" colspan="1">the record, naming the counterparty on every row (<a href="#record" class="auto internal xref">Section 8</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">B-3, B-4</td>
+            <td class="text-left" rowspan="1" colspan="1">Behavioural baseline; anomaly detection</td>
+            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's trajectory conditions (<a href="#tightening" class="auto internal xref">Section 3.2</a>) can only tighten on what she has seen</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">B-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Explainability</td>
+            <td class="text-left" rowspan="1" colspan="1">the conditions that decided each request, kept in the record</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">D-1 to D-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Data governance</td>
+            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's terms (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>) state what may be done with what is released</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-1, S-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Resource allowlist; action boundaries</td>
+            <td class="text-left" rowspan="1" colspan="1">policy units and their scopes (<a href="#shape" class="auto internal xref">Section 2</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-3</td>
+            <td class="text-left" rowspan="1" colspan="1">Rate limiting</td>
+            <td class="text-left" rowspan="1" colspan="1">the attention bound on the owner's queue (<a href="#attention" class="auto internal xref">Section 6</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-4</td>
+            <td class="text-left" rowspan="1" colspan="1">Transaction limits</td>
+            <td class="text-left" rowspan="1" colspan="1">grants bound to one operation (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Blast radius containment</td>
+            <td class="text-left" rowspan="1" colspan="1">operator blocking (<a href="#operators" class="auto internal xref">Section 7</a>) and revocation of a lineage (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">R-1, R-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Circuit breaker; kill switch</td>
+            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's revocation is effective on the next call</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">R-3</td>
+            <td class="text-left" rowspan="1" colspan="1">Session revocation</td>
+            <td class="text-left" rowspan="1" colspan="1">revoking a connection kills every grant under it (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">R-4</td>
+            <td class="text-left" rowspan="1" colspan="1">State rollback</td>
+            <td class="text-left" rowspan="1" colspan="1">the declared consequence of each operation (<a href="#consequence" class="auto internal xref">Section 3.3</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">R-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Graceful degradation</td>
+            <td class="text-left" rowspan="1" colspan="1">demotion on either ladder takes effect on the next request (<a href="#autonomy" class="auto internal xref">Section 9</a>)</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="appendix-D-3"><span>[<a href="#ATF" class="cite xref">ATF</a>]</span>'s promotion gates map as <a href="#owners-ladder" class="auto internal xref">Section 9.2</a> describes. Its automatic
+demotion triggers — a critical incident, a discovered vulnerability, repeated
+minor incidents — are observed by the operator, which is where <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> places
+them, and reach every owner through the operator's ladder on the agent's next
+request without any owner acting.<a href="#appendix-D-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-D">
+<section id="appendix-E">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-D-1">The decomposition of <a href="#axes" class="auto internal xref">Section 4.1</a> follows <span>[<a href="#SP800-63-3" class="cite xref">SP800-63-3</a>]</span>. The operator key directory
+<p id="appendix-E-1">The decomposition of <a href="#axes" class="auto internal xref">Section 4.1</a> follows <span>[<a href="#SP800-63-3" class="cite xref">SP800-63-3</a>]</span>. The operator key directory
 of <span>[<a href="#I-D.meunier-webbotauth-registry" class="cite xref">I-D.meunier-webbotauth-registry</a>]</span> and the client metadata document of
 <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span> are what make the accountability
-axis derivable rather than asserted.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
-<p id="appendix-D-2">The consequence vocabulary of <a href="#consequence" class="auto internal xref">Section 3.3</a> — reversible, compensatable,
+axis derivable rather than asserted.<a href="#appendix-E-1" class="pilcrow">¶</a></p>
+<p id="appendix-E-2">The levels of <a href="#autonomy" class="auto internal xref">Section 9</a> are those of the Agentic Trust Framework <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>,
+by Josh Woodruff. The suggestion to profile them in this document's terms, and
+the observation that a separate requesting party is what turns one ladder into
+two, came from conversation between Josh Woodruff and Eve Maler.<a href="#appendix-E-2" class="pilcrow">¶</a></p>
+<p id="appendix-E-3">The consequence vocabulary of <a href="#consequence" class="auto internal xref">Section 3.3</a> — reversible, compensatable,
 forward-recoverable, irreversible — is Nat Sakimura's, from "When Software
 Becomes Staff: Governance, Security &amp; Safety for Agentic AI"
 (https://nat.sakimura.org/2026/05/19/when-software-becomes-staff-governance-security-safety-for-agentic-ai/).
 That work also states the objection this document answers structurally: a
 capability an agent declares about itself is advertising, so the declaration
-here is made by the resource and read by the party that bears the cost.<a href="#appendix-D-2" class="pilcrow">¶</a></p>
+here is made by the resource and read by the party that bears the cost.<a href="#appendix-E-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-E">
+<section id="appendix-F">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>

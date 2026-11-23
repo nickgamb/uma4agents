@@ -541,6 +541,38 @@ async def agent_revoke(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/api/agent/connections/autonomy")
+async def agent_connection_autonomy(request: Request, handle: str):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/connections/autonomy",
+                        params={"handle": handle},
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/api/agent/connections/autonomy")
+async def agent_set_autonomy(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/connections/autonomy",
+                         json=await request.json(),
+                         headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/api/agent/policy-presets")
+async def agent_policy_presets(request: Request):
+    if require_login(request):
+        return JSONResponse([], status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{UMA_AS}/owner/policy-presets",
+                        headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/api/agent/ledger")
 async def agent_ledger(request: Request):
     if require_login(request):

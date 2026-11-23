@@ -194,6 +194,16 @@ class MemoryOwnerStore:
             if tier_id not in conn.setdefault("tiers_approved", []):
                 conn["tiers_approved"].append(tier_id)
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        conn = self._connections.get(handle)
+        if conn is None or conn.get("status") != "active":
+            return False
+        if ((conn.get("autonomy") or {}).get("level") or "intern") != expect:
+            return False
+        conn["autonomy"] = dict(record)
+        return True
+
     async def lineage_approvals(self, root: str) -> list[str]:
         tiers: list[str] = []
         for conn in self._connections.values():

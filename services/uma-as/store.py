@@ -229,6 +229,25 @@ class OwnerStore(Protocol):
         have been automatic, so one automatic grant would justify the next.
         """
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        """Write where this agent stands on her autonomy ladder, **only if it
+        still stands at `expect`** and the connection is still active. True
+        when written.
+
+        Compare-and-set because the two people who may move the level do not
+        see each other. She promotes from a view that is a minute old while an
+        administrator demotes on something he has just seen; a plain write
+        lets her stale promotion land on top of his demotion and undo it
+        without either of them knowing. With the expected level checked in the
+        same statement, the second writer is told the level moved, reads it
+        again, and decides again — which is the only safe outcome when one of
+        the two writes would have widened access.
+
+        `expect` is the level name, and a connection with no level recorded
+        stands at "intern".
+        """
+
     async def lineage_approvals(self, root: str) -> list[str]:
         """Every tier the owner personally approved for a connection *and its
         live sub-agents*, as one set.

@@ -18,6 +18,19 @@ somewhere on the web that speaks for it, and neither works without one:
       published operator — which is the RqP != RO cold-start problem, since by
       definition there is no prior relationship to lean on.
 
+  /atf
+      The operator's Agentic Trust Framework conformance statement, in the
+      shape ATF's CONFORMANCE.md gives for "ATF Compatible". Its agents' metadata
+      documents point at it, beside the maturity level the operator has put
+      each class of agent at — the operator's own ladder, which an owner's
+      authorization server reads and may only tighten on. See docs/AUTONOMY.md.
+
+  /agents/<class>.json
+      One metadata document per class of agent this firm runs, when it runs
+      more than one. ATF levels are per agent: a firm's research assistant and
+      its advisory agent are at different rungs of its own ladder, and each is
+      a client with its own `client_id`.
+
 A real operator publishes keys it already holds, and that is the shape here:
 AGENT_OPERATOR_KEYS_FILE names a JWKS this process reads at startup and only
 serves. POST /register remains as a lab path for the single-process stack,
@@ -48,6 +61,21 @@ KEYS_FILE = os.environ.get("AGENT_OPERATOR_KEYS_FILE")
 # authorization server recognises her own agents, so publishing one takes a
 # credential. Unset only for a directory nothing grants standing on.
 REGISTER_TOKEN = os.environ.get("AGENT_OPERATOR_REGISTER_TOKEN")
+# Where this operator has put its default agent on its own ATF ladder. Unset
+# means the operator says nothing about it, which is not the same as saying
+# its agent is an intern — and is how every operator that has not heard of
+# ATF looks.
+ATF_LEVEL = os.environ.get("AGENT_OPERATOR_ATF_LEVEL")
+ATF_CONFORMANCE = os.environ.get("AGENT_OPERATOR_ATF_CONFORMANCE", "compatible")
+ATF_VERSION = "0.9.0"
+# Further classes of agent, each its own client: {"research": {"name": …,
+# "atf_level": "intern"}}. Lab data rather than a registry — a firm knows
+# which agents it runs.
+try:
+    CLASSES: dict[str, dict] = json.loads(
+        os.environ.get("AGENT_OPERATOR_CLASSES") or "{}")
+except ValueError:
+    CLASSES = {}
 
 app = FastAPI(title="agent-operator")
 
@@ -91,19 +119,65 @@ async def health() -> dict:
     return {"status": "ok", "keys": len(KEYS)}
 
 
-@app.get("/agent.json")
-async def client_id_metadata() -> JSONResponse:
-    """The CIMD document. `client_id` MUST equal the URL this is served from —
+def metadata(path: str, name: str, atf_level: str | None) -> dict:
+    """One CIMD document. `client_id` MUST equal the URL it is served from —
     that self-reference is what stops one site publishing metadata about
     another's client, and Alice's AS rejects the document if it disagrees."""
-    return JSONResponse({
-        "client_id": f"{ORIGIN}/agent.json",
-        "client_name": NAME,
+    doc = {
+        "client_id": f"{ORIGIN}{path}",
+        "client_name": name,
         "client_uri": ORIGIN,
         "policy_uri": f"{ORIGIN}/privacy",
         "tos_uri": f"{ORIGIN}/terms",
         "contacts": ["advisory-ops@sterling-vance.example"],
         "software_id": "uma4agents-agent-shim",
+    }
+    if atf_level:
+        # The operator's own ladder. Its statement about its own agent: an
+        # owner's authority reads it and may only ever tighten on it.
+        doc["atf"] = {"version": ATF_VERSION, "maturity_level": atf_level,
+                      "conformance": ATF_CONFORMANCE,
+                      "statement_uri": f"{ORIGIN}/atf"}
+    return doc
+
+
+@app.get("/agent.json")
+async def client_id_metadata() -> JSONResponse:
+    return JSONResponse(metadata("/agent.json", NAME, ATF_LEVEL))
+
+
+@app.get("/agents/{cls}.json")
+async def class_metadata(cls: str) -> JSONResponse:
+    """A further class of agent this firm runs, as its own client."""
+    entry = CLASSES.get(cls)
+    if not isinstance(entry, dict):
+        return JSONResponse({"error": "no such agent class"}, status_code=404)
+    return JSONResponse(metadata(f"/agents/{cls}.json",
+                                 entry.get("name") or f"{NAME} ({cls})",
+                                 entry.get("atf_level")))
+
+
+@app.get("/atf")
+async def atf_statement() -> JSONResponse:
+    """The firm's ATF conformance statement — ATF's own template, as data.
+
+    Self-assessed, because that is what "ATF Compatible" is, and an owner's
+    authority treats it accordingly: it is shown to her and credited with
+    nothing. The element scores are this lab's honest reading of what the
+    stack around this operator demonstrates, not a claim about any real firm.
+    """
+    return JSONResponse({
+        "organization": NAME.split(" — ")[0],
+        "implementation": NAME,
+        "atf_version": ATF_VERSION,
+        "conformance": ATF_CONFORMANCE,
+        "target_maturity_levels": {"/agent.json": ATF_LEVEL, **{
+            f"/agents/{k}.json": (v or {}).get("atf_level")
+            for k, v in CLASSES.items()}},
+        "elements": {"identity": "4/5", "behavior": "2/5",
+                     "data_governance": "1/5", "segmentation": "4/5",
+                     "incident_response": "3/5"},
+        "notes": "lab operator; see docs/AUTONOMY.md for the crosswalk",
     })
 
 
