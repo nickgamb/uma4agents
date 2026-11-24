@@ -1438,6 +1438,9 @@ counterparty on every row it honestly can.<a href="#section-abstract-2" class="p
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
                 <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-a-profile-of-the-agentic-tr" class="internal xref">A Profile of the Agentic Trust Framework</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.6">
+                <p id="section-toc.1-1.9.2.6.1"><a href="#section-9.6" class="auto internal xref">9.6</a>.  <a href="#name-containment" class="internal xref">Containment</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
@@ -2314,6 +2317,31 @@ intern asks for it rather than refused, because an undescribed read is common
 and refusing it would make the profile unusable on most resources.<a href="#section-9.5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="containment">
+<section id="section-9.6">
+        <h3 id="name-containment">
+<a href="#section-9.6" class="section-number selfRef">9.6. </a><a href="#name-containment" class="section-name selfRef">Containment</a>
+        </h3>
+<p id="section-9.6-1">A policy unit's terms <span class="bcp14">MAY</span> state a call rate: a number of calls and a period.
+An authorization server that offers one <span class="bcp14">MUST</span> refuse at introspection a grant
+whose agent has already made that many calls at that unit within the period,
+with <code>error</code> of <code>rate_limited</code>, counting only calls an enforcement point
+reported as allowed. Because the rate is in the terms, the agent agrees to it
+before it holds a grant.<a href="#section-9.6-1" class="pilcrow">¶</a></p>
+<p id="section-9.6-2">An enforcement point <span class="bcp14">SHOULD</span> report a call it refused after the agent's
+signature verified, and the authorization server records it against the agent
+as it does an allowed call (<a href="#pep-reports" class="auto internal xref">Section 8.5</a>). Refusals before the signature
+verified are not counted, since anyone holding a copy of a grant could cause
+them. An authorization server <span class="bcp14">MAY</span> suspend an agent after a number of such
+refusals within a window. A suspension <span class="bcp14">MUST</span> stop every grant the agent holds
+and every new grant, with <code>error</code> of <code>suspended</code>, and <span class="bcp14">MUST</span> lower the agent to
+the bottom of the owner's ladder (<a href="#owners-ladder" class="auto internal xref">Section 9.2</a>). It <span class="bcp14">MUST NOT</span> be lifted by
+anyone but the owner. It keeps the connection and the rest of the agent's
+standing.<a href="#section-9.6-2" class="pilcrow">¶</a></p>
+<p id="section-9.6-3">Both <code>rate_limited</code> and <code>suspended</code> are terminal in the sense of
+<span>[<a href="#U4AFedAuthz" class="cite xref">U4AFedAuthz</a>]</span> Section 5: a fresh negotiation cannot change either.<a href="#section-9.6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="security-considerations">
@@ -2777,9 +2805,15 @@ reach the owner's resources:<a href="#appendix-D-2" class="pilcrow">¶</a></p>
 set does not attempt it.<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="appendix-D-3.7">gap:</dt>
+<dt id="appendix-D-3.7">resource:</dt>
         <dd style="margin-left: 1.5em" id="appendix-D-3.8">
-          <p id="appendix-D-3.8.1">the owner's side could meet it and this set does not.<a href="#appendix-D-3.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-3.8.1">it is the resource server's to do, and this set carries what the resource
+server declares about it.<a href="#appendix-D-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-D-3.9">gap:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-D-3.10">
+          <p id="appendix-D-3.10.1">the owner's side could meet it and this set does not.<a href="#appendix-D-3.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2902,8 +2936,8 @@ set does not attempt it.<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">S-3</td>
             <td class="text-left" rowspan="1" colspan="1">Rate limiting</td>
-            <td class="text-left" rowspan="1" colspan="1">gap</td>
-            <td class="text-left" rowspan="1" colspan="1">Not enforced. The attention bound of <a href="#attention" class="auto internal xref">Section 6</a> limits how many requests may wait for the owner, not how often an agent calls; a rule may tighten on a call count.</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">A call rate in the terms of a policy unit, enforced at introspection (<a href="#containment" class="auto internal xref">Section 9.6</a>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">S-4</td>
@@ -2920,8 +2954,8 @@ set does not attempt it.<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-1</td>
             <td class="text-left" rowspan="1" colspan="1">Circuit breaker</td>
-            <td class="text-left" rowspan="1" colspan="1">gap</td>
-            <td class="text-left" rowspan="1" colspan="1">An enforcement point refuses each call that fails; nothing halts an agent automatically after repeated failures.</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Repeated calls refused after the agent's signature verified suspend it until the owner lifts the suspension (<a href="#containment" class="auto internal xref">Section 9.6</a>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-2</td>
@@ -2938,8 +2972,8 @@ set does not attempt it.<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-4</td>
             <td class="text-left" rowspan="1" colspan="1">State rollback</td>
-            <td class="text-left" rowspan="1" colspan="1">gap</td>
-            <td class="text-left" rowspan="1" colspan="1">The declared consequence of <a href="#consequence" class="auto internal xref">Section 3.3</a> says whether an act can be undone. Nothing here undoes one.</td>
+            <td class="text-left" rowspan="1" colspan="1">resource</td>
+            <td class="text-left" rowspan="1" colspan="1">Undoing an act is the resource server's. The declared consequence of <a href="#consequence" class="auto internal xref">Section 3.3</a> says whether it can be undone, and the owner's rules read it.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-5</td>

@@ -1065,6 +1065,18 @@ draft-gamb-uma4agents-policy-00:
     verified: check
     targets: [as-test]
     asserts: ["and read again once its copy has aged, so an operator's demotion lands"]
+  - text: "An authorization server that offers one MUST refuse at introspection a grant whose agent has already made that many calls at that unit within the period"
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["a call past the rate her terms state is refused", "two reads go through and the third is over the rate she set"]
+  - text: "A suspension MUST stop every grant the agent holds and every new grant, with error of suspended, and MUST lower the agent to the bottom of the owner's ladder"
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["and its grants stop working", "and drop it to intern on her ladder", "three trades other than the one granted suspend the agent", "and the grant it holds stops working"]
+  - text: "It MUST NOT be lifted by anyone but the owner."
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["only she lifts it, and the grant works again", "she lifts the suspension"]
   - text: "An authorization server MUST NOT treat it as an attestation, and MUST NOT raise any axis of"
     verified: check
     targets: [rules-test]

@@ -364,9 +364,19 @@ class OwnerStore(Protocol):
         attribution on the owner's side: the enforcement point never needs to
         be told the handle, and it enforces for an authority it cannot read."""
 
-    async def trajectory(self, handle: str, since: str) -> dict:
+    async def set_suspension(self, handle: str, record: dict | None) -> bool:
+        """Suspend a connection (`record`) or lift a suspension (None). True
+        when the connection exists. A suspended connection keeps its standing
+        and its level; its grants are refused until the owner lifts it."""
+
+    async def trajectory(self, handle: str, since: str,
+                         tier: str | None = None) -> dict:
         """What this agent has been doing lately: ``{"denials": int,
-        "tiers": [str], "calls": int}`` over the entries at or after
+        "tiers": [str], "calls": int, "refused_calls": int}`` over the
+        entries at or after ``since``. With ``tier``, ``calls`` counts only
+        calls at that tier, which is what a rate limit in its terms reads.
+        ``refused_calls`` counts calls an enforcement point refused after the
+        agent's signature verified. Over the entries at or after
         ``since`` — how often she refused it, how far across her resources it
         has reached, and how much it actually did.
 

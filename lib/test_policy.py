@@ -739,6 +739,15 @@ check("a preset adds to her rules rather than replacing them",
       == len(autonomy.EARNED_AUTONOMY))
 
 
+check("a rate limit in her terms is a positive count over a duration",
+      policy.validate_rate_limit({"calls": 60, "per": "1h"}) == {"calls": 60, "per": "1h"})
+for bad in ({"calls": 0, "per": "1h"}, {"calls": 5, "per": "soon"}, {"calls": True, "per": "1h"}):
+    try:
+        policy.validate_rate_limit(bad)
+        check(f"a malformed rate limit is refused: {bad}", False)
+    except ValueError:
+        check(f"a malformed rate limit is refused: {bad}", True)
+
 # --- her attention has a floor and a ceiling -----------------------------------
 
 check("the pend budget is a small positive default", 0 < policy.PEND_BUDGET <= 20)

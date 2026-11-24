@@ -757,6 +757,28 @@ def evaluate(tier: dict, facts: dict) -> tuple[str, list[str]]:
     return result, reasons
 
 
+def validate_rate_limit(value) -> dict | None:
+    """A tier's call rate, `{"calls": N, "per": "1h"}`, or None for none.
+
+    Stated in her terms, so the agent agrees to it before it has a grant,
+    and enforced by her authority on introspection — the one place every
+    call already passes.
+    """
+    if value in (None, {}):
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("rate_limit is {\"calls\": N, \"per\": \"1h\"}")
+    calls = value.get("calls")
+    if not isinstance(calls, int) or isinstance(calls, bool) or calls < 1:
+        raise ValueError("rate_limit calls must be a positive whole number")
+    try:
+        if parse_duration(value.get("per", "")) < 1:
+            raise ValueError
+    except (TypeError, ValueError):
+        raise ValueError("rate_limit per is a duration such as 1h or 10m") from None
+    return {"calls": calls, "per": str(value["per"])}
+
+
 def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
              registered: set[str], jointly_held: set[str] | None = None,
              owner: str = "alice") -> dict:
@@ -836,6 +858,8 @@ def new_tier(tier_id: str, spec: dict, existing: dict[str, dict],
             "expires_in": int(terms["expires_in"]),
             "prohibited": list(terms.get("prohibited") or []),
             **({"per_operation": True} if terms.get("per_operation") else {}),
+            **({"rate_limit": rl} if (rl := validate_rate_limit(
+                terms.get("rate_limit"))) else {}),
             **({"constraints": dict(terms["constraints"])}
                if isinstance(terms.get("constraints"), dict) else {}),
         },
@@ -873,6 +897,11 @@ def apply_patch(tier: dict, patch: dict) -> dict:
     for field in ("purpose", "expires_in", "prohibited", "scope", "constraints"):
         if field in terms_patch:
             tier["terms"][field] = terms_patch[field]
+    if "rate_limit" in terms_patch:
+        if rl := validate_rate_limit(terms_patch["rate_limit"]):
+            tier["terms"]["rate_limit"] = rl
+        else:
+            tier["terms"].pop("rate_limit", None)
     # Any owner edit produces a new template version so contracts are
     # verifiably tied to the terms in force when they were signed.
     base = tier["terms"]["template_id"].rsplit("/v", 1)[0]

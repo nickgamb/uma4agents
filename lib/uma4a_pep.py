@@ -517,6 +517,20 @@ class Enforcer:
         except (httpx.HTTPError, ValueError, Pending):
             return None
 
+    async def report_refusal(self, family: str, tool: str, reason: str) -> None:
+        """Report a call refused after its signature verified, so the owner's
+        circuit breaker counts what the agent itself attempted. Best-effort,
+        like the access report: the call was already refused."""
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await self._protected(
+                    client, "/audit/refused",
+                    json={"family": family, "tool": tool, "reason": reason})
+                r.raise_for_status()
+        except Exception as exc:                                  # noqa: BLE001
+            self.event("refusal.report_failed", family=family, tool=f"{tool}",
+                       error=str(exc)[:160])
+
     async def report_access(self, family: str, tool: str, summary: str) -> None:
         """Ground the ledger's "touched" column in enforcement, not claims."""
         # The call already happened; a record that could not be written does
@@ -879,6 +893,14 @@ class Enforcer:
         if reason == "organization_revoked":
             return Decision(outcome="deny", status=403, error="access_revoked",
                             description="the owner's organization revoked this agent")
+        if reason == "rate_limited":
+            return Decision(outcome="deny", status=429, error="rate_limited",
+                            description="this agent has made as many calls as the "
+                                        "owner's terms allow in this period")
+        if reason == "suspended":
+            return Decision(outcome="deny", status=403, error="access_suspended",
+                            description="the owner's authorization server suspended "
+                                        "this agent after repeated refused calls")
         # connection_revoked, and anything this enforcement point does not
         # recognise.
         return Decision(outcome="deny", status=403, error="access_revoked",
@@ -1109,11 +1131,17 @@ class Enforcer:
                 # exception — the organization's clause is for one act.
                 self.event("access.denied", reason="operation-binding-missing",
                            tool=f.tool)
+                if not override:
+                    await self.report_refusal(info.get("family", "?"), f.tool,
+                                              "operation_required")
                 return Decision(outcome="deny", status=403, error="operation_required",
                                 description="this tool takes a grant bound to one operation")
             if op and (op.get("tool") != f.tool or op.get("params_s256") != actual):
                 self.event("access.denied", reason="operation-binding", tool=f.tool,
                            expected=op.get("params_s256"), actual=actual)
+                if not override:
+                    await self.report_refusal(info.get("family", "?"), f.tool,
+                                              "operation_mismatch")
                 return Decision(outcome="deny", status=403, error="operation_mismatch",
                                 description="RPT authorizes a different operation")
             # 5. Only now spend it. Check-then-act, so the burn is last and
@@ -1128,6 +1156,9 @@ class Enforcer:
                 reason = spent.get("error", "")
                 if reason == "already_consumed":
                     self.event("access.denied", reason="consume-lost-race", tool=f.tool)
+                    if not override:
+                        await self.report_refusal(info.get("family", "?"), f.tool,
+                                                  "already_consumed")
                     return Decision(outcome="deny", status=403, error="already_consumed",
                                     description="this single-use grant was already spent")
                 # Live a moment ago and not now: revoked or expired in between.

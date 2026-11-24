@@ -43,7 +43,7 @@ import httpx
 sys.path.insert(0, "/driver/lib")
 from uma4a_grant import (  # noqa: E402
     AgentKeys, GrantDenied, mcp_call, mcp_json, mcp_meta, parse_challenge,
-    run_grant,
+    run_grant, signed_headers,
 )
 from uma4a_http_sig import jwk_thumbprint  # noqa: E402
 from uma4a_http_sig import sign as http_sign  # noqa: E402
@@ -214,12 +214,29 @@ def negotiate(client: httpx.Client, keys: AgentKeys, tool: str,
             asked["v"] = True
 
     try:
-        run_grant(client, as_uri, ticket, keys, lambda t: True,
+        keys.rpt = run_grant(client, as_uri, ticket, keys, lambda t: True,
                   operation=({"tool": tool, "params": args} if args else None),
                   on_status=status, max_wait_s=max_wait_s)
         return True, asked["v"], None
     except GrantDenied as exc:
         return False, asked["v"], str(exc)
+
+
+def call(client: httpx.Client, keys: AgentKeys, tool: str,
+         arguments: dict | None = None) -> str:
+    """Make the call its last grant is for, signed. Returns the error code
+    the resource answered with, or "" if the call went through."""
+    from urllib.parse import urlparse
+    target = urlparse(GATEWAY)
+    r = mcp_call(client, GATEWAY, "tools/call",
+                 {"name": tool, "arguments": arguments or {}}, META,
+                 headers=signed_headers("POST", target.netloc, target.path,
+                                        keys.rpt, keys))
+    body = r.text
+    for code in ("rate_limited", "access_suspended", "operation_mismatch"):
+        if code in body or code in r.headers.get("www-authenticate", ""):
+            return code
+    return "" if r.status_code == 200 and '"error"' not in body else f"{r.status_code}"
 
 
 def agent(name: str, document: str) -> AgentKeys:
@@ -253,6 +270,8 @@ def main() -> int:
         trade_tier, held = next(
             (t, v) for t, v in tiers.items()
             if "alice-vault/execute_trade" in (v.get("resources") or []))
+        reads = next(t for t, v in tiers.items()
+                     if "alice-vault/get_positions" in (v.get("resources") or []))
         presets = owner(client, "GET", "/owner/policy-presets").json()
         profile = next(p for p in presets if p["id"] == "earned-autonomy")["rules"]
         # Hers as she wrote them, so a run that died half way does not make
@@ -390,7 +409,33 @@ def main() -> int:
             check("and an intern's trade is refused, as on the first day",
                   not ok and not asked, why or "")
             approving.set()
+
+            print("\n== A rate in her terms, and a breaker on refused calls ==")
+            owner(client, "PUT", f"/owner/policies/{reads}",
+                  {"terms": {"rate_limit": {"calls": 2, "per": "1h"}}})
+            negotiate(client, advisor, "get_positions", max_wait_s=5)
+            answers = [call(client, advisor, "get_positions") for _ in range(3)]
+            check("two reads go through and the third is over the rate she set",
+                  answers == ["", "", "rate_limited"], str(answers))
+
+            climb(client, again.get("handle", ""), "principal")
+            ok, _, why = negotiate(client, advisor, "execute_trade", TRADE, max_wait_s=10)
+            wrong = {**TRADE, "quantity": TRADE["quantity"] + 99}
+            refused = [call(client, advisor, "execute_trade", wrong) for _ in range(3)]
+            gone = connection(client, advisor)
+            check("three trades other than the one granted suspend the agent",
+                  ok and refused == ["operation_mismatch"] * 3
+                  and bool(gone.get("suspended")), f"{refused} {gone.get('suspended')}")
+            check("and drop it to intern",
+                  (gone.get("autonomy_view") or {}).get("level") == "intern")
+            check("and the grant it holds stops working",
+                  call(client, advisor, "execute_trade", TRADE) == "access_suspended")
+            r = owner(client, "POST", "/owner/connections/resume",
+                      {"handle": gone.get("handle", "")})
+            check("she lifts the suspension", r.status_code < 300, r.text[:160])
         finally:
+            owner(client, "PUT", f"/owner/policies/{reads}",
+                  {"terms": {"rate_limit": None}})
             restored = owner(client, "PUT", f"/owner/policies/{trade_tier}",
                              {"rules": hers})
             check("her trade tier is put back as she wrote it",

@@ -253,20 +253,22 @@ resources, and given one of four statuses:
 
 | Status | Meaning | Requirements |
 |---|---|---|
-| met | U4A meets it on her side | I-1, I-2, B-1, B-2, S-1, S-2, S-4, R-3, R-5 |
+| met | U4A meets it on her side | I-1, I-2, B-1, B-2, S-1, S-2, S-3, S-4, R-1, R-3, R-5 |
 | partly | part of it is met on her side; the appendix says which part | I-3, I-4, B-4, B-5, D-3, D-5, S-5, R-2 |
 | operator | it concerns the agent's own runtime, which she cannot see | I-5, B-3, D-1, D-2, D-4 |
-| gap | her side could meet it and this lab does not | S-3, R-1, R-4 |
+| resource | undoing an act is the resource server's; U4A carries what it declares | R-4 |
 
-The three gaps:
+Two of these are met by containment on her side:
 
-- **S-3, rate limiting.** The attention budget limits how many requests may wait
-  for her, not how often an agent calls. A rule can tighten on a call count, and
-  nothing enforces a rate.
-- **R-1, circuit breaker.** Her enforcement point refuses each failing call, and
-  nothing halts an agent after repeated failures.
-- **R-4, state rollback.** A resource declares whether an act can be undone
-  ([CONSEQUENCE.md](CONSEQUENCE.md)). Nothing undoes one.
+- **S-3, rate limiting.** A tier's terms may carry `rate_limit`, such as
+  `{"calls": 60, "per": "1h"}`. The agent agrees to it with the terms. Her
+  authority refuses introspection with `rate_limited` once the agent has made
+  that many allowed calls at the tier in the period.
+- **R-1, circuit breaker.** Her enforcement point reports calls it refused after
+  the agent's signature verified (`POST /audit/refused`). Three in ten minutes
+  (`UMA_AS_BREAKER_REFUSALS`, `UMA_AS_BREAKER_WINDOW`) suspend the agent: its
+  grants answer `suspended`, it gets no new ones, and it drops to intern. Only
+  she lifts it (`POST /owner/connections/resume`).
 
 ATF's automatic demotion triggers are a critical incident, a discovered
 vulnerability, and repeated minor incidents. The operator observes all of them,

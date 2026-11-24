@@ -48,6 +48,7 @@ const ACTIONS = {
   trajectory: (d) => trajectory(d.handle),
   revoke: (d) => revoke(d.handle),
   autonomy: (d) => setAutonomy(d.handle, d.level, d.expect),
+  resume: (d) => resume(d.handle),
   ladder: (d) => showLadder(d.handle),
   preset: (d) => addPreset(d.tier, d.preset),
   operator: (d) => operatorAction(d.op, d.origin),
@@ -443,7 +444,9 @@ async function renderConnections(target) {
       <td>${esc((c.first_seen || "").replace("T", " ").replace("Z", ""))}</td>
       <td>${c.last_access ? esc(c.last_access.replace("T", " ").replace("Z", "")) : "—"}</td>
       <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${esc(c.status)}</span></td>
-      <td class="r">${c.status === "active" ? `<button class="btn danger sm" data-act="revoke" data-handle="${esc(c.handle)}">Revoke</button>` : ""}</td>
+      <td class="r">${c.suspended ? `<span class="chip neg" title="${esc(c.suspended.because)}">suspended</span>
+        <button class="btn ghost sm" data-act="resume" data-handle="${esc(c.handle)}">Resume</button> ` : ""}${
+        c.status === "active" ? `<button class="btn danger sm" data-act="revoke" data-handle="${esc(c.handle)}">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 /* Where an agent stands on each of its two autonomy ladders.
@@ -544,6 +547,15 @@ window.operatorAction = async (action, origin) => {
         : `${origin} may ask again — what was revoked stays revoked`,
       action === "block" ? "warn" : "");
   } catch (e) { toast("Not applied", e.message, "warn"); }
+  renderConnections($("#aaBody"));
+};
+
+window.resume = async (handle) => {
+  try {
+    await api("/api/agent/connections/resume", { method: "POST",
+      headers: { "content-type": "application/json" }, body: JSON.stringify({ handle }) });
+    toast("Agent resumed", "Its grants work again; its level stays where the breaker left it");
+  } catch (e) { toast("Not resumed", e.message, "warn"); }
   renderConnections($("#aaBody"));
 };
 
@@ -1401,6 +1413,7 @@ const LEDGER_KINDS = {
   promised: "", touched: "pos", approved: "warn", denied: "neg",
   refused: "neg", relaxed: "warn", connected: "", revoked: "neg",
   autonomy_promoted: "warn", autonomy_demoted: "",
+  call_refused: "neg", suspended: "neg", resumed: "",
   // The organization above her. `break_glass` is the only kind in this
   // record that describes something she did not decide and could not have
   // stopped, which is exactly why it is in her record and marked.
@@ -1438,6 +1451,9 @@ function ledgerDetail(e) {
     case "org_acted": return `${esc(e.what)}${e.operator ? ` · ${esc(e.operator)}` : ""}`;
     case "refused":   return `${e.because ? esc(e.because.join(", ")) : "the requesting side declined your terms"}${
       e.terms_uri ? ` · <a class="thumb" href="${encodeURI(e.terms_uri)}" target="_blank" rel="noopener">${esc(e.terms_uri.split("/terms/")[1] || e.terms_uri)}</a>` : ""}`;
+    case "call_refused": return `call refused at the resource: <span class="mono">${esc(e.tool)}</span> · ${esc(e.reason)}`;
+    case "suspended":    return `suspended by the circuit breaker · ${esc(e.because)}`;
+    case "resumed":      return "you lifted the suspension";
     case "autonomy_promoted": return `you promoted this agent: ${esc(e.from)} → <b>${esc(e.to)}</b>${
       e.note ? ` · ${esc(e.note)}` : ""}`;
     case "autonomy_demoted":  return `${e.by ? "demoted for you" : "you demoted this agent"}: ${

@@ -28,9 +28,11 @@ release within that month. One entry per release.
 
 - **Authorization server:** Earned autonomy on two ladders. Alice keeps one level per connected agent — intern, junior, senior, principal, from the CSA Agentic Trust Framework — which only she raises, one rung at a time, and which revocation resets (`POST /owner/connections/autonomy`). The agent's operator declares its own level in its client metadata document (`atf`), which her rules may only tighten on. New conditions `standing.autonomy_at_least`, `standing.autonomy_below`, `operator.autonomy_below`, `operator.autonomy_undeclared`, and an `earned-autonomy` preset at `GET /owner/policy-presets`.
 - **Authorization server:** An `acted` event on her stream whenever an agent is let change something without her being asked.
-- **Portal:** Connected agents shows both ladders side by side, with promote and demote beside hers and what her record says about each promotion; approval cards carry both; My Terms adds the preset in one step.
+- **Portal:** Connected agents shows both ladders side by side, with promote and demote beside hers and what her record says about each promotion; approval cards carry both; My Terms adds the preset in one step; a suspended agent is marked, with Resume.
 - **Lab:** `make autonomy-check`, `make fixture-autonomy` and `make k8s-autonomy-check`. The lab operator declares its advisory agent a principal and its research assistant (`/agents/research.json`) an intern, and serves an ATF conformance statement at `/atf`.
-- **Spec:** Policy draft §9, Earned Autonomy, and an appendix judging each of ATF's 25 requirements on the owner's side as met, partly met, the operator's, or a gap.
+- **Authorization server:** A tier's terms may carry `rate_limit` (`{"calls": N, "per": "1h"}`), enforced at introspection (`rate_limited`).
+- **Authorization server:** A circuit breaker: the enforcement point reports calls refused after proof-of-possession (`POST /audit/refused`), and three within ten minutes (`UMA_AS_BREAKER_REFUSALS`, `UMA_AS_BREAKER_WINDOW`) suspend the agent and drop it to intern until she resumes it (`POST /owner/connections/resume`).
+- **Spec:** Policy draft §9, Earned Autonomy, with containment (§9.6), and an appendix judging each of ATF's 25 requirements on the owner's side.
 
 #### Enhancements
 

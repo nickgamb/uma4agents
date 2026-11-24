@@ -569,6 +569,29 @@ async def test_an_autonomy_level_moves_once(store) -> None:
           not await store.set_autonomy("jkt:rung", {"level": "senior"}, "junior"))
 
 
+async def test_rate_and_breaker_inputs(store) -> None:
+    """The per-tier call count a rate limit reads, the refused-call count the
+    breaker reads, and the suspension flag, alike in both stores."""
+    await store.put_connection({"handle": "jkt:rate", "status": "active",
+                                "first_seen": "2026-08-11T00:00:00Z",
+                                "identity": {"level": "pseudonymous"},
+                                "tiers_granted": [], "tiers_approved": [],
+                                "revocations": 0})
+    for kind, tier in (("touched", "tier1"), ("touched", "tier2"),
+                       ("call_refused", "tier2")):
+        await store.ledger_add(kind, "fam_rate", "2026-08-12T00:00:00Z",
+                               {"tier": tier}, "jkt:rate")
+    t = await store.trajectory("jkt:rate", "2026-08-11T00:00:00Z", "tier1")
+    check("rate: calls are counted per tier, refused calls apart",
+          t["calls"] == 1 and t["refused_calls"] == 1, str(t))
+    await store.set_suspension("jkt:rate", {"because": "test"})
+    suspended = (await store.connection("jkt:rate")).get("suspended")
+    await store.set_suspension("jkt:rate", None)
+    check("breaker: a suspension is set and lifted on the connection",
+          suspended == {"because": "test"}
+          and not (await store.connection("jkt:rate")).get("suspended"))
+
+
 async def test_tiers_can_be_added_and_removed(store) -> None:
     """Terms she writes herself. Creating is the uniqueness check and the write
     in one step, so two replicas cannot both believe they created it."""
@@ -713,7 +736,7 @@ async def test_trajectory_reads_the_window(store) -> None:
           (await store.trajectory("jkt:other", since))["denials"] == 1)
     check("trajectory: an agent with no history counts as nothing",
           await store.trajectory("jkt:none", since)
-          == {"denials": 0, "tiers": [], "calls": 0})
+          == {"denials": 0, "tiers": [], "calls": 0, "refused_calls": 0})
 
 
 async def test_claimed_origins_round_trip(store) -> None:
@@ -776,6 +799,7 @@ TESTS = [
     test_an_allowed_call_can_be_traced_to_its_agent,
     test_trajectory_reads_the_window,
     test_claimed_origins_round_trip,
+    test_rate_and_breaker_inputs,
 ]
 
 

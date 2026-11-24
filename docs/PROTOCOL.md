@@ -50,7 +50,8 @@ POST   /introspect      RPT introspection (permissions array). Never consumes by
                         default; an inactive answer carries an `error` reason
                         (invalid_signature | unknown_token | connection_revoked |
                         organization_revoked | already_consumed | revoked |
-                        expired) so the PEP can tell a re-negotiable failure from
+                        expired | rate_limited | suspended) so the PEP can tell a
+                        re-negotiable failure from
                         a settled one. A grant over another owner's resources is
                         unknown_token, whatever its state
 POST   /consume         burn a single-use RPT — the atomic last step of
@@ -58,6 +59,8 @@ POST   /consume         burn a single-use RPT — the atomic last step of
                         have passed. {consumed: false} carries `error`:
                         already_consumed | not_single_use | an introspection reason
 POST   /audit/access    the PEP reports an allowed call (grounds the ledger's "touched")
+POST   /audit/refused   the PEP reports a call refused after PoP verified; repeated
+                        ones trip the circuit breaker
 
 # Token endpoint (agent-facing UMA 2.0 Grant shape, plus RS-facing PAT issuance)
 POST /token         grant_type=uma-ticket            the four-beat negotiation loop
@@ -119,6 +122,7 @@ POST /owner/connections/revoke            {handle}: revoke a connection + its li
 GET  /owner/connections/autonomy?handle=   one agent on both ladders, its history,
                                            and what her record says about promoting
                                            it a rung (advisory)
+POST /owner/connections/resume             {handle}: lift a circuit-breaker suspension
 POST /owner/connections/autonomy           {handle, level, expect}: promote one rung
                                            (hers alone) or demote any distance;
                                            409 if it no longer stands at `expect`

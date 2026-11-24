@@ -563,6 +563,16 @@ async def agent_set_autonomy(request: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/api/agent/connections/resume")
+async def agent_resume(request: Request):
+    if require_login(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(f"{UMA_AS}/owner/connections/resume",
+                         json=await request.json(), headers=await owner_headers(request))
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/api/agent/policy-presets")
 async def agent_policy_presets(request: Request):
     if require_login(request):

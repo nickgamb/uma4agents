@@ -360,6 +360,10 @@ SUBAGENT_FANOUT = int(os.environ.get("UMA_AS_SUBAGENT_FANOUT", "3"))
 # all of them, so a rule reads "recently" and the deployment says how long that
 # is, rather than every rule carrying its own duration.
 TRAJECTORY_WINDOW = os.environ.get("UMA_AS_TRAJECTORY_WINDOW", "7d")
+# The circuit breaker: this many calls refused after the agent's signature
+# verified, within this window, suspends the agent's grants until she lifts it.
+BREAKER_REFUSALS = int(os.environ.get("UMA_AS_BREAKER_REFUSALS", "3"))
+BREAKER_WINDOW = os.environ.get("UMA_AS_BREAKER_WINDOW", "10m")
 
 STORE: store.Store = store.make_store()
 # Keyed by (owner, resource id): one owner's entry is never another's, even
@@ -1300,6 +1304,8 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
     if (conn := await st(owner).connection(rec.get("handle") or "")) is not None:
         if conn["status"] != "active":
             return claims, rec, "connection_revoked"
+        if conn.get("suspended"):
+            return claims, rec, "suspended"
     if rec["consumed"]:
         if claims.get("single_use"):
             return claims, rec, "already_consumed"
@@ -1347,6 +1353,20 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
             event("rpt.introspected", corr=rec["family"],
                   result="organization_revoked")
             return {"active": False, "error": "organization_revoked"}
+    # The call rate her terms state for this tier. Counted from the calls her
+    # record already holds, so a call over the limit is refused before it is
+    # made. A count read a moment stale only lets the limit be met late.
+    if rec.get("handle") and rec.get("tier"):
+        tier = (await st(owner).tiers()).get(rec["tier"]) or {}
+        if rl := (tier.get("terms") or {}).get("rate_limit"):
+            since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(
+                now() - policy.parse_duration(rl["per"])))
+            made = (await st(owner).trajectory(rec["handle"], since,
+                                               rec["tier"]))["calls"]
+            if made >= rl["calls"]:
+                event("rpt.introspected", corr=rec["family"], result="rate_limited",
+                      calls=made, limit=rl["calls"], per=rl["per"])
+                return {"active": False, "error": "rate_limited"}
     if rec.get("handle"):
         await st(owner).touch_connection(rec["handle"], utcstamp())
     # Consumption is no longer done here by default: the PEP has not yet
@@ -1430,6 +1450,61 @@ async def audit_access(request: Request) -> dict:
     }, handle=(grant or {}).get("handle"))
     event("access.allowed", corr=body.get("family"), tool=body.get("tool"))
     return {"recorded": True}
+
+
+@app.post("/audit/refused")
+async def audit_refused(request: Request) -> dict:
+    """The PEP reports a call it refused after the agent's signature verified
+    — a mismatched or missing operation, a spent grant presented again. The
+    authority attributes it, as it does an allowed call, and trips the
+    circuit breaker on the agent once enough land within the window."""
+    owner = await require_pat(request)
+    body = await request.json()
+    family = body.get("family", "?")
+    grant = await st(owner).grant_for_family(family)
+    handle = (grant or {}).get("handle")
+    await ledger_add(owner, "call_refused", family, {
+        "tool": body.get("tool"), "reason": body.get("reason"),
+        "tier": (grant or {}).get("tier")}, handle=handle)
+    event("access.refused", corr=family, tool=body.get("tool"),
+          reason=body.get("reason"))
+    if handle:
+        await breaker(owner, handle)
+    return {"recorded": True}
+
+
+async def breaker(owner: str, handle: str) -> None:
+    """Suspend an agent whose calls keep being refused.
+
+    Automatic because it only withdraws: the agent's grants stop working and
+    it drops to the bottom of her ladder. Its connection and the rest of its
+    standing are kept, and only she lifts the suspension.
+    """
+    conn = await st(owner).connection(handle)
+    if not conn or conn.get("status") != "active" or conn.get("suspended"):
+        return
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(
+        now() - policy.parse_duration(BREAKER_WINDOW)))
+    refused = (await st(owner).trajectory(handle, since))["refused_calls"]
+    if refused < BREAKER_REFUSALS:
+        return
+    why = (f"{refused} calls refused within {BREAKER_WINDOW}")
+    await st(owner).set_suspension(handle, {"since": utcstamp(), "because": why})
+    level = autonomy.name(autonomy.owner_level(conn))
+    if level != "intern":
+        record = autonomy.change(conn, "intern",
+                                 {"kind": "system", "by": "circuit breaker"},
+                                 utcstamp(), note=why)
+        if await st(owner).set_autonomy(handle, record, level):
+            await ledger_add(owner, "autonomy_demoted", "-", {
+                "from": level, "to": "intern", "note": why,
+                "by": {"kind": "system", "admin": "circuit breaker",
+                       "name": "automatic"}}, handle=handle)
+    event("connection.suspended", handle=handle, because=why)
+    await ledger_add(owner, "suspended", "-", {"because": why}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": "suspended", "handle": handle,
+                               "because": why})
 
 
 # --- The organization above her, if she has joined one -----------------------
@@ -3912,6 +3987,11 @@ async def joint_verdict(request: Request) -> dict:
         return refuse(*problems)
 
     conn = await st(owner).connection(handle)
+    if (conn or {}).get("suspended"):
+        why = "this agent is suspended after repeated refused calls"
+        await ledger_add(owner, "joint_refused", negotiation,
+                         {"account": account, "because": [why]}, handle=handle)
+        return refuse(why)
     if origin := operator_origin(identity):
         if origin in await st(owner).blocked_operators():
             why = "this holder does not accept agents from that operator"
@@ -4360,6 +4440,19 @@ async def token(request: Request) -> JSONResponse:
             rec["introduction_refused"] = why_not
             event("connection.introduction_refused", corr=family,
                   handle=handle, because=why_not)
+
+    # Suspended by the circuit breaker: no new grant either, until she lifts it.
+    if (conn or {}).get("suspended"):
+        event("policy.evaluated", corr=family, result="suspended")
+        await ledger_add(rec["owner"], "refused", family, {
+            "tier": rec["tier"], "because": ["this agent is suspended"]},
+            handle=handle)
+        await close_negotiation(rec)
+        return JSONResponse(
+            {"error": "request_denied",
+             "error_description": "the owner's authorization server suspended "
+                                  "this agent after repeated refused calls"},
+            status_code=403)
 
     # What her authority can establish about this agent, and what she has
     # herself seen of it. Kept apart on purpose — see `assurance.py`.
@@ -5998,6 +6091,23 @@ async def revoke_connection_for(owner: str, handle: str,
     return {"handle": handle, "status": "revoked",
             "rpts_deactivated": killed + child_tokens,
             "connections_revoked": children}
+
+
+@app.post("/owner/connections/resume")
+async def owner_resume_connection(request: Request) -> dict:
+    """Lift a circuit-breaker suspension. Hers alone: it is the one step of
+    the breaker that gives access back."""
+    owner = await require_owner(request)
+    handle = await handle_in(request)
+    conn = await st(owner).connection(handle)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="unknown connection")
+    if not conn.get("suspended"):
+        raise HTTPException(status_code=409, detail="this agent is not suspended")
+    await st(owner).set_suspension(handle, None)
+    await ledger_add(owner, "resumed", "-", {}, handle=handle)
+    event("connection.resumed", handle=handle)
+    return {"handle": handle, "suspended": False}
 
 
 @app.get("/owner/ledger")

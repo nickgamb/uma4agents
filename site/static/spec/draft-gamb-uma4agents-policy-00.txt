@@ -116,26 +116,27 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
      9.4.  Acting Without Asking . . . . . . . . . . . . . . . . . .  17
      9.5.  A Profile of the Agentic Trust Framework  . . . . . . . .  17
+     9.6.  Containment . . . . . . . . . . . . . . . . . . . . . . .  19
    10. Security Considerations . . . . . . . . . . . . . . . . . . .  19
      10.1.  The Asymmetry Is the Security Model  . . . . . . . . . .  19
-     10.2.  Assurance Is Derived, Never Claimed  . . . . . . . . . .  19
-     10.3.  Promotion Is a Relaxation  . . . . . . . . . . . . . . .  19
-     10.4.  Trajectory Reads Are Not Atomic  . . . . . . . . . . . .  19
+     10.2.  Assurance Is Derived, Never Claimed  . . . . . . . . . .  20
+     10.3.  Promotion Is a Relaxation  . . . . . . . . . . . . . . .  20
+     10.4.  Trajectory Reads Are Not Atomic  . . . . . . . . . . . .  20
      10.5.  The Bound Is a Depth, and the Depth Is Small . . . . . .  20
    11. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  20
      11.1.  The Record Is a Per-Agent History  . . . . . . . . . . .  20
-     11.2.  Operator Claims Are Visible to the Owner . . . . . . . .  20
-     11.3.  An Operator's Level Is Shown, Not Hidden . . . . . . . .  20
-   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  20
-   13. References  . . . . . . . . . . . . . . . . . . . . . . . . .  20
-     13.1.  Normative References . . . . . . . . . . . . . . . . . .  20
+     11.2.  Operator Claims Are Visible to the Owner . . . . . . . .  21
+     11.3.  An Operator's Level Is Shown, Not Hidden . . . . . . . .  21
+   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  21
+   13. References  . . . . . . . . . . . . . . . . . . . . . . . . .  21
+     13.1.  Normative References . . . . . . . . . . . . . . . . . .  21
      13.2.  Informative References . . . . . . . . . . . . . . . . .  22
    Appendix A.  A Condition Vocabulary . . . . . . . . . . . . . . .  23
    Appendix B.  Record Entry Kinds . . . . . . . . . . . . . . . . .  25
    Appendix C.  Implementation Status  . . . . . . . . . . . . . . .  25
-   Appendix D.  Mapping to the Agentic Trust Framework . . . . . . .  25
+   Appendix D.  Mapping to the Agentic Trust Framework . . . . . . .  26
    Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  29
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  29
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  30
 
 1.  Introduction
 
@@ -157,7 +158,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
    This document is an OPTIONAL extension of [U4ACore] and depends on
    [U4ATerms].  Its identifying URI is https://u4a.ai/spec/policy/1.0.
-
 
 
 
@@ -1020,6 +1020,30 @@ Internet-Draft           Owner Policy for Agents          September 2026
    undescribed read is common and refusing it would make the profile
    unusable on most resources.
 
+9.6.  Containment
+
+   A policy unit's terms MAY state a call rate: a number of calls and a
+   period.  An authorization server that offers one MUST refuse at
+   introspection a grant whose agent has already made that many calls at
+   that unit within the period, with error of rate_limited, counting
+   only calls an enforcement point reported as allowed.  Because the
+   rate is in the terms, the agent agrees to it before it holds a grant.
+
+   An enforcement point SHOULD report a call it refused after the
+   agent's signature verified, and the authorization server records it
+   against the agent as it does an allowed call (Section 8.5).  Refusals
+   before the signature verified are not counted, since anyone holding a
+   copy of a grant could cause them.  An authorization server MAY
+   suspend an agent after a number of such refusals within a window.  A
+   suspension MUST stop every grant the agent holds and every new grant,
+   with error of suspended, and MUST lower the agent to the bottom of
+   the owner's ladder (Section 9.2).  It MUST NOT be lifted by anyone
+   but the owner.  It keeps the connection and the rest of the agent's
+   standing.
+
+   Both rate_limited and suspended are terminal in the sense of
+   [U4AFedAuthz] Section 5: a fresh negotiation cannot change either.
+
 10.  Security Considerations
 
 10.1.  The Asymmetry Is the Security Model
@@ -1029,6 +1053,18 @@ Internet-Draft           Owner Policy for Agents          September 2026
    party being decided about write the decision, and the mechanism by
    which it did so — a well-formed key, a resolvable document, an
    operator's name — costs that party nothing.
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 19]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
 10.2.  Assurance Is Derived, Never Claimed
 
@@ -1058,14 +1094,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    window: a stale read behaves as an earlier arrival would have, and
    cannot widen access beyond what a differently timed arrival would
    have received.  The test for whether a read needs the indivisibility
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 19]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    of [U4ACore] Section 8.3 is whether staleness can widen; these
    cannot.
 
@@ -1085,6 +1113,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    another.  Retention is deployment policy.  An implementation SHOULD
    let the owner see every entry that names an agent, since she is the
    party it was kept for.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 20]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
 11.2.  Operator Claims Are Visible to the Owner
 
@@ -1113,15 +1149,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 13.1.  Normative References
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 20]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    [I-D.ietf-oauth-client-id-metadata-document]
               Parecki, A. and E. Smith, "OAuth Client ID Metadata
               Document", Work in Progress, Internet-Draft, draft-ietf-
@@ -1140,6 +1167,16 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 21]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
@@ -1171,13 +1208,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 21]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
               Kantara Recommendation, 7 January 2018,
@@ -1196,6 +1226,13 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 22]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
    [SP800-63-3]
               National Institute of Standards and Technology, "Digital
@@ -1219,20 +1256,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 22]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
 Appendix A.  A Condition Vocabulary
 
@@ -1259,6 +1282,14 @@ Appendix A.  A Condition Vocabulary
    |                                  |          | older than D       |
    +----------------------------------+----------+--------------------+
    | standing.first_party             | relaxing | an agent the owner |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 23]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    |                                  |          | activated herself  |
    +----------------------------------+----------+--------------------+
    | standing.none                    | observed | no standing        |
@@ -1282,14 +1313,6 @@ Appendix A.  A Condition Vocabulary
    +----------------------------------+----------+--------------------+
    | standing.calls_above:N           | observed | recently made more |
    |                                  |          | than N calls       |
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 23]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    +----------------------------------+----------+--------------------+
    | standing.introduced              | observed | introduced by      |
    |                                  |          | another agent      |
@@ -1315,6 +1338,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    | request.reason_absent            | observed | stated no reason   |
    +----------------------------------+----------+--------------------+
    | request.mission_absent           | observed | cited no mandate   |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 24]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    +----------------------------------+----------+--------------------+
    | standing.autonomy_at_least:L     | relaxing | the owner has      |
    |                                  |          | raised this agent  |
@@ -1335,16 +1366,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    +----------------------------------+----------+--------------------+
 
       Table 2: The reference implementation's condition vocabulary.
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 24]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
 Appendix B.  Record Entry Kinds
 
@@ -1373,6 +1394,14 @@ Appendix C.  Implementation Status
    return of a blocked operator as an anonymous stranger.  Section 9 is
    exercised end to end against a running authorization server and
    resource: two agents of one operator at different levels of its
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 25]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    ladder, each starting at the bottom of the owner's, promoted one step
    at a time, refused while either ladder stands too low, and returned
    to the bottom by a revocation.
@@ -1394,15 +1423,10 @@ Appendix D.  Mapping to the Agentic Trust Framework
       is stated.
 
    operator:  it concerns the agent's own runtime, which the owner
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 25]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
       cannot see, and this set does not attempt it.
+
+   resource:  it is the resource server's to do, and this set carries
+      what the resource server declares about it.
 
    gap:  the owner's side could meet it and this set does not.
 
@@ -1426,6 +1450,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | (Section 4.2).  The chain from  |
    |     |                |          | the operator to the person it   |
    |     |                |          | acts for is not established.    |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 26]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    +-----+----------------+----------+---------------------------------+
    | I-4 | Purpose        | partly   | Each agreement carries the      |
    |     | declaration    |          | purpose the owner's terms       |
@@ -1450,14 +1482,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | not the reporter                |
    |     |                |          | (Section 8.5).                  |
    +-----+----------------+----------+---------------------------------+
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 26]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    | B-3 | Behavioural    | operator | The trajectory conditions of    |
    |     | baseline       |          | Section 3.2 count denials,      |
    |     |                |          | units and calls in a window.    |
@@ -1482,6 +1506,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | the agent's inputs are not      |
    |     |                |          | hers to see.                    |
    +-----+----------------+----------+---------------------------------+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 27]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    | D-2 | Injection      | operator | Not detected.  Per-operation    |
    |     | prevention     |          | grants bound what an injected   |
    |     |                |          | instruction can do on her       |
@@ -1506,14 +1538,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | ([U4ALineage]).  Lineage        |
    |     |                |          | inside the agent's pipeline is  |
    |     |                |          | the operator's.                 |
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 27]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    +-----+----------------+----------+---------------------------------+
    | S-1 | Resource       | met      | Each policy unit names its      |
    |     | allowlist      |          | resources; an ungoverned        |
@@ -1524,12 +1548,9 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     | boundaries     |          | bound to one named operation    |
    |     |                |          | ([U4ACore]).                    |
    +-----+----------------+----------+---------------------------------+
-   | S-3 | Rate limiting  | gap      | Not enforced.  The attention    |
-   |     |                |          | bound of Section 6 limits how   |
-   |     |                |          | many requests may wait for the  |
-   |     |                |          | owner, not how often an agent   |
-   |     |                |          | calls; a rule may tighten on a  |
-   |     |                |          | call count.                     |
+   | S-3 | Rate limiting  | met      | A call rate in the terms of a   |
+   |     |                |          | policy unit, enforced at        |
+   |     |                |          | introspection (Section 9.6).    |
    +-----+----------------+----------+---------------------------------+
    | S-4 | Transaction    | met      | A grant may be bound to one     |
    |     | limits         |          | operation and its parameters    |
@@ -1541,13 +1562,22 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | action (Section 7), and         |
    |     |                |          | revoking an agent revokes its   |
    |     |                |          | lineage ([U4ALineage]).         |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 28]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    |     |                |          | Cumulative impact across calls  |
    |     |                |          | is not limited.                 |
    +-----+----------------+----------+---------------------------------+
-   | R-1 | Circuit        | gap      | An enforcement point refuses    |
-   |     | breaker        |          | each call that fails; nothing   |
-   |     |                |          | halts an agent automatically    |
-   |     |                |          | after repeated failures.        |
+   | R-1 | Circuit        | met      | Repeated calls refused after    |
+   |     | breaker        |          | the agent's signature verified  |
+   |     |                |          | suspend it until the owner      |
+   |     |                |          | lifts the suspension            |
+   |     |                |          | (Section 9.6).                  |
    +-----+----------------+----------+---------------------------------+
    | R-2 | Kill switch    | partly   | Revoking a connection or        |
    |     |                |          | blocking an operator takes      |
@@ -1561,18 +1591,11 @@ Internet-Draft           Owner Policy for Agents          September 2026
    |     |                |          | under it in one step            |
    |     |                |          | ([U4ACore]).                    |
    +-----+----------------+----------+---------------------------------+
-   | R-4 | State rollback | gap      | The declared consequence of     |
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 28]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
-   |     |                |          | Section 3.3 says whether an     |
-   |     |                |          | act can be undone.  Nothing     |
-   |     |                |          | here undoes one.                |
+   | R-4 | State rollback | resource | Undoing an act is the resource  |
+   |     |                |          | server's.  The declared         |
+   |     |                |          | consequence of Section 3.3      |
+   |     |                |          | says whether it can be undone,  |
+   |     |                |          | and the owner's rules read it.  |
    +-----+----------------+----------+---------------------------------+
    | R-5 | Graceful       | met      | Lowering either ladder takes    |
    |     | degradation    |          | effect on the agent's next      |
@@ -1594,6 +1617,14 @@ Acknowledgments
    key directory of [I-D.meunier-webbotauth-registry] and the client
    metadata document of [I-D.ietf-oauth-client-id-metadata-document] are
    what make the accountability axis derivable rather than asserted.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 29]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
    The levels of Section 9 are those of the Agentic Trust Framework
    [ATF].
@@ -1621,4 +1652,29 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 29]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 30]

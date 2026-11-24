@@ -783,6 +783,29 @@ An operation no resource server has described is put to the owner when an
 intern asks for it rather than refused, because an undescribed read is common
 and refusing it would make the profile unusable on most resources.
 
+## Containment {#containment}
+
+A policy unit's terms MAY state a call rate: a number of calls and a period.
+An authorization server that offers one MUST refuse at introspection a grant
+whose agent has already made that many calls at that unit within the period,
+with `error` of `rate_limited`, counting only calls an enforcement point
+reported as allowed. Because the rate is in the terms, the agent agrees to it
+before it holds a grant.
+
+An enforcement point SHOULD report a call it refused after the agent's
+signature verified, and the authorization server records it against the agent
+as it does an allowed call ({{pep-reports}}). Refusals before the signature
+verified are not counted, since anyone holding a copy of a grant could cause
+them. An authorization server MAY suspend an agent after a number of such
+refusals within a window. A suspension MUST stop every grant the agent holds
+and every new grant, with `error` of `suspended`, and MUST lower the agent to
+the bottom of the owner's ladder ({{owners-ladder}}). It MUST NOT be lifted by
+anyone but the owner. It keeps the connection and the rest of the agent's
+standing.
+
+Both `rate_limited` and `suspended` are terminal in the sense of
+{{U4AFedAuthz}} Section 5: a fresh negotiation cannot change either.
+
 # Security Considerations
 
 ## The Asymmetry Is the Security Model
@@ -945,6 +968,10 @@ operator:
 : it concerns the agent's own runtime, which the owner cannot see, and this
   set does not attempt it.
 
+resource:
+: it is the resource server's to do, and this set carries what the resource
+  server declares about it.
+
 gap:
 : the owner's side could meet it and this set does not.
 
@@ -967,13 +994,13 @@ gap:
 | D-5 | Data lineage | partly | The record links what an agent promised to what it touched, per negotiation, and sub-agents to the agent that introduced them ({{U4ALineage}}). Lineage inside the agent's pipeline is the operator's. |
 | S-1 | Resource allowlist | met | Each policy unit names its resources; an ungoverned resource is refused ({{shape}}). |
 | S-2 | Action boundaries | met | Scopes per unit, and grants bound to one named operation ({{U4ACore}}). |
-| S-3 | Rate limiting | gap | Not enforced. The attention bound of {{attention}} limits how many requests may wait for the owner, not how often an agent calls; a rule may tighten on a call count. |
+| S-3 | Rate limiting | met | A call rate in the terms of a policy unit, enforced at introspection ({{containment}}). |
 | S-4 | Transaction limits | met | A grant may be bound to one operation and its parameters and spent once ({{U4ACore}}); terms may carry constraints. |
 | S-5 | Blast radius containment | partly | Access is per unit, an operator can be blocked in one action ({{operators}}), and revoking an agent revokes its lineage ({{U4ALineage}}). Cumulative impact across calls is not limited. |
-| R-1 | Circuit breaker | gap | An enforcement point refuses each call that fails; nothing halts an agent automatically after repeated failures. |
+| R-1 | Circuit breaker | met | Repeated calls refused after the agent's signature verified suspend it until the owner lifts the suspension ({{containment}}). |
 | R-2 | Kill switch | partly | Revoking a connection or blocking an operator takes effect on the next call, because the enforcement point introspects every call. It stops access, not the agent. |
 | R-3 | Session revocation | met | Revoking a connection deactivates every grant issued under it in one step ({{U4ACore}}). |
-| R-4 | State rollback | gap | The declared consequence of {{consequence}} says whether an act can be undone. Nothing here undoes one. |
+| R-4 | State rollback | resource | Undoing an act is the resource server's. The declared consequence of {{consequence}} says whether it can be undone, and the owner's rules read it. |
 | R-5 | Graceful degradation | met | Lowering either ladder takes effect on the agent's next request ({{autonomy}}). |
 {: title="ATF's requirements, judged on the owner's side of the exchange."}
 

@@ -133,5 +133,6 @@ intern again.
 gateway. The normative text is
 [§9 of the policy draft](/spec/draft-gamb-uma4agents-policy-00.html). Its
 appendix judges each of ATF's 25 requirements on the owner's side of the
-exchange: 9 met, 8 partly met, 5 that belong to the operator, and 3 gaps (rate
-limiting, a circuit breaker, and rollback).
+exchange: 11 met, including a call rate in her terms and a circuit breaker
+that suspends an agent whose calls keep being refused; 8 partly met; 5 that
+belong to the operator; and rollback, which is the resource server's.
