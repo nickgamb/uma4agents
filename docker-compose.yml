@@ -468,6 +468,12 @@ services:
       # Only the operator's own agents put keys in its directory. Without a
       # token anyone could publish one here and be attributed to this firm.
       AGENT_OPERATOR_REGISTER_TOKEN: ${OPERATOR_REGISTER_TOKEN:-uma4agents-operator-register}
+      # Where the firm has put its agents on its own ATF ladder. Its advisory
+      # agent has been running long enough to be a principal there; its
+      # research assistant is still an intern. Alice's authority reads both
+      # and may only ever tighten on them — see docs/AUTONOMY.md.
+      AGENT_OPERATOR_ATF_LEVEL: principal
+      AGENT_OPERATOR_CLASSES: '{"research": {"name": "Sterling & Vance — Research Assistant", "atf_level": "intern"}}'
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:9030/health')\""]
       interval: 3s
@@ -996,6 +1002,22 @@ services:
       UMA_AS_PEND_BUDGET: ${UMA_AS_PEND_BUDGET:-5}
     volumes:
       - ./clients/demo-driver/assurance_check.py:/driver/assurance_check.py:ro
+      - ./lib:/driver/lib:ro
+      - ./certs/rootCA.pem:/driver/rootCA.pem:ro
+      - driver-keys:/driver/keys
+    profiles: ["test"]
+
+  autonomy-check:
+    image: python:3.12-slim
+    entrypoint:
+      - /bin/bash
+      - -c
+      - pip install -q httpx 'pyjwt[crypto]' && exec python /driver/autonomy_check.py
+    environment:
+      PYTHONPATH: /driver/lib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./clients/demo-driver/autonomy_check.py:/driver/autonomy_check.py:ro
       - ./lib:/driver/lib:ro
       - ./certs/rootCA.pem:/driver/rootCA.pem:ro
       - driver-keys:/driver/keys

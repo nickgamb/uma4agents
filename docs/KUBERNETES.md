@@ -168,6 +168,17 @@ lane, because the agent you want to let in is a stranger too the first time.
 
 Her rules are editable in the portal under **My Terms**, as sentences. The same
 page adds terms of her own over any resource no tier governs yet.
+
+```bash
+make k8s-autonomy-check         # expect 25 passed
+```
+
+**Notice** that an agent its firm calls a principal is an intern with her, and
+that one she has promoted to principal still stays out of her trades while its
+firm calls it an intern: two ladders, the lower one governs, and only hers can
+relax anything. Her level is a compare-and-set on the connection row in
+Postgres, so this is also where a stale promotion meets a real database. See
+[AUTONOMY.md](AUTONOMY.md).
 [ASSURANCE.md](ASSURANCE.md) is the argument.
 
 ### 7. An agent framework nobody modified

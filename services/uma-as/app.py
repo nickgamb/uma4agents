@@ -35,6 +35,7 @@ from fastapi.responses import JSONResponse
 from jwt.algorithms import OKPAlgorithm
 
 import assurance
+import autonomy
 import introduction
 import joint
 import org
@@ -359,6 +360,10 @@ SUBAGENT_FANOUT = int(os.environ.get("UMA_AS_SUBAGENT_FANOUT", "3"))
 # all of them, so a rule reads "recently" and the deployment says how long that
 # is, rather than every rule carrying its own duration.
 TRAJECTORY_WINDOW = os.environ.get("UMA_AS_TRAJECTORY_WINDOW", "7d")
+# The circuit breaker: this many calls refused after the agent's signature
+# verified, within this window, suspends the agent's grants until she lifts it.
+BREAKER_REFUSALS = int(os.environ.get("UMA_AS_BREAKER_REFUSALS", "3"))
+BREAKER_WINDOW = os.environ.get("UMA_AS_BREAKER_WINDOW", "10m")
 
 STORE: store.Store = store.make_store()
 # Keyed by (owner, resource id): one owner's entry is never another's, even
@@ -1299,6 +1304,8 @@ async def _decode_rpt(token: str) -> tuple[dict | None, dict | None, str]:
     if (conn := await st(owner).connection(rec.get("handle") or "")) is not None:
         if conn["status"] != "active":
             return claims, rec, "connection_revoked"
+        if conn.get("suspended"):
+            return claims, rec, "suspended"
     if rec["consumed"]:
         if claims.get("single_use"):
             return claims, rec, "already_consumed"
@@ -1346,6 +1353,20 @@ async def introspect(request: Request, token: str = Form(...), consume: str = Fo
             event("rpt.introspected", corr=rec["family"],
                   result="organization_revoked")
             return {"active": False, "error": "organization_revoked"}
+    # The call rate her terms state for this tier. Counted from the calls her
+    # record already holds, so a call over the limit is refused before it is
+    # made. A count read a moment stale only lets the limit be met late.
+    if rec.get("handle") and rec.get("tier"):
+        tier = (await st(owner).tiers()).get(rec["tier"]) or {}
+        if rl := (tier.get("terms") or {}).get("rate_limit"):
+            since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(
+                now() - policy.parse_duration(rl["per"])))
+            made = (await st(owner).trajectory(rec["handle"], since,
+                                               rec["tier"]))["calls"]
+            if made >= rl["calls"]:
+                event("rpt.introspected", corr=rec["family"], result="rate_limited",
+                      calls=made, limit=rl["calls"], per=rl["per"])
+                return {"active": False, "error": "rate_limited"}
     if rec.get("handle"):
         await st(owner).touch_connection(rec["handle"], utcstamp())
     # Consumption is no longer done here by default: the PEP has not yet
@@ -1429,6 +1450,61 @@ async def audit_access(request: Request) -> dict:
     }, handle=(grant or {}).get("handle"))
     event("access.allowed", corr=body.get("family"), tool=body.get("tool"))
     return {"recorded": True}
+
+
+@app.post("/audit/refused")
+async def audit_refused(request: Request) -> dict:
+    """The PEP reports a call it refused after the agent's signature verified
+    — a mismatched or missing operation, a spent grant presented again. The
+    authority attributes it, as it does an allowed call, and trips the
+    circuit breaker on the agent once enough land within the window."""
+    owner = await require_pat(request)
+    body = await request.json()
+    family = body.get("family", "?")
+    grant = await st(owner).grant_for_family(family)
+    handle = (grant or {}).get("handle")
+    await ledger_add(owner, "call_refused", family, {
+        "tool": body.get("tool"), "reason": body.get("reason"),
+        "tier": (grant or {}).get("tier")}, handle=handle)
+    event("access.refused", corr=family, tool=body.get("tool"),
+          reason=body.get("reason"))
+    if handle:
+        await breaker(owner, handle)
+    return {"recorded": True}
+
+
+async def breaker(owner: str, handle: str) -> None:
+    """Suspend an agent whose calls keep being refused.
+
+    Automatic because it only withdraws: the agent's grants stop working and
+    it drops to the bottom of her ladder. Its connection and the rest of its
+    standing are kept, and only she lifts the suspension.
+    """
+    conn = await st(owner).connection(handle)
+    if not conn or conn.get("status") != "active" or conn.get("suspended"):
+        return
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(
+        now() - policy.parse_duration(BREAKER_WINDOW)))
+    refused = (await st(owner).trajectory(handle, since))["refused_calls"]
+    if refused < BREAKER_REFUSALS:
+        return
+    why = (f"{refused} calls refused within {BREAKER_WINDOW}")
+    await st(owner).set_suspension(handle, {"since": utcstamp(), "because": why})
+    level = autonomy.name(autonomy.owner_level(conn))
+    if level != "intern":
+        record = autonomy.change(conn, "intern",
+                                 {"kind": "system", "by": "circuit breaker"},
+                                 utcstamp(), note=why)
+        if await st(owner).set_autonomy(handle, record, level):
+            await ledger_add(owner, "autonomy_demoted", "-", {
+                "from": level, "to": "intern", "note": why,
+                "by": {"kind": "system", "admin": "circuit breaker",
+                       "name": "automatic"}}, handle=handle)
+    event("connection.suspended", handle=handle, because=why)
+    await ledger_add(owner, "suspended", "-", {"because": why}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": "suspended", "handle": handle,
+                               "because": why})
 
 
 # --- The organization above her, if she has joined one -----------------------
@@ -2945,6 +3021,9 @@ def standing_facts(conn: dict | None, tier_id: str,
     if conn is None or conn.get("status") != "active":
         return {"active": False, "age_seconds": None, "first_at_tier": True,
                 "first_party": first_party,
+                # A stranger is an intern. So is an agent she has revoked,
+                # whatever it once was.
+                "autonomy": autonomy.INTERN,
                 "introduced": False, "lineage_new_at_tier": True,
                 "approved_tiers": [], "trajectory": trajectory,
                 "revocations": int((conn or {}).get("revocations", 0))}
@@ -2973,6 +3052,9 @@ def standing_facts(conn: dict | None, tier_id: str,
         "lineage_new_at_tier": tier_id not in (
             lineage or conn.get("tiers_approved") or []),
         "revocations": int(conn.get("revocations", 0)),
+        # Where she has put it on her autonomy ladder. Rises only by her hand
+        # (autonomy.change), which is what lets it relax — see policy.py.
+        "autonomy": autonomy.owner_level(conn),
         # What it has been doing lately. Restrictions only — see policy.py.
         "trajectory": trajectory,
     }
@@ -3276,7 +3358,16 @@ async def verify_resource_server_signature(request: Request, body: bytes,
 # Keyed by a URL the agent chooses, so bounded; and a URL that just failed is
 # not fetched again for a minute, so naming one cannot make this server fetch
 # it once per request.
+#
+# Timed as well. While the document was display only, a copy that never
+# expired cost a stale name in her dialog. It now carries where the operator
+# says its agent stands on its own autonomy ladder, and an operator demoting
+# an agent is the case that must reach her: a stale copy keeps reading the
+# level from before the demotion, which is the direction that widens. The TTL
+# bounds how long an operator's demotion takes to land, as the key directory's
+# does for a disowned key.
 _CIMD_CACHE = uma4a_fetch.BoundedCache(max_entries=1024)
+_CIMD_TTL = float(os.environ.get("UMA_AS_CIMD_TTL", "300"))
 _CIMD_FAILED = uma4a_fetch.FailureFloor()
 
 
@@ -3290,8 +3381,8 @@ def resolve_client_id(client_id: str) -> dict:
     "unresolved" rather than rejecting the contract; what it must never do is
     silently present unverified claims as though they were checked.
     """
-    if client_id in _CIMD_CACHE:
-        return _CIMD_CACHE[client_id]
+    if (hit := _CIMD_CACHE.get(client_id)) and time.time() - hit[0] < _CIMD_TTL:
+        return hit[1]
     out: dict = {"client_id": client_id, "verified": False}
     try:
         if not client_id.startswith("https://"):
@@ -3313,13 +3404,19 @@ def resolve_client_id(client_id: str) -> dict:
             "policy_uri": doc.get("policy_uri"),
             "tos_uri": doc.get("tos_uri"),
             "contacts": doc.get("contacts"),
+            # Where the operator says this agent stands on its own ATF ladder.
+            # Kept as published and read by `autonomy.operator_declaration`,
+            # which is the only reader: it may tighten her rules and never
+            # loosen them, so carrying it costs nothing if it is a lie.
+            **({autonomy.CIMD_MEMBER: doc[autonomy.CIMD_MEMBER]}
+               if isinstance(doc.get(autonomy.CIMD_MEMBER), dict) else {}),
         }
         event("client_metadata.resolved", client_id=client_id,
               client_name=out.get("client_name"))
         # Successes are cached; a failure is remembered only for the minute of
         # the floor, so an agent is not left nameless in Alice's dialog long
         # after its operator recovers.
-        _CIMD_CACHE[client_id] = out
+        _CIMD_CACHE[client_id] = (time.time(), out)
     except Exception as exc:
         out["error"] = str(exc)[:120]
         event("client_metadata.unresolved", client_id=client_id, reason=str(exc)[:120])
@@ -3890,6 +3987,11 @@ async def joint_verdict(request: Request) -> dict:
         return refuse(*problems)
 
     conn = await st(owner).connection(handle)
+    if (conn or {}).get("suspended"):
+        why = "this agent is suspended after repeated refused calls"
+        await ledger_add(owner, "joint_refused", negotiation,
+                         {"account": account, "because": [why]}, handle=handle)
+        return refuse(why)
     if origin := operator_origin(identity):
         if origin in await st(owner).blocked_operators():
             why = "this holder does not accept agents from that operator"
@@ -3908,6 +4010,8 @@ async def joint_verdict(request: Request) -> dict:
                     "reason": contract.get("reason"),
                     "mission": contract.get("mission"),
                     "consequence": consequence_of(owner, resource_id)},
+        # Where its operator says it stands. Tighten-only (autonomy.py).
+        "operator": autonomy.operator_declaration(identity),
         "tier": tier_id,
     }
     requirement, reasons = policy.evaluate(tier, facts)
@@ -3970,6 +4074,8 @@ async def joint_verdict(request: Request) -> dict:
             "template": {"enforced": {}},
             "assurance": axes,
             "assurance_notes": assurance.describe(axes, identity),
+            "autonomy_notes": autonomy.describe(
+                facts["standing"]["autonomy"], facts["operator"]),
             "because": reasons,
             "joint": {"account": account, "tally": record["tally"],
                       "holders": [h["owner"] for h in mandate.get("holders") or []],
@@ -4335,6 +4441,19 @@ async def token(request: Request) -> JSONResponse:
             event("connection.introduction_refused", corr=family,
                   handle=handle, because=why_not)
 
+    # Suspended by the circuit breaker: no new grant either, until she lifts it.
+    if (conn or {}).get("suspended"):
+        event("policy.evaluated", corr=family, result="suspended")
+        await ledger_add(rec["owner"], "refused", family, {
+            "tier": rec["tier"], "because": ["this agent is suspended"]},
+            handle=handle)
+        await close_negotiation(rec)
+        return JSONResponse(
+            {"error": "request_denied",
+             "error_description": "the owner's authorization server suspended "
+                                  "this agent after repeated refused calls"},
+            status_code=403)
+
     # What her authority can establish about this agent, and what she has
     # herself seen of it. Kept apart on purpose — see `assurance.py`.
     # An operator she has shut out. Blocking is a *restriction*, so it can rest
@@ -4394,6 +4513,8 @@ async def token(request: Request) -> JSONResponse:
                     "mission": contract.get("mission"),
                     "consequence": consequence_of(rec["owner"],
                                                   rec["resource_id"])},
+        # Where its operator says it stands. Tighten-only (autonomy.py).
+        "operator": autonomy.operator_declaration(contract["_identity"]),
         "tier": rec["tier"],
     }
     requirement, reasons = policy.evaluate(tier, facts)
@@ -4546,6 +4667,10 @@ async def token(request: Request) -> JSONResponse:
         # much of a dialog.
         rec["assurance"] = axes
         rec["assurance_notes"] = assurance.describe(axes, contract["_identity"])
+        # Both autonomy ladders, apart: where it stands with her, and where
+        # its operator says it stands. Never folded into one line.
+        rec["autonomy_notes"] = autonomy.describe(
+            facts["standing"]["autonomy"], facts["operator"])
         rec["because"] = reasons
         rotated = await new_ticket(rec)
         event("ticket.awaiting_owner", corr=family, tier=rec["tier"], kind=kind)
@@ -4570,6 +4695,7 @@ async def token(request: Request) -> JSONResponse:
                 # without saying what was checked teaches nothing.
                 "assurance": axes,
                 "assurance_notes": assurance.describe(axes, contract["_identity"]),
+                "autonomy_notes": rec["autonomy_notes"],
                 "because": reasons,
                 "organization": rec.get("org") or None,
             }
@@ -4591,6 +4717,20 @@ async def token(request: Request) -> JSONResponse:
         await ledger_add(rec["owner"], "relaxed", family, {"tier": rec["tier"],
                                              "because": reasons},
                          handle=handle)
+    # And she is told, as it happens, whenever an agent is let change
+    # something without her being asked — a relaxation she wrote, or a tier
+    # that never asked, alike. ATF's senior rung is "act and notify": the
+    # telling is the half of that bargain that keeps her in it. Pushed on the
+    # same stream as her pending requests, so the portal that would have asked
+    # her shows her instead. Reads are not announced; they change nothing.
+    relaxed_here = bool(reasons) and tier.get("ask_me")
+    if relaxed_here or uma4a_consequence.at_or_above(
+            facts["request"].get("consequence"), "compensatable"):
+        await owner_notify(rec["owner"], {
+            "type": "acted", "family": family, "tier": rec["tier"],
+            "tier_name": tier["name"], "handle": handle,
+            "operation": contract.get("operation"), "because": reasons,
+            "consequence": facts["request"].get("consequence")})
     # The operation, when the contract carries one — not None.
     #
     # This path used to hardcode None, and it was unreachable while every
@@ -4757,6 +4897,7 @@ async def pending_view(owner: str) -> list:
             "handle": rec.get("handle"),
             "assurance": rec.get("assurance", {}),
             "assurance_notes": rec.get("assurance_notes", []),
+            "autonomy_notes": rec.get("autonomy_notes", []),
             "because": rec.get("because", []),
             "organization": rec.get("org") or None,
             # Which resource, so an administrator can see at a glance whether
@@ -5228,6 +5369,19 @@ async def owner_policy_vocabulary(request: Request) -> list:
     """
     await require_owner(request)
     return policy.vocabulary()
+
+
+@app.get("/owner/policy-presets")
+async def owner_policy_presets(request: Request) -> list:
+    """Rule sets she can add to a tier in one step.
+
+    A preset is ordinary rules, served so her portal can show exactly what
+    adding one would write — every condition in it is in the vocabulary
+    above, and saving it goes through the same validation as anything she
+    types. Nothing about a tier carrying a preset is special afterwards.
+    """
+    await require_owner(request)
+    return autonomy.PRESETS
 
 
 @app.post("/owner/policies")
@@ -5767,7 +5921,112 @@ async def owner_joint_leave(account: str, request: Request) -> dict:
 @app.get("/owner/connections")
 async def owner_connections(request: Request) -> list:
     owner = await require_owner(request)
-    return await st(owner).connections()
+    out = []
+    for conn in await st(owner).connections():
+        # Where it stands on both autonomy ladders, read on every listing
+        # rather than stored: hers from the record she wrote, the operator's
+        # from the identity captured when it connected. Two fields, never
+        # one — see autonomy.py.
+        out.append({**conn, "autonomy_view": {
+            "level": autonomy.name(autonomy.owner_level(conn)),
+            "operator": autonomy.operator_declaration(conn.get("identity") or {}),
+        }})
+    return out
+
+
+@app.get("/owner/connections/autonomy")
+async def owner_connection_autonomy(request: Request, handle: str) -> dict:
+    """Where one agent stands with her, where its operator says it stands,
+    and what her own record says about promoting it a rung.
+
+    The eligibility is advisory and computed from the ledger her decisions
+    already wrote: nothing here promotes anything, and the answer is shown
+    beside the button rather than instead of it.
+    """
+    owner = await require_owner(request)
+    conn = await st(owner).connection(handle)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="unknown connection")
+    identity = conn.get("identity") or {}
+    level = autonomy.owner_level(conn)
+    declared = autonomy.operator_declaration(identity)
+    return {
+        "handle": handle,
+        "level": autonomy.name(level),
+        "means": autonomy.MEANS[level],
+        "operator": declared,
+        "notes": autonomy.describe(level, declared),
+        "eligibility": autonomy.eligibility(conn, await st(owner).ledger(handle)),
+        "history": ((conn.get("autonomy") or {}).get("history") or []),
+    }
+
+
+@app.post("/owner/connections/autonomy")
+async def owner_set_autonomy(request: Request) -> dict:
+    """Promote or demote an agent on her ladder.
+
+    `{"handle": …, "level": "junior", "expect": "intern"}`. Promotion is hers
+    alone and one rung at a time; she may demote any distance. `expect` is the
+    level her portal showed her, and the write lands only if the agent still
+    stands there — omit it and the level read just now is used, which is
+    right for a script and wrong for a screen a person has been looking at.
+    """
+    owner = await require_owner(request)
+    try:
+        body = await request.json()
+    except ValueError:
+        body = {}
+    handle = await handle_in(request)
+    return await set_autonomy_for(owner, handle, body.get("level"),
+                                  by={"kind": "owner", "owner": owner},
+                                  expect=body.get("expect"),
+                                  note=body.get("note"))
+
+
+async def set_autonomy_for(owner: str, handle: str, level, *, by: dict,
+                           expect: str | None = None,
+                           note: str | None = None) -> dict:
+    """One move on her ladder, by whoever `by` names.
+
+    Only her own endpoint calls this today. It takes `by` rather than assuming
+    her because the rule it enforces is about who moves the level, and a
+    caller acting for her must arrive here and be told no — not be unable to
+    arrive. An organization's administrator is deliberately *not* given an
+    endpoint: her ladder covers her own accounts as well as the
+    organization's, and his tool for an agent he distrusts is already the
+    narrower one — shutting it out of the organization's resources.
+    """
+    conn = await st(owner).connection(handle)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="unknown connection")
+    current = autonomy.name(autonomy.owner_level(conn))
+    if expect is not None and autonomy.name(autonomy.normalise(expect)) != current:
+        raise HTTPException(status_code=409, detail=(
+            f"this agent is {current} with you now, not {expect} — someone "
+            f"moved it since you looked"))
+    try:
+        record = autonomy.change(conn, level, by, utcstamp(),
+                                 note=str(note)[:200] if note else None)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    if not await st(owner).set_autonomy(handle, record, current):
+        raise HTTPException(status_code=409, detail=(
+            "this agent's level changed while you were deciding, or it is no "
+            "longer connected — look again and decide again"))
+    moved = "promoted" if autonomy.normalise(record["level"]) > \
+        autonomy.normalise(current) else "demoted"
+    event(f"autonomy.{moved}", handle=handle, was=current, to=record["level"],
+          by=by.get("owner") or by.get("admin"))
+    await ledger_add(owner, f"autonomy_{moved}", "-", {
+        "from": current, "to": record["level"],
+        **({"note": record["history"][-1].get("note")}
+           if record["history"][-1].get("note") else {}),
+        **({"by": by} if by.get("kind") != "owner" else {})}, handle=handle)
+    await owner_notify(owner, {"type": "decided", "family": "-",
+                               "decision": f"autonomy-{moved}",
+                               "handle": handle, "level": record["level"]})
+    return {"handle": handle, "level": record["level"], "was": current,
+            "means": autonomy.MEANS[autonomy.normalise(record["level"])]}
 
 
 async def handle_in(request: Request) -> str:
@@ -5832,6 +6091,23 @@ async def revoke_connection_for(owner: str, handle: str,
     return {"handle": handle, "status": "revoked",
             "rpts_deactivated": killed + child_tokens,
             "connections_revoked": children}
+
+
+@app.post("/owner/connections/resume")
+async def owner_resume_connection(request: Request) -> dict:
+    """Lift a circuit-breaker suspension. Hers alone: it is the one step of
+    the breaker that gives access back."""
+    owner = await require_owner(request)
+    handle = await handle_in(request)
+    conn = await st(owner).connection(handle)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="unknown connection")
+    if not conn.get("suspended"):
+        raise HTTPException(status_code=409, detail="this agent is not suspended")
+    await st(owner).set_suspension(handle, None)
+    await ledger_add(owner, "resumed", "-", {}, handle=handle)
+    event("connection.resumed", handle=handle)
+    return {"handle": handle, "suspended": False}
 
 
 @app.get("/owner/ledger")

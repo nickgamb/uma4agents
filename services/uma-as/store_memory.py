@@ -194,6 +194,16 @@ class MemoryOwnerStore:
             if tier_id not in conn.setdefault("tiers_approved", []):
                 conn["tiers_approved"].append(tier_id)
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        conn = self._connections.get(handle)
+        if conn is None or conn.get("status") != "active":
+            return False
+        if ((conn.get("autonomy") or {}).get("level") or "intern") != expect:
+            return False
+        conn["autonomy"] = dict(record)
+        return True
+
     async def lineage_approvals(self, root: str) -> list[str]:
         tiers: list[str] = []
         for conn in self._connections.values():
@@ -295,18 +305,29 @@ class MemoryOwnerStore:
                 return {"handle": rec["handle"], "tier": rec.get("tier")}
         return None
 
-    async def trajectory(self, handle: str, since: str) -> dict:
-        denials, calls, tiers = 0, 0, []
+    async def set_suspension(self, handle: str, record: dict | None) -> bool:
+        conn = self._connections.get(handle)
+        if conn is None:
+            return False
+        conn["suspended"] = dict(record) if record else None
+        return True
+
+    async def trajectory(self, handle: str, since: str,
+                         tier: str | None = None) -> dict:
+        denials, calls, refused, tiers = 0, 0, 0, []
         for row in self._ledger:
             if row.get("handle") != handle or row["ts"] < since:
                 continue
             if row["kind"] == "denied":
                 denials += 1
-            if row["kind"] == "touched":
+            if row["kind"] == "touched" and (tier is None or row.get("tier") == tier):
                 calls += 1
-            if (tier := row.get("tier")) and tier not in tiers:
-                tiers.append(tier)
-        return {"denials": denials, "tiers": sorted(tiers), "calls": calls}
+            if row["kind"] == "call_refused":
+                refused += 1
+            if (seen := row.get("tier")) and seen not in tiers:
+                tiers.append(seen)
+        return {"denials": denials, "tiers": sorted(tiers), "calls": calls,
+                "refused_calls": refused}
 
     async def publish_terms(self, doc: dict) -> None:
         self._terms.setdefault(doc["template_id"], dict(doc))

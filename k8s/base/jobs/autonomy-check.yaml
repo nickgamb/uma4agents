@@ -1,0 +1,58 @@
+# Earned autonomy — in the cluster.
+#
+# The same clients/demo-driver/autonomy_check.py the compose stack runs, from
+# Bob's namespace, through the edge. Two of Bob's agents, at different rungs
+# of his firm's ATF ladder, each start as an intern with Alice; she promotes
+# them one rung at a time; the firm's ladder only ever tightens; and lowering
+# either takes effect on the next request. The level is a compare-and-set on
+# the connection row here, so this is also where a stale promotion meets a
+# real database.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: autonomy-check
+  namespace: sterling-vance
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: autonomy-check }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent
+      containers:
+        - name: autonomy-check
+          image: localhost:5001/u4a/uma-as:dev
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              pip install -q httpx 'pyjwt[crypto]' 2>/dev/null
+              exec python3 /driver/autonomy_check.py
+          env:
+            - name: PYTHONPATH
+              value: /driver/lib
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: UMA4A_CACERT
+              value: /certs/rootCA.pem
+          volumeMounts:
+            - { name: driver, mountPath: /driver/autonomy_check.py, subPath: autonomy_check.py, readOnly: true }
+            - { name: lib, mountPath: /driver/lib, readOnly: true }
+            - { name: ca, mountPath: /certs, readOnly: true }
+            - { name: keys, mountPath: /driver/keys }
+          workingDir: /driver
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+      volumes:
+        - name: driver
+          configMap: { name: demo-driver }
+        - name: lib
+          configMap: { name: demo-lib }
+        - name: ca
+          configMap: { name: uma-lab-ca-bundle }
+        - name: keys
+          emptyDir: {}

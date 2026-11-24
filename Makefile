@@ -123,8 +123,17 @@ fixture:
 	docker compose -f compose.fixture.yml up -d --build owner-keygen uma-as alice-vault-mcp
 	docker compose -f compose.fixture.yml --profile check run --rm fixture-check
 
+## fixture-autonomy: the earned-autonomy check on the fixture — no identity
+## provider, no gateway, no DNS, no `make init`. Adds the agent operator whose
+## metadata declares its own ATF ladder. See docs/AUTONOMY.md.
+.PHONY: fixture-autonomy
+fixture-autonomy:
+	docker compose -f compose.fixture.yml up -d --build owner-keygen uma-as alice-vault-mcp
+	docker compose -f compose.fixture.yml --profile autonomy up -d --build agent-operator
+	docker compose -f compose.fixture.yml --profile autonomy run --rm autonomy-check
+
 fixture-down:
-	docker compose -f compose.fixture.yml down --timeout 2 --volumes --remove-orphans
+	docker compose -f compose.fixture.yml --profile autonomy down --timeout 2 --volumes --remove-orphans
 
 ## flow-check: four agents, four identity regimes, one unchanged owner.
 ## The check behind docs/FLOW.md — agent identity never reaches her decision.
@@ -198,6 +207,15 @@ okta-live:
 		-e OKTA_REFRESH_TOKEN -e OKTA_SUBJECT \
 		python:3.12-slim bash -c \
 		"pip install -q httpx 'pyjwt[crypto]' cryptography certifi && exec python /driver/okta_live.py"
+
+## autonomy-check: earned autonomy, as the CSA Agentic Trust Framework's
+## ladder profiled twice — once by the agent's operator, once by Alice. Every
+## agent is an intern with her whatever its firm says, only she promotes it,
+## the firm's ladder only tightens, and lowering either lands at once. See
+## docs/AUTONOMY.md.
+.PHONY: autonomy-check
+autonomy-check:
+	docker compose --profile test run --rm autonomy-check
 
 ## assurance-check: agent assurance, and the cap on how much of Alice's
 ## attention a stranger can spend. See docs/ASSURANCE.md.
@@ -658,7 +676,7 @@ include Makefile.k8s
 .PHONY: check-all check-unit check-live
 check-unit: rules-test sig-test pep-test gateway-test introduction-test aauth-test org-test rego-test joint-test tally-test as-test client-test store-test
 check-live: smoke-test flow-check first-party-check multi-owner-check \
-	establishment-check assurance-check intent-check consequence-check \
+	establishment-check assurance-check autonomy-check intent-check consequence-check \
 	clearance-check \
 	subagent-check org-check \
 	joint-check xaa-check adapter-check shim-test embedded-check kwaai-check \

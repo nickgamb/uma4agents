@@ -71,6 +71,11 @@ behind: the resource that would have to undo an act declares whether it can be,
 and her policy reads it — so "ask me about anything that cannot be undone" is a
 rule that names no tool and holds for tools she has never seen.
 
+**[docs/AUTONOMY.md](docs/AUTONOMY.md)** is what comes after assurance: how much
+an agent she has already met may do without asking. The CSA Agentic Trust
+Framework's maturity ladder, held twice — once by the firm running the agent,
+which can only make her rules stricter, and once by her, which only she climbs.
+
 **[docs/CLEARANCE.md](docs/CLEARANCE.md)** is the authorization that is nobody's
 here to give. Whether a desk holds a current licence is a fact about the world,
 and the party asking has every reason to misstate it, so it travels from the

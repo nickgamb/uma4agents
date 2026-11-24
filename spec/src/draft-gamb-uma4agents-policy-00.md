@@ -72,6 +72,14 @@ normative:
       Internet-Draft: draft-gamb-uma4agents-terms-00
     target: https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html
 informative:
+  ATF:
+    title: "Agentic Trust Framework: Zero Trust Governance for AI Agents"
+    author:
+      - org: Cloud Security Alliance
+    date: 2026-04
+    seriesinfo:
+      Cloud Security Alliance: Public Review Draft 0.9.1
+    target: https://github.com/massivescale-ai/agentic-trust-framework
   SP800-63-3:
     title: "Digital Identity Guidelines"
     author:
@@ -121,7 +129,9 @@ the owner's attention is defended.
 Its central rule is an asymmetry: evidence supplied by the requesting side may
 only tighten a requirement, and only the owner's own prior decisions may relax
 one. Agent assurance is decomposed into three independent axes with no composite
-score. The owner's pending queue has a depth limit, in two lanes, so that a party
+score. Once the owner has met an agent, how much it may do without asking her is
+an earned level that only she raises, kept apart from the level its operator
+declares, which may only tighten. The owner's pending queue has a depth limit, in two lanes, so that a party
 who can mint keys for free cannot make "the owner decides" into a denial of
 service. And the owner's record of what was promised, decided and done names the
 counterparty on every row it honestly can.
@@ -212,7 +222,9 @@ offers it:
 - the owner personally approved access for this agent at this policy unit;
 - the owner has never revoked this agent;
 - the owner's relationship with this agent is older than a stated duration;
-- the agent is one the owner activated herself, as {{first-party}}.
+- the agent is one the owner activated herself, as {{first-party}};
+- the owner has raised this agent to at least a stated level of her own
+  autonomy ladder, as {{owners-ladder}}.
 
 "The owner has previously granted here" is not on the list, and the distinction
 is the point. A grant this server made may have been automatic, and relaxing on
@@ -243,7 +255,10 @@ Every other condition may appear only in a rule whose effect is `ask` or
 - what this server has recently done regarding the agent: how many times the
   owner has denied it, how many policy units it has asked at, how many calls it
   has made;
-- that the agent was introduced by another agent ({{U4ALineage}}).
+- that the agent was introduced by another agent ({{U4ALineage}});
+- that the agent stands below a stated level of the owner's autonomy ladder,
+  or of its operator's ({{operators-ladder}}), or that its operator declares
+  none.
 
 A rule that tightens on the owner's own aggregate conduct — "she has denied this
 agent four times" — reads the owner's decisions and is still observed rather
@@ -551,6 +566,246 @@ NOT accept a handle from the report. The enforcement point is the resource
 server's component; which agent did what is the owner's record and not the
 resource server's to assert.
 
+# Earned Autonomy {#autonomy}
+
+{{assurance}} says what an authorization server may know about an agent before
+the owner has met it. This section says how much an agent she *has* met may do
+without asking her, and how the owner raises that over time.
+
+The vocabulary is the maturity model of the Agentic Trust Framework {{ATF}}.
+Four levels, in increasing order of what an agent may do unsupervised:
+`intern` (observes and reports), `junior` (may act, every act approved
+first), `senior` (acts, and a person is told), `principal` (acts within an
+approved domain, and escalates the edge). {{ATF}} describes these as one
+ladder, climbed by an agent as the organization that deploys it comes to trust
+it. Inside one organization that is the whole picture: the party governing the
+agent and the party whose systems it reaches are the same party.
+
+Under this profile they are not. The agent's operator runs it on behalf of a
+requesting party; the resource owner holds what it asks for. So every agent
+stands on two ladders at once: the one its operator keeps, and the one the
+owner keeps. They answer different questions — how far does the party running
+this agent trust it, and how far does *this owner* — and an answer to the first
+is evidence about the second only in one direction.
+
+## Two Ladders {#two-ladders}
+
+An authorization server implementing this section MUST keep the level the
+owner has given an agent and the level the agent's operator declares as two
+facts, and MUST NOT combine them into a single level. An owner's rules read
+each through its own conditions.
+
+The reason is the one {{axes}} gives for refusing a composite assurance score.
+A combined level is the mechanism by which an operator's confidence in its own
+agent would come to stand in for an owner's, and that is a trade no owner would
+make if asked directly. Whichever ladder stands lower is the one that governs,
+and an owner who wants that writes it as rules ({{atf-profile}}).
+
+## The Owner's Ladder {#owners-ladder}
+
+An authorization server keeps one level per standing connection. An agent with
+no standing connection MUST be treated as at the lowest level, and a connection
+the owner admits, including one she readmits after revoking it, MUST begin
+there. A level granted by another party, an operator's included, is not
+standing with her.
+
+An authorization server MUST NOT raise an agent's level except on the owner's
+own decision, and MUST NOT raise it on a decision taken on her behalf
+({{attribution}}). It MUST NOT raise a level by more than one step in one
+decision: the time an agent spends at each level is the only evidence of its
+conduct there that the owner will ever have, and skipping a level discards it.
+The owner MUST be able to lower an agent's level by any number of steps in one
+decision, and revoking the agent lowers it to the bottom.
+
+Together these give the property that lets the level relax a rule
+({{relaxing}}): it can rise only by the owner's hand, one step at a time, so
+whatever it reads is at or below a level she personally granted. A condition
+that the agent stands at least at the lowest level holds for every agent,
+including one the owner has never met, and MUST be refused where the rule is
+stored ({{asymmetry}}).
+
+Two parties may move one agent's level without seeing each other — the owner
+from a view she opened a minute ago, and a second surface or a second
+authorization server acting on something newer. An authorization server MUST
+apply a change of level only if the agent still stands at the level the person
+deciding was shown, so that a stale promotion cannot overwrite a demotion it
+never saw. It MUST record every change of level, with the level before and
+after and who decided it, in the record of {{record}}.
+
+{{ATF}} sets five conditions on a promotion: performance, security validation,
+business value, incident record and governance sign-off. An authorization
+server SHOULD show the owner, beside the decision, what her own record says
+about the first and fourth — how long the agent has stood at its level, how
+often she approved what it asked there, and whether her policy refused it —
+and SHOULD say that the second and third are evidence about the operator's
+programme rather than about this agent with her. The fifth is her decision
+itself. Nothing an authorization server computes from these may promote an
+agent.
+
+A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full ({{attention}}) is about the owner; neither is an incident.
+
+Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does ({{clearance}}): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.
+
+A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full ({{attention}}) is about the owner; neither is an incident.
+
+Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does ({{clearance}}): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.
+
+## The Operator's Ladder {#operators-ladder}
+
+An operator declares where it has put an agent on its own ladder in the client
+metadata document {{I-D.ietf-oauth-client-id-metadata-document}} the agent
+names, as a member `atf` whose value is an object:
+
+~~~ json
+{
+  "atf": {
+    "version": "0.9.0",
+    "maturity_level": "senior",
+    "conformance": "compatible",
+    "statement_uri": "https://operator.example/atf"
+  }
+}
+~~~
+{: title="An operator's declaration of its agent's level, in its client metadata document."}
+
+`maturity_level` is one of the four levels; `conformance` is `compatible` or
+`certified` in the sense of {{ATF}}; `statement_uri` locates the operator's
+conformance statement. A level is per client, so an operator running agents at
+different levels publishes a document per class of agent.
+
+An authorization server that reads the declaration MUST read it only from a
+client metadata document that resolved and claims its own URL, and MUST NOT
+read it from anything the agent itself sent. It MUST treat the operator's level
+as a condition that may only tighten, under {{tightening}}: the declaration is
+the requesting side's statement about itself, and a level it raises reaches
+nobody's resources. An operator that declares no level MUST NOT satisfy a
+condition that its level is below a stated level; an operator that has not
+heard of {{ATF}} is not saying its agent is an intern. An authorization server
+MAY offer a separate condition naming the absence.
+
+Because it may only tighten, the declaration needs no verification to be safe
+to read: an operator that overstates its agent gains nothing, and one that
+understates it costs only itself. It is shown to the owner with what the
+authorization server could establish about who made it — an operator at level 2
+of the accountability axis ({{level-two}}), or a document any agent could have
+named.
+
+An operator lowering its agent is the change that must reach the owner, since a
+stale copy of the document goes on reading the level from before. An
+authorization server MUST bound how long it relies on a copy of a client
+metadata document from which it reads a level, and SHOULD use the same bound
+as for an operator's key directory.
+
+A declaration of `certified` is the operator's claim that a third party audited
+its programme. An authorization server MUST NOT treat it as an attestation, and
+MUST NOT raise any axis of {{assurance}} on it. Third-party attestation is the
+evidence that would let somebody outside the operator stand behind its ladder,
+and it would belong on the accountability axis, above level 2; it needs a party
+a relying authorization server can ask, which {{ATF}} does not yet define.
+
+## Acting Without Asking {#act-notify}
+
+The `senior` level of {{ATF}} is "act and notify". Where a grant is issued
+without asking the owner for an operation whose declared consequence is
+`compensatable` or worse, or because a rule relaxed a unit that would otherwise
+have asked, the authorization server SHOULD tell the owner as it happens, on
+whatever surface would otherwise have asked her. A relaxation is also recorded
+({{record}}).
+
+## A Profile of the Agentic Trust Framework {#atf-profile}
+
+The levels of {{ATF}} map onto rules over conditions this document already
+defines, together with the consequence a resource server declares for the
+operation ({{consequence}}). Applied to a policy unit, the following reads as
+the levels do, on both ladders at once:
+
+~~~ json
+{"rules": [
+  {"then": "auto",
+   "when": ["standing.autonomy_at_least:senior"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "refuse",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_unknown"]},
+  {"then": "refuse",
+   "when": ["operator.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]}
+]}
+~~~
+{: title="The levels of ATF as an owner's rules, in the vocabulary of Appendix A."}
+
+| Level, with her | A read | An act that can be compensated | An act that cannot be undone |
+|---|---|---|---|
+| intern | as the unit says | refused | refused |
+| junior | as the unit says | asked | asked |
+| senior | granted | granted, and she is told | asked |
+| principal | granted | granted, and she is told | granted, and she is told |
+{: title="What the profile does, before the operator's ladder is read."}
+
+The operator's ladder is then read the same way and can only make a cell
+stricter: an agent its operator still calls an intern does not act on her
+resources however far she has promoted it. The only rule
+in the profile that relaxes anything reads the owner's own decision.
+
+An operation no resource server has described is put to the owner when an
+intern asks for it rather than refused, because an undescribed read is common
+and refusing it would make the profile unusable on most resources.
+
+## Containment {#containment}
+
+A policy unit's terms MAY state a call rate: a number of calls and a period.
+An authorization server that offers one MUST refuse at introspection a grant
+whose agent has already made that many calls at that unit within the period,
+with `error` of `rate_limited`, counting only calls an enforcement point
+reported as allowed. Because the rate is in the terms, the agent agrees to it
+before it holds a grant.
+
+An enforcement point SHOULD report a call it refused after the agent's
+signature verified, and the authorization server records it against the agent
+as it does an allowed call ({{pep-reports}}). Refusals before the signature
+verified are not counted, since anyone holding a copy of a grant could cause
+them. An authorization server MAY suspend an agent after a number of such
+refusals within a window. A suspension MUST stop every grant the agent holds
+and every new grant, with `error` of `suspended`, and MUST lower the agent to
+the bottom of the owner's ladder ({{owners-ladder}}). It MUST NOT be lifted by
+anyone but the owner. It keeps the connection and the rest of the agent's
+standing.
+
+Both `rate_limited` and `suspended` are terminal in the sense of
+{{U4AFedAuthz}} Section 5: a fresh negotiation cannot change either.
+
 # Security Considerations
 
 ## The Asymmetry Is the Security Model
@@ -566,6 +821,18 @@ An implementation that reads an assurance level from anything the requesting
 side sent has reintroduced the problem {{axes}} exists to remove. Each level is
 the result of a check this authority ran, and the check either ran and passed
 or the level is zero.
+
+## Promotion Is a Relaxation
+
+Raising an agent on the owner's ladder widens what it may do at every policy
+unit that reads the ladder, from that request onward. That is why only the
+owner may do it, one step at a time, and why the write is conditional on the
+level she was shown ({{owners-ladder}}). An implementation that let an
+administrator, an operator, or an automatic process raise the level would have
+built the relaxation {{asymmetry}} exists to forbid, under a different name.
+
+Lowering needs none of this. A demotion, by anyone and by any distance, can
+only make the owner's rules stricter.
 
 ## Trajectory Reads Are Not Atomic
 
@@ -600,6 +867,12 @@ with the level it reached. An implementation MUST make the difference visible �
 "named" and "published this agent's key" are different sentences — because a
 resolved name is exactly what an owner starts keying decisions on, and
 {{level-two}} is the only level that means what it appears to.
+
+## An Operator's Level Is Shown, Not Hidden
+
+The operator's declared level is shown to the owner alongside her own, as two
+statements. It is information the operator chose to publish about its own
+agent; nothing about the owner is disclosed to the operator by reading it.
 
 # IANA Considerations
 
@@ -639,6 +912,10 @@ written `90d`, `12h`, `45m` or as seconds.
 | `request.max_expiry` | observed | asked for the longest access the unit allows |
 | `request.reason_absent` | observed | stated no reason |
 | `request.mission_absent` | observed | cited no mandate |
+| `standing.autonomy_at_least:L` | relaxing | the owner has raised this agent to at least level L ({{owners-ladder}}) |
+| `standing.autonomy_below:L` | observed | the agent stands below level L with the owner |
+| `operator.autonomy_below:L` | observed | the agent's operator declares a level below L |
+| `operator.autonomy_undeclared` | observed | the agent's operator declares no level |
 {: title="The reference implementation's condition vocabulary."}
 
 # Record Entry Kinds {#record-kinds}
@@ -649,7 +926,8 @@ following kinds of entry, each carrying the negotiation identifier of
 
 `promised`, `approved`, `denied`, `connected`, `touched`, `relaxed`, `refused`,
 `identity_refused`, `revoked`; `claimed`, `disclaimed` for the owner's own
-operators; and the kinds defined by {{U4AMultiParty}} for organizations and
+operators; `autonomy_promoted`, `autonomy_demoted` for her ladder
+({{owners-ladder}}); and the kinds defined by {{U4AMultiParty}} for organizations and
 jointly held resources.
 
 # Implementation Status {#implementation-status}
@@ -663,6 +941,74 @@ that the set of relaxing conditions is exactly the set the tests expect and that
 every other condition is refused under `auto` at the moment of saving. The
 attention bound and both lanes are exercised against a running authorization
 server, as is the return of a blocked operator as an anonymous stranger.
+{{autonomy}} is exercised end to end against a running authorization server
+and resource: two agents of one operator at different levels of its ladder,
+each starting at the bottom of the owner's, promoted one step at a time,
+refused while either ladder stands too low, and returned to the bottom by a
+revocation.
+
+# Mapping to the Agentic Trust Framework {#atf-crosswalk}
+
+This appendix is not normative. {{ATF}} sets 25 requirements across five
+elements for an organization deploying agents. Under this profile some fall to
+the operator, as {{ATF}} assumes, and some are met by the resource owner's
+authorization server on her side of the exchange, which is the side {{ATF}}
+does not describe.
+
+Each requirement is given one of four statuses, judged only for requests that
+reach the owner's resources:
+
+met:
+: this set meets it on the owner's side.
+
+partly:
+: this set meets part of it on the owner's side; the remainder is stated.
+
+operator:
+: it concerns the agent's own runtime, which the owner cannot see, and this
+  set does not attempt it.
+
+resource:
+: it is the resource server's to do, and this set carries what the resource
+  server declares about it.
+
+gap:
+: the owner's side could meet it and this set does not.
+
+| ATF | Requirement | Status | Under this set |
+|---|---|---|---|
+| I-1 | Unique identifier | met | The connection handle names each agent to the owner: its key's thumbprint, or its issuer and subject ({{U4ACore}}). |
+| I-2 | Credential binding | met | Every agreement and call is signed with the agent's key; the binding axis records it ({{axes}}). |
+| I-3 | Ownership chain | partly | The accountability axis names the operator, and level 2 is the operator's own attestation ({{level-two}}). The chain from the operator to the person it acts for is not established. |
+| I-4 | Purpose declaration | partly | Each agreement carries the purpose the owner's terms state and the agent's reason ({{U4ATerms}}). This is per grant; a standing declaration of the agent's scope is the operator's. |
+| I-5 | Capability manifest | operator | Not read. |
+| B-1 | Structured logging | met | The record of {{record}}, for everything that reaches her resources. |
+| B-2 | Action attribution | met | Every row of the record names the agent where it can ({{counterparty}}); an enforcement point's report is attributed by the authorization server, not the reporter ({{pep-reports}}). |
+| B-3 | Behavioural baseline | operator | The trajectory conditions of {{tightening}} count denials, units and calls in a window. They are not a baseline. |
+| B-4 | Anomaly detection | partly | A rule can tighten when an agent's requests widen or multiply ({{tightening}}). There is no detection beyond such counts. |
+| B-5 | Explainability | partly | The conditions that decided each request are kept in the record. The agent's own rationale is only its stated reason, which nothing checks. |
+| D-1 | Schema validation | operator | Her side validates the agreement against her terms and the call against the operation it was granted for; the agent's inputs are not hers to see. |
+| D-2 | Injection prevention | operator | Not detected. Per-operation grants bound what an injected instruction can do on her resources. |
+| D-3 | PII/PHI protection | partly | Scopes limit what is released, and her terms prohibit uses of it. Detection and masking are the operator's, and most prohibitions are undertakings rather than enforced ({{U4ATerms}}). |
+| D-4 | Output validation | operator | Not attempted. |
+| D-5 | Data lineage | partly | The record links what an agent promised to what it touched, per negotiation, and sub-agents to the agent that introduced them ({{U4ALineage}}). Lineage inside the agent's pipeline is the operator's. |
+| S-1 | Resource allowlist | met | Each policy unit names its resources; an ungoverned resource is refused ({{shape}}). |
+| S-2 | Action boundaries | met | Scopes per unit, and grants bound to one named operation ({{U4ACore}}). |
+| S-3 | Rate limiting | met | A call rate in the terms of a policy unit, enforced at introspection ({{containment}}). |
+| S-4 | Transaction limits | met | A grant may be bound to one operation and its parameters and spent once ({{U4ACore}}); terms may carry constraints. |
+| S-5 | Blast radius containment | partly | Access is per unit, an operator can be blocked in one action ({{operators}}), and revoking an agent revokes its lineage ({{U4ALineage}}). Cumulative impact across calls is not limited. |
+| R-1 | Circuit breaker | met | Repeated calls refused after the agent's signature verified suspend it until the owner lifts the suspension ({{containment}}). |
+| R-2 | Kill switch | partly | Revoking a connection or blocking an operator takes effect on the next call, because the enforcement point introspects every call. It stops access, not the agent. |
+| R-3 | Session revocation | met | Revoking a connection deactivates every grant issued under it in one step ({{U4ACore}}). |
+| R-4 | State rollback | resource | Undoing an act is the resource server's. The declared consequence of {{consequence}} says whether it can be undone, and the owner's rules read it. |
+| R-5 | Graceful degradation | met | Lowering either ladder takes effect on the agent's next request ({{autonomy}}). |
+{: title="ATF's requirements, judged on the owner's side of the exchange."}
+
+{{ATF}}'s promotion gates map as {{owners-ladder}} describes. Its automatic
+demotion triggers — a critical incident, a discovered vulnerability, repeated
+minor incidents — are observed by the operator, which is where {{ATF}} places
+them, and reach every owner through the operator's ladder on the agent's next
+request without any owner acting.
 
 # Acknowledgments
 {:numbered="false"}
@@ -671,6 +1017,8 @@ The decomposition of {{axes}} follows {{SP800-63-3}}. The operator key directory
 of {{I-D.meunier-webbotauth-registry}} and the client metadata document of
 {{I-D.ietf-oauth-client-id-metadata-document}} are what make the accountability
 axis derivable rather than asserted.
+
+The levels of {{autonomy}} are those of the Agentic Trust Framework {{ATF}}.
 
 The consequence vocabulary of {{consequence}} — reversible, compensatable,
 forward-recoverable, irreversible — is Nat Sakimura's, from "When Software

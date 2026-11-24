@@ -71,7 +71,11 @@ then immediately negotiates.
 
 What is still missing at level 2 is anyone *outside* the operator. Attestation
 by an accreditation body or a regulator would be a further level; it needs a
-trust framework that does not exist, and this does not invent one.
+trust framework that does not exist, and this does not invent one. The nearest
+candidate is the CSA Agentic Trust Framework's *Certified* tier — an
+independent audit of an operator's programme — which [AUTONOMY.md](AUTONOMY.md)
+reads as a claim and credits with nothing until a relying party has somewhere
+to ask.
 
 ## The asymmetry
 
@@ -108,10 +112,13 @@ have their own homes:
 | Writing rules over these facts, adding terms of her own, and the validation that has to happen where policy is *stored* | [u4a.ai/docs/guides/owner-policy](https://u4a.ai/docs/guides/owner-policy/) |
 | Why relaxation may rest only on her own decisions, and not on what this server granted | same guide, step 3 |
 | The cap on how much of her attention a stranger can spend, and why one queue defended the wrong half | [u4a.ai/docs/overview/attention](https://u4a.ai/docs/overview/attention/), and FINDINGS recommendation 14 |
+| How much an agent she *has* met may do without asking — the ATF maturity ladder, held once by its operator and once by her | [AUTONOMY.md](AUTONOMY.md) |
 | Blocking an operator rather than one agent at a time | [u4a.ai/docs/overview/revocation](https://u4a.ai/docs/overview/revocation/), and `POST /owner/operators/block` in [PROTOCOL.md](PROTOCOL.md) |
 
 ## See also
 
+- [AUTONOMY.md](AUTONOMY.md) — earned autonomy: what comes after assurance,
+  once she has met the agent
 - [FLOW.md](FLOW.md) — why her policy still names no identity system
 - [FINDINGS.md](../FINDINGS.md) — recommendations 13 and 14
 - `services/uma-as/assurance.py`, `services/uma-as/policy.py`

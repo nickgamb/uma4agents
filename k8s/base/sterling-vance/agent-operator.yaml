@@ -71,6 +71,13 @@ spec:
               value: https://agent.uma.lab
             - name: AGENT_OPERATOR_KEYS_FILE
               value: /published/agent-jwks.json
+            # The firm's own ATF ladder: its advisory agent is a principal
+            # there, its research assistant an intern. Owners' authorities
+            # read these and may only tighten on them (docs/AUTONOMY.md).
+            - name: AGENT_OPERATOR_ATF_LEVEL
+              value: principal
+            - name: AGENT_OPERATOR_CLASSES
+              value: '{"research": {"name": "Sterling & Vance — Research Assistant", "atf_level": "intern"}}'
           volumeMounts:
             - { name: published, mountPath: /published, readOnly: true }
           startupProbe:

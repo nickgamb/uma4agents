@@ -50,7 +50,8 @@ POST   /introspect      RPT introspection (permissions array). Never consumes by
                         default; an inactive answer carries an `error` reason
                         (invalid_signature | unknown_token | connection_revoked |
                         organization_revoked | already_consumed | revoked |
-                        expired) so the PEP can tell a re-negotiable failure from
+                        expired | rate_limited | suspended) so the PEP can tell a
+                        re-negotiable failure from
                         a settled one. A grant over another owner's resources is
                         unknown_token, whatever its state
 POST   /consume         burn a single-use RPT — the atomic last step of
@@ -58,6 +59,8 @@ POST   /consume         burn a single-use RPT — the atomic last step of
                         have passed. {consumed: false} carries `error`:
                         already_consumed | not_single_use | an introspection reason
 POST   /audit/access    the PEP reports an allowed call (grounds the ledger's "touched")
+POST   /audit/refused   the PEP reports a call refused after PoP verified; repeated
+                        ones trip the circuit breaker
 
 # Token endpoint (agent-facing UMA 2.0 Grant shape, plus RS-facing PAT issuance)
 POST /token         grant_type=uma-ticket            the four-beat negotiation loop
@@ -96,6 +99,9 @@ DELETE /owner/policies/{tier_id}           remove one; its resources become
                                            ungoverned, and ungoverned is denied
 GET  /owner/policy-vocabulary              conditions a rule may use, and which
                                            of them may relax one
+GET  /owner/policy-presets                 rule sets she can add in one step (the
+                                           earned-autonomy profile); ordinary rules,
+                                           saved through the same validation
 GET  /owner/resources                      registered resources joined with tiers
 GET  /owner/resource-servers               RSs holding her protection access,
                                            each with a status: pending (it has
@@ -109,8 +115,17 @@ POST /owner/resource-servers/decision      approved | revoked, by client_id in
 POST /owner/resource-servers/{id}/revoke   the same withdrawal, by path. Kept for
                                            the seeded relationships, whose ids
                                            are plain names
-GET  /owner/connections                    standing agent relationships
+GET  /owner/connections                    standing agent relationships, each with
+                                           `autonomy_view`: her level and the level
+                                           its operator declares, side by side
 POST /owner/connections/revoke            {handle}: revoke a connection + its live RPTs
+GET  /owner/connections/autonomy?handle=   one agent on both ladders, its history,
+                                           and what her record says about promoting
+                                           it a rung (advisory)
+POST /owner/connections/resume             {handle}: lift a circuit-breaker suspension
+POST /owner/connections/autonomy           {handle, level, expect}: promote one rung
+                                           (hers alone) or demote any distance;
+                                           409 if it no longer stands at `expect`
 GET  /owner/operators                      operators behind those connections
 POST /owner/operators/block                shut out every agent one operator
                                            runs, revoking what is connected in
@@ -650,6 +665,7 @@ list with the baseline and the reasoning for each.
 | 22 | The owner's API: `owner_endpoint` in the metadata, and the surface under it through which her portal, her tools or her own agent operate her authorization server | Left to the deployment | Owner |
 | 23 | `consequence` on a published tool surface — what an operation leaves behind, declared by the resource that performs it, read by her policy, carried on the grant and re-checked at the call | No vocabulary for what an act costs | FedAuthz §2.1; Core §7.2; Policy §3.3 |
 | 24 | Clearance: facts a party other than the requester must attest — a licence, a jurisdiction — fetched authority-to-authority, required by her tier or the charter above it, and refused before terms are dictated | Claims come from the requesting party | Policy §3.4; MultiParty §2.4 |
+| 25 | Earned autonomy on two ladders: the owner's level per connection (raised only by her, one rung at a time, compare-and-set, reset by revocation; relaxing), and the operator's ATF level declared as `atf` in its CIMD (tighten-only; undeclared is unknown, not low). An unasked act pushes an `acted` event | No notion of an agent's autonomy, or of the party that grants it | Policy §9 |
 
 Everything not listed here is intended to be stock UMA 2.0, and an AAuth agent
 token is verified as AAuth specifies. An

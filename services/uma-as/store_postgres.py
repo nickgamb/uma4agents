@@ -451,6 +451,17 @@ class PostgresOwnerStore:
             "SET conn = jsonb_set(conn, '{last_access}', to_jsonb($2::text)) "
             "WHERE handle = $1 AND owner = $3", handle, when, self._o)
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        # One statement: the check and the write cannot be separated by
+        # another replica's change. See Store.set_autonomy.
+        row = await self._pool.fetchrow(
+            "UPDATE connections SET conn = jsonb_set(conn, '{autonomy}', $2::jsonb) "
+            "WHERE handle = $1 AND owner = $4 AND conn ->> 'status' = 'active' "
+            "  AND COALESCE(conn -> 'autonomy' ->> 'level', 'intern') = $3 "
+            "RETURNING handle", handle, json.dumps(record), expect, self._o)
+        return row is not None
+
     async def lineage_approvals(self, root: str) -> list[str]:
         # The root and its live children in one statement. `jsonb_array_elements_text`
         # unnests each row's approved tiers so the union happens in the
@@ -628,19 +639,30 @@ class PostgresOwnerStore:
             "AND handle IS NOT NULL ORDER BY jti LIMIT 1", family, self._o)
         return {"handle": row["handle"], "tier": row["tier"]} if row else None
 
-    async def trajectory(self, handle: str, since: str) -> dict:
+    async def set_suspension(self, handle: str, record: dict | None) -> bool:
+        row = await self._pool.fetchrow(
+            "UPDATE connections SET conn = jsonb_set(conn, '{suspended}', $2::jsonb) "
+            "WHERE handle = $1 AND owner = $3 RETURNING handle",
+            handle, json.dumps(record), self._o)
+        return row is not None
+
+    async def trajectory(self, handle: str, since: str,
+                         tier: str | None = None) -> dict:
         # One pass over the (handle, kind, ts) index. `ts` is fixed-width
         # UTC, so the lexicographic comparison is a time comparison.
         row = await self._pool.fetchrow(
             "SELECT count(*) FILTER (WHERE kind = 'denied') AS denials, "
-            "       count(*) FILTER (WHERE kind = 'touched') AS calls, "
+            "       count(*) FILTER (WHERE kind = 'touched' "
+            "             AND ($4::text IS NULL OR entry->>'tier' = $4)) AS calls, "
+            "       count(*) FILTER (WHERE kind = 'call_refused') AS refused, "
             "       coalesce(array_agg(DISTINCT entry->>'tier') "
             "                FILTER (WHERE entry ? 'tier'), '{}') AS tiers "
             "  FROM ledger WHERE handle = $1 AND ts >= $2 AND owner = $3",
-            handle, since, self._o)
+            handle, since, self._o, tier)
         return {"denials": int(row["denials"] or 0),
                 "tiers": sorted(row["tiers"] or []),
-                "calls": int(row["calls"] or 0)}
+                "calls": int(row["calls"] or 0),
+                "refused_calls": int(row["refused"] or 0)}
 
     async def publish_terms(self, doc: dict) -> None:
         # DO NOTHING, not DO UPDATE: a published version's content never

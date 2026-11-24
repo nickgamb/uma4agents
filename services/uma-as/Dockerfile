@@ -16,6 +16,7 @@ COPY lib/uma4a_jose.py lib/uma4a_aauth.py ./
 COPY services/uma-as/app.py services/uma-as/policy.py ./
 COPY services/uma-as/org.py services/uma-as/joint.py ./
 COPY services/uma-as/assurance.py services/uma-as/introduction.py ./
+COPY services/uma-as/autonomy.py ./
 COPY services/uma-as/store.py services/uma-as/store_memory.py ./
 COPY services/uma-as/store_postgres.py services/uma-as/schema.sql ./
 EXPOSE 9000

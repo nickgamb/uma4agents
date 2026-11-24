@@ -27,6 +27,7 @@ NS=sterling-vance
 kubectl -n "$NS" create configmap demo-driver \
   --from-file=driver.py="$ROOT/clients/demo-driver/driver.py" \
   --from-file=assurance_check.py="$ROOT/clients/demo-driver/assurance_check.py" \
+  --from-file=autonomy_check.py="$ROOT/clients/demo-driver/autonomy_check.py" \
   --from-file=first_party_check.py="$ROOT/clients/demo-driver/first_party_check.py" \
   --from-file=subagent_check.py="$ROOT/clients/demo-driver/subagent_check.py" \
   --from-file=intent_check.py="$ROOT/clients/demo-driver/intent_check.py" \

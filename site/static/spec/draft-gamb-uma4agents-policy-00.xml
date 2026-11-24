@@ -37,7 +37,7 @@
     <abstract>
 
 
-<?line 115?>
+<?line 123?>
 
 <t>This document specifies what a resource owner's policy over autonomous agents
 may say, what may be known about an agent before the owner has met it, and how
@@ -46,7 +46,9 @@ the owner's attention is defended.</t>
 <t>Its central rule is an asymmetry: evidence supplied by the requesting side may
 only tighten a requirement, and only the owner's own prior decisions may relax
 one. Agent assurance is decomposed into three independent axes with no composite
-score. The owner's pending queue has a depth limit, in two lanes, so that a party
+score. Once the owner has met an agent, how much it may do without asking her is
+an earned level that only she raises, kept apart from the level its operator
+declares, which may only tighten. The owner's pending queue has a depth limit, in two lanes, so that a party
 who can mint keys for free cannot make "the owner decides" into a denial of
 service. And the owner's record of what was promised, decided and done names the
 counterparty on every row it honestly can.</t>
@@ -62,7 +64,7 @@ counterparty on every row it honestly can.</t>
   <middle>
 
 
-<?line 129?>
+<?line 139?>
 
 <section anchor="introduction"><name>Introduction</name>
 
@@ -158,7 +160,9 @@ offers it:</t>
   <t>the owner personally approved access for this agent at this policy unit;</t>
   <t>the owner has never revoked this agent;</t>
   <t>the owner's relationship with this agent is older than a stated duration;</t>
-  <t>the agent is one the owner activated herself, as <xref target="first-party"/>.</t>
+  <t>the agent is one the owner activated herself, as <xref target="first-party"/>;</t>
+  <t>the owner has raised this agent to at least a stated level of her own
+autonomy ladder, as <xref target="owners-ladder"/>.</t>
 </list></t>
 
 <t>"The owner has previously granted here" is not on the list, and the distinction
@@ -192,7 +196,10 @@ would put a request she has answered back in front of her.</t>
   <t>what this server has recently done regarding the agent: how many times the
 owner has denied it, how many policy units it has asked at, how many calls it
 has made;</t>
-  <t>that the agent was introduced by another agent (<xref target="U4ALineage"/>).</t>
+  <t>that the agent was introduced by another agent (<xref target="U4ALineage"/>);</t>
+  <t>that the agent stands below a stated level of the owner's autonomy ladder,
+or of its operator's (<xref target="operators-ladder"/>), or that its operator declares
+none.</t>
 </list></t>
 
 <t>A rule that tightens on the owner's own aggregate conduct — "she has denied this
@@ -530,6 +537,266 @@ resource server's to assert.</t>
 
 </section>
 </section>
+<section anchor="autonomy"><name>Earned Autonomy</name>
+
+<t><xref target="assurance"/> says what an authorization server may know about an agent before
+the owner has met it. This section says how much an agent she <em>has</em> met may do
+without asking her, and how the owner raises that over time.</t>
+
+<t>The vocabulary is the maturity model of the Agentic Trust Framework <xref target="ATF"/>.
+Four levels, in increasing order of what an agent may do unsupervised:
+<spanx style="verb">intern</spanx> (observes and reports), <spanx style="verb">junior</spanx> (may act, every act approved
+first), <spanx style="verb">senior</spanx> (acts, and a person is told), <spanx style="verb">principal</spanx> (acts within an
+approved domain, and escalates the edge). <xref target="ATF"/> describes these as one
+ladder, climbed by an agent as the organization that deploys it comes to trust
+it. Inside one organization that is the whole picture: the party governing the
+agent and the party whose systems it reaches are the same party.</t>
+
+<t>Under this profile they are not. The agent's operator runs it on behalf of a
+requesting party; the resource owner holds what it asks for. So every agent
+stands on two ladders at once: the one its operator keeps, and the one the
+owner keeps. They answer different questions — how far does the party running
+this agent trust it, and how far does <em>this owner</em> — and an answer to the first
+is evidence about the second only in one direction.</t>
+
+<section anchor="two-ladders"><name>Two Ladders</name>
+
+<t>An authorization server implementing this section <bcp14>MUST</bcp14> keep the level the
+owner has given an agent and the level the agent's operator declares as two
+facts, and <bcp14>MUST NOT</bcp14> combine them into a single level. An owner's rules read
+each through its own conditions.</t>
+
+<t>The reason is the one <xref target="axes"/> gives for refusing a composite assurance score.
+A combined level is the mechanism by which an operator's confidence in its own
+agent would come to stand in for an owner's, and that is a trade no owner would
+make if asked directly. Whichever ladder stands lower is the one that governs,
+and an owner who wants that writes it as rules (<xref target="atf-profile"/>).</t>
+
+</section>
+<section anchor="owners-ladder"><name>The Owner's Ladder</name>
+
+<t>An authorization server keeps one level per standing connection. An agent with
+no standing connection <bcp14>MUST</bcp14> be treated as at the lowest level, and a connection
+the owner admits, including one she readmits after revoking it, <bcp14>MUST</bcp14> begin
+there. A level granted by another party, an operator's included, is not
+standing with her.</t>
+
+<t>An authorization server <bcp14>MUST NOT</bcp14> raise an agent's level except on the owner's
+own decision, and <bcp14>MUST NOT</bcp14> raise it on a decision taken on her behalf
+(<xref target="attribution"/>). It <bcp14>MUST NOT</bcp14> raise a level by more than one step in one
+decision: the time an agent spends at each level is the only evidence of its
+conduct there that the owner will ever have, and skipping a level discards it.
+The owner <bcp14>MUST</bcp14> be able to lower an agent's level by any number of steps in one
+decision, and revoking the agent lowers it to the bottom.</t>
+
+<t>Together these give the property that lets the level relax a rule
+(<xref target="relaxing"/>): it can rise only by the owner's hand, one step at a time, so
+whatever it reads is at or below a level she personally granted. A condition
+that the agent stands at least at the lowest level holds for every agent,
+including one the owner has never met, and <bcp14>MUST</bcp14> be refused where the rule is
+stored (<xref target="asymmetry"/>).</t>
+
+<t>Two parties may move one agent's level without seeing each other — the owner
+from a view she opened a minute ago, and a second surface or a second
+authorization server acting on something newer. An authorization server <bcp14>MUST</bcp14>
+apply a change of level only if the agent still stands at the level the person
+deciding was shown, so that a stale promotion cannot overwrite a demotion it
+never saw. It <bcp14>MUST</bcp14> record every change of level, with the level before and
+after and who decided it, in the record of <xref target="record"/>.</t>
+
+<t><xref target="ATF"/> sets five conditions on a promotion: performance, security validation,
+business value, incident record and governance sign-off. An authorization
+server <bcp14>SHOULD</bcp14> show the owner, beside the decision, what her own record says
+about the first and fourth — how long the agent has stood at its level, how
+often she approved what it asked there, and whether her policy refused it —
+and <bcp14>SHOULD</bcp14> say that the second and third are evidence about the operator's
+programme rather than about this agent with her. The fifth is her decision
+itself. Nothing an authorization server computes from these may promote an
+agent.</t>
+
+<t>A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full (<xref target="attention"/>) is about the owner; neither is an incident.</t>
+
+<t>Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does (<xref target="clearance"/>): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.</t>
+
+<t>A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full (<xref target="attention"/>) is about the owner; neither is an incident.</t>
+
+<t>Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does (<xref target="clearance"/>): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.</t>
+
+</section>
+<section anchor="operators-ladder"><name>The Operator's Ladder</name>
+
+<t>An operator declares where it has put an agent on its own ladder in the client
+metadata document <xref target="I-D.ietf-oauth-client-id-metadata-document"/> the agent
+names, as a member <spanx style="verb">atf</spanx> whose value is an object:</t>
+
+<figure title="An operator's declaration of its agent's level, in its client metadata document."><sourcecode type="json"><![CDATA[
+{
+  "atf": {
+    "version": "0.9.0",
+    "maturity_level": "senior",
+    "conformance": "compatible",
+    "statement_uri": "https://operator.example/atf"
+  }
+}
+]]></sourcecode></figure>
+
+<t><spanx style="verb">maturity_level</spanx> is one of the four levels; <spanx style="verb">conformance</spanx> is <spanx style="verb">compatible</spanx> or
+<spanx style="verb">certified</spanx> in the sense of <xref target="ATF"/>; <spanx style="verb">statement_uri</spanx> locates the operator's
+conformance statement. A level is per client, so an operator running agents at
+different levels publishes a document per class of agent.</t>
+
+<t>An authorization server that reads the declaration <bcp14>MUST</bcp14> read it only from a
+client metadata document that resolved and claims its own URL, and <bcp14>MUST NOT</bcp14>
+read it from anything the agent itself sent. It <bcp14>MUST</bcp14> treat the operator's level
+as a condition that may only tighten, under <xref target="tightening"/>: the declaration is
+the requesting side's statement about itself, and a level it raises reaches
+nobody's resources. An operator that declares no level <bcp14>MUST NOT</bcp14> satisfy a
+condition that its level is below a stated level; an operator that has not
+heard of <xref target="ATF"/> is not saying its agent is an intern. An authorization server
+<bcp14>MAY</bcp14> offer a separate condition naming the absence.</t>
+
+<t>Because it may only tighten, the declaration needs no verification to be safe
+to read: an operator that overstates its agent gains nothing, and one that
+understates it costs only itself. It is shown to the owner with what the
+authorization server could establish about who made it — an operator at level 2
+of the accountability axis (<xref target="level-two"/>), or a document any agent could have
+named.</t>
+
+<t>An operator lowering its agent is the change that must reach the owner, since a
+stale copy of the document goes on reading the level from before. An
+authorization server <bcp14>MUST</bcp14> bound how long it relies on a copy of a client
+metadata document from which it reads a level, and <bcp14>SHOULD</bcp14> use the same bound
+as for an operator's key directory.</t>
+
+<t>A declaration of <spanx style="verb">certified</spanx> is the operator's claim that a third party audited
+its programme. An authorization server <bcp14>MUST NOT</bcp14> treat it as an attestation, and
+<bcp14>MUST NOT</bcp14> raise any axis of <xref target="assurance"/> on it. Third-party attestation is the
+evidence that would let somebody outside the operator stand behind its ladder,
+and it would belong on the accountability axis, above level 2; it needs a party
+a relying authorization server can ask, which <xref target="ATF"/> does not yet define.</t>
+
+</section>
+<section anchor="act-notify"><name>Acting Without Asking</name>
+
+<t>The <spanx style="verb">senior</spanx> level of <xref target="ATF"/> is "act and notify". Where a grant is issued
+without asking the owner for an operation whose declared consequence is
+<spanx style="verb">compensatable</spanx> or worse, or because a rule relaxed a unit that would otherwise
+have asked, the authorization server <bcp14>SHOULD</bcp14> tell the owner as it happens, on
+whatever surface would otherwise have asked her. A relaxation is also recorded
+(<xref target="record"/>).</t>
+
+</section>
+<section anchor="atf-profile"><name>A Profile of the Agentic Trust Framework</name>
+
+<t>The levels of <xref target="ATF"/> map onto rules over conditions this document already
+defines, together with the consequence a resource server declares for the
+operation (<xref target="consequence"/>). Applied to a policy unit, the following reads as
+the levels do, on both ladders at once:</t>
+
+<figure title="The levels of ATF as an owner's rules, in the vocabulary of Appendix A."><sourcecode type="json"><![CDATA[
+{"rules": [
+  {"then": "auto",
+   "when": ["standing.autonomy_at_least:senior"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "refuse",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["standing.autonomy_below:junior",
+            "request.consequence_unknown"]},
+  {"then": "refuse",
+   "when": ["operator.autonomy_below:junior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:senior",
+            "request.consequence_at_or_above:compensatable"]},
+  {"then": "ask",
+   "when": ["operator.autonomy_below:principal",
+            "request.consequence_at_or_above:irreversible"]}
+]}
+]]></sourcecode></figure>
+
+<texttable title="What the profile does, before the operator's ladder is read.">
+      <ttcol align='left'>Level, with her</ttcol>
+      <ttcol align='left'>A read</ttcol>
+      <ttcol align='left'>An act that can be compensated</ttcol>
+      <ttcol align='left'>An act that cannot be undone</ttcol>
+      <c>intern</c>
+      <c>as the unit says</c>
+      <c>refused</c>
+      <c>refused</c>
+      <c>junior</c>
+      <c>as the unit says</c>
+      <c>asked</c>
+      <c>asked</c>
+      <c>senior</c>
+      <c>granted</c>
+      <c>granted, and she is told</c>
+      <c>asked</c>
+      <c>principal</c>
+      <c>granted</c>
+      <c>granted, and she is told</c>
+      <c>granted, and she is told</c>
+</texttable>
+
+<t>The operator's ladder is then read the same way and can only make a cell
+stricter: an agent its operator still calls an intern does not act on her
+resources however far she has promoted it. The only rule
+in the profile that relaxes anything reads the owner's own decision.</t>
+
+<t>An operation no resource server has described is put to the owner when an
+intern asks for it rather than refused, because an undescribed read is common
+and refusing it would make the profile unusable on most resources.</t>
+
+</section>
+<section anchor="containment"><name>Containment</name>
+
+<t>A policy unit's terms <bcp14>MAY</bcp14> state a call rate: a number of calls and a period.
+An authorization server that offers one <bcp14>MUST</bcp14> refuse at introspection a grant
+whose agent has already made that many calls at that unit within the period,
+with <spanx style="verb">error</spanx> of <spanx style="verb">rate_limited</spanx>, counting only calls an enforcement point
+reported as allowed. Because the rate is in the terms, the agent agrees to it
+before it holds a grant.</t>
+
+<t>An enforcement point <bcp14>SHOULD</bcp14> report a call it refused after the agent's
+signature verified, and the authorization server records it against the agent
+as it does an allowed call (<xref target="pep-reports"/>). Refusals before the signature
+verified are not counted, since anyone holding a copy of a grant could cause
+them. An authorization server <bcp14>MAY</bcp14> suspend an agent after a number of such
+refusals within a window. A suspension <bcp14>MUST</bcp14> stop every grant the agent holds
+and every new grant, with <spanx style="verb">error</spanx> of <spanx style="verb">suspended</spanx>, and <bcp14>MUST</bcp14> lower the agent to
+the bottom of the owner's ladder (<xref target="owners-ladder"/>). It <bcp14>MUST NOT</bcp14> be lifted by
+anyone but the owner. It keeps the connection and the rest of the agent's
+standing.</t>
+
+<t>Both <spanx style="verb">rate_limited</spanx> and <spanx style="verb">suspended</spanx> are terminal in the sense of
+<xref target="U4AFedAuthz"/> Section 5: a fresh negotiation cannot change either.</t>
+
+</section>
+</section>
 <section anchor="security-considerations"><name>Security Considerations</name>
 
 <section anchor="the-asymmetry-is-the-security-model"><name>The Asymmetry Is the Security Model</name>
@@ -546,6 +813,19 @@ resolvable document, an operator's name — costs that party nothing.</t>
 side sent has reintroduced the problem <xref target="axes"/> exists to remove. Each level is
 the result of a check this authority ran, and the check either ran and passed
 or the level is zero.</t>
+
+</section>
+<section anchor="promotion-is-a-relaxation"><name>Promotion Is a Relaxation</name>
+
+<t>Raising an agent on the owner's ladder widens what it may do at every policy
+unit that reads the ladder, from that request onward. That is why only the
+owner may do it, one step at a time, and why the write is conditional on the
+level she was shown (<xref target="owners-ladder"/>). An implementation that let an
+administrator, an operator, or an automatic process raise the level would have
+built the relaxation <xref target="asymmetry"/> exists to forbid, under a different name.</t>
+
+<t>Lowering needs none of this. A demotion, by anyone and by any distance, can
+only make the owner's rules stricter.</t>
 
 </section>
 <section anchor="trajectory-reads-are-not-atomic"><name>Trajectory Reads Are Not Atomic</name>
@@ -585,6 +865,13 @@ with the level it reached. An implementation <bcp14>MUST</bcp14> make the differ
 "named" and "published this agent's key" are different sentences — because a
 resolved name is exactly what an owner starts keying decisions on, and
 <xref target="level-two"/> is the only level that means what it appears to.</t>
+
+</section>
+<section anchor="an-operators-level-is-shown-not-hidden"><name>An Operator's Level Is Shown, Not Hidden</name>
+
+<t>The operator's declared level is shown to the owner alongside her own, as two
+statements. It is information the operator chose to publish about its own
+agent; nothing about the owner is disclosed to the operator by reading it.</t>
 
 </section>
 </section>
@@ -783,6 +1070,16 @@ records one such vocabulary without registering it.</t>
 
     <references title='Informative References' anchor="sec-informative-references">
 
+<reference anchor="ATF" target="https://github.com/massivescale-ai/agentic-trust-framework">
+  <front>
+    <title>Agentic Trust Framework: Zero Trust Governance for AI Agents</title>
+    <author >
+      <organization>Cloud Security Alliance</organization>
+    </author>
+    <date year="2026" month="April"/>
+  </front>
+  <seriesInfo name="Cloud Security Alliance" value="Public Review Draft 0.9.1"/>
+</reference>
 <reference anchor="SP800-63-3" target="https://doi.org/10.6028/NIST.SP.800-63-3">
   <front>
     <title>Digital Identity Guidelines</title>
@@ -856,7 +1153,7 @@ records one such vocabulary without registering it.</t>
 </references>
 
 
-<?line 629?>
+<?line 902?>
 
 <section anchor="shipped-vocabulary"><name>A Condition Vocabulary</name>
 
@@ -927,6 +1224,18 @@ written <spanx style="verb">90d</spanx>, <spanx style="verb">12h</spanx>, <spanx
       <c><spanx style="verb">request.mission_absent</spanx></c>
       <c>observed</c>
       <c>cited no mandate</c>
+      <c><spanx style="verb">standing.autonomy_at_least:L</spanx></c>
+      <c>relaxing</c>
+      <c>the owner has raised this agent to at least level L (<xref target="owners-ladder"/>)</c>
+      <c><spanx style="verb">standing.autonomy_below:L</spanx></c>
+      <c>observed</c>
+      <c>the agent stands below level L with the owner</c>
+      <c><spanx style="verb">operator.autonomy_below:L</spanx></c>
+      <c>observed</c>
+      <c>the agent's operator declares a level below L</c>
+      <c><spanx style="verb">operator.autonomy_undeclared</spanx></c>
+      <c>observed</c>
+      <c>the agent's operator declares no level</c>
 </texttable>
 
 </section>
@@ -938,7 +1247,8 @@ following kinds of entry, each carrying the negotiation identifier of
 
 <t><spanx style="verb">promised</spanx>, <spanx style="verb">approved</spanx>, <spanx style="verb">denied</spanx>, <spanx style="verb">connected</spanx>, <spanx style="verb">touched</spanx>, <spanx style="verb">relaxed</spanx>, <spanx style="verb">refused</spanx>,
 <spanx style="verb">identity_refused</spanx>, <spanx style="verb">revoked</spanx>; <spanx style="verb">claimed</spanx>, <spanx style="verb">disclaimed</spanx> for the owner's own
-operators; and the kinds defined by <xref target="U4AMultiParty"/> for organizations and
+operators; <spanx style="verb">autonomy_promoted</spanx>, <spanx style="verb">autonomy_demoted</spanx> for her ladder
+(<xref target="owners-ladder"/>); and the kinds defined by <xref target="U4AMultiParty"/> for organizations and
 jointly held resources.</t>
 
 </section>
@@ -952,7 +1262,162 @@ rule engine is tested for the properties of <xref target="evaluation"/> directly
 that the set of relaxing conditions is exactly the set the tests expect and that
 every other condition is refused under <spanx style="verb">auto</spanx> at the moment of saving. The
 attention bound and both lanes are exercised against a running authorization
-server, as is the return of a blocked operator as an anonymous stranger.</t>
+server, as is the return of a blocked operator as an anonymous stranger.
+<xref target="autonomy"/> is exercised end to end against a running authorization server
+and resource: two agents of one operator at different levels of its ladder,
+each starting at the bottom of the owner's, promoted one step at a time,
+refused while either ladder stands too low, and returned to the bottom by a
+revocation.</t>
+
+</section>
+<section anchor="atf-crosswalk"><name>Mapping to the Agentic Trust Framework</name>
+
+<t>This appendix is not normative. <xref target="ATF"/> sets 25 requirements across five
+elements for an organization deploying agents. Under this profile some fall to
+the operator, as <xref target="ATF"/> assumes, and some are met by the resource owner's
+authorization server on her side of the exchange, which is the side <xref target="ATF"/>
+does not describe.</t>
+
+<t>Each requirement is given one of four statuses, judged only for requests that
+reach the owner's resources:</t>
+
+<dl>
+  <dt>met:</dt>
+  <dd>
+    <t>this set meets it on the owner's side.</t>
+  </dd>
+  <dt>partly:</dt>
+  <dd>
+    <t>this set meets part of it on the owner's side; the remainder is stated.</t>
+  </dd>
+  <dt>operator:</dt>
+  <dd>
+    <t>it concerns the agent's own runtime, which the owner cannot see, and this
+set does not attempt it.</t>
+  </dd>
+  <dt>resource:</dt>
+  <dd>
+    <t>it is the resource server's to do, and this set carries what the resource
+server declares about it.</t>
+  </dd>
+  <dt>gap:</dt>
+  <dd>
+    <t>the owner's side could meet it and this set does not.</t>
+  </dd>
+</dl>
+
+<texttable title="ATF's requirements, judged on the owner's side of the exchange.">
+      <ttcol align='left'>ATF</ttcol>
+      <ttcol align='left'>Requirement</ttcol>
+      <ttcol align='left'>Status</ttcol>
+      <ttcol align='left'>Under this set</ttcol>
+      <c>I-1</c>
+      <c>Unique identifier</c>
+      <c>met</c>
+      <c>The connection handle names each agent to the owner: its key's thumbprint, or its issuer and subject (<xref target="U4ACore"/>).</c>
+      <c>I-2</c>
+      <c>Credential binding</c>
+      <c>met</c>
+      <c>Every agreement and call is signed with the agent's key; the binding axis records it (<xref target="axes"/>).</c>
+      <c>I-3</c>
+      <c>Ownership chain</c>
+      <c>partly</c>
+      <c>The accountability axis names the operator, and level 2 is the operator's own attestation (<xref target="level-two"/>). The chain from the operator to the person it acts for is not established.</c>
+      <c>I-4</c>
+      <c>Purpose declaration</c>
+      <c>partly</c>
+      <c>Each agreement carries the purpose the owner's terms state and the agent's reason (<xref target="U4ATerms"/>). This is per grant; a standing declaration of the agent's scope is the operator's.</c>
+      <c>I-5</c>
+      <c>Capability manifest</c>
+      <c>operator</c>
+      <c>Not read.</c>
+      <c>B-1</c>
+      <c>Structured logging</c>
+      <c>met</c>
+      <c>The record of <xref target="record"/>, for everything that reaches her resources.</c>
+      <c>B-2</c>
+      <c>Action attribution</c>
+      <c>met</c>
+      <c>Every row of the record names the agent where it can (<xref target="counterparty"/>); an enforcement point's report is attributed by the authorization server, not the reporter (<xref target="pep-reports"/>).</c>
+      <c>B-3</c>
+      <c>Behavioural baseline</c>
+      <c>operator</c>
+      <c>The trajectory conditions of <xref target="tightening"/> count denials, units and calls in a window. They are not a baseline.</c>
+      <c>B-4</c>
+      <c>Anomaly detection</c>
+      <c>partly</c>
+      <c>A rule can tighten when an agent's requests widen or multiply (<xref target="tightening"/>). There is no detection beyond such counts.</c>
+      <c>B-5</c>
+      <c>Explainability</c>
+      <c>partly</c>
+      <c>The conditions that decided each request are kept in the record. The agent's own rationale is only its stated reason, which nothing checks.</c>
+      <c>D-1</c>
+      <c>Schema validation</c>
+      <c>operator</c>
+      <c>Her side validates the agreement against her terms and the call against the operation it was granted for; the agent's inputs are not hers to see.</c>
+      <c>D-2</c>
+      <c>Injection prevention</c>
+      <c>operator</c>
+      <c>Not detected. Per-operation grants bound what an injected instruction can do on her resources.</c>
+      <c>D-3</c>
+      <c>PII/PHI protection</c>
+      <c>partly</c>
+      <c>Scopes limit what is released, and her terms prohibit uses of it. Detection and masking are the operator's, and most prohibitions are undertakings rather than enforced (<xref target="U4ATerms"/>).</c>
+      <c>D-4</c>
+      <c>Output validation</c>
+      <c>operator</c>
+      <c>Not attempted.</c>
+      <c>D-5</c>
+      <c>Data lineage</c>
+      <c>partly</c>
+      <c>The record links what an agent promised to what it touched, per negotiation, and sub-agents to the agent that introduced them (<xref target="U4ALineage"/>). Lineage inside the agent's pipeline is the operator's.</c>
+      <c>S-1</c>
+      <c>Resource allowlist</c>
+      <c>met</c>
+      <c>Each policy unit names its resources; an ungoverned resource is refused (<xref target="shape"/>).</c>
+      <c>S-2</c>
+      <c>Action boundaries</c>
+      <c>met</c>
+      <c>Scopes per unit, and grants bound to one named operation (<xref target="U4ACore"/>).</c>
+      <c>S-3</c>
+      <c>Rate limiting</c>
+      <c>met</c>
+      <c>A call rate in the terms of a policy unit, enforced at introspection (<xref target="containment"/>).</c>
+      <c>S-4</c>
+      <c>Transaction limits</c>
+      <c>met</c>
+      <c>A grant may be bound to one operation and its parameters and spent once (<xref target="U4ACore"/>); terms may carry constraints.</c>
+      <c>S-5</c>
+      <c>Blast radius containment</c>
+      <c>partly</c>
+      <c>Access is per unit, an operator can be blocked in one action (<xref target="operators"/>), and revoking an agent revokes its lineage (<xref target="U4ALineage"/>). Cumulative impact across calls is not limited.</c>
+      <c>R-1</c>
+      <c>Circuit breaker</c>
+      <c>met</c>
+      <c>Repeated calls refused after the agent's signature verified suspend it until the owner lifts the suspension (<xref target="containment"/>).</c>
+      <c>R-2</c>
+      <c>Kill switch</c>
+      <c>partly</c>
+      <c>Revoking a connection or blocking an operator takes effect on the next call, because the enforcement point introspects every call. It stops access, not the agent.</c>
+      <c>R-3</c>
+      <c>Session revocation</c>
+      <c>met</c>
+      <c>Revoking a connection deactivates every grant issued under it in one step (<xref target="U4ACore"/>).</c>
+      <c>R-4</c>
+      <c>State rollback</c>
+      <c>resource</c>
+      <c>Undoing an act is the resource server's. The declared consequence of <xref target="consequence"/> says whether it can be undone, and the owner's rules read it.</c>
+      <c>R-5</c>
+      <c>Graceful degradation</c>
+      <c>met</c>
+      <c>Lowering either ladder takes effect on the agent's next request (<xref target="autonomy"/>).</c>
+</texttable>
+
+<t><xref target="ATF"/>'s promotion gates map as <xref target="owners-ladder"/> describes. Its automatic
+demotion triggers — a critical incident, a discovered vulnerability, repeated
+minor incidents — are observed by the operator, which is where <xref target="ATF"/> places
+them, and reach every owner through the operator's ladder on the agent's next
+request without any owner acting.</t>
 
 </section>
 <section numbered="false" anchor="acknowledgments"><name>Acknowledgments</name>
@@ -961,6 +1426,8 @@ server, as is the return of a blocked operator as an anonymous stranger.</t>
 of <xref target="I-D.meunier-webbotauth-registry"/> and the client metadata document of
 <xref target="I-D.ietf-oauth-client-id-metadata-document"/> are what make the accountability
 axis derivable rather than asserted.</t>
+
+<t>The levels of <xref target="autonomy"/> are those of the Agentic Trust Framework <xref target="ATF"/>.</t>
 
 <t>The consequence vocabulary of <xref target="consequence"/> — reversible, compensatable,
 forward-recoverable, irreversible — is Nat Sakimura's, from "When Software
@@ -976,260 +1443,396 @@ here is made by the resource and read by the party that bears the cost.</t>
   </back>
 
 <!-- ##markdown-source:
-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
-nyL3ccRtSGT+ruLzf2bOoqttEHscmBIBp6Z0Y7bjJAklprKR0DdyKWxSPKMz
-WRenZ3Qawh/3uaoCDf0KeTMNNvVwdBk5s0CzJLxwE0KVldo1+RRoeLGKy2wG
-KQSJdBzvNmXb7HAvLJtY6vuq3TA4g0NEHHWDhNF8xhqbw4JLzUehXWd/xDDx
-Ms5gQBd4DSc04ziJNFHtMsiXUFMhZtzSW9fXv70EA8ky5j7EY+ornawapLiV
-wnHg4sfXz8L8HmjubsgNDPkBRORFlaya0D8sdxn+XUWWNrWmLjPrUuPaYBlB
-s2230zWqIytnu4vId++YGheIK5OUSBadrP0DFSqAevvgA12FeYvb8g8//ZE6
-7Jeb1XTd4VYZW2+ogkFvaWBImBtvi+EzmGIwHF1wnMt9Vlg9aiXbVTCkNLuM
-n0qMRq3CSm9Yj9i3g8+zoCmJ96RigECBeC+PNMV1urh9c3N2xHdvjvju4f9H
-VhytaSqHPnPdJ4Sle50hTGvo8JUuBoBYrfJ1O4JKkgeQubtIOivzFE9lxZzE
-Ic9oILln+EiA4WvWSueotUKCvEabMZkMHKg+4PaCE+3UpYB7C5FzA98+DGcR
-YamgIxFPMoTpazlfIXFgmAAuyRtY7BWZRyG4zlkd0fwlO1cyuSYmrDC6sWOS
-w5C5p1E/3s0Y8G7ghbBEk1Los4BcvKEFSrGfjh0YWfeIh25E70vGHodATDYr
-l7UO0TDmQr22t8/iE9mt/NQbIWYS9nJ55zzveYj1o3xhRcQpBJlQs33YCrm6
-wn+YU8lrTnfiSE3j9v1R106kzm3ql+Y8W7oBrZaafZuUozZB1g28k9w7JDbt
-PRqvaJ1ECqT0+cxnFqmQxCKHIysPABHvyUj3tI66IlVUBSSmAxgMqpY4h1ln
-7aJhe+ywd2QtZnngoX/mp9C5CflY8ebvoZVAhMNt5BCsCgkM2Uiax+vlFCf4
-Ref4Baej/ADgeH2HNmRsx0i0wUGNzSJl9TYqsC4nNGVupLj5p+mirB49w9hY
-/R+556quOAU55HohoY5Mzm7PLxSvGUlWp0kSk3OS6dtFlePO6KXIiNFt+NiH
-m9UBT+FFEzxCcr17uikXEoC7vo5PoW74AjMfD1KELId4S2a4KYou6sri3nKw
-Gwf+teQcTnuiOdVGjla4/8TwK9jcKd9IYkGI/4gHTW6HRmcSJ0vUALRhNWTW
-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
-AAA=
+H4sIAAAAAAAAA+1965LbVpLm//MU2FLEWtaSVEm+tF2aW1mSbXXLklaSxzE7
+4VCBBEhCIgE2AKrELtXEPsQ+wD7LPso+yWZ+mXkuIFmye2diYyemIzpcAoFz
+yZMnT16+zDMej11f9avyLDt5flmXbfaiWVWz3Sg777ptm9ezMsvrIjvv+7Lu
+q6bO5k2b/dyV7finvM4XJf00m5Vdl93++afzz7P7k9MTl0+nbfl+0CI+PF9Q
+K92JK5pZna+p06LN5/14ka+n4+06/zLH7+MNvhifnroi7+mt+6f3vx6ffju+
+95Wb0YNF0+7OsqqeN67bTtdV19HA+t2G3nzy+PX3rtq0Z1nfbrv+/unpt6f3
+Xd6W+Vn2qpxt26rfuXfl7rJpi7Psn2nMoyzf9sumrf6S8/xG2UYJkBsB6E8M
+61fX9USLN/mqqamrXdm5TUWN9M1slHVN27flvKO/dmv+41cn7Z65LBvT/zMa
+cHeWPZtkP9Bs8UBI8KyavQvPmnaR1zqWs+ynqi5+yNuirLOnTx/ihXKdV6uz
+rKavmGz/sOB/T2bNOu3n8ST7KV+VbdTR4/dl9Czt6B/Lus6+z2c9kdbVTbum
+5+9LHvvL7x/+4esvvtE/v/nDN1/xn0/GjybrcltXxAiX5XTa9DzbcVsuqq6n
+1dFXqrKfjxv8NFtVRMRxVYzXZZ/TuuZj4oLtmh7y27QSPxC18XeWGUveyGgZ
+PgBfPT+nLvDsPF7MEzQW1oH/Nz5An2M08m//xG/PlttV/m7wAT2uyrfDX/Wz
+P06yl9VsudfLH4k1qzr+zfj83jfj03vj0z/gIU2+Kjvmcxv8n2jCeUu8/LKk
+FSfaFZin0CxvF2V/li37ftOd3b1L1O0m7+SDqq76Cks6oXW/S1vt7uXiblvO
+dHHowXjB1BwTDSfLfr3iJfny/GHTlr9nRV60zbxalbLXt31TN+tm2/ltf3Q1
+4l1xbGf8vqULguMIKZ/UfdnWZT9+xCLomCSaEQFYDh0i8PbLfJJXd7tNObt7
+49cRQb8vC+bQv6REpadlSwMuUvb990PGeVnwgP/y15MyaiEi5+uyXXcpLXHm
+jJkR52VLFMUrv+XU+v+Pqj1P7a8nqX0u9OTuI7F//vr7lK5gvmqWveZzNfu+
+pWnRIfruLPtvZdvo0x+a9zRsKA1g3Sc3sixJorPs4arZFv5ozs5Xq4q/H5Bp
+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
+AA==
 
 -->
 

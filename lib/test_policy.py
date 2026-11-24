@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "uma-as"))
 
 import assurance  # noqa: E402
+import autonomy  # noqa: E402
 import policy  # noqa: E402
 
 PASS, FAIL = [], []
@@ -365,7 +366,7 @@ check("a count condition without its argument is unstorable",
 # the shape a stored-before-validation rule would have.
 check("an unevaluable restriction still asks",
       policy.evaluate(tier(rules=[{"when": ["standing.age_above:1d"],
-                                   "then": "ask"}]),
+                                "then": "ask"}]),
                       {"assurance": {}, "standing": {}, "request": {},
                        "tier": "tier1"})[0] == policy.ASK)
 check("a restriction naming a condition this server no longer knows still fires",
@@ -517,6 +518,235 @@ check("her policy surface offers the classes, none of them able to relax",
       and not any(_vocab[c]["may_relax"] for c in _vocab
                   if c.startswith("request.consequence")))
 
+
+# --- earned autonomy: two ladders, and only hers relaxes -----------------------
+#
+# ATF's four rungs, on her side (standing.autonomy_*) and the operator's
+# (operator.autonomy_*). See services/uma-as/autonomy.py. The properties worth
+# a test are the ones a careless implementation would lose: a stranger is an
+# intern; the operator's ladder never widens; whichever stands lower governs.
+
+def laddered(*, hers=None, theirs=None, consequence=None, active=True) -> dict:
+    f = facts(active=active, consequence=consequence, tier_id="tier3")
+    if hers is not None:
+        f["standing"]["autonomy"] = autonomy.normalise(hers)
+    f["operator"] = {"level": theirs}
+    return f
+
+
+profile = {"ask_me": True, "rules": autonomy.EARNED_AUTONOMY,
+           "terms": {"expires_in": 900}}
+reads = {"ask_me": False, "rules": autonomy.EARNED_AUTONOMY,
+         "terms": {"expires_in": 900}}
+
+
+def under(t, **kw) -> str:
+    return policy.evaluate(t, laddered(**kw))[0]
+
+
+check("the profile itself is a rule set she could have written and saved",
+      not refused(autonomy.EARNED_AUTONOMY))
+
+# Her ladder, rung by rung, on an act nobody can undo.
+check("an intern cannot place a trade at all",
+      under(profile, hers="intern", consequence="irreversible") == policy.REFUSE)
+check("a junior may, once she approves it",
+      under(profile, hers="junior", consequence="irreversible") == policy.ASK)
+check("a senior still asks about what cannot be undone",
+      under(profile, hers="senior", consequence="irreversible") == policy.ASK)
+check("a principal acts without asking",
+      under(profile, hers="principal", consequence="irreversible") == policy.AUTO)
+check("a senior acts without asking on what can be put back",
+      under(profile, hers="senior", consequence="compensatable") == policy.AUTO)
+check("a junior asks even on a tier that would not have asked",
+      under(reads, hers="junior", consequence="compensatable") == policy.ASK)
+check("an intern reads as the tier says",
+      under(reads, hers="intern", consequence="reversible") == policy.AUTO)
+check("an intern asking for something nobody described is put to her",
+      under(reads, hers="intern", consequence=None) == policy.ASK)
+
+# Who counts as what. ATF: "initial maturity level set (always Intern)".
+check("a stranger is an intern, whatever its operator says",
+      under(profile, active=False, theirs="principal",
+            consequence="irreversible") == policy.REFUSE)
+check("a fact assembled without a level reads as the bottom rung",
+      under(profile, hers=None, consequence="irreversible") == policy.REFUSE)
+
+# The operator's ladder can only tighten.
+check("its operator's intern stays out even after she promotes it to principal",
+      under(profile, hers="principal", theirs="intern",
+            consequence="irreversible") == policy.REFUSE)
+check("its operator's junior is asked about even as her principal",
+      under(profile, hers="principal", theirs="junior",
+            consequence="compensatable") == policy.ASK)
+check("its operator's senior is asked about what cannot be undone",
+      under(profile, hers="principal", theirs="senior",
+            consequence="irreversible") == policy.ASK)
+check("only both at principal act on what cannot be undone",
+      under(profile, hers="principal", theirs="principal",
+            consequence="irreversible") == policy.AUTO)
+check("its operator's principal buys an intern of hers nothing",
+      under(profile, hers="intern", theirs="principal",
+            consequence="compensatable") == policy.REFUSE)
+check("an operator that declares nothing is not thereby low",
+      under(profile, hers="principal", theirs=None,
+            consequence="irreversible") == policy.AUTO)
+check("an operator's fifth rung is no declaration rather than a high one",
+      policy.evaluate(profile, {**laddered(hers="principal",
+                                           consequence="irreversible"),
+                                "operator": {"level": "chief"}})[0] == policy.AUTO)
+check("an owner who wants a declaration can require one",
+      policy.evaluate(_over([{"when": ["operator.autonomy_undeclared"],
+                                "then": "ask"}]),
+                      laddered(theirs=None))[0] == policy.ASK)
+
+# The asymmetry, at save time.
+check("the operator's ladder cannot be made to grant automatically",
+      refused([{"when": ["operator.autonomy_below:principal"], "then": "auto"}]))
+check("nor can an undeclared level",
+      refused([{"when": ["operator.autonomy_undeclared"], "then": "auto"}]))
+check("her ladder read downwards cannot relax",
+      refused([{"when": ["standing.autonomy_below:senior"], "then": "auto"}]))
+check("her ladder read upwards can",
+      not refused([{"when": ["standing.autonomy_at_least:senior"], "then": "auto"}]))
+check("'at least an intern' is refused: it would relax for a stranger",
+      refused([{"when": ["standing.autonomy_at_least:intern"], "then": "auto"}]))
+check("'below intern' is refused: it can never fire",
+      refused([{"when": ["standing.autonomy_below:intern"], "then": "ask"}]))
+check("a rung the ladder does not have cannot be saved",
+      refused([{"when": ["standing.autonomy_at_least:chief"], "then": "auto"}]))
+check("the ladder conditions need a rung",
+      refused([{"when": ["operator.autonomy_below"], "then": "ask"}]))
+check("rungs may be named by ATF's numbers too",
+      not refused([{"when": ["standing.autonomy_at_least:3"], "then": "auto"}]))
+
+_vocab = {v["condition"]: v for v in policy.vocabulary()}
+check("her surface offers both ladders, and only her upward rungs may relax",
+      all(_vocab[c]["may_relax"] == c.startswith("standing.autonomy_at_least")
+          for c in _vocab if "autonomy" in c)
+      and any(c.startswith("operator.autonomy") for c in _vocab))
+check("every ladder condition her surface offers would save",
+      not refused([{"when": [c], "then": "ask"} for c in _vocab
+                   if "autonomy" in c]))
+
+# Moving on her ladder.
+_me = {"kind": "owner", "owner": "alice"}
+_admin = {"kind": "administrator", "org": "acme", "admin": "dana"}
+_conn = {"handle": "h", "status": "active", "first_seen": "2026-01-01T00:00:00Z"}
+
+
+def moved(conn, to, by=_me):
+    try:
+        return autonomy.change(conn, to, by, "2026-02-01T00:00:00Z")
+    except ValueError as exc:
+        return str(exc)
+
+
+_j = moved(_conn, "junior")
+check("she promotes an intern to junior", isinstance(_j, dict)
+      and _j["level"] == "junior" and _j["by"] == _me)
+check("one rung at a time",
+      "one rung at a time" in moved(_conn, "senior"))
+check("nobody else may promote",
+      "only the owner may promote" in moved(_conn, "junior", by=_admin))
+_p = {**_conn, "autonomy": {"level": "principal"}}
+_d = moved(_p, "intern", by=_admin)
+check("someone acting for her may demote, any distance",
+      isinstance(_d, dict) and _d["level"] == "intern"
+      and _d["history"][-1]["from"] == "principal")
+check("a level is not set twice",
+      "already" in moved(_p, "principal"))
+check("a revoked agent has no level to move",
+      "revoked" in moved({**_p, "status": "revoked"}, "intern"))
+check("and reads as an intern whatever it was",
+      autonomy.owner_level({**_p, "status": "revoked"}) == autonomy.INTERN)
+
+# What she is shown before promoting. Advisory: it promotes nothing.
+_elig = autonomy.eligibility(
+    {**_conn, "autonomy": {"level": "junior", "since": "2026-01-01T00:00:00Z"}},
+    [{"kind": "approved", "ts": "2026-01-02T00:00:00Z"}] * 19
+    + [{"kind": "denied", "ts": "2026-01-03T00:00:00Z"}],
+    now=1767225600 + 30 * 86400)
+_gates = {g["gate"]: g for g in _elig["gates"]}
+check("eligibility reads time at level from her record",
+      _gates["performance: time at level"]["met"] is True)
+check("and her acceptance of what it asked, against ATF's threshold",
+      _gates["performance: your acceptance of what it asked"]["met"] is True
+      and "19 of 20" in _gates["performance: your acceptance of what it asked"]["detail"])
+_mixed = autonomy.eligibility(
+    {**_conn, "autonomy": {"level": "intern", "since": "2026-01-01T00:00:00Z"}},
+    [{"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "because": ["standing.autonomy_below:junior",
+                  "request.consequence_at_or_above:compensatable"]},
+     {"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "reason": "her queue of agent requests is full", "lane": "unattributable"},
+     {"kind": "approved", "ts": "2026-01-02T00:00:00Z",
+      "by": {"kind": "administrator", "admin": "dana"}}],
+    now=1767225600 + 30 * 86400)
+_mg = {g["gate"]: g for g in _mixed["gates"]}
+check("an intern refused for asking beyond its level has no incident for it",
+      _mg["incident record: refused by your policy"]["met"] is True
+      and "beyond its level" in _mg["incident record: refused by your policy"]["detail"])
+check("nor does a refusal because her queue was full",
+      "request(s) refused" not in _mg["incident record: refused by your policy"]["detail"])
+_jr = autonomy.eligibility(
+    {**_conn, "autonomy": {"level": "junior", "since": "2026-01-01T00:00:00Z"}},
+    [{"kind": "approved", "ts": "2026-01-02T00:00:00Z",
+      "by": {"kind": "administrator", "admin": "dana"}},
+     {"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "because": ["request.reason_absent"]}],
+    now=1767225600 + 30 * 86400)
+_jg = {g["gate"]: g for g in _jr["gates"]}
+check("a decision taken for her is not counted as her acceptance",
+      _jg["performance: your acceptance of what it asked"]["met"] is None)
+check("a refusal on the request's own merits is an incident",
+      _jg["incident record: refused by your policy"]["met"] is False)
+check("and leaves the operator's gates to the operator",
+      _gates["security validation"]["met"] is None)
+
+# What the operator said, and from where.
+_said = autonomy.operator_declaration(
+    {"client_metadata": {"verified": True, "atf": {
+        "maturity_level": "Senior", "conformance": "certified",
+        "statement_uri": "http://insecure.example/atf"}},
+     "operator_attested": True})
+check("an operator's declaration is read from its resolved metadata",
+      _said["level"] == "senior" and _said["published_key"])
+check("a statement URI that is not https is dropped", _said["statement_uri"] is None)
+check("an unresolved metadata document declares nothing",
+      autonomy.operator_declaration({"client_metadata": {
+          "verified": False, "atf": {"maturity_level": "principal"}}})["level"] is None)
+check("a claimed certification is shown as a claim, never as attested",
+      "nobody this authority can ask has confirmed" in
+      " ".join(autonomy.describe(autonomy.INTERN, _said)))
+_certified = {"key_bound": True, "level": "pseudonymous", "client_metadata": {
+    "verified": True, "client_id": "https://op.example/agent.json",
+    "atf": {"maturity_level": "principal", "conformance": "certified"}}}
+_plain = {"key_bound": True, "level": "pseudonymous", "client_metadata": {
+    "verified": True, "client_id": "https://op.example/agent.json"}}
+check("a claimed certification raises no assurance axis",
+      assurance.assess(_certified) == assurance.assess(_plain))
+check("her ladder and the operator's are described apart, never as one number",
+      len(autonomy.describe(autonomy.JUNIOR, _said)) == 2)
+check("nothing in the module combines the two ladders",
+      not any(n in dir(autonomy) for n in ("combined", "composite", "effective_level")))
+check("a preset adds to her rules rather than replacing them",
+      autonomy.with_preset([{"when": ["standing.none"], "then": "ask"}],
+                           autonomy.EARNED_AUTONOMY)[0]
+      == {"when": ["standing.none"], "then": "ask"}
+      and len(autonomy.with_preset(autonomy.EARNED_AUTONOMY,
+                                   autonomy.EARNED_AUTONOMY))
+      == len(autonomy.EARNED_AUTONOMY))
+
+
+check("a rate limit in her terms is a positive count over a duration",
+      policy.validate_rate_limit({"calls": 60, "per": "1h"}) == {"calls": 60, "per": "1h"})
+for bad in ({"calls": 0, "per": "1h"}, {"calls": 5, "per": "soon"}, {"calls": True, "per": "1h"}):
+    try:
+        policy.validate_rate_limit(bad)
+        check(f"a malformed rate limit is refused: {bad}", False)
+    except ValueError:
+        check(f"a malformed rate limit is refused: {bad}", True)
 
 # --- her attention has a floor and a ceiling -----------------------------------
 

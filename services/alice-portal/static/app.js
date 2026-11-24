@@ -47,6 +47,10 @@ const ACTIONS = {
   decide: (d) => decide(d.family, d.decision),
   trajectory: (d) => trajectory(d.handle),
   revoke: (d) => revoke(d.handle),
+  autonomy: (d) => setAutonomy(d.handle, d.level, d.expect),
+  resume: (d) => resume(d.handle),
+  ladder: (d) => showLadder(d.handle),
+  preset: (d) => addPreset(d.tier, d.preset),
   operator: (d) => operatorAction(d.op, d.origin),
   leaveMandate: (d) => leaveMandate(d.account),
   joinMandate: (d) => joinMandate(d.tally, d.account),
@@ -382,6 +386,10 @@ async function renderApprovals(target) {
       ${p.handle ? `<div class="kv"><span class="k">Agent</span><span class="thumb">${esc(p.handle)}</span></div>` : ""}
       ${(p.assurance_notes || []).length ? `<div class="kv"><span class="k">Checked</span><span>
         ${p.assurance_notes.map(n => `<div class="note">${esc(n)}</div>`).join("")}</span></div>` : ""}
+      ${(p.autonomy_notes || []).length ? `<div class="kv"><span class="k">Autonomy</span><span>
+        ${p.autonomy_notes.map(n => `<div class="note">${esc(n)}</div>`).join("")}
+        <div class="muted" style="font-size:12px;margin-top:4px">Two ladders, never one. Only you
+        move the first; the operator's can only make your rules stricter.</div></span></div>` : ""}
       ${(p.because || []).length ? `<div class="kv"><span class="k">Why you</span><span>
         ${p.because.map(b => `<span class="chip warn">${esc(condLabel(b))}</span>`).join(" ")}</span></div>` : ""}
       ${p.organization && (p.organization.because || []).length ? `<div class="kv">
@@ -420,7 +428,7 @@ async function renderConnections(target) {
     return;
   }
   target.innerHTML = operatorPanel(operators) + `<div class="card pad-lg"><table>
-    <thead><tr><th>Agent</th><th>Identity</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
+    <thead><tr><th>Agent</th><th>Identity</th><th>Autonomy</th><th>Handle</th><th>Connected</th><th>Last active</th><th class="r">Status</th><th></th></tr></thead>
     <tbody>${conns.map(c => `<tr>
       <td><div class="tick"><div class="badge2">🤖</div><div>
         <div class="nm">${esc(c.label)}</div>
@@ -429,15 +437,85 @@ async function renderConnections(target) {
             >${esc(c.parent_handle.slice(0, 14))}…</a></div>` : ""}
       </div></div></td>
       <td>${esc(c.identity?.level || "—")}</td>
+      <td>${autonomyCell(c)}</td>
       <td class="thumb"><a href="#" data-act="trajectory" data-handle="${esc(c.handle)}"
         title="Everything this agent has asked for, and what you decided"
         >${esc(c.handle.length > 24 ? c.handle.slice(0, 22) + "…" : c.handle)}</a></td>
       <td>${esc((c.first_seen || "").replace("T", " ").replace("Z", ""))}</td>
       <td>${c.last_access ? esc(c.last_access.replace("T", " ").replace("Z", "")) : "—"}</td>
       <td class="r"><span class="chip ${c.status === "active" ? "pos" : "neg"}">${esc(c.status)}</span></td>
-      <td class="r">${c.status === "active" ? `<button class="btn danger sm" data-act="revoke" data-handle="${esc(c.handle)}">Revoke</button>` : ""}</td>
+      <td class="r">${c.suspended ? `<span class="chip neg" title="${esc(c.suspended.because)}">suspended</span>
+        <button class="btn ghost sm" data-act="resume" data-handle="${esc(c.handle)}">Resume</button> ` : ""}${
+        c.status === "active" ? `<button class="btn danger sm" data-act="revoke" data-handle="${esc(c.handle)}">Revoke</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }
+/* Where an agent stands on each of its two autonomy ladders.
+
+   Hers first, with the controls, because it is the only one she moves. The
+   operator's beside it, labelled as what it is: the operator's statement about
+   its own agent, which can make her rules stricter and nothing else. They are
+   never shown as one value — an operator's "principal" next to her "intern"
+   is the normal case, not a conflict to resolve. */
+const RUNGS = ["intern", "junior", "senior", "principal"];
+function autonomyCell(c) {
+  const v = c.autonomy_view || {};
+  const level = v.level || "intern";
+  const i = RUNGS.indexOf(level);
+  const op = v.operator || {};
+  const theirs = op.level
+    ? `<div class="cell-sub" title="Declared in the operator's metadata document${
+        op.published_key ? ", by an operator that published this agent's key" : " (self-asserted)"}">
+        operator says ${esc(op.level)}${op.conformance === "certified" ? " · claims certified" : ""}</div>`
+    : `<div class="cell-sub">operator declares no level</div>`;
+  if (c.status !== "active") return `<span class="chip">intern</span>${theirs}`;
+  const up = i < RUNGS.length - 1
+    ? `<button class="btn ghost sm" data-act="autonomy" data-handle="${esc(c.handle)}"
+        data-level="${RUNGS[i + 1]}" data-expect="${level}" title="Promote one rung">▲</button>` : "";
+  const down = i > 0
+    ? `<button class="btn ghost sm" data-act="autonomy" data-handle="${esc(c.handle)}"
+        data-level="${RUNGS[i - 1]}" data-expect="${level}" title="Demote one rung">▼</button>` : "";
+  return `<span class="chip ${i >= 2 ? "warn" : ""}">${esc(level)}</span> ${up}${down}
+    <a href="#" class="cell-sub" data-act="ladder" data-handle="${esc(c.handle)}">why</a>${theirs}`;
+}
+
+window.setAutonomy = async (handle, level, expect) => {
+  const promoting = RUNGS.indexOf(level) > RUNGS.indexOf(expect);
+  if (promoting) {
+    // Her sign-off is the gate ATF calls governance sign-off, so she sees
+    // what her own record says before she gives it.
+    const v = await api(`/api/agent/connections/autonomy?handle=${encodeURIComponent(handle)}`);
+    const gates = (v.eligibility?.gates || [])
+      .map(g => `${g.met === true ? "✓" : g.met === false ? "✗" : "·"} ${g.gate}: ${g.detail}`).join("\n");
+    if (!confirm(`Promote this agent to ${level}?\n\nIt will be able to: ${
+        ({ junior: "act, with every act put to you first",
+           senior: "act without asking (you are told); irreversible acts still ask",
+           principal: "act without asking, including irreversible acts" })[level]}\n\n${gates}`)) return;
+  }
+  try {
+    const res = await api("/api/agent/connections/autonomy", { method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ handle, level, expect }) });
+    toast(promoting ? `Promoted to ${res.level}` : `Demoted to ${res.level}`, res.means,
+      promoting ? "" : "warn");
+  } catch (e) { toast("Level not changed", e.message, "warn"); }
+  renderConnections($("#aaBody"));
+};
+
+window.showLadder = async (handle) => {
+  const v = await api(`/api/agent/connections/autonomy?handle=${encodeURIComponent(handle)}`);
+  const gates = (v.eligibility?.gates || []).map(g => `<div class="kv"><span class="k">${
+    g.met === true ? "✓" : g.met === false ? "✗" : "·"} ${esc(g.gate)}</span><span>${esc(g.detail)}</span></div>`).join("");
+  const history = (v.history || []).slice().reverse().map(h =>
+    `<div class="note">${esc(h.at)} · ${esc(h.from)} → ${esc(h.to)}${h.note ? " · " + esc(h.note) : ""}</div>`).join("");
+  $("#aaBody").insertAdjacentHTML("afterbegin", `<div class="card pad-lg" style="margin-bottom:14px">
+    <div class="section-head"><h2>Autonomy · <span class="thumb">${esc(handle)}</span></h2>
+      <button class="btn ghost sm" style="margin-left:auto" onclick="this.closest('.card').remove()">Close</button></div>
+    ${(v.notes || []).map(n => `<div class="note">${esc(n)}</div>`).join("")}
+    ${v.eligibility?.next ? `<div class="lbl" style="margin-top:14px">Promoting it to ${esc(v.eligibility.next)}
+      — what your own record says (advisory; the decision is yours)</div>${gates}` : ""}
+    ${history ? `<div class="lbl" style="margin-top:14px">History</div>${history}` : ""}</div>`);
+};
+
 function operatorPanel(operators) {
   if (!operators.length) return "";
   return `<div class="card pad-lg" style="margin-bottom:14px">
@@ -469,6 +547,15 @@ window.operatorAction = async (action, origin) => {
         : `${origin} may ask again — what was revoked stays revoked`,
       action === "block" ? "warn" : "");
   } catch (e) { toast("Not applied", e.message, "warn"); }
+  renderConnections($("#aaBody"));
+};
+
+window.resume = async (handle) => {
+  try {
+    await api("/api/agent/connections/resume", { method: "POST",
+      headers: { "content-type": "application/json" }, body: JSON.stringify({ handle }) });
+    toast("Agent resumed", "Its grants work again; its level stays where the breaker left it");
+  } catch (e) { toast("Not resumed", e.message, "warn"); }
   renderConnections($("#aaBody"));
 };
 
@@ -584,8 +671,10 @@ function ruleSentence(rule) {
   return `If ${when.map(condLabel).join(", and ")} — <b>${OUTCOMES[rule.then] || rule.then}</b>`;
 }
 
+let PRESETS = null;
 async function renderTerms(target) {
   if (!VOCAB) VOCAB = await api("/api/agent/policy-vocabulary");
+  if (!PRESETS) PRESETS = await api("/api/agent/policy-presets").catch(() => []);
   const tiers = await api("/api/agent/policies");
   if (policyMode === "code") return renderTermsCode(target, tiers);
   // The ceiling above her terms, where there is one. Read alongside her
@@ -623,6 +712,10 @@ async function renderTerms(target) {
         <button class="btn primary sm" style="margin-left:auto" onclick="savePolicy('${id}')">Save changes</button>
       </div>
       ${ruleEditor(id, t)}
+      ${(PRESETS || []).map(pr => `<div class="rule-add" style="margin-top:8px">
+        <button class="btn ghost sm" data-act="preset" data-tier="${esc(id)}" data-preset="${esc(pr.id)}"
+          title="${esc(pr.summary)}">+ ${esc(pr.label)}</button>
+        <span class="muted" style="font-size:12px">${esc(pr.summary)}</span></div>`).join("")}
     </div>`).join("") + `
     ${newTierForm(free)}
     <div style="display:flex;justify-content:flex-end;margin-top:6px">
@@ -783,6 +876,19 @@ window.addRule = async (id) => {
 window.dropRule = async (id, i) => {
   const rules = await currentRules(id);
   rules.splice(i, 1);
+  await putRules(id, rules);
+};
+
+/* A preset is ordinary rules: they go through the same save, and the same
+   refusal, as a rule she typed. Added to hers, never in place of them. */
+window.addPreset = async (id, presetId) => {
+  const preset = (PRESETS || []).find(p => p.id === presetId);
+  if (!preset) return;
+  const rules = await currentRules(id);
+  const seen = new Set(rules.map(r => JSON.stringify([r.then, r.when])));
+  for (const r of preset.rules) {
+    if (!seen.has(JSON.stringify([r.then, r.when]))) rules.push({ when: [...r.when], then: r.then });
+  }
   await putRules(id, rules);
 };
 
@@ -1306,6 +1412,8 @@ window.leaveOrganization = async () => {
 const LEDGER_KINDS = {
   promised: "", touched: "pos", approved: "warn", denied: "neg",
   refused: "neg", relaxed: "warn", connected: "", revoked: "neg",
+  autonomy_promoted: "warn", autonomy_demoted: "",
+  call_refused: "neg", suspended: "neg", resumed: "",
   // The organization above her. `break_glass` is the only kind in this
   // record that describes something she did not decide and could not have
   // stopped, which is exactly why it is in her record and marked.
@@ -1343,6 +1451,13 @@ function ledgerDetail(e) {
     case "org_acted": return `${esc(e.what)}${e.operator ? ` · ${esc(e.operator)}` : ""}`;
     case "refused":   return `${e.because ? esc(e.because.join(", ")) : "the requesting side declined your terms"}${
       e.terms_uri ? ` · <a class="thumb" href="${encodeURI(e.terms_uri)}" target="_blank" rel="noopener">${esc(e.terms_uri.split("/terms/")[1] || e.terms_uri)}</a>` : ""}`;
+    case "call_refused": return `call refused at the resource: <span class="mono">${esc(e.tool)}</span> · ${esc(e.reason)}`;
+    case "suspended":    return `suspended by the circuit breaker · ${esc(e.because)}`;
+    case "resumed":      return "you lifted the suspension";
+    case "autonomy_promoted": return `you promoted this agent: ${esc(e.from)} → <b>${esc(e.to)}</b>${
+      e.note ? ` · ${esc(e.note)}` : ""}`;
+    case "autonomy_demoted":  return `${e.by ? "demoted for you" : "you demoted this agent"}: ${
+      esc(e.from)} → <b>${esc(e.to)}</b>${e.note ? ` · ${esc(e.note)}` : ""}`;
     case "relaxed":   return `a rule you wrote granted without asking · ${esc((e.because || []).join(", "))}`;
     case "connected": return `agent connected · <span class="thumb">${esc(e.handle)}</span>`;
     case "org_joined":  return `you joined <b>${esc(e.organization)}</b> (charter v${esc(e.charter_version)})
@@ -1451,6 +1566,16 @@ function connectEvents() {
       : d.stage === "break_glass_used" ? "used break-glass access" : "took break-glass access";
     toast("Your organization " + stage, [d.resource_id, d.reason].filter(Boolean).join(" — "), "warn");
     const dot = $("#orgDot"); if (dot) dot.classList.add("on");
+    if (location.hash.includes("agent-authorization") && agentTab === "ledger") renderLedger($("#aaBody"));
+  });
+  /* ATF's senior rung is "act and notify". The act happened without her; this
+     is the notify, as it happens rather than in tomorrow's ledger. */
+  es.addEventListener("acted", (e) => {
+    let d = {};
+    try { d = JSON.parse(e.data); } catch (err) {}
+    toast("An agent acted without asking you",
+      `${d.tier_name || d.tier || ""}${d.operation ? " · " + d.operation.tool : ""} — because ${
+        (d.because || []).map(condLabel).join(", ")}`, "");
     if (location.hash.includes("agent-authorization") && agentTab === "ledger") renderLedger($("#aaBody"));
   });
   es.addEventListener("organization", (e) => {

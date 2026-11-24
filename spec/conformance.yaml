@@ -1017,6 +1017,70 @@ draft-gamb-uma4agents-policy-00:
     verified: check
     targets: [assurance-check, rules-test]
     asserts: ["the operator's own directory raised accountability to 2", "the operator publishing this agent's key is worth more than saying so"]
+  - text: "An authorization server implementing this section MUST keep the level the owner has given an agent and the level the agent's operator declares as two facts, and MUST NOT combine them into a single level."
+    verified: check
+    targets: [rules-test]
+    asserts: ["nothing in the module combines the two ladders", "her ladder and the operator's are described apart, never as one number"]
+  - text: "An agent with no standing connection MUST be treated as at the lowest level, and a connection the owner admits, including one she readmits after revoking it, MUST begin there."
+    verified: check
+    targets: [rules-test, as-test, autonomy-check]
+    asserts: ["a stranger is an intern, whatever its operator says", "a new connection is an intern with her, whatever its operator says", "a revoked agent is an intern in her standing facts", "revoked and readmitted, it is an intern again"]
+  - text: "An authorization server MUST NOT raise an agent's level except on the owner's own decision, and MUST NOT raise it on a decision taken on her behalf"
+    verified: check
+    targets: [rules-test, as-test]
+    asserts: ["nobody else may promote", "nobody acting for her may promote", "and the refusal wrote nothing"]
+  - text: "It MUST NOT raise a level by more than one step in one decision"
+    verified: check
+    targets: [rules-test, as-test, autonomy-check]
+    asserts: ["one rung at a time", "she cannot skip a rung"]
+  - text: "The owner MUST be able to lower an agent's level by any number of steps in one decision, and revoking the agent lowers it to the bottom."
+    verified: check
+    targets: [rules-test, autonomy-check]
+    asserts: ["someone acting for her may demote, any distance", "she demotes the advisor two rungs in one step", "and its next trade is put to her again", "and reads as an intern whatever it was"]
+  - text: "A condition that the agent stands at least at the lowest level holds for every agent, including one the owner has never met, and MUST be refused where the rule is stored"
+    verified: check
+    targets: [rules-test, autonomy-check]
+    asserts: ["'at least an intern' is refused: it would relax for a stranger", "nor one relaxing on 'at least an intern', which every stranger is"]
+  - text: "An authorization server MUST apply a change of level only if the agent still stands at the level the person deciding was shown"
+    verified: check
+    targets: [as-test, store-test, autonomy-check]
+    asserts: ["a promotion from a view that has gone stale is refused", "the store will not write over a level it was not expecting", "autonomy: exactly one of many writes from the same level lands"]
+  - text: "It MUST record every change of level, with the level before and after and who decided it, in the record of"
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["her record keeps the promotion, named to the agent", "every promotion is in her record, by her"]
+  - text: "An authorization server that reads the declaration MUST read it only from a client metadata document that resolved and claims its own URL, and MUST NOT read it from anything the agent itself sent."
+    verified: check
+    targets: [rules-test]
+    asserts: ["an operator's declaration is read from its resolved metadata", "an unresolved metadata document declares nothing"]
+  - text: "It MUST treat the operator's level as a condition that may only tighten"
+    verified: check
+    targets: [rules-test, autonomy-check]
+    asserts: ["the operator's ladder cannot be made to grant automatically", "a rule relaxing on the operator's ladder cannot be saved", "its operator's intern stays out even after she promotes it to principal", "her principal stays out of her trades while its firm calls it an intern"]
+  - text: "An operator that declares no level MUST NOT satisfy a condition that its level is below a stated level"
+    verified: check
+    targets: [rules-test]
+    asserts: ["an operator that declares nothing is not thereby low", "an operator's fifth rung is no declaration rather than a high one"]
+  - text: "An authorization server MUST bound how long it relies on a copy of a client metadata document from which it reads a level"
+    verified: check
+    targets: [as-test]
+    asserts: ["and read again once its copy has aged, so an operator's demotion lands"]
+  - text: "An authorization server that offers one MUST refuse at introspection a grant whose agent has already made that many calls at that unit within the period"
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["a call past the rate her terms state is refused", "two reads go through and the third is over the rate she set"]
+  - text: "A suspension MUST stop every grant the agent holds and every new grant, with error of suspended, and MUST lower the agent to the bottom of the owner's ladder"
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["and its grants stop working", "and drop it to intern on her ladder", "three trades other than the one granted suspend the agent", "and the grant it holds stops working"]
+  - text: "It MUST NOT be lifted by anyone but the owner."
+    verified: check
+    targets: [as-test, autonomy-check]
+    asserts: ["only she lifts it, and the grant works again", "she lifts the suspension"]
+  - text: "An authorization server MUST NOT treat it as an attestation, and MUST NOT raise any axis of"
+    verified: check
+    targets: [rules-test]
+    asserts: ["a claimed certification is shown as a claim, never as attested", "a claimed certification raises no assurance axis"]
 
 draft-gamb-uma4agents-terms-00:
   - text: "It verifies with the algorithm the key names in its alg member, or with EdDSA where a bare Ed25519 jwk names none"

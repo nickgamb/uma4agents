@@ -229,6 +229,25 @@ class OwnerStore(Protocol):
         have been automatic, so one automatic grant would justify the next.
         """
 
+    async def set_autonomy(self, handle: str, record: dict,
+                           expect: str) -> bool:
+        """Write where this agent stands on her autonomy ladder, **only if it
+        still stands at `expect`** and the connection is still active. True
+        when written.
+
+        Compare-and-set because the two people who may move the level do not
+        see each other. She promotes from a view that is a minute old while an
+        administrator demotes on something he has just seen; a plain write
+        lets her stale promotion land on top of his demotion and undo it
+        without either of them knowing. With the expected level checked in the
+        same statement, the second writer is told the level moved, reads it
+        again, and decides again — which is the only safe outcome when one of
+        the two writes would have widened access.
+
+        `expect` is the level name, and a connection with no level recorded
+        stands at "intern".
+        """
+
     async def lineage_approvals(self, root: str) -> list[str]:
         """Every tier the owner personally approved for a connection *and its
         live sub-agents*, as one set.
@@ -345,9 +364,19 @@ class OwnerStore(Protocol):
         attribution on the owner's side: the enforcement point never needs to
         be told the handle, and it enforces for an authority it cannot read."""
 
-    async def trajectory(self, handle: str, since: str) -> dict:
+    async def set_suspension(self, handle: str, record: dict | None) -> bool:
+        """Suspend a connection (`record`) or lift a suspension (None). True
+        when the connection exists. A suspended connection keeps its standing
+        and its level; its grants are refused until the owner lifts it."""
+
+    async def trajectory(self, handle: str, since: str,
+                         tier: str | None = None) -> dict:
         """What this agent has been doing lately: ``{"denials": int,
-        "tiers": [str], "calls": int}`` over the entries at or after
+        "tiers": [str], "calls": int, "refused_calls": int}`` over the
+        entries at or after ``since``. With ``tier``, ``calls`` counts only
+        calls at that tier, which is what a rate limit in its terms reads.
+        ``refused_calls`` counts calls an enforcement point refused after the
+        agent's signature verified. Over the entries at or after
         ``since`` — how often she refused it, how far across her resources it
         has reached, and how much it actually did.
 
