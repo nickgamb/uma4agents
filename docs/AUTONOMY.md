@@ -168,9 +168,9 @@ decisions already wrote:
 | Gate | What her record says |
 |---|---|
 | performance: time at level | days since it reached this rung, against ATF's illustrative 2 / 4 / 8 weeks |
-| performance: acceptance | how many of the requests it put to her at this rung she approved. ATF suggests above 95% before leaving junior |
-| incident record | requests her policy refused since it reached this rung |
-| security validation, business value | the operator's programme, not this agent with her: shown as the operator's to evidence |
+| performance: acceptance | how many of the requests it put to her at this rung she approved herself (decisions taken for her do not count). ATF suggests above 95% before leaving junior |
+| incident record | requests her policy refused on their own merits since it reached this rung. A refusal because of its level is the ladder working, and one because her queue was full is about her; neither counts |
+| security validation, business value | the operator's programme, not this agent with her: shown as the operator's, or an evaluator's, to evidence |
 | governance sign-off | hers: promoting it *is* the sign-off |
 
 None of it promotes anything. It is advisory, and the decision is hers.
@@ -247,16 +247,26 @@ ATF sets 25 requirements for an organization deploying agents. Under U4A some
 fall to the operator, as ATF assumes. Some are met by the resource owner's
 authority on her side of the exchange, which ATF does not describe. The full
 crosswalk is the appendix *Mapping to the Agentic Trust Framework* in
-[the policy draft](https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html).
-The short version:
+[the policy draft](https://u4a.ai/spec/draft-gamb-uma4agents-policy-00.html),
+one row per requirement. Each is judged only for requests that reach her
+resources, and given one of four statuses:
 
-| ATF element | Met by the operator | Met on her side, by U4A |
+| Status | Meaning | Requirements |
 |---|---|---|
-| Identity | unique identity, capability manifest | key binding, the accountability axis, the agreement's stated purpose |
-| Behaviour | baseline, anomaly detection | a record naming the agent on every row, and the conditions that decided each request |
-| Data governance | input and output validation | her terms say what may be done with what she releases |
-| Segmentation | its own allowlists | tiers and scopes, per-operation grants, the attention budget, operator blocking |
-| Incident response | kill switch, circuit breaker | revocation effective on the next call, and demotion on either ladder at once |
+| met | U4A meets it on her side | I-1, I-2, B-1, B-2, S-1, S-2, S-4, R-3, R-5 |
+| partly | part of it is met on her side; the appendix says which part | I-3, I-4, B-4, B-5, D-3, D-5, S-5, R-2 |
+| operator | it concerns the agent's own runtime, which she cannot see | I-5, B-3, D-1, D-2, D-4 |
+| gap | her side could meet it and this lab does not | S-3, R-1, R-4 |
+
+The three gaps:
+
+- **S-3, rate limiting.** The attention budget limits how many requests may wait
+  for her, not how often an agent calls. A rule can tighten on a call count, and
+  nothing enforces a rate.
+- **R-1, circuit breaker.** Her enforcement point refuses each failing call, and
+  nothing halts an agent after repeated failures.
+- **R-4, state rollback.** A resource declares whether an act can be undone
+  ([CONSEQUENCE.md](CONSEQUENCE.md)). Nothing undoes one.
 
 ATF's automatic demotion triggers are a critical incident, a discovered
 vulnerability, and repeated minor incidents. The operator observes all of them,
@@ -286,6 +296,16 @@ conversation with the ATF authors would move it:
    a grant. Those are observable incidents on her side. Should they feed her own
    automatic demotion, or only her promotion eligibility? This lab does neither
    yet.
+5. **An evaluator's appraisal as promotion evidence.** ATF has an agent earn
+   its level from signed records of what it did, appraised and signed by an
+   evaluator. The natural place for that on her side is beside the eligibility
+   gates. It would travel as a [clearance](CLEARANCE.md) does: fetched by her
+   authority from the evaluator, verified against the evaluator's published
+   keys, bound to this agent, and never carried by the agent itself. It would
+   inform her decision and could not make it. What is open is the record and
+   appraisal format, who publishes the evaluator's keys, and how an appraisal
+   lapses. Clearance today attests facts about the owner. An appraisal is about
+   the agent, so it needs a new subject, not a new transport.
 
 ## See also
 

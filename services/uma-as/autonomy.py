@@ -238,9 +238,21 @@ def eligibility(conn: dict | None, ledger: list[dict],
 
     at_level = [r for r in ledger
                 if since is None or (r.get("ts") or "") >= since]
-    approved = sum(1 for r in at_level if r.get("kind") == "approved")
-    denied = sum(1 for r in at_level if r.get("kind") == "denied")
-    refused = sum(1 for r in at_level if r.get("kind") == "refused")
+    # Her own answers only. A decision taken for her is recorded with `by`,
+    # and is not her acceptance of anything.
+    approved = sum(1 for r in at_level
+                   if r.get("kind") == "approved" and not r.get("by"))
+    denied = sum(1 for r in at_level
+                 if r.get("kind") == "denied" and not r.get("by"))
+    # A refusal is an incident only when the agent asked for something her
+    # policy refuses on its own merits. Two kinds are not: a refusal because
+    # of where the agent stands on either ladder, which is the profile doing
+    # its job (an intern that asks to act is refused by design), and one
+    # because her queue was full, which is about her and not the agent.
+    refusals = [r for r in at_level if r.get("kind") == "refused"]
+    beyond = [r for r in refusals if _on_a_ladder(r)]
+    refused = [r for r in refusals
+               if r not in beyond and r.get("because")]
 
     gates = []
     days = None if since_ts is None else (now - since_ts) / 86400
@@ -264,19 +276,33 @@ def eligibility(conn: dict | None, ledger: list[dict],
         })
     gates.append({
         "gate": "incident record: refused by your policy",
-        "met": refused == 0,
-        "detail": (f"{refused} request(s) refused since it became "
+        "met": not refused,
+        "detail": (f"{len(refused)} request(s) refused since it became "
                    f"{name(level)}" if refused else
-                   f"nothing refused since it became {name(level)}"),
+                   f"nothing refused since it became {name(level)}")
+        + (f"; {len(beyond)} more asked beyond its level, which is not an "
+           f"incident" if beyond else ""),
     })
+    # Evidence about the agent's conduct elsewhere and the operator's
+    # programme. An evaluator's signed appraisal is the natural input here,
+    # fetched by her authority and never carried by the agent; none is read
+    # yet, and when one is it will satisfy a gate shown beside her decision
+    # rather than make it.
     for gate in ("security validation", "business value"):
         gates.append({"gate": gate, "met": None,
                       "detail": "evidence about the operator's programme, not "
-                                "about this agent with you — the operator's to "
-                                "show"})
+                                "about this agent with you — the operator's, or "
+                                "an evaluator's, to show; none is read yet"})
     gates.append({"gate": "governance sign-off", "met": None,
                   "detail": "yours: promoting it is the sign-off"})
     return {"level": name(level), "next": name(level + 1), "gates": gates}
+
+
+def _on_a_ladder(row: dict) -> bool:
+    """Whether a refusal was decided by where the agent stands on either
+    autonomy ladder, rather than by anything else in her policy."""
+    return any(str(c).startswith(("standing.autonomy_", "operator.autonomy_"))
+               for c in row.get("because") or [])
 
 
 # --- the operator's ladder ---------------------------------------------------

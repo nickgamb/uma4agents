@@ -2130,6 +2130,28 @@ and <span class="bcp14">SHOULD</span> say that the second and third are evidence
 programme rather than about this agent with her. The fifth is her decision
 itself. Nothing an authorization server computes from these may promote an
 agent.<a href="#section-9.2-5" class="pilcrow">¶</a></p>
+<p id="section-9.2-6">A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full (<a href="#attention" class="auto internal xref">Section 6</a>) is about the owner; neither is an incident.<a href="#section-9.2-6" class="pilcrow">¶</a></p>
+<p id="section-9.2-7">Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does (<a href="#clearance" class="auto internal xref">Section 3.4</a>): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.<a href="#section-9.2-7" class="pilcrow">¶</a></p>
+<p id="section-9.2-8">A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full (<a href="#attention" class="auto internal xref">Section 6</a>) is about the owner; neither is an incident.<a href="#section-9.2-8" class="pilcrow">¶</a></p>
+<p id="section-9.2-9">Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does (<a href="#clearance" class="auto internal xref">Section 3.4</a>): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.<a href="#section-9.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="operators-ladder">
@@ -2734,113 +2756,204 @@ revocation.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
 <p id="appendix-D-1">This appendix is not normative. <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> sets 25 requirements across five
 elements for an organization deploying agents. Under this profile some fall to
 the operator, as <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> assumes, and some are met by the resource owner's
-authorization server on her side of the exchange — which is the side <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>
-does not describe. The table records where each is met in this set.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
-<span id="name-atfs-requirements-and-where"></span><table class="center" id="table-3">
+authorization server on her side of the exchange, which is the side <span>[<a href="#ATF" class="cite xref">ATF</a>]</span>
+does not describe.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
+<p id="appendix-D-2">Each requirement is given one of four statuses, judged only for requests that
+reach the owner's resources:<a href="#appendix-D-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-D-3">
+        <dt id="appendix-D-3.1">met:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-D-3.2">
+          <p id="appendix-D-3.2.1">this set meets it on the owner's side.<a href="#appendix-D-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-D-3.3">partly:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-D-3.4">
+          <p id="appendix-D-3.4.1">this set meets part of it on the owner's side; the remainder is stated.<a href="#appendix-D-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-D-3.5">operator:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-D-3.6">
+          <p id="appendix-D-3.6.1">it concerns the agent's own runtime, which the owner cannot see, and this
+set does not attempt it.<a href="#appendix-D-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-D-3.7">gap:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-D-3.8">
+          <p id="appendix-D-3.8.1">the owner's side could meet it and this set does not.<a href="#appendix-D-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<span id="name-atfs-requirements-judged-on"></span><table class="center" id="table-3">
         <caption>
 <a href="#table-3" class="selfRef">Table 3</a>:
-<a href="#name-atfs-requirements-and-where" class="selfRef">ATF's requirements, and where each is met when the owner is a separate party.</a>
+<a href="#name-atfs-requirements-judged-on" class="selfRef">ATF's requirements, judged on the owner's side of the exchange.</a>
         </caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">ATF</th>
             <th class="text-left" rowspan="1" colspan="1">Requirement</th>
-            <th class="text-left" rowspan="1" colspan="1">Where it is met under this set</th>
+            <th class="text-left" rowspan="1" colspan="1">Status</th>
+            <th class="text-left" rowspan="1" colspan="1">Under this set</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">I-1</td>
             <td class="text-left" rowspan="1" colspan="1">Unique identifier</td>
-            <td class="text-left" rowspan="1" colspan="1">the connection handle (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">The connection handle names each agent to the owner: its key's thumbprint, or its issuer and subject (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">I-2</td>
             <td class="text-left" rowspan="1" colspan="1">Credential binding</td>
-            <td class="text-left" rowspan="1" colspan="1">the binding axis (<a href="#axes" class="auto internal xref">Section 4.1</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Every agreement and call is signed with the agent's key; the binding axis records it (<a href="#axes" class="auto internal xref">Section 4.1</a>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">I-3</td>
             <td class="text-left" rowspan="1" colspan="1">Ownership chain</td>
-            <td class="text-left" rowspan="1" colspan="1">the accountability axis (<a href="#axes" class="auto internal xref">Section 4.1</a>); level 2 is the operator's own attestation</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">The accountability axis names the operator, and level 2 is the operator's own attestation (<a href="#level-two" class="auto internal xref">Section 4.2</a>). The chain from the operator to the person it acts for is not established.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">I-4</td>
             <td class="text-left" rowspan="1" colspan="1">Purpose declaration</td>
-            <td class="text-left" rowspan="1" colspan="1">the purpose and reason of the agreement (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">Each agreement carries the purpose the owner's terms state and the agent's reason (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>). This is per grant; a standing declaration of the agent's scope is the operator's.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">I-5</td>
             <td class="text-left" rowspan="1" colspan="1">Capability manifest</td>
-            <td class="text-left" rowspan="1" colspan="1">the operator's; outside this set</td>
+            <td class="text-left" rowspan="1" colspan="1">operator</td>
+            <td class="text-left" rowspan="1" colspan="1">Not read.</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">B-1, B-2</td>
-            <td class="text-left" rowspan="1" colspan="1">Structured logging; action attribution</td>
-            <td class="text-left" rowspan="1" colspan="1">the record, naming the counterparty on every row (<a href="#record" class="auto internal xref">Section 8</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">B-1</td>
+            <td class="text-left" rowspan="1" colspan="1">Structured logging</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">The record of <a href="#record" class="auto internal xref">Section 8</a>, for everything that reaches her resources.</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">B-3, B-4</td>
-            <td class="text-left" rowspan="1" colspan="1">Behavioural baseline; anomaly detection</td>
-            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's trajectory conditions (<a href="#tightening" class="auto internal xref">Section 3.2</a>) can only tighten on what she has seen</td>
+            <td class="text-left" rowspan="1" colspan="1">B-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Action attribution</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Every row of the record names the agent where it can (<a href="#counterparty" class="auto internal xref">Section 8.3</a>); an enforcement point's report is attributed by the authorization server, not the reporter (<a href="#pep-reports" class="auto internal xref">Section 8.5</a>).</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">B-3</td>
+            <td class="text-left" rowspan="1" colspan="1">Behavioural baseline</td>
+            <td class="text-left" rowspan="1" colspan="1">operator</td>
+            <td class="text-left" rowspan="1" colspan="1">The trajectory conditions of <a href="#tightening" class="auto internal xref">Section 3.2</a> count denials, units and calls in a window. They are not a baseline.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">B-4</td>
+            <td class="text-left" rowspan="1" colspan="1">Anomaly detection</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">A rule can tighten when an agent's requests widen or multiply (<a href="#tightening" class="auto internal xref">Section 3.2</a>). There is no detection beyond such counts.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">B-5</td>
             <td class="text-left" rowspan="1" colspan="1">Explainability</td>
-            <td class="text-left" rowspan="1" colspan="1">the conditions that decided each request, kept in the record</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">The conditions that decided each request are kept in the record. The agent's own rationale is only its stated reason, which nothing checks.</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">D-1 to D-5</td>
-            <td class="text-left" rowspan="1" colspan="1">Data governance</td>
-            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's terms (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>) state what may be done with what is released</td>
+            <td class="text-left" rowspan="1" colspan="1">D-1</td>
+            <td class="text-left" rowspan="1" colspan="1">Schema validation</td>
+            <td class="text-left" rowspan="1" colspan="1">operator</td>
+            <td class="text-left" rowspan="1" colspan="1">Her side validates the agreement against her terms and the call against the operation it was granted for; the agent's inputs are not hers to see.</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">S-1, S-2</td>
-            <td class="text-left" rowspan="1" colspan="1">Resource allowlist; action boundaries</td>
-            <td class="text-left" rowspan="1" colspan="1">policy units and their scopes (<a href="#shape" class="auto internal xref">Section 2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">D-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Injection prevention</td>
+            <td class="text-left" rowspan="1" colspan="1">operator</td>
+            <td class="text-left" rowspan="1" colspan="1">Not detected. Per-operation grants bound what an injected instruction can do on her resources.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">D-3</td>
+            <td class="text-left" rowspan="1" colspan="1">PII/PHI protection</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">Scopes limit what is released, and her terms prohibit uses of it. Detection and masking are the operator's, and most prohibitions are undertakings rather than enforced (<span>[<a href="#U4ATerms" class="cite xref">U4ATerms</a>]</span>).</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">D-4</td>
+            <td class="text-left" rowspan="1" colspan="1">Output validation</td>
+            <td class="text-left" rowspan="1" colspan="1">operator</td>
+            <td class="text-left" rowspan="1" colspan="1">Not attempted.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">D-5</td>
+            <td class="text-left" rowspan="1" colspan="1">Data lineage</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">The record links what an agent promised to what it touched, per negotiation, and sub-agents to the agent that introduced them (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>). Lineage inside the agent's pipeline is the operator's.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-1</td>
+            <td class="text-left" rowspan="1" colspan="1">Resource allowlist</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Each policy unit names its resources; an ungoverned resource is refused (<a href="#shape" class="auto internal xref">Section 2</a>).</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">S-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Action boundaries</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Scopes per unit, and grants bound to one named operation (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">S-3</td>
             <td class="text-left" rowspan="1" colspan="1">Rate limiting</td>
-            <td class="text-left" rowspan="1" colspan="1">the attention bound on the owner's queue (<a href="#attention" class="auto internal xref">Section 6</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">gap</td>
+            <td class="text-left" rowspan="1" colspan="1">Not enforced. The attention bound of <a href="#attention" class="auto internal xref">Section 6</a> limits how many requests may wait for the owner, not how often an agent calls; a rule may tighten on a call count.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">S-4</td>
             <td class="text-left" rowspan="1" colspan="1">Transaction limits</td>
-            <td class="text-left" rowspan="1" colspan="1">grants bound to one operation (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">A grant may be bound to one operation and its parameters and spent once (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>); terms may carry constraints.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">S-5</td>
             <td class="text-left" rowspan="1" colspan="1">Blast radius containment</td>
-            <td class="text-left" rowspan="1" colspan="1">operator blocking (<a href="#operators" class="auto internal xref">Section 7</a>) and revocation of a lineage (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">Access is per unit, an operator can be blocked in one action (<a href="#operators" class="auto internal xref">Section 7</a>), and revoking an agent revokes its lineage (<span>[<a href="#U4ALineage" class="cite xref">U4ALineage</a>]</span>). Cumulative impact across calls is not limited.</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">R-1, R-2</td>
-            <td class="text-left" rowspan="1" colspan="1">Circuit breaker; kill switch</td>
-            <td class="text-left" rowspan="1" colspan="1">the operator's; the owner's revocation is effective on the next call</td>
+            <td class="text-left" rowspan="1" colspan="1">R-1</td>
+            <td class="text-left" rowspan="1" colspan="1">Circuit breaker</td>
+            <td class="text-left" rowspan="1" colspan="1">gap</td>
+            <td class="text-left" rowspan="1" colspan="1">An enforcement point refuses each call that fails; nothing halts an agent automatically after repeated failures.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">R-2</td>
+            <td class="text-left" rowspan="1" colspan="1">Kill switch</td>
+            <td class="text-left" rowspan="1" colspan="1">partly</td>
+            <td class="text-left" rowspan="1" colspan="1">Revoking a connection or blocking an operator takes effect on the next call, because the enforcement point introspects every call. It stops access, not the agent.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-3</td>
             <td class="text-left" rowspan="1" colspan="1">Session revocation</td>
-            <td class="text-left" rowspan="1" colspan="1">revoking a connection kills every grant under it (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Revoking a connection deactivates every grant issued under it in one step (<span>[<a href="#U4ACore" class="cite xref">U4ACore</a>]</span>).</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-4</td>
             <td class="text-left" rowspan="1" colspan="1">State rollback</td>
-            <td class="text-left" rowspan="1" colspan="1">the declared consequence of each operation (<a href="#consequence" class="auto internal xref">Section 3.3</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">gap</td>
+            <td class="text-left" rowspan="1" colspan="1">The declared consequence of <a href="#consequence" class="auto internal xref">Section 3.3</a> says whether an act can be undone. Nothing here undoes one.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">R-5</td>
             <td class="text-left" rowspan="1" colspan="1">Graceful degradation</td>
-            <td class="text-left" rowspan="1" colspan="1">demotion on either ladder takes effect on the next request (<a href="#autonomy" class="auto internal xref">Section 9</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">met</td>
+            <td class="text-left" rowspan="1" colspan="1">Lowering either ladder takes effect on the agent's next request (<a href="#autonomy" class="auto internal xref">Section 9</a>).</td>
           </tr>
         </tbody>
       </table>
-<p id="appendix-D-3"><span>[<a href="#ATF" class="cite xref">ATF</a>]</span>'s promotion gates map as <a href="#owners-ladder" class="auto internal xref">Section 9.2</a> describes. Its automatic
+<p id="appendix-D-5"><span>[<a href="#ATF" class="cite xref">ATF</a>]</span>'s promotion gates map as <a href="#owners-ladder" class="auto internal xref">Section 9.2</a> describes. Its automatic
 demotion triggers — a critical incident, a discovered vulnerability, repeated
 minor incidents — are observed by the operator, which is where <span>[<a href="#ATF" class="cite xref">ATF</a>]</span> places
 them, and reach every owner through the operator's ladder on the agent's next
-request without any owner acting.<a href="#appendix-D-3" class="pilcrow">¶</a></p>
+request without any owner acting.<a href="#appendix-D-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">

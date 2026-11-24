@@ -105,7 +105,7 @@ Table of Contents
    9.  Earned Autonomy . . . . . . . . . . . . . . . . . . . . . . .  13
      9.1.  Two Ladders . . . . . . . . . . . . . . . . . . . . . . .  14
      9.2.  The Owner's Ladder  . . . . . . . . . . . . . . . . . . .  14
-     9.3.  The Operator's Ladder . . . . . . . . . . . . . . . . . .  15
+     9.3.  The Operator's Ladder . . . . . . . . . . . . . . . . . .  16
 
 
 
@@ -114,28 +114,28 @@ Gamb & Maler              Expires 19 March 2027                 [Page 2]
 Internet-Draft           Owner Policy for Agents          September 2026
 
 
-     9.4.  Acting Without Asking . . . . . . . . . . . . . . . . . .  16
+     9.4.  Acting Without Asking . . . . . . . . . . . . . . . . . .  17
      9.5.  A Profile of the Agentic Trust Framework  . . . . . . . .  17
-   10. Security Considerations . . . . . . . . . . . . . . . . . . .  18
-     10.1.  The Asymmetry Is the Security Model  . . . . . . . . . .  18
-     10.2.  Assurance Is Derived, Never Claimed  . . . . . . . . . .  18
+   10. Security Considerations . . . . . . . . . . . . . . . . . . .  19
+     10.1.  The Asymmetry Is the Security Model  . . . . . . . . . .  19
+     10.2.  Assurance Is Derived, Never Claimed  . . . . . . . . . .  19
      10.3.  Promotion Is a Relaxation  . . . . . . . . . . . . . . .  19
      10.4.  Trajectory Reads Are Not Atomic  . . . . . . . . . . . .  19
-     10.5.  The Bound Is a Depth, and the Depth Is Small . . . . . .  19
-   11. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  19
-     11.1.  The Record Is a Per-Agent History  . . . . . . . . . . .  19
+     10.5.  The Bound Is a Depth, and the Depth Is Small . . . . . .  20
+   11. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  20
+     11.1.  The Record Is a Per-Agent History  . . . . . . . . . . .  20
      11.2.  Operator Claims Are Visible to the Owner . . . . . . . .  20
      11.3.  An Operator's Level Is Shown, Not Hidden . . . . . . . .  20
    12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  20
    13. References  . . . . . . . . . . . . . . . . . . . . . . . . .  20
      13.1.  Normative References . . . . . . . . . . . . . . . . . .  20
-     13.2.  Informative References . . . . . . . . . . . . . . . . .  21
-   Appendix A.  A Condition Vocabulary . . . . . . . . . . . . . . .  22
-   Appendix B.  Record Entry Kinds . . . . . . . . . . . . . . . . .  24
-   Appendix C.  Implementation Status  . . . . . . . . . . . . . . .  24
+     13.2.  Informative References . . . . . . . . . . . . . . . . .  22
+   Appendix A.  A Condition Vocabulary . . . . . . . . . . . . . . .  23
+   Appendix B.  Record Entry Kinds . . . . . . . . . . . . . . . . .  25
+   Appendix C.  Implementation Status  . . . . . . . . . . . . . . .  25
    Appendix D.  Mapping to the Agentic Trust Framework . . . . . . .  25
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  26
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  27
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  29
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  29
 
 1.  Introduction
 
@@ -813,6 +813,44 @@ Internet-Draft           Owner Policy for Agents          September 2026
    Nothing an authorization server computes from these may promote an
    agent.
 
+   A refusal is evidence about the agent's conduct only when her policy
+   refused the request on its own merits.  A refusal because of where
+   the agent stands on either ladder is the ladder working, and a
+   refusal because the owner's queue was full (Section 6) is about the
+   owner; neither is an incident.
+
+   Evidence from a party outside both — an evaluator's signed appraisal
+   of what the agent has done elsewhere — would belong beside these
+   conditions.  It would travel as a clearance does (Section 3.4):
+   fetched by the authorization server from the party that signed it,
+   verified against that party's published keys, bound to this agent,
+   and never carried by the agent itself.  Like the rest, it would
+   inform the owner's decision and could not make it.  This document
+   does not define its format.
+
+   A refusal is evidence about the agent's conduct only when her policy
+   refused the request on its own merits.  A refusal because of where
+   the agent stands on either ladder is the ladder working, and a
+   refusal because the owner's queue was full (Section 6) is about the
+   owner; neither is an incident.
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 15]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
+   Evidence from a party outside both — an evaluator's signed appraisal
+   of what the agent has done elsewhere — would belong beside these
+   conditions.  It would travel as a clearance does (Section 3.4):
+   fetched by the authorization server from the party that signed it,
+   verified against that party's published keys, bound to this agent,
+   and never carried by the agent itself.  Like the rest, it would
+   inform the owner's decision and could not make it.  This document
+   does not define its format.
+
 9.3.  The Operator's Ladder
 
    An operator declares where it has put an agent on its own ladder in
@@ -831,16 +869,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
       Figure 2: An operator's declaration of its agent's level, in its
                          client metadata document.
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 15]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
    maturity_level is one of the four levels; conformance is compatible
    or certified in the sense of [ATF]; statement_uri locates the
@@ -862,6 +890,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    Because it may only tighten, the declaration needs no verification to
    be safe to read: an operator that overstates its agent gains nothing,
    and one that understates it costs only itself.  It is shown to the
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 16]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    owner with what the authorization server could establish about who
    made it — an operator at level 2 of the accountability axis
    (Section 4.2), or a document any agent could have named.
@@ -889,21 +925,34 @@ Internet-Draft           Owner Policy for Agents          September 2026
    tell the owner as it happens, on whatever surface would otherwise
    have asked her.  A relaxation is also recorded (Section 8).
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 16]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
 9.5.  A Profile of the Agentic Trust Framework
 
    The levels of [ATF] map onto rules over conditions this document
    already defines, together with the consequence a resource server
    declares for the operation (Section 3.3).  Applied to a policy unit,
    the following reads as the levels do, on both ladders at once:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 17]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
    {"rules": [
      {"then": "auto",
@@ -934,26 +983,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    Figure 3: The levels of ATF as an owner's rules, in the vocabulary of
                                 Appendix A.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 17]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    +=================+===========+=================+==================+
    | Level, with her | A read    | An act that can | An act that      |
    |                 |           | be compensated  | cannot be undone |
@@ -973,6 +1002,13 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
      Table 1: What the profile does, before the operator's ladder is
                                   read.
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 18]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
    The operator's ladder is then read the same way and can only make a
    cell stricter: an agent its operator still calls an intern does not
@@ -1001,15 +1037,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    to remove.  Each level is the result of a check this authority ran,
    and the check either ran and passed or the level is zero.
 
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 18]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
 10.3.  Promotion Is a Relaxation
 
    Raising an agent on the owner's ladder widens what it may do at every
@@ -1031,6 +1058,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    window: a stale read behaves as an earlier arrival would have, and
    cannot widen access beyond what a differently timed arrival would
    have received.  The test for whether a read needs the indivisibility
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 19]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    of [U4ACore] Section 8.3 is whether staleness can widen; these
    cannot.
 
@@ -1050,21 +1085,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    another.  Retention is deployment policy.  An implementation SHOULD
    let the owner see every entry that names an agent, since she is the
    party it was kept for.
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 19]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
 11.2.  Operator Claims Are Visible to the Owner
 
@@ -1093,6 +1113,15 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 13.1.  Normative References
 
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 20]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    [I-D.ietf-oauth-client-id-metadata-document]
               Parecki, A. and E. Smith, "OAuth Client ID Metadata
               Document", Work in Progress, Internet-Draft, draft-ietf-
@@ -1111,16 +1140,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 20]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
@@ -1152,6 +1171,13 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Draft, draft-gamb-uma4agents-terms-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-terms-00.html>.
 
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 21]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    [UMAGrant] Maler, E., Machulak, M., and J. Richer, "User-Managed
               Access (UMA) 2.0 Grant for OAuth 2.0 Authorization",
               Kantara Recommendation, 7 January 2018,
@@ -1169,14 +1195,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 21]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
 
    [SP800-63-3]
               National Institute of Standards and Technology, "Digital
@@ -1200,6 +1218,21 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 22]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
 Appendix A.  A Condition Vocabulary
 
@@ -1226,14 +1259,6 @@ Appendix A.  A Condition Vocabulary
    |                                  |          | older than D       |
    +----------------------------------+----------+--------------------+
    | standing.first_party             | relaxing | an agent the owner |
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 22]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    |                                  |          | activated herself  |
    +----------------------------------+----------+--------------------+
    | standing.none                    | observed | no standing        |
@@ -1257,6 +1282,14 @@ Internet-Draft           Owner Policy for Agents          September 2026
    +----------------------------------+----------+--------------------+
    | standing.calls_above:N           | observed | recently made more |
    |                                  |          | than N calls       |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 23]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
    +----------------------------------+----------+--------------------+
    | standing.introduced              | observed | introduced by      |
    |                                  |          | another agent      |
@@ -1282,14 +1315,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
    | request.reason_absent            | observed | stated no reason   |
    +----------------------------------+----------+--------------------+
    | request.mission_absent           | observed | cited no mandate   |
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 23]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    +----------------------------------+----------+--------------------+
    | standing.autonomy_at_least:L     | relaxing | the owner has      |
    |                                  |          | raised this agent  |
@@ -1310,6 +1335,16 @@ Internet-Draft           Owner Policy for Agents          September 2026
    +----------------------------------+----------+--------------------+
 
       Table 2: The reference implementation's condition vocabulary.
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 24]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
 
 Appendix B.  Record Entry Kinds
 
@@ -1338,14 +1373,6 @@ Appendix C.  Implementation Status
    return of a blocked operator as an anonymous stranger.  Section 9 is
    exercised end to end against a running authorization server and
    resource: two agents of one operator at different levels of its
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 24]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    ladder, each starting at the bottom of the owner's, promoted one step
    at a time, refused while either ladder stands too low, and returned
    to the bottom by a revocation.
@@ -1356,44 +1383,17 @@ Appendix D.  Mapping to the Agentic Trust Framework
    five elements for an organization deploying agents.  Under this
    profile some fall to the operator, as [ATF] assumes, and some are met
    by the resource owner's authorization server on her side of the
-   exchange — which is the side [ATF] does not describe.  The table
-   records where each is met in this set.
+   exchange, which is the side [ATF] does not describe.
 
-   +======+===================+=======================================+
-   | ATF  | Requirement       | Where it is met under this set        |
-   +======+===================+=======================================+
-   | I-1  | Unique identifier | the connection handle ([U4ACore])     |
-   +------+-------------------+---------------------------------------+
-   | I-2  | Credential        | the binding axis (Section 4.1)        |
-   |      | binding           |                                       |
-   +------+-------------------+---------------------------------------+
-   | I-3  | Ownership chain   | the accountability axis               |
-   |      |                   | (Section 4.1); level 2 is the         |
-   |      |                   | operator's own attestation            |
-   +------+-------------------+---------------------------------------+
-   | I-4  | Purpose           | the purpose and reason of the         |
-   |      | declaration       | agreement ([U4ATerms])                |
-   +------+-------------------+---------------------------------------+
-   | I-5  | Capability        | the operator's; outside this set      |
-   |      | manifest          |                                       |
-   +------+-------------------+---------------------------------------+
-   | B-1, | Structured        | the record, naming the counterparty   |
-   | B-2  | logging; action   | on every row (Section 8)              |
-   |      | attribution       |                                       |
-   +------+-------------------+---------------------------------------+
-   | B-3, | Behavioural       | the operator's; the owner's           |
-   | B-4  | baseline; anomaly | trajectory conditions (Section 3.2)   |
-   |      | detection         | can only tighten on what she has seen |
-   +------+-------------------+---------------------------------------+
-   | B-5  | Explainability    | the conditions that decided each      |
-   |      |                   | request, kept in the record           |
-   +------+-------------------+---------------------------------------+
-   | D-1  | Data governance   | the operator's; the owner's terms     |
-   | to   |                   | ([U4ATerms]) state what may be done   |
-   | D-5  |                   | with what is released                 |
-   +------+-------------------+---------------------------------------+
-   | S-1, | Resource          | policy units and their scopes         |
-   | S-2  | allowlist; action | (Section 2)                           |
+   Each requirement is given one of four statuses, judged only for
+   requests that reach the owner's resources:
+
+   met:  this set meets it on the owner's side.
+
+   partly:  this set meets part of it on the owner's side; the remainder
+      is stated.
+
+   operator:  it concerns the agent's own runtime, which the owner
 
 
 
@@ -1402,35 +1402,185 @@ Gamb & Maler              Expires 19 March 2027                [Page 25]
 Internet-Draft           Owner Policy for Agents          September 2026
 
 
-   |      | boundaries        |                                       |
-   +------+-------------------+---------------------------------------+
-   | S-3  | Rate limiting     | the attention bound on the owner's    |
-   |      |                   | queue (Section 6)                     |
-   +------+-------------------+---------------------------------------+
-   | S-4  | Transaction       | grants bound to one operation         |
-   |      | limits            | ([U4ACore])                           |
-   +------+-------------------+---------------------------------------+
-   | S-5  | Blast radius      | operator blocking (Section 7) and     |
-   |      | containment       | revocation of a lineage               |
-   |      |                   | ([U4ALineage])                        |
-   +------+-------------------+---------------------------------------+
-   | R-1, | Circuit breaker;  | the operator's; the owner's           |
-   | R-2  | kill switch       | revocation is effective on the next   |
-   |      |                   | call                                  |
-   +------+-------------------+---------------------------------------+
-   | R-3  | Session           | revoking a connection kills every     |
-   |      | revocation        | grant under it ([U4ACore])            |
-   +------+-------------------+---------------------------------------+
-   | R-4  | State rollback    | the declared consequence of each      |
-   |      |                   | operation (Section 3.3)               |
-   +------+-------------------+---------------------------------------+
-   | R-5  | Graceful          | demotion on either ladder takes       |
-   |      | degradation       | effect on the next request            |
-   |      |                   | (Section 9)                           |
-   +------+-------------------+---------------------------------------+
+      cannot see, and this set does not attempt it.
 
-       Table 3: ATF's requirements, and where each is met when the
-                        owner is a separate party.
+   gap:  the owner's side could meet it and this set does not.
+
+   +=====+================+==========+=================================+
+   | ATF | Requirement    | Status   | Under this set                  |
+   +=====+================+==========+=================================+
+   | I-1 | Unique         | met      | The connection handle names     |
+   |     | identifier     |          | each agent to the owner: its    |
+   |     |                |          | key's thumbprint, or its        |
+   |     |                |          | issuer and subject              |
+   |     |                |          | ([U4ACore]).                    |
+   +-----+----------------+----------+---------------------------------+
+   | I-2 | Credential     | met      | Every agreement and call is     |
+   |     | binding        |          | signed with the agent's key;    |
+   |     |                |          | the binding axis records it     |
+   |     |                |          | (Section 4.1).                  |
+   +-----+----------------+----------+---------------------------------+
+   | I-3 | Ownership      | partly   | The accountability axis names   |
+   |     | chain          |          | the operator, and level 2 is    |
+   |     |                |          | the operator's own attestation  |
+   |     |                |          | (Section 4.2).  The chain from  |
+   |     |                |          | the operator to the person it   |
+   |     |                |          | acts for is not established.    |
+   +-----+----------------+----------+---------------------------------+
+   | I-4 | Purpose        | partly   | Each agreement carries the      |
+   |     | declaration    |          | purpose the owner's terms       |
+   |     |                |          | state and the agent's reason    |
+   |     |                |          | ([U4ATerms]).  This is per      |
+   |     |                |          | grant; a standing declaration   |
+   |     |                |          | of the agent's scope is the     |
+   |     |                |          | operator's.                     |
+   +-----+----------------+----------+---------------------------------+
+   | I-5 | Capability     | operator | Not read.                       |
+   |     | manifest       |          |                                 |
+   +-----+----------------+----------+---------------------------------+
+   | B-1 | Structured     | met      | The record of Section 8, for    |
+   |     | logging        |          | everything that reaches her     |
+   |     |                |          | resources.                      |
+   +-----+----------------+----------+---------------------------------+
+   | B-2 | Action         | met      | Every row of the record names   |
+   |     | attribution    |          | the agent where it can          |
+   |     |                |          | (Section 8.3); an enforcement   |
+   |     |                |          | point's report is attributed    |
+   |     |                |          | by the authorization server,    |
+   |     |                |          | not the reporter                |
+   |     |                |          | (Section 8.5).                  |
+   +-----+----------------+----------+---------------------------------+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 26]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
+   | B-3 | Behavioural    | operator | The trajectory conditions of    |
+   |     | baseline       |          | Section 3.2 count denials,      |
+   |     |                |          | units and calls in a window.    |
+   |     |                |          | They are not a baseline.        |
+   +-----+----------------+----------+---------------------------------+
+   | B-4 | Anomaly        | partly   | A rule can tighten when an      |
+   |     | detection      |          | agent's requests widen or       |
+   |     |                |          | multiply (Section 3.2).  There  |
+   |     |                |          | is no detection beyond such     |
+   |     |                |          | counts.                         |
+   +-----+----------------+----------+---------------------------------+
+   | B-5 | Explainability | partly   | The conditions that decided     |
+   |     |                |          | each request are kept in the    |
+   |     |                |          | record.  The agent's own        |
+   |     |                |          | rationale is only its stated    |
+   |     |                |          | reason, which nothing checks.   |
+   +-----+----------------+----------+---------------------------------+
+   | D-1 | Schema         | operator | Her side validates the          |
+   |     | validation     |          | agreement against her terms     |
+   |     |                |          | and the call against the        |
+   |     |                |          | operation it was granted for;   |
+   |     |                |          | the agent's inputs are not      |
+   |     |                |          | hers to see.                    |
+   +-----+----------------+----------+---------------------------------+
+   | D-2 | Injection      | operator | Not detected.  Per-operation    |
+   |     | prevention     |          | grants bound what an injected   |
+   |     |                |          | instruction can do on her       |
+   |     |                |          | resources.                      |
+   +-----+----------------+----------+---------------------------------+
+   | D-3 | PII/PHI        | partly   | Scopes limit what is released,  |
+   |     | protection     |          | and her terms prohibit uses of  |
+   |     |                |          | it.  Detection and masking are  |
+   |     |                |          | the operator's, and most        |
+   |     |                |          | prohibitions are undertakings   |
+   |     |                |          | rather than enforced            |
+   |     |                |          | ([U4ATerms]).                   |
+   +-----+----------------+----------+---------------------------------+
+   | D-4 | Output         | operator | Not attempted.                  |
+   |     | validation     |          |                                 |
+   +-----+----------------+----------+---------------------------------+
+   | D-5 | Data lineage   | partly   | The record links what an agent  |
+   |     |                |          | promised to what it touched,    |
+   |     |                |          | per negotiation, and sub-       |
+   |     |                |          | agents to the agent that        |
+   |     |                |          | introduced them                 |
+   |     |                |          | ([U4ALineage]).  Lineage        |
+   |     |                |          | inside the agent's pipeline is  |
+   |     |                |          | the operator's.                 |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 27]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
+   +-----+----------------+----------+---------------------------------+
+   | S-1 | Resource       | met      | Each policy unit names its      |
+   |     | allowlist      |          | resources; an ungoverned        |
+   |     |                |          | resource is refused             |
+   |     |                |          | (Section 2).                    |
+   +-----+----------------+----------+---------------------------------+
+   | S-2 | Action         | met      | Scopes per unit, and grants     |
+   |     | boundaries     |          | bound to one named operation    |
+   |     |                |          | ([U4ACore]).                    |
+   +-----+----------------+----------+---------------------------------+
+   | S-3 | Rate limiting  | gap      | Not enforced.  The attention    |
+   |     |                |          | bound of Section 6 limits how   |
+   |     |                |          | many requests may wait for the  |
+   |     |                |          | owner, not how often an agent   |
+   |     |                |          | calls; a rule may tighten on a  |
+   |     |                |          | call count.                     |
+   +-----+----------------+----------+---------------------------------+
+   | S-4 | Transaction    | met      | A grant may be bound to one     |
+   |     | limits         |          | operation and its parameters    |
+   |     |                |          | and spent once ([U4ACore]);     |
+   |     |                |          | terms may carry constraints.    |
+   +-----+----------------+----------+---------------------------------+
+   | S-5 | Blast radius   | partly   | Access is per unit, an          |
+   |     | containment    |          | operator can be blocked in one  |
+   |     |                |          | action (Section 7), and         |
+   |     |                |          | revoking an agent revokes its   |
+   |     |                |          | lineage ([U4ALineage]).         |
+   |     |                |          | Cumulative impact across calls  |
+   |     |                |          | is not limited.                 |
+   +-----+----------------+----------+---------------------------------+
+   | R-1 | Circuit        | gap      | An enforcement point refuses    |
+   |     | breaker        |          | each call that fails; nothing   |
+   |     |                |          | halts an agent automatically    |
+   |     |                |          | after repeated failures.        |
+   +-----+----------------+----------+---------------------------------+
+   | R-2 | Kill switch    | partly   | Revoking a connection or        |
+   |     |                |          | blocking an operator takes      |
+   |     |                |          | effect on the next call,        |
+   |     |                |          | because the enforcement point   |
+   |     |                |          | introspects every call.  It     |
+   |     |                |          | stops access, not the agent.    |
+   +-----+----------------+----------+---------------------------------+
+   | R-3 | Session        | met      | Revoking a connection           |
+   |     | revocation     |          | deactivates every grant issued  |
+   |     |                |          | under it in one step            |
+   |     |                |          | ([U4ACore]).                    |
+   +-----+----------------+----------+---------------------------------+
+   | R-4 | State rollback | gap      | The declared consequence of     |
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 28]
+
+Internet-Draft           Owner Policy for Agents          September 2026
+
+
+   |     |                |          | Section 3.3 says whether an     |
+   |     |                |          | act can be undone.  Nothing     |
+   |     |                |          | here undoes one.                |
+   +-----+----------------+----------+---------------------------------+
+   | R-5 | Graceful       | met      | Lowering either ladder takes    |
+   |     | degradation    |          | effect on the agent's next      |
+   |     |                |          | request (Section 9).            |
+   +-----+----------------+----------+---------------------------------+
+
+       Table 3: ATF's requirements, judged on the owner's side of the
+                                 exchange.
 
    [ATF]'s promotion gates map as Section 9.2 describes.  Its automatic
    demotion triggers — a critical incident, a discovered vulnerability,
@@ -1451,13 +1601,6 @@ Acknowledgments
    party is what turns one ladder into two, came from conversation
    between Josh Woodruff and Eve Maler.
 
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 26]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    The consequence vocabulary of Section 3.3 — reversible,
    compensatable, forward-recoverable, irreversible — is Nat Sakimura's,
    from "When Software Becomes Staff: Governance, Security & Safety for
@@ -1473,6 +1616,14 @@ Authors' Addresses
    Nick Gamb
    MindGarden LLC
    Email: nickgamb@gmail.com
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 29]
+
+Internet-Draft           Owner Policy for Agents          September 2026
 
 
    Eve Maler
@@ -1509,4 +1660,21 @@ Authors' Addresses
 
 
 
-Gamb & Maler              Expires 19 March 2027                [Page 27]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gamb & Maler              Expires 19 March 2027                [Page 30]

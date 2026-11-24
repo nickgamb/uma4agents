@@ -71,9 +71,11 @@ From there:
 
 Before she promotes, her portal shows what her own record says about ATF's
 gates: how long the agent has been at this rung, how many of the requests it
-put to her she approved, and whether her policy refused anything. Security
-validation and business value are about the firm's programme rather than this
-agent with her, and are labelled as the firm's to show. Governance sign-off is
+put to her she approved, and whether her policy refused anything on its own
+merits. A refusal because of the agent's level is the ladder working, not an
+incident. Security validation and business value are about the firm's programme
+rather than this agent with her, and are labelled as the firm's, or an
+evaluator's, to show. Governance sign-off is
 her pressing the button.
 
 ## The firm's ladder
@@ -129,6 +131,7 @@ intern again.
 
 `make fixture-autonomy` runs the same check with no identity provider and no
 gateway. The normative text is
-[§9 of the policy draft](/spec/draft-gamb-uma4agents-policy-00.html), and its
-appendix maps all 25 of ATF's requirements to where each is met when the owner
-is a separate party.
+[§9 of the policy draft](/spec/draft-gamb-uma4agents-policy-00.html). Its
+appendix judges each of ATF's 25 requirements on the owner's side of the
+exchange: 9 met, 8 partly met, 5 that belong to the operator, and 3 gaps (rate
+limiting, a circuit breaker, and rollback).

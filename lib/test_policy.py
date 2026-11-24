@@ -673,6 +673,34 @@ check("eligibility reads time at level from her record",
 check("and her acceptance of what it asked, against ATF's threshold",
       _gates["performance: your acceptance of what it asked"]["met"] is True
       and "19 of 20" in _gates["performance: your acceptance of what it asked"]["detail"])
+_mixed = autonomy.eligibility(
+    {**_conn, "autonomy": {"level": "intern", "since": "2026-01-01T00:00:00Z"}},
+    [{"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "because": ["standing.autonomy_below:junior",
+                  "request.consequence_at_or_above:compensatable"]},
+     {"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "reason": "her queue of agent requests is full", "lane": "unattributable"},
+     {"kind": "approved", "ts": "2026-01-02T00:00:00Z",
+      "by": {"kind": "administrator", "admin": "dana"}}],
+    now=1767225600 + 30 * 86400)
+_mg = {g["gate"]: g for g in _mixed["gates"]}
+check("an intern refused for asking beyond its level has no incident for it",
+      _mg["incident record: refused by your policy"]["met"] is True
+      and "beyond its level" in _mg["incident record: refused by your policy"]["detail"])
+check("nor does a refusal because her queue was full",
+      "request(s) refused" not in _mg["incident record: refused by your policy"]["detail"])
+_jr = autonomy.eligibility(
+    {**_conn, "autonomy": {"level": "junior", "since": "2026-01-01T00:00:00Z"}},
+    [{"kind": "approved", "ts": "2026-01-02T00:00:00Z",
+      "by": {"kind": "administrator", "admin": "dana"}},
+     {"kind": "refused", "ts": "2026-01-02T00:00:00Z",
+      "because": ["request.reason_absent"]}],
+    now=1767225600 + 30 * 86400)
+_jg = {g["gate"]: g for g in _jr["gates"]}
+check("a decision taken for her is not counted as her acceptance",
+      _jg["performance: your acceptance of what it asked"]["met"] is None)
+check("a refusal on the request's own merits is an incident",
+      _jg["incident record: refused by your policy"]["met"] is False)
 check("and leaves the operator's gates to the operator",
       _gates["security validation"]["met"] is None)
 

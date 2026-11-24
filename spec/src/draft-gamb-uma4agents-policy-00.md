@@ -643,6 +643,32 @@ programme rather than about this agent with her. The fifth is her decision
 itself. Nothing an authorization server computes from these may promote an
 agent.
 
+A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full ({{attention}}) is about the owner; neither is an incident.
+
+Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does ({{clearance}}): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.
+
+A refusal is evidence about the agent's conduct only when her policy refused
+the request on its own merits. A refusal because of where the agent stands on
+either ladder is the ladder working, and a refusal because the owner's queue
+was full ({{attention}}) is about the owner; neither is an incident.
+
+Evidence from a party outside both — an evaluator's signed appraisal of what
+the agent has done elsewhere — would belong beside these conditions. It would
+travel as a clearance does ({{clearance}}): fetched by the authorization server
+from the party that signed it, verified against that party's published keys,
+bound to this agent, and never carried by the agent itself. Like the rest, it
+would inform the owner's decision and could not make it. This document does
+not define its format.
+
 ## The Operator's Ladder {#operators-ladder}
 
 An operator declares where it has put an agent on its own ladder in the client
@@ -904,29 +930,53 @@ revocation.
 This appendix is not normative. {{ATF}} sets 25 requirements across five
 elements for an organization deploying agents. Under this profile some fall to
 the operator, as {{ATF}} assumes, and some are met by the resource owner's
-authorization server on her side of the exchange — which is the side {{ATF}}
-does not describe. The table records where each is met in this set.
+authorization server on her side of the exchange, which is the side {{ATF}}
+does not describe.
 
-| ATF | Requirement | Where it is met under this set |
-|---|---|---|
-| I-1 | Unique identifier | the connection handle ({{U4ACore}}) |
-| I-2 | Credential binding | the binding axis ({{axes}}) |
-| I-3 | Ownership chain | the accountability axis ({{axes}}); level 2 is the operator's own attestation |
-| I-4 | Purpose declaration | the purpose and reason of the agreement ({{U4ATerms}}) |
-| I-5 | Capability manifest | the operator's; outside this set |
-| B-1, B-2 | Structured logging; action attribution | the record, naming the counterparty on every row ({{record}}) |
-| B-3, B-4 | Behavioural baseline; anomaly detection | the operator's; the owner's trajectory conditions ({{tightening}}) can only tighten on what she has seen |
-| B-5 | Explainability | the conditions that decided each request, kept in the record |
-| D-1 to D-5 | Data governance | the operator's; the owner's terms ({{U4ATerms}}) state what may be done with what is released |
-| S-1, S-2 | Resource allowlist; action boundaries | policy units and their scopes ({{shape}}) |
-| S-3 | Rate limiting | the attention bound on the owner's queue ({{attention}}) |
-| S-4 | Transaction limits | grants bound to one operation ({{U4ACore}}) |
-| S-5 | Blast radius containment | operator blocking ({{operators}}) and revocation of a lineage ({{U4ALineage}}) |
-| R-1, R-2 | Circuit breaker; kill switch | the operator's; the owner's revocation is effective on the next call |
-| R-3 | Session revocation | revoking a connection kills every grant under it ({{U4ACore}}) |
-| R-4 | State rollback | the declared consequence of each operation ({{consequence}}) |
-| R-5 | Graceful degradation | demotion on either ladder takes effect on the next request ({{autonomy}}) |
-{: title="ATF's requirements, and where each is met when the owner is a separate party."}
+Each requirement is given one of four statuses, judged only for requests that
+reach the owner's resources:
+
+met:
+: this set meets it on the owner's side.
+
+partly:
+: this set meets part of it on the owner's side; the remainder is stated.
+
+operator:
+: it concerns the agent's own runtime, which the owner cannot see, and this
+  set does not attempt it.
+
+gap:
+: the owner's side could meet it and this set does not.
+
+| ATF | Requirement | Status | Under this set |
+|---|---|---|---|
+| I-1 | Unique identifier | met | The connection handle names each agent to the owner: its key's thumbprint, or its issuer and subject ({{U4ACore}}). |
+| I-2 | Credential binding | met | Every agreement and call is signed with the agent's key; the binding axis records it ({{axes}}). |
+| I-3 | Ownership chain | partly | The accountability axis names the operator, and level 2 is the operator's own attestation ({{level-two}}). The chain from the operator to the person it acts for is not established. |
+| I-4 | Purpose declaration | partly | Each agreement carries the purpose the owner's terms state and the agent's reason ({{U4ATerms}}). This is per grant; a standing declaration of the agent's scope is the operator's. |
+| I-5 | Capability manifest | operator | Not read. |
+| B-1 | Structured logging | met | The record of {{record}}, for everything that reaches her resources. |
+| B-2 | Action attribution | met | Every row of the record names the agent where it can ({{counterparty}}); an enforcement point's report is attributed by the authorization server, not the reporter ({{pep-reports}}). |
+| B-3 | Behavioural baseline | operator | The trajectory conditions of {{tightening}} count denials, units and calls in a window. They are not a baseline. |
+| B-4 | Anomaly detection | partly | A rule can tighten when an agent's requests widen or multiply ({{tightening}}). There is no detection beyond such counts. |
+| B-5 | Explainability | partly | The conditions that decided each request are kept in the record. The agent's own rationale is only its stated reason, which nothing checks. |
+| D-1 | Schema validation | operator | Her side validates the agreement against her terms and the call against the operation it was granted for; the agent's inputs are not hers to see. |
+| D-2 | Injection prevention | operator | Not detected. Per-operation grants bound what an injected instruction can do on her resources. |
+| D-3 | PII/PHI protection | partly | Scopes limit what is released, and her terms prohibit uses of it. Detection and masking are the operator's, and most prohibitions are undertakings rather than enforced ({{U4ATerms}}). |
+| D-4 | Output validation | operator | Not attempted. |
+| D-5 | Data lineage | partly | The record links what an agent promised to what it touched, per negotiation, and sub-agents to the agent that introduced them ({{U4ALineage}}). Lineage inside the agent's pipeline is the operator's. |
+| S-1 | Resource allowlist | met | Each policy unit names its resources; an ungoverned resource is refused ({{shape}}). |
+| S-2 | Action boundaries | met | Scopes per unit, and grants bound to one named operation ({{U4ACore}}). |
+| S-3 | Rate limiting | gap | Not enforced. The attention bound of {{attention}} limits how many requests may wait for the owner, not how often an agent calls; a rule may tighten on a call count. |
+| S-4 | Transaction limits | met | A grant may be bound to one operation and its parameters and spent once ({{U4ACore}}); terms may carry constraints. |
+| S-5 | Blast radius containment | partly | Access is per unit, an operator can be blocked in one action ({{operators}}), and revoking an agent revokes its lineage ({{U4ALineage}}). Cumulative impact across calls is not limited. |
+| R-1 | Circuit breaker | gap | An enforcement point refuses each call that fails; nothing halts an agent automatically after repeated failures. |
+| R-2 | Kill switch | partly | Revoking a connection or blocking an operator takes effect on the next call, because the enforcement point introspects every call. It stops access, not the agent. |
+| R-3 | Session revocation | met | Revoking a connection deactivates every grant issued under it in one step ({{U4ACore}}). |
+| R-4 | State rollback | gap | The declared consequence of {{consequence}} says whether an act can be undone. Nothing here undoes one. |
+| R-5 | Graceful degradation | met | Lowering either ladder takes effect on the agent's next request ({{autonomy}}). |
+{: title="ATF's requirements, judged on the owner's side of the exchange."}
 
 {{ATF}}'s promotion gates map as {{owners-ladder}} describes. Its automatic
 demotion triggers — a critical incident, a discovered vulnerability, repeated

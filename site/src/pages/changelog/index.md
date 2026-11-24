@@ -30,7 +30,7 @@ release within that month. One entry per release.
 - **Authorization server:** An `acted` event on her stream whenever an agent is let change something without her being asked.
 - **Portal:** Connected agents shows both ladders side by side, with promote and demote beside hers and what her record says about each promotion; approval cards carry both; My Terms adds the preset in one step.
 - **Lab:** `make autonomy-check`, `make fixture-autonomy` and `make k8s-autonomy-check`. The lab operator declares its advisory agent a principal and its research assistant (`/agents/research.json`) an intern, and serves an ATF conformance statement at `/atf`.
-- **Spec:** Policy draft §9, Earned Autonomy, and an appendix mapping ATF's 25 requirements to where each is met when the owner is a separate party.
+- **Spec:** Policy draft §9, Earned Autonomy, and an appendix judging each of ATF's 25 requirements on the owner's side as met, partly met, the operator's, or a gap.
 
 #### Enhancements
 
