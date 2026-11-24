@@ -1186,10 +1186,11 @@ Internet-Draft           Owner Policy for Agents          September 2026
 
 13.2.  Informative References
 
-   [ATF]      Woodruff, J., "Agentic Trust Framework: Zero Trust
-              Governance for AI Agents", Cloud Security Alliance Public
-              Review Draft 0.9.1, April 2026, <https://github.com/
-              massivescale-ai/agentic-trust-framework>.
+   [ATF]      Cloud Security Alliance, "Agentic Trust Framework: Zero
+              Trust Governance for AI Agents", Cloud Security
+              Alliance Public Review Draft 0.9.1, April 2026,
+              <https://github.com/massivescale-ai/agentic-trust-
+              framework>.
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
@@ -1218,7 +1219,6 @@ Internet-Draft           Owner Policy for Agents          September 2026
               Internet-Draft, draft-gamb-uma4agents-multiparty-00, 2026,
               <https://u4a.ai/spec/draft-gamb-uma4agents-multiparty-
               00.html>.
-
 
 
 
@@ -1596,10 +1596,7 @@ Acknowledgments
    what make the accountability axis derivable rather than asserted.
 
    The levels of Section 9 are those of the Agentic Trust Framework
-   [ATF], by Josh Woodruff.  The suggestion to profile them in this
-   document's terms, and the observation that a separate requesting
-   party is what turns one ladder into two, came from conversation
-   between Josh Woodruff and Eve Maler.
+   [ATF].
 
    The consequence vocabulary of Section 3.3 — reversible,
    compensatable, forward-recoverable, irreversible — is Nat Sakimura's,
@@ -1618,63 +1615,10 @@ Authors' Addresses
    Email: nickgamb@gmail.com
 
 
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 29]
-
-Internet-Draft           Owner Policy for Agents          September 2026
-
-
    Eve Maler
    Venn Factory
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Gamb & Maler              Expires 19 March 2027                [Page 30]
+Gamb & Maler              Expires 19 March 2027                [Page 29]

@@ -75,8 +75,7 @@ informative:
   ATF:
     title: "Agentic Trust Framework: Zero Trust Governance for AI Agents"
     author:
-      - ins: J. Woodruff
-        name: Josh Woodruff
+      - org: Cloud Security Alliance
     date: 2026-04
     seriesinfo:
       Cloud Security Alliance: Public Review Draft 0.9.1
@@ -992,10 +991,7 @@ of {{I-D.meunier-webbotauth-registry}} and the client metadata document of
 {{I-D.ietf-oauth-client-id-metadata-document}} are what make the accountability
 axis derivable rather than asserted.
 
-The levels of {{autonomy}} are those of the Agentic Trust Framework {{ATF}},
-by Josh Woodruff. The suggestion to profile them in this document's terms, and
-the observation that a separate requesting party is what turns one ladder into
-two, came from conversation between Josh Woodruff and Eve Maler.
+The levels of {{autonomy}} are those of the Agentic Trust Framework {{ATF}}.
 
 The consequence vocabulary of {{consequence}} — reversible, compensatable,
 forward-recoverable, irreversible — is Nat Sakimura's, from "When Software

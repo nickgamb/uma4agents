@@ -19,7 +19,7 @@ her?**
 
 The vocabulary is the Cloud Security Alliance's
 [Agentic Trust Framework](https://github.com/massivescale-ai/agentic-trust-framework)
-(ATF), by Josh Woodruff. It has four maturity levels, and an agent earns its
+(ATF). It has four maturity levels, and an agent earns its
 way up them: an **intern** observes and reports, a **junior** may act once a
 person approves, a **senior** acts and a person is told, and a **principal**
 acts on its own within a domain.

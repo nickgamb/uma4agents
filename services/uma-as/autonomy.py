@@ -20,7 +20,7 @@ stands on two ladders at once**, and this module keeps them apart.
 
 The operator's ladder
 ---------------------
-ATF as Josh Woodruff wrote it, run by the operator over its own agents. The
+ATF as written, run by the operator over its own agents. The
 operator publishes where an agent stands — in its Client ID Metadata
 Document, beside the rest of what it says about itself — and her authority
 reads it. Under U4A it may only **tighten**: an operator that says its own

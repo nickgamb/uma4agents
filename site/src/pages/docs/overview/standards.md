@@ -56,7 +56,7 @@ service offering conditions.
 | [AAuth](https://github.com/dickhardt/AAuth) | An agent token: a verifiable agent identity, bound to a session key | One way to take the identified path |
 | [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-webbotauth-registry/) | A directory where an operator publishes its agents' keys | Display and discovery only |
 | [Client ID Metadata Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | A client described by URL rather than pre-registration | Display, and the operator's declared ATF level, which only tightens |
-| [Agentic Trust Framework](https://github.com/massivescale-ai/agentic-trust-framework) (CSA, Woodruff, 2026) | The four maturity levels — intern, junior, senior, principal — and the promotion gates between them | [Earned autonomy](/docs/overview/autonomy/), held once by the operator and once by the owner |
+| [Agentic Trust Framework](https://github.com/massivescale-ai/agentic-trust-framework) (CSA, 2026) | The four maturity levels — intern, junior, senior, principal — and the promotion gates between them | [Earned autonomy](/docs/overview/autonomy/), held once by the operator and once by the owner |
 
 ## What an act costs
 

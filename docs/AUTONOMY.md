@@ -6,7 +6,7 @@ met it, how much may it do without asking her?**
 
 The vocabulary is the Cloud Security Alliance's
 [Agentic Trust Framework](https://github.com/massivescale-ai/agentic-trust-framework)
-(ATF), by Josh Woodruff, used as written. It has four maturity levels, and an
+(ATF), used as written. It has four maturity levels, and an
 agent earns its way up them:
 
 | ATF level | Autonomy | Human involvement |
